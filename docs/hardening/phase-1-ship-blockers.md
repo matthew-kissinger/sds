@@ -215,11 +215,19 @@ Validation 2026-06-09 (all four P1-SETTINGS tasks): `npm run lint`, `npm run typ
 
 ## Gate
 
-- [ ] `npm test` green
-- [ ] `npm run build` green
-- [ ] A new player is taught (tutorial complete and re-triggerable)
-- [ ] The game advertises only the languages it delivers
-- [ ] Mobile players are warned, not surprised
-- [ ] Sharing works (invite link + Web Share)
+- [x] `npm test` green
+- [x] `npm run build` green
+- [x] A new player is taught (tutorial complete and re-triggerable)
+- [x] The game advertises only the languages it delivers
+- [x] Mobile players are warned, not surprised
+- [x] Sharing works (invite link + Web Share)
 
-Gate result: (record date, commit, and evidence here)
+Gate result: PASSED 2026-06-09. npm test 1248 passed / 8 skipped (67 new
+tests this phase), lint clean, typecheck clean, build green. Tutorial
+verified in a Playwright browser smoke on a fresh profile (offer, guided
+steps on real input, skip persistence). Wave 1 commit fdd820a (tutorial,
+l10n, mobile warning, share); wave 2 commit (settings panel, fallback
+notice). Deferred notes: non-en tutorial translations ride the parity
+allowlist; mouseSensitivity is a dead settings field flagged in
+[P1-SETTINGS-PANEL]; settings panel browser smoke recommended at next
+paired session.
