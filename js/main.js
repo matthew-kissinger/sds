@@ -705,6 +705,22 @@ class SheepDogSimulation {
             Terrain: 0, Trees: 0, Rocks: 0, Mountains: 0, Grass: 0,
             Structures: 0, Sheep: 0, Water: 0, Atmosphere: 0,
         };
+        // [P2-ALLOC] Cached visible-group counts for trees/rocks/mountains.
+        // Visibility on these arrays only flips on camera-driven hybrid LOD
+        // switches (TreeImpostorRuntime), scene rebuilds (new array refs), and
+        // the perf-probe isolation toggle. The counts feed display-only
+        // consumers (perf HUD draw-call estimate, on-demand cost reports), so
+        // recompute is keyed on array identity/length + isolation and
+        // otherwise throttled to once per second instead of filtering the
+        // full arrays every frame. -1 means "source was not an array".
+        this._perfGroupCountCache = {
+            trees: -1, rocks: -1, mountains: -1,
+            treesRef: null, treesLen: -1,
+            rocksRef: null, rocksLen: -1,
+            mountainsRef: null, mountainsLen: -1,
+            isolation: null,
+            lastMs: -Infinity,
+        };
         // Site 4 — MP input payload. Reused object with persistent nested
         // direction/clientPosition (safe: sendPlayerInput consumes it
         // synchronously via msgpack encode before returning).
@@ -1392,6 +1408,7 @@ class SheepDogSimulation {
                 this.gameState.gameCompleted = false;
                 this.gameState.sheepRetired = 0;
             }
+            this.menuController?.reset?.();
 
             emitGameEvent('scene-swap-end');
             emitGameEvent('scene-restart-to-menu');
@@ -1493,7 +1510,10 @@ class SheepDogSimulation {
             if (sheepSystem) {
                 perf.addSystemTriangles('Sheep', sheepSystem.getTotalTriangleEstimate());
             }
-            this.updatePerformanceVisibleCounts();
+            // Force-refresh the cached group counts: this one-shot runs at
+            // init and after terrain rebuilds, where stale counts would
+            // otherwise persist up to a second.
+            this.updatePerformanceVisibleCounts(true);
         } catch (error) {
             console.warn('[PERF] Failed to register system triangle counts:', error);
         }
@@ -1590,7 +1610,7 @@ class SheepDogSimulation {
         };
     }
 
-    updatePerformanceVisibleCounts() {
+    updatePerformanceVisibleCounts(forceRefresh = false) {
         try {
             const tb = this.terrainBuilder;
             const gs = tb.grassSystem?.getStats?.() ?? {};
@@ -1643,11 +1663,49 @@ class SheepDogSimulation {
             let terrain = 0;
             if (tb.terrainMesh && tb.terrainMesh.visible !== false) terrain++;
             if (tb.terrainSkirtMesh && tb.terrainSkirtMesh.visible !== false) terrain++;
-            const treeGroups = Array.isArray(tb.trees)
-                ? tb.trees.filter((obj) => obj?.visible !== false).length
+            // [P2-ALLOC] Visible-group counts come from the throttled cache
+            // (refreshed below at most once per second, or immediately when an
+            // array ref/length or the isolation mode changes). Replaces three
+            // full-array .filter() allocations per frame.
+            const groupCache = this._perfGroupCountCache;
+            const treesArr = Array.isArray(tb.trees) ? tb.trees : null;
+            const rocksArr = Array.isArray(tb.rocks) ? tb.rocks : null;
+            const mountainsArr = Array.isArray(tb.mountains) ? tb.mountains : null;
+            const nowMs = performance.now();
+            if (forceRefresh
+                || nowMs - groupCache.lastMs >= 1000
+                || groupCache.isolation !== isolation
+                || groupCache.treesRef !== treesArr
+                || groupCache.treesLen !== (treesArr ? treesArr.length : -1)
+                || groupCache.rocksRef !== rocksArr
+                || groupCache.rocksLen !== (rocksArr ? rocksArr.length : -1)
+                || groupCache.mountainsRef !== mountainsArr
+                || groupCache.mountainsLen !== (mountainsArr ? mountainsArr.length : -1)) {
+                const countVisible = (arr) => {
+                    if (!arr) return -1;
+                    let n = 0;
+                    for (let i = 0; i < arr.length; i++) {
+                        if (arr[i]?.visible !== false) n++;
+                    }
+                    return n;
+                };
+                groupCache.trees = countVisible(treesArr);
+                groupCache.rocks = countVisible(rocksArr);
+                groupCache.mountains = countVisible(mountainsArr);
+                groupCache.treesRef = treesArr;
+                groupCache.treesLen = treesArr ? treesArr.length : -1;
+                groupCache.rocksRef = rocksArr;
+                groupCache.rocksLen = rocksArr ? rocksArr.length : -1;
+                groupCache.mountainsRef = mountainsArr;
+                groupCache.mountainsLen = mountainsArr ? mountainsArr.length : -1;
+                groupCache.isolation = isolation;
+                groupCache.lastMs = nowMs;
+            }
+            const treeGroups = treesArr
+                ? groupCache.trees
                 : (systemVisible('trees') ? (tb.konveyorNativeTreeInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
-            const rockGroups = Array.isArray(tb.rocks)
-                ? tb.rocks.filter((obj) => obj?.visible !== false).length
+            const rockGroups = rocksArr
+                ? groupCache.rocks
                 : (systemVisible('rocks') ? (tb.konveyorNativeRockInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
             // `structures` counted above during the flatten pass.
             const grassChunks = systemVisible('grass') ? (gs.chunksVisible ?? 0) : 0;
@@ -1670,7 +1728,7 @@ class SheepDogSimulation {
             counts.Rocks = systemVisible('rocks')
                 ? (tb.konveyorRockPlacementPlan?.totalRocks ?? tb.konveyorNativeRockInstancingSummary?.rockInstances ?? 0)
                 : 0;
-            counts.Mountains = systemVisible('mountains') ? (tb.mountains?.filter?.((obj) => obj?.visible !== false).length ?? 0) : 0;
+            counts.Mountains = systemVisible('mountains') && groupCache.mountains >= 0 ? groupCache.mountains : 0;
             counts.Grass = systemVisible('grass') ? (gs.visibleClumps ?? gs.totalClumps ?? 0) : 0;
             counts.Structures = structures;
             counts.Sheep = sheep;
