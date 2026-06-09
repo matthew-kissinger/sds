@@ -34,3 +34,36 @@ database_id = "513aa937-e60a-4fb6-b499-9f3814149e88"
 # [[routes]]
 # pattern = "sheepdogsim.com/r/*"
 # zone_name = "sheepdogsim.com"
+
+# ---------------------------------------------------------------------------
+# P2-STAGING: per-PR preview environment. Deployed by
+# .github/workflows/preview.yml as sds-worker-preview, with its OWN D1 so a
+# preview can never touch the production leaderboard.
+#
+# !!! The database_id below is a PLACEHOLDER (all zeros), not a real database.
+# !!! The preview workflow substitutes the repo Actions variable
+# !!! CF_PREVIEW_D1_ID before deploying, and scripts/d1-migrate-remote.mjs
+# !!! refuses to run against the placeholder or the production id.
+# Operator setup (one time):
+#   1. npx wrangler d1 create sds-db-preview
+#   2. Set repo Actions variable CF_PREVIEW_D1_ID to the new database id
+#      (until it is set, the preview-worker job is skipped with a notice).
+#   3. npx wrangler secret put JWT_SECRET --env preview
+# Environments do not inherit bindings, so DO + D1 are redeclared here.
+# DO [[migrations]] are top-level and shared across environments.
+# ---------------------------------------------------------------------------
+[env.preview]
+name = "sds-worker-preview"
+
+[[env.preview.durable_objects.bindings]]
+name = "ROOM_DO"
+class_name = "RoomDO"
+
+[[env.preview.durable_objects.bindings]]
+name = "LOBBY_DO"
+class_name = "LobbyDO"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "sds-db-preview"
+database_id = "00000000-0000-0000-0000-000000000000" # PLACEHOLDER - see above

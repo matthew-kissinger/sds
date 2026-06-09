@@ -71,13 +71,19 @@ jobs:
             test-results/
           retention-days: 7
 
-  # Apply any D1 migration newly ADDED in this push to the remote DB BEFORE the
-  # worker/pages deploys, so code never ships ahead of its schema. This closes the
-  # Cycle 67 gap where 0009 had to be applied to remote by hand (the survival
-  # board 500'd until it was). It applies only files added in this push's commit
-  # range (git diff --diff-filter=A), so already-applied migrations are never
-  # re-run. The d1_migrations tracking table is historical/out-of-sync, so we do
-  # NOT use `wrangler d1 migrations apply` (it would try to re-run 0007-0009).
+  # Apply pending D1 migrations to the remote DB BEFORE the worker/pages deploys,
+  # so code never ships ahead of its schema. This closes the Cycle 67 gap where
+  # 0009 had to be applied to remote by hand (the survival board 500'd until it
+  # was). P2-MIGRATE-STATE: applied migrations are tracked in the
+  # sds_migration_state table (worker/migrations/0010_migration_state.sql), which
+  # this deploy controls. scripts/d1-migrate-remote.mjs marks each migration
+  # 'failed' before applying and 'applied' after, so a half-failed apply is
+  # detected on the next deploy instead of silently skipped. If the state table
+  # does not exist yet (the deploy that ships 0010), the script falls back to the
+  # legacy git diff --diff-filter=A behavior for that one run. The built-in
+  # d1_migrations tracking table is historical/out-of-sync from earlier manual
+  # applies, so we still do NOT use `wrangler d1 migrations apply` (it would try
+  # to re-run 0007-0009).
   migrate:
     name: Migrate D1 (remote)
     needs: test
@@ -94,33 +100,13 @@ jobs:
           cache-dependency-path: worker/package-lock.json
       - run: npm ci
         working-directory: worker
-      - name: Apply newly-added D1 migrations to remote sds-db
+      - name: Apply pending D1 migrations to remote sds-db (state-tracked)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          ZERO="0000000000000000000000000000000000000000"
-          if [ -z "${BEFORE}" ] || [ "${BEFORE}" = "${ZERO}" ]; then
-            BASE="${AFTER}~1"
-          else
-            BASE="${BEFORE}"
-          fi
-          echo "Scanning ${BASE}..${AFTER} for newly added worker/migrations/*.sql"
-          mapfile -t NEW < <(git diff --name-only --diff-filter=A "${BASE}" "${AFTER}" -- 'worker/migrations/*.sql' | sort)
-          if [ "${#NEW[@]}" -eq 0 ]; then
-            echo "No new D1 migrations in this push; nothing to apply."
-            exit 0
-          fi
-          printf 'New migration: %s\n' "${NEW[@]}"
-          cd worker
-          for f in "${NEW[@]}"; do
-            rel="${f#worker/}"
-            echo ">> Applying ${rel} to remote sds-db"
-            npx wrangler d1 execute sds-db --remote --file="${rel}" --yes
-          done
+        run: node scripts/d1-migrate-remote.mjs
 
   pages:
     name: Deploy Pages
