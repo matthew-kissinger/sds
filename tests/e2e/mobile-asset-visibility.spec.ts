@@ -38,27 +38,24 @@ async function seedIdentity(ctx: BrowserContext) {
     });
 }
 
-const WORLD_NAME: Record<string, string> = {
-    'field': 'Home Field',
-    'rolling-hills': 'Rolling Hills',
-    'open-country': 'Open Country',
+const WORLD_STEPS_FROM_FLAGSHIP: Record<string, number> = {
+    'field': 1,
+    'rolling-hills': 2,
+    'open-country': 3,
 };
 
 // Cycle 51 world-first entrance: the world is armed via the prev/next switcher,
-// not a ?scene= deep-link. Cycle the Next-world chip until the target biome
-// name shows; the switcher wraps, so the target is reached in <= N clicks
-// regardless of the default.
+// not a ?scene= deep-link. The default is the Cycle 82 flagship
+// Newsheepdogland; the SEO fallback main also contains scene names, so use the
+// known carousel offset instead of querying visible text.
 async function armWorld(page: Page, sceneId: string) {
-    const wanted = WORLD_NAME[sceneId];
-    const nameLoc = page.getByText(wanted, { exact: true });
+    const steps = WORLD_STEPS_FROM_FLAGSHIP[sceneId];
     const nextBtn = page.getByRole('button', { name: /Next world/i });
     await expect(nextBtn).toBeVisible({ timeout: 30_000 });
-    for (let i = 0; i < SCENES.length; i++) {
-        if (await nameLoc.isVisible().catch(() => false)) return;
+    for (let i = 0; i < steps; i++) {
         await nextBtn.dispatchEvent('click');
         await page.waitForTimeout(200);
     }
-    await expect(nameLoc).toBeVisible({ timeout: 5_000 });
 }
 
 async function startSoloClassic(page: Page, sceneId: string) {
