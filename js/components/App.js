@@ -49,6 +49,13 @@ export async function initReactUI() {
 
     console.log('[UI] Loading React components...');
 
+    // [P3-ACHIEVE-UI] Subscribe the achievement unlock toast before any round
+    // can complete. Fire-and-forget dynamic import: the toast rides the lazy
+    // achievements chunk and can never block (or break) the React mount.
+    import('../achievements/unlockToast.js')
+        .then(({ installUnlockToast }) => installUnlockToast())
+        .catch(() => {});
+
     try {
         // Load all modules in parallel
         const [
@@ -57,6 +64,7 @@ export async function initReactUI() {
             { getPlayerIdentity, savePlayerIdentity, generatePersistentId },
             { loadSettings, saveSettings, applySettingsToGame },
             { SettingsPanel },
+            { AchievementsPanel },
             { SandboxSetup },
             { FenceEditor },
             { ShapeEditor },
@@ -95,6 +103,7 @@ export async function initReactUI() {
             import('./shared/playerIdentity.js'),
             import('./shared/settings.js'),
             import('./StartScreen/SettingsPanel.js'),
+            import('./StartScreen/AchievementsPanel.js'),
             import('./StartScreen/SandboxSetup.js'),
             import('./StartScreen/FenceEditor.js'),
             import('./StartScreen/ShapeEditor.js'),
@@ -277,6 +286,7 @@ export async function initReactUI() {
             // play route to multiplayer / sandbox / 2-player.
             const entranceNav = {
                 onLeaderboard: () => setScreen('leaderboard'),
+                onAchievements: () => setScreen('achievements'),
                 onSettings: () => setScreen('settings'),
                 onSandbox: () => setScreen('sandboxSetup'),
                 onLocal: () => setScreen('localModeSetup'),
@@ -635,6 +645,11 @@ export async function initReactUI() {
                         return createElement(GlobalLeaderboard, {
                             onBack: () => setScreen('entrance'),
                             playerIdentity
+                        });
+
+                    case 'achievements':
+                        return createElement(AchievementsPanel, {
+                            onBack: () => setScreen('entrance')
                         });
 
                     case 'settings':

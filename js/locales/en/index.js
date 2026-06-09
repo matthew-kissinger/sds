@@ -514,6 +514,14 @@ export default {
     // [P3-ACHIEVE-DATA] Achievement names + descriptions. Ids live in
     // js/achievements/definitions.js and map here via nameKey/descKey.
     achievements: {
+        // [P3-ACHIEVE-UI] UI chrome: the unlock toast + the menu list view.
+        ui: {
+            toastTitle: 'Achievement unlocked',
+            panelTitle: 'Achievements',
+            summary: '{{unlocked}} of {{total}} unlocked',
+            locked: 'Locked',
+            unlockedOn: 'Unlocked {{date}}'
+        },
         firstPen: {
             name: 'First Pen',
             desc: 'Pen your first full flock.'

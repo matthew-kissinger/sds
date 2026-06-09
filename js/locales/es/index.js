@@ -443,6 +443,14 @@ export default {
 
     // [P3-ACHIEVE-DATA] Logros: nombres y descripciones.
     achievements: {
+        // [P3-ACHIEVE-UI] Interfaz: aviso de desbloqueo y lista del menú.
+        ui: {
+            toastTitle: 'Logro desbloqueado',
+            panelTitle: 'Logros',
+            summary: '{{unlocked}} de {{total}} desbloqueados',
+            locked: 'Bloqueado',
+            unlockedOn: 'Desbloqueado el {{date}}'
+        },
         firstPen: {
             name: 'Primer corral',
             desc: 'Encierra tu primer rebaño completo.'

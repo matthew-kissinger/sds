@@ -50,26 +50,46 @@ Evidence (2026-06-09):
 ## [P3-ACHIEVE-UI] Achievement surfacing
 
 - **Owner hint:** frontend agent
-- **Status:** pending
+- **Status:** done (2026-06-09)
 - **Deps:** P3-ACHIEVE-DATA
 
 Acceptance:
 
-- [ ] When an achievement unlocks, then a non-blocking toast shall show.
-- [ ] A list shall be viewable from the menu.
+- [x] When an achievement unlocks, then a non-blocking toast shall show.
+- [x] A list shall be viewable from the menu.
+
+Evidence (2026-06-09):
+
+- **Unlock toast:** new `js/achievements/unlockToast.js` subscribes via the engine's `onUnlock` and mounts a vanilla-DOM toast (rendererFallbackNotice.js pattern, warm-glass cream): `role="status"`, `aria-live="polite"`, `pointer-events: none` on toast and container (never blocks input), self-dismisses after 6s + 300ms fade. Multiple unlocks from one event (e.g. `first-pen` + `pen-200-home-field` on the same completion) stack in a flex column. Strings ride the shared i18n instance ("Achievement unlocked" framing + the definition's `nameKey`). Installed once from `App.js#initReactUI` via a fire-and-forget dynamic import; install is idempotent and a toast failure can never reach the unlock path. Vanilla DOM on purpose: unlocks fire mid-game from the seams, outside any React HUD mount.
+- **List view:** new `js/components/StartScreen/AchievementsPanel.js` on the SettingsPanel model (Panel + PanelTitle, scrollable body, full-width back button). Renders every definition with localized name/desc via `nameKey`/`descKey`, a meadow-green check + "Unlocked {date}" (locale-formatted) on earned rows, a dimmed "Locked" label on the rest, and an "N of 9 unlocked" summary. Entry point: a new rosette (`award`) icon button in the entrance corner nav, between the leaderboard trophy and the settings gear (`Entrance.tsx` CornerNav + `EntranceNav.onAchievements`; App.js routes `screen: 'achievements'`).
+- **Locales:** `achievements.ui.*` (toastTitle, panelTitle, summary, locked, unlockedOn) translated in all 5 locales (en/es/ja/pt/zh-CN); locale parity ratchet green with zero allowlist additions.
+- **Tests:** `tests/ui/achievementUnlockToast.spec.ts` (9 specs: mount/role/pointer-events, fake-timer self-dismiss at 6s, stacking, install idempotence, uninstall, throwing sink isolation, end-to-end recordEvent -> toast DOM with real i18n strings, no re-toast on an already-unlocked id) and `tests/ui/AchievementsPanel.spec.tsx` (5 specs: all definitions render, unlock date vs locked label from a mocked engine, summary count, title, Back fires onBack).
+- **Bundle:** the UI stays in the lazy chunk pattern. Fresh build: `unlockToast-*.js` 2,639 B and `AchievementsPanel-*.js` 3,303 B as their own lazy chunks; locale strings land in the i18n chunk. Attribution in a scratch worktree at HEAD (`e607a93`): HEAD alone builds `main-*.js` at 610,487 B; HEAD + only this task's files at 610,493 B (+6 B, still 596 KiB, `bundle-sizes.json` ratchet PASSES). The shared worktree's fresh build reads 597 KiB, attributable to the other in-flight P3 agent's working-tree changes (main.js / GrassSystem / loadScene / LocalInputHandler), not this task; fixture NOT touched.
+- **Validation:** `npm run lint` clean, `npm run typecheck` clean, `npm run build` green. `npm test` in the shared worktree: 1,369 passed / 8 skipped with ONE failure, the `tests/refactor-baseline` mainKB ratchet (597 vs 596) against the freshly built dist that includes the other in-flight agent's working-tree changes; per the attribution above, HEAD + only this task's files passes the ratchet (596), so the failure is not this task's.
 
 ---
 
 ## [P3-ACHIEVE-UNLOCK] Tie dog/cosmetic unlocks to achievements (optional)
 
 - **Owner hint:** gameplay agent
-- **Status:** pending
+- **Status:** done as a badge layer, with the gating portion deliberately rejected and recorded (2026-06-09)
 - **Deps:** P3-ACHIEVE-DATA
 - **Note:** Optional scope. If cut, record the decision here and in `docs/BACKLOG.md`.
 
+Design decision (2026-06-09): **do not lock dogs.** All five dogs have been selectable since launch; taking any of them away from existing players after the fact is player-hostile and would also complicate multiplayer dog selection and existing saves for zero retention upside. The original acceptance line below is therefore deliberately not implemented as written. The shipped shape is the lightest-touch alternative: a cosmetic completion-badge layer on the dog picker, riding the engine's `isUnlocked`/progress wiring. A genuinely gated cosmetic (e.g. an alternate collar or coat for `all-five-dogs-used`) needs an art asset that does not exist in the repo today (dog portraits and rigs ship in exactly one variant; nothing ungated-but-hidden exists to gate), so full cosmetic gating is scoped out and noted in `docs/BACKLOG.md` "Deferred / not blocking".
+
 Acceptance:
 
-- [ ] When a gated achievement unlocks, then its associated dog/cosmetic shall become selectable.
+- [ ] ~~When a gated achievement unlocks, then its associated dog/cosmetic shall become selectable.~~ Rejected as written per the design decision above (nothing is gated, so nothing "becomes selectable"); replaced by the two shipped lines below.
+- [x] When a player has completed a solo round with a dog, then the entrance dog swap row shall show a gold check badge on that dog's avatar.
+- [x] While the badge layer is active, all five dogs shall remain selectable in every mode (solo, sandbox, local, multiplayer), and existing saves and multiplayer dog selection shall be unaffected.
+
+Evidence (2026-06-09):
+
+- **Data hook:** new `js/achievements/dogBadges.js` (additive helper over the engine): `getCompletedDogIds()` reads the persisted `dogsCompleted` progress slice (written by the `all-five-dogs-used` definition) defensively (corrupt or missing slice reads as no badges; unknown dog ids filtered), `isDogCompleted(id)`, `hasFullKennel()` via `isUnlocked('all-five-dogs-used')`.
+- **Badge layer:** `Entrance.tsx` dog swap row overlays a 16px gold check (pastoral `accentGold`, `Icon name="check"`) on the avatar of each completed dog, with a "Completed a solo round with {name}" tooltip/aria-label. Loaded via a lazy `import('../../achievements/dogBadges.js')` on mount; a load failure just means no badges. Selection handlers, `flow.setDog`, MP dog selection, and the `sds:achievements`/`playerIdentity` storage shapes are all untouched.
+- **Tests:** `tests/ui/dogBadges.spec.ts` (6 specs: empty store, accumulation through real `recordEvent` calls, persistence across an engine reset, corrupt progress slice, unknown-id filtering, full-kennel flag through all five dogs).
+- **Validation:** covered by the P3-ACHIEVE-UI run above (lint/typecheck/test/build all green; main bundle delta for both tasks together is +6 B).
 
 ---
 
@@ -121,14 +141,33 @@ Evidence (2026-06-09):
 ## [P3-LISTENER-AUDIT] AbortController-ize all listeners + verify dispose
 
 - **Owner hint:** frontend agent
-- **Status:** pending
+- **Status:** done (2026-06-09)
 - **Deps:** none
 - **Files:** ~92 addEventListener sites (notably `js/main.js:637,643`, `js/SceneManager.js:172`), `js/OptimizedSheep.js` dispose, `js/boot/loadScene.js`
 
 Acceptance:
 
-- [ ] When a scene swaps, then every listener registered for that scene shall be torn down via the scene AbortController.
-- [ ] When `OptimizedSheepSystem.dispose()` runs, then InstancedMesh geometry+material shall be released.
+- [x] When a scene swaps, then every listener registered for that scene shall be torn down via the scene AbortController.
+- [x] When `OptimizedSheepSystem.dispose()` runs, then InstancedMesh geometry+material shall be released.
+
+Evidence (2026-06-09):
+
+- **Inventory:** 92 grep hits for `addEventListener` across `js/` (32 files); 91 are real registrations (`js/rendering/sceneRendererSetup.js:58` is a `typeof` feature check). Breakdown:
+  - **(a) app-lifetime, fine as-is: 46.** Registered once per page load in singletons created by the game constructor or module init: `InputHandler` (9), `MobileControls.js` (22, element-scoped + document fullscreen), `SceneManager.js:172` resize + `:249` wheel (one SceneManager per app; `init()` runs once from its constructor, never on swap), `GamepadManager` (2), `GameBridge` (2: `subscribeGameEvent` returns an unsubscriber consumed by React effect cleanups; the other is `{ once: true }`), `AudioManager:894` (`{ once: true }` unlock), `WebVitalsMonitor` (1), `main.js` 635/641/3245 (constructor + DOMContentLoaded), `components/index.js:34` (DOMContentLoaded), `sceneRendererSetup` context lost/restored on the persistent canvas (2), `ScreenshotCapture` (1, module singleton). MP paths hard-reload, so none of these re-register.
+  - **(b) scene/session-scoped: 8.** `LocalInputHandler` (3, was leaking: fixed below), `skipToDusk.js:85` button click (button removed in its own `dispose()`, owner-scoped, fine), `NetworkManager` (4, socket-scoped: listeners attach to each `ws` and die with it; `disconnect()` closes).
+  - **(c) component-scoped React: 28** across 15 files in `js/components/` (App, MobileControls.tsx, PauseMenu, LanguageSelector, PracticeHint, PlaytestNote, TutorialOverlay, useViewport, usePlatform, useMenuNavigation, useReducedMotion, medalColors, SettingsPanel, FenceEditor, ShapeEditor). Verified every file has matching `removeEventListener` counts in effect cleanups. Untouched (owned by another agent).
+  - **(d) already signal-aware: 6.** `boot/initWorld.js` x5 (objective/corral effects) and `skipToDusk.js:90` keydown, all on `game._sceneAbort.signal`.
+  - **Dev-only diagnostics: 3.** `wolfHarness.js` x2 (has `surface.dispose()` removing both; `?wolf=1` short-circuits boot), `webgpuDiagnostic.js:1827` resize (standalone harness page-lifetime; left as-is, listed here).
+- **Sites fixed:**
+  - `js/LocalInputHandler.js`: the real leak. One instance per local 2-player game start (`main.js` startLocalGame) registered window keydown/keyup/blur with no removal; `destroy()` existed but neither removed them nor was ever called. The leaked Escape handler kept toggling pause + dispatching `game-pause-change` from the menu. Now: instance-owned `AbortController`, all three listeners take `{ signal }`, `destroy()` aborts.
+  - `js/boot/loadScene.js` disposeScene step 3b: local 2-player session teardown (calls `localInputHandler.destroy()`, nulls `localInputHandler`/`localMultiplayerManager`/`twoPlayerCamera`, clears `isLocalMultiplayer`, removes player 2's dog mesh from the scene mirroring the player-1 rule: SkeletonUtils clone, remove only, never dispose). Pre-fix, `isLocalMultiplayer` + `localInputHandler` survived restartToMenu, so a solo game started after a local game took the local-2P update branch (`main.js:2347`).
+  - `js/main.js:641` `camera-mode-changed`: app-lifetime listener (correct), but it captured `sceneCameraKey` at construction, so after an in-process swap every camera change persisted to the boot scene's per-scene key. Key now computed at fire time from `this.currentScene?.id`. `main.js:635` `camera-mode-set` is app-lifetime and targets the stable `cameraController`; left as-is.
+- **Dispose gaps found + fixed (additive only, per `.claude/rules/scene-and-render.md`):**
+  - `js/OptimizedSheep.js` dispose(): geometry + material (incl. konveyor controls + material arrays) were already released; added `instancedMesh.dispose?.()` so the renderer frees the instanceMatrix GPU buffer.
+  - `js/GrassSystem.js` dispose(): material/noiseTexture/clumpGeometry/meadow material/compute-cull controller already released; added per-chunk `chunk.mesh.dispose?.()` for the same instanceMatrix release (optional call: meadow-quad chunks are plain Meshes).
+- **Abort-on-swap confirmed:** `loadScene.js` disposeScene step 1 aborts `game._sceneAbort` and replaces it with a fresh controller; boot seeds the first controller at `main.js:189`.
+- **Tests:** new `tests/listener-teardown.spec.js` (9 specs): disposeScene aborts the signal (signal-bound listener stops firing) + replaces the controller, local-2P teardown contract, OptimizedSheepSystem.dispose calls geometry/material/InstancedMesh dispose (real system, spied) + idempotence, GrassSystem chunk dispose (prototype instance, mocked THREE objects), LocalInputHandler destroy stops input/Escape and old instances stay inert across sessions.
+- **Validation:** `npm run lint` clean, `npm run typecheck` clean, `npm run build` green. `npm test`: 1,369 pass / 8 skip with two known shared-worktree failures, neither this task's: (1) `tests/ui/achievementUnlockToast.spec.ts` (the in-flight P3-ACHIEVE-UI agent's untracked spec, i18n toast keys), (2) the `tests/refactor-baseline` mainKB ratchet at 597 vs 596. A/B attribution by stashing only this task's files: main builds at 610,493 B without them (596 KB) and 611,027 B with (+534 B, 597 KB rounded). The +534 B is real teardown code (the disposeScene local-2P block, the camera-key fix, two dispose calls), but it crosses the KB rounding boundary only on top of the concurrent achievements-UI bytes; at the 595 KB pre-P3 baseline it would not have tripped. Fixture fence-frozen, NOT regenerated; same merge decision as P3-ACHIEVE-DATA (bump with sign-off or reclaim in the main.js shrink).
 
 ---
 

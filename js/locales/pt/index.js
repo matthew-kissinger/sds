@@ -425,6 +425,14 @@ export default {
 
     // [P3-ACHIEVE-DATA] Conquistas: nomes e descrições.
     achievements: {
+        // [P3-ACHIEVE-UI] Interface: aviso de desbloqueio e lista do menu.
+        ui: {
+            toastTitle: 'Conquista desbloqueada',
+            panelTitle: 'Conquistas',
+            summary: '{{unlocked}} de {{total}} desbloqueadas',
+            locked: 'Bloqueada',
+            unlockedOn: 'Desbloqueada em {{date}}'
+        },
         firstPen: {
             name: 'Primeiro curral',
             desc: 'Leve seu primeiro rebanho completo ao curral.'

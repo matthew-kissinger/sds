@@ -98,6 +98,13 @@ const GLYPHS = {
   ),
 
   // destinations / modes
+  // [P3-ACHIEVE-UI] rosette mark for the achievements list entry point.
+  award: (
+    <>
+      <circle cx="12" cy="9.3" r="4.6" />
+      <path d="M9.6 13.2 8.2 19.8l3.8-2.1 3.8 2.1-1.4-6.6" />
+    </>
+  ),
   trophy: (
     <>
       <path d="M8 5h8v3a4 4 0 0 1-8 0V5z" />

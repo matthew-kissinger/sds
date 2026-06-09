@@ -29,6 +29,7 @@ import type { BootFlow } from './useBootFlow';
 
 export interface EntranceNav {
   onLeaderboard: () => void;
+  onAchievements: () => void;
   onSettings: () => void;
   onSandbox: () => void;
   onLocal: () => void;
@@ -71,6 +72,7 @@ function CornerNav({ nav }: { nav: EntranceNav }) {
   return (
     <div style={{ position: 'relative', display: 'flex', gap: 10 }}>
       <button style={btn} title="Leaderboard" aria-label="Leaderboard" onClick={nav.onLeaderboard}><Icon name="trophy" size={18} /></button>
+      <button style={btn} title="Achievements" aria-label="Achievements" onClick={nav.onAchievements}><Icon name="award" size={18} /></button>
       <button style={btn} title="Settings" aria-label="Settings" onClick={nav.onSettings}><Icon name="settings" size={18} /></button>
       <button style={btn} title="About this project" aria-label="About this project" aria-expanded={infoOpen} onClick={() => setInfoOpen((o) => !o)}><Icon name="info" size={18} /></button>
       {infoOpen && (
@@ -196,6 +198,20 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
   const rootRef = useRef<HTMLDivElement>(null);
   useMenuNavigation(rootRef);
 
+  // [P3-ACHIEVE-UNLOCK] Cosmetic badge layer on the dog swap row: dogs the
+  // player has completed a solo round with carry a small gold check. Read
+  // from the achievements progress slice via a lazy import (the achievements
+  // module stays out of the entrance chunk); a load failure just means no
+  // badges. No dog is ever locked - selection is unaffected.
+  const [completedDogs, setCompletedDogs] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    let cancelled = false;
+    import('../../achievements/dogBadges.js')
+      .then((m) => { if (!cancelled) setCompletedDogs(m.getCompletedDogIds()); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   // P11: prefetch the sibling worlds' backdrops during idle so switching is
   // instant (the armed world's backdrop is preloaded with fetchpriority=high in
   // index.html). Best-effort, cancelled if the entrance unmounts first.
@@ -320,7 +336,23 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
             <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
               {flow.dogs.map((d) => (
                 <button key={d.id} onClick={() => { flow.setDog(d.id); setDogOpen(false); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: pastoral.ink }}>
-                  <DogAvatar dog={d} size={44} active={d.id === flow.dog.id} />
+                  <span style={{ position: 'relative', display: 'inline-block', lineHeight: 0 }}>
+                    <DogAvatar dog={d} size={44} active={d.id === flow.dog.id} />
+                    {completedDogs.has(d.id) && (
+                      <span
+                        title={`Completed a solo round with ${d.name}`}
+                        aria-label={`Completed a solo round with ${d.name}`}
+                        data-dog-badge={d.id}
+                        style={{
+                          position: 'absolute', right: -3, bottom: -3, width: 16, height: 16, borderRadius: '50%',
+                          background: pastoral.accentGold, color: pastoral.ink, display: 'grid', placeItems: 'center',
+                          border: `1px solid ${pastoral.glassWarmBorder}`, boxShadow: '0 1px 4px rgba(43,38,32,0.3)',
+                        }}
+                      >
+                        <Icon name="check" size={10} strokeWidth={2.6} />
+                      </span>
+                    )}
+                  </span>
                   <span style={{ fontSize: 11 }}>{d.name.split(' ')[0]}</span>
                 </button>
               ))}

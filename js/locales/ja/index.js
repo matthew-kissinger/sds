@@ -443,6 +443,14 @@ export default {
 
     // [P3-ACHIEVE-DATA] 実績の名前と説明。
     achievements: {
+        // [P3-ACHIEVE-UI] UI: 解除トーストとメニューの一覧。
+        ui: {
+            toastTitle: '実績を解除しました',
+            panelTitle: '実績',
+            summary: '{{total}}件中{{unlocked}}件解除',
+            locked: '未解除',
+            unlockedOn: '{{date}}に解除'
+        },
         firstPen: {
             name: 'はじめての囲い込み',
             desc: '初めて群れ全体を囲いに入れる。'

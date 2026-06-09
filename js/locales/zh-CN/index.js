@@ -443,6 +443,14 @@ export default {
 
     // [P3-ACHIEVE-DATA] 成就名称与描述。
     achievements: {
+        // [P3-ACHIEVE-UI] 界面：解锁提示与菜单列表。
+        ui: {
+            toastTitle: '成就已解锁',
+            panelTitle: '成就',
+            summary: '已解锁 {{unlocked}}/{{total}}',
+            locked: '未解锁',
+            unlockedOn: '解锁于 {{date}}'
+        },
         firstPen: {
             name: '第一栏',
             desc: '把你的第一群羊全部赶进羊圈。'
