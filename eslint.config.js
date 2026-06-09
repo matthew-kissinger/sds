@@ -1,22 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * ESLint flat config — only enforces the deterministic-sim boundary
- * (Cycle 28 Stream B5). The full codebase has not opted into linting;
- * this config scopes a single rule (`no-restricted-imports`) to
- * `shared/**` so the deterministic-sim kernel can't accidentally take
- * a dependency on Three.js, the DOM, or the renderer-side `js/`.
+ * ESLint flat config with two scopes:
  *
- * Why scoped: `shared/` runs identically on the Cloudflare Worker (V8
- * isolate, no DOM) and the client (V8 with DOM, Three.js loaded). Any
- * import that pulls in DOM-only code desyncs the two builds — an
- * MP-breaking class of bug that historically only surfaced under load.
+ * 1. `shared/**` (Cycle 28 Stream B5): enforces the deterministic-sim
+ *    boundary. `no-restricted-imports` keeps the kernel free of
+ *    Three.js / DOM / renderer-side `js/` dependencies, and `no-undef`
+ *    (with a deliberately DOM-free globals map) flags browser-only
+ *    access. `shared/` runs identically on the Cloudflare Worker (V8
+ *    isolate, no DOM) and the client; any import that pulls in DOM-only
+ *    code desyncs the two builds — an MP-breaking class of bug that
+ *    historically only surfaced under load. Do not weaken this block.
  *
- * Run: `npx eslint shared/` (CI gate; the npm `lint` script wraps it).
+ * 2. `js/**` (hardening P0-LINT): a permissive correctness pass for the
+ *    renderer-side client code. The hard requirement is that unused
+ *    imports/vars fail lint (`no-unused-vars`), plus two cheap
+ *    correctness rules (`no-dupe-keys`, `no-unreachable`). `no-undef`
+ *    is intentionally NOT enabled for `js/` — it would require a giant
+ *    browser-globals list for no correctness payoff. Scope is
+ *    `js/**\/*.js` only: the repo's `.ts` / `.tsx` files under `js/`
+ *    need @typescript-eslint to parse, which is not installed; TS
+ *    coverage is deferred to the typecheck task (P0-TYPE).
  *
- * The rule is intentionally narrow — it does NOT enforce style, format,
- * or semantic JS rules across the full codebase. If a future cycle
- * wants project-wide linting, that's a deliberate scope expansion.
+ * Run: `npx eslint shared/ js/` (the npm `lint` script wraps it).
  */
 
 export default [
@@ -101,6 +107,31 @@ export default [
             // `window` / `document` / etc. are excluded from the globals
             // map above, so `no-undef` flags any DOM-only access.
             'no-undef': 'error',
+        },
+    },
+    {
+        // Renderer-side client code (hardening P0-LINT). Permissive on
+        // purpose: unused imports/vars are the hard gate, plus two cheap
+        // correctness rules. No `no-undef` (browser globals), no style
+        // rules. `.ts` / `.tsx` under js/ are excluded — they need
+        // @typescript-eslint, which is not installed (see P0-TYPE).
+        files: ['js/**/*.js'],
+        // App.js is owned by the P0-CRASH task right now and carries
+        // pre-existing unused-var violations; re-include it once that
+        // task lands and the violations are cleaned up there.
+        ignores: ['js/components/App.js'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+        },
+        rules: {
+            'no-unused-vars': ['error', {
+                argsIgnorePattern: '^_',
+                varsIgnorePattern: '^_',
+                caughtErrors: 'none',
+            }],
+            'no-dupe-keys': 'error',
+            'no-unreachable': 'error',
         },
     },
 ];

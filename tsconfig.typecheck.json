@@ -1,0 +1,16 @@
+{
+  // CI typecheck entry point (npm run typecheck). Scope notes:
+  // - js/ and shared/ are the checked surface: all .ts/.tsx files plus any
+  //   .js file that opts in with a // @ts-check pragma (checkJs stays false
+  //   globally in the base config).
+  // - worker/ is excluded: it has its own wrangler toolchain and tsconfig,
+  //   and its Cloudflare ambient types (D1Database, DurableObjectState, ...)
+  //   are not installed at the repo root.
+  // - tests/ is excluded: tests/worker and tests/integration transitively
+  //   import worker/src (re-leaking the worker errors above), and several
+  //   suites carry pre-existing type errors. Widening the gate to tests/ is
+  //   a follow-up hardening task, not part of establishing the gate.
+  "extends": "./tsconfig.json",
+  "include": ["js", "shared"],
+  "exclude": ["node_modules", "dist", "worker", "examples", "tests"]
+}

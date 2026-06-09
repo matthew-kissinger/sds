@@ -11,8 +11,6 @@
  * Uses line segment collision with configurable thickness
  */
 
-import { Vector2D } from './Vector2D.js';
-
 export class FenceCollisionSystem {
     constructor() {
         // All fence segments for collision
@@ -89,7 +87,6 @@ export class FenceCollisionSystem {
 
         // Find which edge the gate is on
         let gateEdgeIndex = -1;
-        let gateEdgeT = 0;
 
         for (let i = 0; i < points.length; i++) {
             const start = points[i];
@@ -101,7 +98,6 @@ export class FenceCollisionSystem {
 
             if (dist < 5) {
                 gateEdgeIndex = i;
-                gateEdgeT = closest.t;
                 break;
             }
         }
@@ -489,7 +485,7 @@ export class FenceCollisionSystem {
      * Find closest point on a line segment to a position
      */
     closestPointOnSegment(x, z, segment) {
-        const { start, end, dx, dz, length } = segment;
+        const { start, dx, dz, length } = segment;
 
         if (length === 0) {
             return { x: start.x, z: start.z };
@@ -585,7 +581,7 @@ export class FenceCollisionSystem {
      * Check if moving from one position to another would cross a fence
      * @returns {Object|null} - Intersection point or null
      */
-    checkMovementCollision(fromX, fromZ, toX, toZ, radius = 1) {
+    checkMovementCollision(fromX, fromZ, toX, toZ, _radius = 1) {
         const nearbySegments = this.getNearbySegments((fromX + toX) / 2, (fromZ + toZ) / 2);
 
         for (const segment of nearbySegments) {

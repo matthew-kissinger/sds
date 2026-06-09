@@ -3,7 +3,7 @@
 import { Vector2 as ThreeVector2 } from 'three';
 
 export function createKonveyorTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }, treeBranch = {}) {
-  const { clamp, float, length, mix, normalize, positionLocal, positionView, positionWorld, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
+  const { clamp, float, length, mix, normalize, positionLocal, positionView, positionWorld, sin, smoothstep, time, uniform, vec3 } = TSL;
   const linearColor = (color) => color.map((value) => (
     value <= 0.04045
       ? value / 12.92

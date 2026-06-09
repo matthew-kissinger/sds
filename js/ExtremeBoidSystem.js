@@ -276,7 +276,7 @@ export class ExtremeBoidSystem {
      * Update all boids - calculates flocking forces
      * Call this once per frame before individual sheep updates
      */
-    update(sheep, deltaTime) {
+    update(sheep, _deltaTime) {
         if (!this.enabled || !this.bounds) return;
 
         // Sheep count can change on restart or tuning; keep buffers in sync.

@@ -4,7 +4,7 @@
  * RoomCreation Component
  * Create a new multiplayer room with settings
  */
-import React, { createElement, useState, useMemo } from 'react';
+import { createElement, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';

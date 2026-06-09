@@ -174,7 +174,6 @@ export class Atmosphere {
    */
   applyPreset(name) {
     if (!isKnownPreset(name)) {
-      // eslint-disable-next-line no-console
       console.warn(`Atmosphere: unknown preset '${name}'; ignoring.`);
       return false;
     }

@@ -10,10 +10,7 @@ import { getCoastlineField, sampleSignedDistance } from '../shared/CoastlineFiel
 import { createGrassComputeCull } from './world/grassComputeCull.js';
 import { getKonveyorWebGpuModules } from './world/konveyorWebGpuModules.js';
 
-// Shader cache for sync access after async load
-let grassDesktopVertexShader = null;
-let grassMobileVertexShader = null;
-let grassFragmentShader = null;
+// Preload guard for the grass shader fetch below
 let grassShadersLoaded = false;
 
 // Cycle 20 Phase 2 v3 (2026-05-04): minimum displaced-terrain Y under which
@@ -57,7 +54,7 @@ export async function preloadGrassShaders(config = {}) {
     };
 
     try {
-        [grassDesktopVertexShader, grassMobileVertexShader, grassFragmentShader] = await Promise.all([
+        await Promise.all([
             loadShaderWithReplacements('./js/shaders/grass/desktop-vertex.glsl', replacements),
             loadShaderWithReplacements('./js/shaders/grass/mobile-vertex.glsl', replacements),
             loadShaderWithReplacements('./js/shaders/grass/fragment.glsl', replacements)
@@ -452,10 +449,8 @@ export class GrassSystem {
 
         // Each blade is a simple quad (4 vertices, 2 triangles) - more reliable
         const verticesPerBlade = 4;
-        const trianglesPerBlade = 2;
 
         const totalVertices = bladesPerClump * verticesPerBlade;
-        const totalIndices = bladesPerClump * trianglesPerBlade * 3 * 2; // *2 for double-sided
 
         const positions = new Float32Array(totalVertices * 3);
         const uvs = new Float32Array(totalVertices * 2);
@@ -2087,7 +2082,7 @@ export class GrassSystem {
      * Cleanup
      */
     dispose() {
-        for (const [key, chunk] of this.chunks) {
+        for (const [, chunk] of this.chunks) {
             this.scene.remove(chunk.mesh);
             // Cycle 51: meadow-quad chunks now own a per-chunk displaced
             // geometry (each conforms to the terrain), so dispose them

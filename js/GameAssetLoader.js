@@ -294,8 +294,7 @@ export class GameAssetLoader {
     reportAssetLoaded(assetPath, isCritical) {
         const priority = isCritical ? 'critical' : 'deferred';
         const totalLoaded = this.loadedAssets.size;
-        const totalAssets = this.criticalAssets.length + this.deferredAssets.length;
-        
+
         // Performance tracking for SEO
         performance.mark(`asset-loaded-${priority}-${totalLoaded}`);
         

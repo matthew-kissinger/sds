@@ -18,12 +18,10 @@ import { PerformanceMonitor } from './PerformanceMonitor.js';
 import { MenuController } from './MenuController.js';
 import { AudioManager } from './AudioManager.js';
 import { GameAssetLoader } from './GameAssetLoader.js';
-import { NetworkManager } from './NetworkManager.js';
 import { MultiplayerState } from './MultiplayerState.js';
 import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
-import { Heightfield } from '../shared/terrain/Heightfield.js';
 import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
 import { applyBarkImpulse, DEFAULT_BARK_CONFIG } from '../shared/BarkImpulse.js';
 import { Atmosphere } from './atmosphere/index.js';
@@ -33,7 +31,6 @@ import { updateSceneMetadata } from './utils/seo.js';
 // Keeps ~860 LoC out of the main bundle for the 99% of users who never use it.
 import { captureFramebufferSample, isProbeEnabled, log as probeLog, drainGlErrors } from './diagnostics/glProbe.js';
 import { isCinematicMode, isUiHidden, getRequestedSun } from './cinematic-url.js';
-import { resolveAssetUrl } from './utils/assetUrl.js';
 import { startReplay as runStartReplay, stopReplay as runStopReplay } from './utils/replay.js';
 import { WebVitalsMonitor } from './boot/WebVitalsMonitor.js';
 import { installStressTestHarness, installMpProbe } from './boot/debugProbes.js';
@@ -2756,7 +2753,7 @@ class SheepDogSimulation {
             // elongated body footprint). Pooled per-remote-dog wrappers.
             if (this.otherPlayers) {
                 let dogIdx = 0;
-                for (const [playerId, remoteDog] of this.otherPlayers) {
+                for (const [, remoteDog] of this.otherPlayers) {
                     if (remoteDog && remoteDog.mesh) {
                         let slot = this._grassDogSlotPool[dogIdx];
                         if (!slot) {
@@ -3199,7 +3196,7 @@ class SheepDogSimulation {
         }
 
         // Update sheep behaviors - pass both dogs for combined scaring
-        const sheepState = this.gameState.updateSheepBehaviors(deltaTime);
+        this.gameState.updateSheepBehaviors(deltaTime);
 
         // Make sheep react to both dogs
         const sheep = this.gameState.getSheep();

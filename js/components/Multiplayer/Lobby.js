@@ -4,7 +4,7 @@
  * Lobby Component
  * Waiting room before game starts
  */
-import React, { createElement, useState } from 'react';
+import { createElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
@@ -52,7 +52,6 @@ export function Lobby({ roomCode, players, maxPlayers, isHost, gameMode, modeLoc
         }
     };
 
-    const isPublicRoom = gameMode !== undefined; // only set for rooms with cycling info
 
     return createElement('div', {
         style: {

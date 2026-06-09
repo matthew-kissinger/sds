@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2D } from './Vector2D.js';
-import { FIELD_SIZES, FIELD_SHAPES, GATE_DEFAULTS, PASTURE_DEFAULTS } from './FieldConfig.js';
+import { FIELD_SIZES, FIELD_SHAPES } from './FieldConfig.js';
 import { pointToSegmentDistance, isPointInPolygon } from './gamestate/polygonSpawn.js';
 import LZString from 'lz-string';
 

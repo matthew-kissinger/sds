@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-import { Vector2D } from './Vector2D.js';
 
 /**
  * LocalMultiplayerManager - Manages local 2-player game state

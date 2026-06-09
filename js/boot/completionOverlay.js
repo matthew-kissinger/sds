@@ -24,7 +24,6 @@ const PASTORAL_SCRIM = 'rgba(40, 28, 18, 0.72)'; // warm scrim, full-screen cove
 const PASTORAL_CREAM = '#f7f1e6'; // warm off-white text on the dark scrim
 const PASTORAL_CREAM_SOFT = 'rgba(247, 241, 230, 0.55)'; // muted secondary text
 const PASTORAL_GLASS_BORDER = 'rgba(255, 244, 224, 0.22)'; // warm hairline
-const PASTORAL_MEADOW = '#5e9e6e'; // warmed meadow green, primary action
 const PASTORAL_GOLD = '#e0a458'; // low-sun gold, runner-up / tie
 const PASTORAL_DUSK = '#d99a8f'; // dusty rose, the second-player accent
 // Warm cream card backgrounds, low-opacity over the scrim (replaces the

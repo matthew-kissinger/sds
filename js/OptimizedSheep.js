@@ -6,7 +6,7 @@ import { Vector2D } from './Vector2D.js';
 import { Boid } from './Boid.js';
 import { loadShader } from './shaders/ShaderLoader.js';
 import { getGameState, getNetworkManager } from './GameBridge.js';
-import { FieldConfig, GATE_DEFAULTS } from './FieldConfig.js';
+import { FieldConfig } from './FieldConfig.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
@@ -2491,7 +2491,7 @@ export class OptimizedSheepInstance extends Boid {
      * @param {number} margin - Boundary margin
      * @returns {Object} - Pasture bounds {minX, maxX, minZ, maxZ}
      */
-    getAssignedPastureBounds(margin = 0.2) {
+    getAssignedPastureBounds(_margin = 0.2) {
         // Try to get competitive gates from global game instance
         const competitiveGates = this.getCompetitiveGates();
         

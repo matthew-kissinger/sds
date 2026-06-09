@@ -847,7 +847,7 @@ export class StructureBuilder {
         const group = new THREE.Group();
         group.name = 'CustomFences';
 
-        fenceSegments.forEach((segment, index) => {
+        fenceSegments.forEach((segment) => {
             const { start, end, type } = segment;
 
             // Calculate fence properties
@@ -921,7 +921,7 @@ export class StructureBuilder {
     /**
      * Create visual marker for competitive gate
      */
-    createCompetitiveGateMarker(gate) {
+    createCompetitiveGateMarker(_gate) {
         // No additional markers needed - gates have their own visual identity
         // Player colors are already shown on the gate structures themselves
     }
@@ -1019,7 +1019,7 @@ export class StructureBuilder {
     /**
      * Update structures (for animations, etc)
      */
-    update(deltaTime) {
+    update(_deltaTime) {
         // Animate flags waving
         this.structures.decorations.forEach(decoration => {
             decoration.traverse(child => {

@@ -394,7 +394,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
         }
 
         if (mode === 'racing') {
-            const isWinner = data.isWinner;
+            const isWinner = data.isWinner === true;
             return {
                 title: isWinner ? t('completion.victory') : t('completion.raceComplete'),
                 subtitle: isWinner ? t('completion.youWon') : t('completion.playerWon', { name: data.winnerName || 'Another player' }),
@@ -411,7 +411,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
         }
 
         if (mode === 'timed') {
-            const isWinner = data.isWinner;
+            const isWinner = data.isWinner === true;
             return {
                 title: isWinner ? t('completion.timesUpVictory') : t('completion.timesUp'),
                 subtitle: isWinner ? t('completion.youCollectedMost') : t('completion.playerCollectedMost', { name: data.winnerName || 'Another player' }),

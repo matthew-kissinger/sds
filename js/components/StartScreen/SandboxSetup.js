@@ -4,11 +4,11 @@
  * SandboxSetup Component
  * Configuration interface for sandbox/creative mode
  */
-import React, { createElement, useState, useEffect, useCallback } from 'react';
+import { createElement, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
-import { Button, BackButton } from '../ui/Button.js';
+import { Button } from '../ui/Button.js';
 import { FIELD_SIZES as FIELD_SIZE_BOUNDS, FIELD_SHAPES } from '../../FieldConfig.js';
 import { SandboxConfig } from '../../SandboxConfig.js';
 
@@ -124,7 +124,7 @@ function SectionHeader({ children }) {
 
 export function SandboxSetup({ config, onConfigChange, onStartGame, onEditFences, onBack }) {
     const { t } = useTranslation();
-    const { isCompact, isLandscapeMobile } = useResponsive();
+    const { isCompact } = useResponsive();
     const [activeTab, setActiveTab] = useState('sheep');
     const [shareToast, setShareToast] = useState(null);
 

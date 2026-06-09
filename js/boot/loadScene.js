@@ -177,7 +177,7 @@ export async function disposeScene(game) {
     // 9. Sun billboard.
     try { game._sunBillboard?.dispose?.(); } catch (err) { console.warn('[SWAP] sunBillboard:', err); }
     game._sunBillboard = null;
-    if (driftLog) baseSnap = step('sunBillboard', baseSnap);
+    if (driftLog) step('sunBillboard', baseSnap);
 
     // 10. GameState scene-coupled fields. Don't call gameState.reset() —
     //     that resets gameMode/competitiveGates which restartToMenu wants

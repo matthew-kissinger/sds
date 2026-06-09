@@ -162,7 +162,7 @@ export const FIELD_SHAPES = {
         label: 'Hexagon',
         description: '6-sided field (flat top)',
         icon: '⬡',
-        getBorderPoints: (bounds, originalBounds = null) => {
+        getBorderPoints: (bounds, _originalBounds = null) => {
             const centerX = (bounds.minX + bounds.maxX) / 2;
             const centerZ = (bounds.minZ + bounds.maxZ) / 2;
             // Use half the width as radius (width = 2*radius for hexagon after modifyBounds)

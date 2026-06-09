@@ -917,8 +917,6 @@ export class Sheepdog {
      * Accepts either legacy `bounds` rect or new discriminated `Boundary`.
      */
     applyBoundaryConstraints(boundsOrBoundary) {
-        let hitBoundary = false;
-
         // Coastline branch (Cycle 64) — clamp inside the shore along the SDF
         // gradient + zero the outward velocity component, mirroring the island
         // clamp. Uses the same field the sim steers on.
@@ -949,9 +947,7 @@ export class Sheepdog {
                     if (vDotIn < 0) {
                         this.velocity.x -= vDotIn * nx;
                         this.velocity.z -= vDotIn * nz;
-                    }
-                    hitBoundary = true;
-                }
+                    }                }
             }
             return;
         }
@@ -974,9 +970,7 @@ export class Sheepdog {
                 if (vDotN > 0) {
                     this.velocity.x -= vDotN * nx;
                     this.velocity.z -= vDotN * nz;
-                }
-                hitBoundary = true;
-            }
+                }            }
             return;
         }
 
@@ -984,24 +978,16 @@ export class Sheepdog {
         const bounds = boundsOrBoundary;
         if (this.position.x < bounds.minX) {
             this.position.x = bounds.minX;
-            this.velocity.x = Math.max(0, this.velocity.x);
-            hitBoundary = true;
-        }
+            this.velocity.x = Math.max(0, this.velocity.x);        }
         if (this.position.x > bounds.maxX) {
             this.position.x = bounds.maxX;
-            this.velocity.x = Math.min(0, this.velocity.x);
-            hitBoundary = true;
-        }
+            this.velocity.x = Math.min(0, this.velocity.x);        }
         if (this.position.z < bounds.minZ) {
             this.position.z = bounds.minZ;
-            this.velocity.z = Math.max(0, this.velocity.z);
-            hitBoundary = true;
-        }
+            this.velocity.z = Math.max(0, this.velocity.z);        }
         if (this.position.z > bounds.maxZ) {
             this.position.z = bounds.maxZ;
-            this.velocity.z = Math.min(0, this.velocity.z);
-            hitBoundary = true;
-        }
+            this.velocity.z = Math.min(0, this.velocity.z);        }
     }
     
     /**

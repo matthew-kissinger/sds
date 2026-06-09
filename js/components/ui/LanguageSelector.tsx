@@ -14,7 +14,7 @@
  * to lucide) so the glyphs render byte-identically. Behavior is identical to
  * the previous LanguageSelector.js.
  */
-import { useState, useRef, useEffect, type CSSProperties } from 'react';
+import { useState, useRef, useEffect, type CSSProperties, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES } from '../../i18n.js';
 import { useResponsive } from '../hooks/usePlatform.js';
@@ -73,8 +73,8 @@ export function LanguageSelector({ variant = 'icon', className = '' }: LanguageS
 
     // Close dropdown when clicking outside
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        const handleClickOutside = (event: Event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         };
@@ -90,7 +90,7 @@ export function LanguageSelector({ variant = 'icon', className = '' }: LanguageS
         };
     }, [isOpen]);
 
-    const handleLanguageChange = (langCode) => {
+    const handleLanguageChange = (langCode: string) => {
         if (langCode !== i18n.language) {
             setIsAnimating(true);
             i18n.changeLanguage(langCode);
@@ -99,7 +99,7 @@ export function LanguageSelector({ variant = 'icon', className = '' }: LanguageS
         setIsOpen(false);
     };
 
-    const toggleOpen = (e) => {
+    const toggleOpen = (e: MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         setIsOpen(!isOpen);
     };

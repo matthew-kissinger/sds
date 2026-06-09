@@ -4,7 +4,7 @@
  * FenceEditor Component
  * 2D visual editor for placing fences in sandbox mode
  */
-import React, { createElement, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createElement, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
@@ -80,7 +80,6 @@ function EditorCanvas({ config, onConfigChange, tool, canvasSize, t }) {
         ];
     }, [config.field?.borderPoints, config.field?.customBorderPoints, config.field?.shape, bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ, fieldShape]);
 
-    const customBorderPoints = config.field?.customBorderPoints || null;  // User-drawn shape
 
     // Convert world coordinates to canvas coordinates
     // NOTE: X axis is flipped to match the 3D game camera view

@@ -179,7 +179,7 @@ export class AudioManager {
         
         // Load regular sound files
         Object.keys(soundFiles).forEach(soundKey => {
-            const promise = new Promise((resolve, reject) => {
+            const promise = new Promise((resolve, _reject) => {
                 this.loader.load(
                     soundFiles[soundKey],
                     (buffer) => {
@@ -194,7 +194,7 @@ export class AudioManager {
                         console.log(`Loaded sound: ${soundKey}`);
                         resolve();
                     },
-                    (progress) => {
+                    (_progress) => {
                         // Loading progress
                     },
                     (error) => {
@@ -215,7 +215,7 @@ export class AudioManager {
 
         // Load sheep bleat sounds
         sheepBleatFiles.forEach((filePath, index) => {
-            const promise = new Promise((resolve, reject) => {
+            const promise = new Promise((resolve, _reject) => {
                 this.loader.load(
                     filePath,
                     (buffer) => {
@@ -232,7 +232,7 @@ export class AudioManager {
                         console.log(`Loaded sheep bleat ${index + 1}: ${filePath.split('/').pop()}`);
                         resolve();
                     },
-                    (progress) => {
+                    (_progress) => {
                         // Loading progress
                     },
                     (error) => {
@@ -253,7 +253,7 @@ export class AudioManager {
 
         // Load dog bark sounds
         Object.keys(dogBarkFiles).forEach(dogType => {
-            const promise = new Promise((resolve, reject) => {
+            const promise = new Promise((resolve, _reject) => {
                 this.loader.load(
                     dogBarkFiles[dogType],
                     (buffer) => {
@@ -268,7 +268,7 @@ export class AudioManager {
                         console.log(`Loaded dog bark for ${dogType}: ${dogBarkFiles[dogType].split('/').pop()}`);
                         resolve();
                     },
-                    (progress) => {
+                    (_progress) => {
                         // Loading progress
                     },
                     (error) => {
@@ -315,7 +315,7 @@ export class AudioManager {
         
         // Load each music track
         Object.keys(musicFiles).forEach(musicKey => {
-            const promise = new Promise((resolve, reject) => {
+            const promise = new Promise((resolve, _reject) => {
                 this.loader.load(
                     musicFiles[musicKey],
                     (buffer) => {

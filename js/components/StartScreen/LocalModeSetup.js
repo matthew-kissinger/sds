@@ -5,7 +5,7 @@
  * Setup screen for local 2-player mode
  * Allows selecting game mode (Co-op, 1v1, Endless) and dogs for both players
  */
-import React, { createElement, useState } from 'react';
+import { createElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { PanelTitle } from '../ui/Panel.js';
@@ -106,7 +106,7 @@ function ModeIcon({ type, color, size = 24 }) {
 }
 
 // Player dog selector
-function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, playerColor, t }) {
+function PlayerDogSelector({ playerNumber, selectedDog, onSelect, playerColor, t }) {
     const { isCompact } = useResponsive();
 
     return createElement('div', {
@@ -165,7 +165,7 @@ function PlayerDogSelector({ player, playerNumber, selectedDog, onSelect, player
 
 export function LocalModeSetup({ onStart, onBack }) {
     const { t } = useTranslation();
-    const { isCompact, isLandscapeMobile } = useResponsive();
+    const { isCompact } = useResponsive();
 
     const [selectedMode, setSelectedMode] = useState('coop');
     const [player1Dog, setPlayer1Dog] = useState('jep');

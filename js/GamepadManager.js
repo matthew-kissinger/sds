@@ -1,3 +1,4 @@
+// @ts-check
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2D } from './Vector2D.js';
@@ -10,11 +11,13 @@ export class GamepadManager {
     constructor() {
         this.gamepad = null;
         this.connected = false;
+        /** @type {boolean[]} */
         this.previousButtons = [];
         this.deadzone = 0.15; // Configurable deadzone for analog sticks
         this.triggerThreshold = 0.1; // Threshold for trigger activation
         
         // Button mappings (standard gamepad layout)
+        /** @type {Record<string, number>} */
         this.buttonMap = {
             A: 0,        // A button - Zoom In
             B: 1,        // B button - Zoom Out
@@ -35,6 +38,7 @@ export class GamepadManager {
         };
         
         // Axis mappings
+        /** @type {Record<string, number>} */
         this.axisMap = {
             LEFT_X: 0,      // Left stick horizontal
             LEFT_Y: 1,      // Left stick vertical
@@ -67,6 +71,7 @@ export class GamepadManager {
     
     /**
      * Handle gamepad connection
+     * @param {GamepadEvent} event
      */
     onGamepadConnected(event) {
         this.gamepad = event.gamepad;
@@ -86,6 +91,7 @@ export class GamepadManager {
     
     /**
      * Handle gamepad disconnection
+     * @param {GamepadEvent} event
      */
     onGamepadDisconnected(event) {
         this.connected = false;
@@ -252,6 +258,10 @@ export class GamepadManager {
         return this._deadzonedAxis(this.axisMap.RIGHT_Y, this.axisMap.RIGHT_X);
     }
 
+    /**
+     * @param {number} primaryIndex
+     * @param {number} otherIndex
+     */
     _deadzonedAxis(primaryIndex, otherIndex) {
         if (!this.connected || !this.gamepad) return 0;
         const primary = this.gamepad.axes[primaryIndex] || 0;
@@ -303,6 +313,7 @@ export class GamepadManager {
      * Cycle 60 P4: edge-detect any mapped button by name (press, not hold).
      * Shares the previousButtons array that isPausePressed relies on, so the
      * timing matches the existing pause edge.
+     * @param {string} buttonName
      */
     wasJustPressed(buttonName) {
         if (!this.connected || !this.gamepad) return false;
@@ -315,6 +326,7 @@ export class GamepadManager {
 
     /**
      * Get current button state for debugging
+     * @param {string} buttonName
      */
     getButtonState(buttonName) {
         if (!this.connected || !this.gamepad || !this.buttonMap[buttonName]) {
@@ -326,6 +338,7 @@ export class GamepadManager {
     
     /**
      * Get current axis value for debugging
+     * @param {string} axisName
      */
     getAxisValue(axisName) {
         if (!this.connected || !this.gamepad || this.axisMap[axisName] === undefined) {
@@ -337,6 +350,7 @@ export class GamepadManager {
     
     /**
      * Set deadzone value
+     * @param {number} deadzone
      */
     setDeadzone(deadzone) {
         this.deadzone = Math.max(0, Math.min(1, deadzone));
@@ -345,6 +359,7 @@ export class GamepadManager {
     
     /**
      * Show gamepad connection notification
+     * @param {boolean} connected
      */
     showConnectionNotification(connected) {
         // Remove existing notification

@@ -267,7 +267,7 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }: InGam
             <div style={rowStyle}>
                 <span style={labelStyle}>{t('settings.audioEnabled')}</span>
                 <Toggle
-                    value={settings.audioEnabled}
+                    value={settings.audioEnabled ?? true}
                     onChange={(v) => handleChange('audioEnabled', v)}
                     color="#22c55e"
                 />
@@ -279,7 +279,7 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }: InGam
                     <span style={labelStyle}>{t('settings.audioVolume')}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Slider
-                            value={settings.audioVolume}
+                            value={settings.audioVolume ?? 70}
                             min={0}
                             max={100}
                             step={5}
@@ -299,7 +299,7 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }: InGam
             <div style={rowStyle}>
                 <span style={labelStyle}>{t('settings.showStats')}</span>
                 <Toggle
-                    value={settings.showStats}
+                    value={settings.showStats ?? false}
                     onChange={(v) => handleChange('showStats', v)}
                     color="#f59e0b"
                 />

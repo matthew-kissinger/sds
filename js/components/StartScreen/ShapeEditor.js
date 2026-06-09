@@ -5,7 +5,7 @@
  * Visual editor for drawing custom field boundary shapes
  * Two-step process: 1) Draw shape boundary 2) Select gate position
  */
-import React, { createElement, useState, useEffect, useRef, useCallback } from 'react';
+import { createElement, useState, useEffect, useRef, useCallback } from 'react';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
 import { Button, BackButton } from '../ui/Button.js';
@@ -116,8 +116,6 @@ function ShapeCanvas({ bounds, shapePoints, setShapePoints, canvasSize, step, ga
         gradient.addColorStop(1, '#221d18');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
-
-        const scale = Math.min(canvasSize.width, canvasSize.height) / Math.max(fieldWidth, fieldHeight) * zoom * 0.8;
 
         // Draw grid
         const gridSize = 20;

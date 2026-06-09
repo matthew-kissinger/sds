@@ -178,7 +178,7 @@ async function _populateSurvivalBoard(container, sceneId, partySize = 1) {
  * no exclamation marks, no emoji, numbers carry the weight.
  * @param {{day:number, score:number, onRestart?:Function, sceneId?:string}} info
  */
-export function showSurvivalSummary({ day = 1, score = 0, onRestart, sceneId = 'newsheepdogland', partySize = 1 } = {}) {
+export function showSurvivalSummary({ day = 1, score = 0, onRestart, sceneId = 'newsheepdogland' } = {}) {
     if (_summaryEl) return;
     const el = document.createElement('div');
     el.id = 'sds-survival-summary';

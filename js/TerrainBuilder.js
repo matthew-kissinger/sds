@@ -4,12 +4,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { InstancedMesh2 } from '@three.ez/instanced-mesh';
-import { loadKilnImpostor } from './kiln-impostor-material.js';
-import { getOccluderUniforms, patchMaterialOccluder } from './shaders/OccluderFadePatch.js';
+import { getOccluderUniforms } from './shaders/OccluderFadePatch.js';
 import { log as probeLog } from './diagnostics/glProbe.js';
 import { getSceneManager } from './GameBridge.js';
-import { TIER_PRESETS } from './HardwareTier.js';
 
 // Phase A Unit B compressed all GLBs with Draco + Meshopt. Every GLTFLoader
 // in the codebase needs both decoders attached or those GLBs fail to parse
@@ -34,8 +31,6 @@ import {
     sumInstancedMeshTriangles,
     sumObjectTreeTriangles
 } from './utils/TriangleCount.js';
-import { generateTrees } from '../shared/TreePlacement.js';
-import { mulberry32 } from '../shared/Random.js';
 import { placeEnvironmentDetails } from './world/RockPlacement.js';
 import { placeTrees, bakeTreeImpostor, createCrossBillboardGeometry } from './world/TreePlacement.js';
 import {
@@ -1530,7 +1525,7 @@ export class TerrainBuilder {
      * Simple grass LOD - just hide some instances at distance, no complex matrix manipulation
      * @param {THREE.Vector3} playerPosition - Current player position
      */
-    updateSimpleGrassLOD(playerPosition) {
+    updateSimpleGrassLOD(_playerPosition) {
         // On mobile, optionally reduce visible grass at distance
         // This is much simpler than before - just basic visibility toggling
         if (this.isMobile && this.grassInstancedMesh) {

@@ -129,7 +129,7 @@ export class FencePresets {
      * @param {Object} options - Additional options
      * @returns {THREE.Group} - Border fence group
      */
-    createBorderSegment(length, orientation = 'horizontal', options = {}) {
+    createBorderSegment(length, orientation = 'horizontal', _options = {}) {
         const group = new THREE.Group();
 
         // Use GLB posts and rails if available (builds fence from components)
