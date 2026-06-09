@@ -192,21 +192,48 @@ Evidence (2026-06-09):
 ## [P4-CHAOS] DO-eviction chaos test
 
 - **Owner hint:** qa/backend agent
-- **Status:** pending
+- **Status:** complete (2026-06-09)
 - **Deps:** P4-LOADTEST
+- **Files:** `tools/loadtest/chaos.mjs` (new; node tool, not vitest), `tools/loadtest/chaos-results-2026-06-09.json` (canonical run, 30/30 checks PASS)
 
 Acceptance:
 
-- [ ] When random DOs are evicted mid-game, then reconnect grace and survival-progress resume shall behave per spec.
+- [x] When random DOs are evicted mid-game, then reconnect grace and survival-progress resume shall behave per spec.
+
+Evidence (2026-06-09):
+
+- Harness: `node tools/loadtest/chaos.mjs` builds on the P4-LOADTEST wire path (same REST/WS handshake, protocolVersion 3, same NetworkManager apply rules + canonical sha1 per-tick desync hashing) and runs 10 rooms: 5 cooperative/field at 200 sheep, 5 survival/newsheepdogland, 22 clients total (C4 is a full 4-player room). Survival day advancement uses the env-gated `__testAdvanceSurvival` seam (`--var INTEGRATION_TEST:1`). Two harness bugs were found and fixed during review/run 1 before the canonical run: (1) the post-restart `startGame` was sent by the original host identity in every room, but C3's host authority had migrated to the guest and the re-pinned `hostPersistentId` persisted, so the message was silently ignored and the run would hang - the fix sends C3's `startGame` from the migrated identity and turns the original-host refusal into an explicit probe; (2) wrangler dev ANSI-colorizes `console.warn`/`console.error` lines (the reset code lands after the closing brace), so the log parser inherited from loadtest.mjs silently dropped every warn/error-level event - run 1 failed only its `do_evicted_midgame` check with 232 unparsed lines; the fixed parser strips escapes and bounds the JSON slice (run 2: rawUnparsed 0).
+- Scenario A (drop + reconnect within the 15s grace, C0/C1/S0 guests + the C2 HOST): 4/4 `disconnect_grace_started`, 4/4 `reconnect_within_grace` (elapsed 5,004-5,013 ms), keyframe-on-bind received on every rebind, ticks advanced after every reconnect, 0 evictions, and the C2 host reconnect did NOT migrate the host. Note: the harness reuses the join-time WS admission ticket, which is verifiable-many-times with a 120s TTL - a production client reconnecting later than that needs a fresh REST join (new sessionId; the grace'd session then times out and the persistent-identity pin reclaims host on rejoin).
+- Scenario B (drop past grace, C3 HOST + S1 guest, no reconnect): both evicted with `player_evicted` reason `grace_timeout` (the only 2 evictions all run); `host_migration` fired exactly once mid-experiment (C3 -> guest, who received `hostChanged` with `isHost: true`); the C3 game continued for the surviving client (tick 332 at drop -> 987); the S1 host saw `playerLeft`; the evicted host's REST re-join mid-game was refused 409 ("Room is not accepting new players"). Pre-restart: 0 desyncs across all 10 rooms (12,162 shared ticks hash-compared), 0 decode errors.
+- Scenario C (DO memory loss): workerd killed mid-game with all 10 rooms live and sockets held, then restarted; local DO storage (`worker/.wrangler/state/v3/do`, wiped before the run for hermeticity) survives, the in-memory sim dies - the same constructor-rehydration path production takes on eviction/redeploy, only the trigger differs. All 10 rooms logged `do_evicted_midgame` on first touch; every 2-player room accepted both original-identity rejoins (new sessionIds) into state `waiting`; the rejoined pinned-host identity passed the `startGame` gate in 8 rooms, and C3 proved the pin migrates AND persists: the pre-migration host's `startGame` was refused, the migrated identity's passed. Post-restart 20s play: 0 desyncs (7,185 shared ticks), 0 decode errors, ticks advancing in all 9 rejoined rooms. 0 unexpected worker exits (no crash loop), `tick_error` 0, `sim_init_failed` 0. Runtime 66.3s.
+- Survival-resume story (observed, and it matches the documented Cycle 68 P4 contract - BACKLOG "P4 persist the multi-day run across DO eviction", commit `ba86297`, plan acceptance "When a survival run is interrupted by a worker restart, the run shall resume from DO storage rather than reset"): what SURVIVES an eviction is the day-granularity checkpoint `{day, flock, peak}` written on each surviving dawn, plus room meta, the players map, and the `hostPersistentId` pin. What DIES with the in-memory sim: the in-flight day (within-day clock restarts at the scene's initialT, phase morning), wolf positions, sheep positions, and any progress since the last dawn; the room snaps to `waiting` and the host must start again. Measured: S0-S3 were advanced past one dawn pre-kill (checkpoint day 2 / flock 16 / peak 16) and resumed at exactly day 2 / flock 16 / peak 16 / phase morning, with `survival_initialized resumed:true` logged for all four; S4 (still day 1, no dawn reached, nothing persisted) restarted fresh at day 1 / flock 10 - an honest edge: a run that never survives a dawn has no checkpoint by design.
+- Phantom-player lockout (observed contract, recorded - no worker fix attempted per task scope): pre-eviction player entries persist in the players map, so rejoined 2-player rooms report playerCount 4 (2 phantoms + 2 rejoins; 3 where one player was grace-evicted pre-kill) and a FULL 4-player room (C4) rehydrates full and refuses every rejoin with 409 room-full. Locally C4 self-healed ~60s after creation: its still-pending idle-room alarm woke the DO (`do_evicted_midgame` then `room_idle_cleanup`) and tore the room down - but a room older than 60s at eviction has already consumed its alarm and stays phantom-locked indefinitely. Production impact: a full room cannot be resumed after a DO eviction; players make a new room. Pre-launch severity judged low (eviction mid-game is rare, the failure is a clean 409, and non-full rooms resume fine), but it is the first candidate if resume-after-eviction UX ever matters.
+- Honest disclosure for the P4-LOADTEST evidence above: the loadtest's parser had the same warn/error ANSI blind spot, so its "0 `tick_overrun` and 0 `tick_health_degraded` lines" and "0 `tick_error`/`ws_broadcast_failed`" claims were vacuous (those levels were unparseable, not absent). Its client-side signals - 0 desyncs, 0 baseTick gaps, 0 decode errors, 0 eviction closes, egress and wire-tick rates - are measured at the client and stand unaffected. With the fixed parser this chaos run observed `tick_overrun` 87 and `tick_health_degraded` 61, all clustered in the survival day-jump window (19 concurrent sims + clock jumps on one contended box; the wire ticks kept advancing and 0 desyncs resulted) - consistent with the already-documented local timer-clamp caveat, and weak evidence either way for production, exactly as the loadtest caveat says. `ws_broadcast_failed` 41 all occurred AFTER the final check, during the harness's own parallel-leave teardown ("Can't call WebSocket send() after close()" on `playerLeft` broadcasts racing socket close); 0 mid-game. Worker-side cosmetic bug noticed, not fixed (out of scope): `host_migration`'s `reclaimedByOriginal` log field is computed after `hostPersistentId` is re-pinned, so it always logs `true`.
+- LOCAL-RUNTIME CAVEAT (same as P4-LOADTEST): local miniflare/workerd is not Cloudflare's distributed runtime. What IS valid here: the grace/eviction/migration state machines, rehydration from persisted DO storage, survival-progress resume, identity-pinned host authority, and desync verdicts across reconnects and the restart.
+- Validation: `npm run lint` green, `npm test` green (1428 passed, 8 skipped; the tool is not collected by vitest). Ports 8799/8787 verified free and no workerd/wrangler processes after the runs.
 
 ---
 
 ## Gate (launch gate)
 
-- [ ] `npm test` green
-- [ ] `npm run build` green
-- [ ] Controls/recovery/update UX are complete
-- [ ] The repo is clean
-- [ ] The backend has survived load + chaos validation
+- [x] `npm test` green
+- [x] `npm run build` green
+- [x] Controls/recovery/update UX are complete
+- [x] The repo is clean
+- [x] The backend has survived load + chaos validation
 
-Gate result: (record date, commit, and evidence here)
+Gate result: PASSED 2026-06-09 (launch gate). npm test 1428 passed / 8
+skipped, lint and typecheck clean, build green, per-chunk bundle budgets
+enforced in CI. Gamepad remap + deadzone, context-loss recovery (WebGL and
+WebGPU device.lost), SW update toast (replacing the hidden-tab
+auto-reload), entrance preload wave (entrance-visible 8,771 to 912 ms at
+20 Mbps). Repo had zero committed root screenshots (spec claim was stale);
+root-anchored ignores added. Load: 100 rooms, 200 clients, 0 desyncs
+across 208,029 compared ticks, 0 evictions. Chaos: 30/30 checks
+(grace reconnect, grace-timeout eviction + host migration, workerd
+restart rehydration); survival resumes from the dawn checkpoint exactly
+per the Cycle 68 contract. Findings for follow-up (diagnosed, not fixed,
+worker ownership): full-room rehydration phantom-player 409 lockout until
+the 60s idle alarm; host_migration.reclaimedByOriginal always logs true;
+the loadtest's zero-overrun log claims were vacuous from ANSI parsing
+(disclosed; client-side measurements stand).
