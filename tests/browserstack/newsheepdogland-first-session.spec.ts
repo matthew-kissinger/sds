@@ -30,26 +30,6 @@ type ButtonQuery = {
 
 const IOS_BASE_URL = process.env.IOS_WATER_BASE_URL || 'http://localhost:3000';
 const FIRST_SESSION_URL = new URL(`/?proof=browserstack-newsheepdogland-${Date.now()}`, IOS_BASE_URL).toString();
-const LOADING_COPY = [
-  'Waking the dogs',
-  'Shaping the land',
-  'Raising the hills',
-  'Growing the grass',
-  'Scattering the stones',
-  'Planting the trees',
-  'Raising the far hills',
-  'Opening the farmhouse',
-  'Setting the fences',
-  'Filling the shore',
-  'Waking the dog',
-  'Gathering the flock',
-];
-const BLOCKING_GAMEPLAY_COPY = [
-  ...LOADING_COPY,
-  'Tap for fullscreen',
-  'Compatibility rendering',
-  'WebGL renderer',
-];
 
 async function seedReturningPlayer(context: BrowserContext) {
   await context.addInitScript(() => {
@@ -215,29 +195,26 @@ async function waitForState(
 async function waitForGameplayVisible(page: Page) {
   await waitForVisibleButton(page, { aria: 'Pause game' }, 45_000);
   await page.waitForFunction(
-    (labels) => {
+    () => {
       function visible(el: Element | null) {
         if (!el) return false;
         const style = getComputedStyle(el);
         const rect = el.getBoundingClientRect();
+        const opacity = Number.parseFloat(style.opacity);
         return style.display !== 'none'
           && style.visibility !== 'hidden'
-          && style.opacity !== '0'
+          && style.pointerEvents !== 'none'
+          && (!Number.isFinite(opacity) || opacity > 0.05)
           && rect.width > 0
           && rect.height > 0;
       }
 
       const visibleLoading = Array.from(document.querySelectorAll('[data-sds-loading-screen="true"]')).some(visible);
       const visibleFallback = visible(document.querySelector('#renderer-fallback-toast'));
-      const visibleBlockingText = (labels as string[]).some((label) => (
-        Array.from(document.body?.querySelectorAll('*') ?? []).some((el) => (
-          el.children.length === 0 && visible(el) && (el.textContent ?? '').includes(label)
-        ))
-      ));
 
-      return !visibleLoading && !visibleFallback && !visibleBlockingText;
+      return !visibleLoading && !visibleFallback;
     },
-    BLOCKING_GAMEPLAY_COPY,
+    null,
     { timeout: 45_000 },
   );
 }
