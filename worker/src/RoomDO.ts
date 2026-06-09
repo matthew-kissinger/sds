@@ -154,6 +154,38 @@ const RATE_CLOSE_FACTOR = 4; // close at 4x the drop threshold (sustained abuse)
 const KEYFRAME_REQUEST_WINDOW_MS = 1000;
 const MAX_KEYFRAME_REQUESTS_PER_WINDOW = 2;
 
+// P2-BACKPRESSURE: slow-client eviction. ws.send() on a saturated socket does
+// not throw - the runtime just grows the connection's internal buffer - so a
+// client that stops reading (dead radio, frozen tab, background-throttled
+// page) turns the 60Hz broadcast loop into unbounded DO memory growth. Two
+// knobs, both exported for the test suite:
+//   - BACKPRESSURE_MAX_BUFFERED_BYTES (256 KB): the per-socket standing
+//     backlog ceiling. A healthy client drains a broadcast frame in
+//     single-digit milliseconds, so a quarter-megabyte backlog is real
+//     saturation, not jitter. Scale check: ~12 full 200-sheep keyframes
+//     (~20.8 kB each, ~200ms of legacy full-frame egress at 60Hz), or about
+//     half of one Chaos (5,000-sheep, ~520 kB) keyframe. The
+//     consecutive-interval requirement below is what keeps a Chaos keyframe
+//     spike from reading as saturation: it drains within a few intervals on
+//     any link that can play that mode at all.
+//   - BACKPRESSURE_EVICT_INTERVALS (250 broadcast intervals at 16ms, ~4s):
+//     consecutive unhealthy intervals (backlog over the ceiling OR send
+//     threw) before eviction. Chosen to sit above transient stalls (mobile
+//     radio handoff, GC pause, brief tab backgrounding: typically 1-2s) and
+//     below the point where a dead socket is worth carrying; one healthy
+//     interval resets the streak.
+// While a socket is over the ceiling its broadcast send is SKIPPED
+// (backpressure relief): piling more frames onto a saturated socket only
+// grows DO-held memory, so skipping bounds per-client buffering at roughly
+// ceiling + one frame regardless of the eviction horizon. Skipping is
+// protocol-safe: a v3 client that misses a delta detects the baseTick gap and
+// recovers via requestKeyframe; a legacy client just gets a fresher full
+// frame on the next healthy interval. The cohort split itself is untouched.
+// Eviction reuses the NORMAL disconnect path (handlePlayerDisconnect), so the
+// 15s reconnect grace and host migration apply exactly as for a network drop.
+export const BACKPRESSURE_MAX_BUFFERED_BYTES = 256 * 1024;
+export const BACKPRESSURE_EVICT_INTERVALS = 250;
+
 // P-SEC-4 (e): idle-room cleanup. A room is created (initRoom) before any socket
 // binds; if nobody ever connects (a create-and-abandon flood) the DO + its
 // persisted row leak. An alarm set at init deletes the room if no WebSocket has
@@ -232,6 +264,13 @@ export class RoomDO {
   // the socket). count past the cap is dropped; the drop is logged once per
   // window so a flood cannot also become a log-spam lever.
   private keyframeRequestWindows = new Map<string, { windowStart: number; count: number }>();
+
+  // P2-BACKPRESSURE: per-player count of consecutive unhealthy broadcast
+  // intervals (standing backlog over BACKPRESSURE_MAX_BUFFERED_BYTES, or
+  // ws.send threw). Reset to absent on any healthy interval, on rebind
+  // (fresh socket, fresh streak), and on leave. At
+  // BACKPRESSURE_EVICT_INTERVALS the client is evicted via evictSlowClient.
+  private sendHealth = new Map<string, number>();
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -696,6 +735,8 @@ export class RoomDO {
     this.socketEverBound = true;
     // P-SEC-4 (c): fresh rate-limit window for this connection.
     this.rateWindows.set(ws, { windowStart: Date.now(), count: 0 });
+    // P2-BACKPRESSURE: a fresh socket starts with a clean send-health streak.
+    this.sendHealth.delete(playerId);
     if (this.cleanupTimeout) {
       clearTimeout(this.cleanupTimeout);
       this.cleanupTimeout = null;
@@ -1072,19 +1113,73 @@ export class RoomDO {
     const deltaPath = this.simulation.getDeltaPathFrame();
     let fullBuf: ArrayBuffer | null = null;   // legacy frames + keyframes
     let deltaBuf: ArrayBuffer | null = null;  // gameStateDelta for the v3 cohort
+    // P2-BACKPRESSURE: evictions are collected during the iteration and run
+    // after it - handlePlayerDisconnect can mutate players/sessions (lobby-
+    // state leave, host migration broadcast) and must not run mid-iteration.
+    let evictions: Array<{ pid: string; ws: WebSocket; buffered: number; sendFailed: boolean }> | null = null;
     for (const [pid, ws] of this.sessions) {
-      try {
-        if (deltaPath?.kind === 'delta' && this.isDeltaCapable(pid)) {
-          if (!deltaBuf) deltaBuf = encodeMsg('gameStateDelta', deltaPath.frame);
-          ws.send(deltaBuf);
-        } else {
-          if (!fullBuf) fullBuf = encodeMsg('gameStateUpdate', state);
-          ws.send(fullBuf);
+      // P2-BACKPRESSURE: standing-backlog check BEFORE the send. Over the
+      // ceiling we skip this client's frame (see the constant block up top)
+      // and count the interval as unhealthy. bufferedAmount is read
+      // defensively: a runtime that doesn't expose it reports 0 and this
+      // clause is inert (send-throw eviction still applies).
+      const rawBuffered = (ws as unknown as { bufferedAmount?: unknown }).bufferedAmount;
+      const buffered = typeof rawBuffered === 'number' ? rawBuffered : 0;
+      let sendFailed = false;
+      if (buffered <= BACKPRESSURE_MAX_BUFFERED_BYTES) {
+        try {
+          if (deltaPath?.kind === 'delta' && this.isDeltaCapable(pid)) {
+            if (!deltaBuf) deltaBuf = encodeMsg('gameStateDelta', deltaPath.frame);
+            ws.send(deltaBuf);
+          } else {
+            if (!fullBuf) fullBuf = encodeMsg('gameStateUpdate', state);
+            ws.send(fullBuf);
+          }
+        } catch (e) {
+          sendFailed = true;
+          log.error('ws_broadcast_failed', { roomCode: this.meta?.roomCode, msgType: 'gameStateUpdate', playerId: pid, error: errStr(e) });
         }
-      } catch (e) {
-        log.error('ws_broadcast_failed', { roomCode: this.meta?.roomCode, msgType: 'gameStateUpdate', playerId: pid, error: errStr(e) });
+      }
+      // P2-BACKPRESSURE: per-client consecutive-unhealthy-interval streak.
+      if (sendFailed || buffered > BACKPRESSURE_MAX_BUFFERED_BYTES) {
+        const streak = (this.sendHealth.get(pid) ?? 0) + 1;
+        this.sendHealth.set(pid, streak);
+        if (streak >= BACKPRESSURE_EVICT_INTERVALS) {
+          (evictions ??= []).push({ pid, ws, buffered, sendFailed });
+        }
+      } else {
+        this.sendHealth.delete(pid);
       }
     }
+    if (evictions) {
+      for (const ev of evictions) this.evictSlowClient(ev.pid, ev.ws, ev.buffered, ev.sendFailed);
+    }
+  }
+
+  // P2-BACKPRESSURE: evict a client whose socket stayed saturated (or whose
+  // sends kept throwing) for BACKPRESSURE_EVICT_INTERVALS consecutive
+  // broadcast intervals. Close code 1013 ("try again later") tells a live
+  // client this was load shedding, not a protocol offence. The disconnect is
+  // then routed through handlePlayerDisconnect - the SAME path a network
+  // close takes - so the 15s reconnect grace and host migration behave
+  // identically to any other drop. (A server-initiated close does not
+  // dispatch our own 'close' listener in workerd, so we route the disconnect
+  // explicitly; if a duplicate close event does arrive, the grace-pending
+  // check in handlePlayerDisconnect absorbs it.)
+  private evictSlowClient(playerId: string, ws: WebSocket, bufferedAmount: number, sendFailed: boolean): void {
+    this.sendHealth.delete(playerId);
+    log.warn('player_evicted', {
+      roomCode: this.meta?.roomCode,
+      playerId,
+      reason: 'backpressure',
+      bufferedAmount,
+      sendFailed,
+      unhealthyIntervals: BACKPRESSURE_EVICT_INTERVALS,
+      maxBufferedBytes: BACKPRESSURE_MAX_BUFFERED_BYTES,
+    });
+    try { ws.close(1013, 'backpressure'); } catch { /* already closed */ }
+    if (this.sessions.get(playerId) === ws) this.sessions.delete(playerId);
+    this.handlePlayerDisconnect(playerId);
   }
 
   // P2-DELTA: a session receives the keyframe/delta cadence iff it declared a
@@ -1139,6 +1234,7 @@ export class RoomDO {
 
     this.players.delete(playerId);
     this.keyframeRequestWindows.delete(playerId); // P2-DELTA: drop the cap window
+    this.sendHealth.delete(playerId); // P2-BACKPRESSURE: drop the streak
     this.meta.lastActivity = Date.now();
 
     if (this.simulation && this.simulation.sheepdogs) {

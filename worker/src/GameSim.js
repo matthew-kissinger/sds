@@ -115,6 +115,56 @@ const DELTA_DEGENERATE_FRACTION = 0.85;
 const TICK_OVERRUN_THRESHOLD_MS = 16;
 const TICK_OVERRUN_LOG_INTERVAL_MS = 5000;
 
+// P2-BACKPRESSURE: tick-variance health. tick_overrun above catches single
+// spikes; this catches sustained degradation, where most ticks are
+// individually near budget but the cadence as a whole has gone ragged (CPU
+// contention on the isolate, a too-heavy room). We keep a rolling window of
+// the last TICK_HEALTH_WINDOW_TICKS inter-tick intervals (300 ticks = 5s at
+// 60Hz) in a preallocated ring buffer; the happy-path cost is one
+// Float64Array slot write + one modulo per tick, zero allocation. Each time
+// the ring completes a full pass (every ~5s of real time) we sort one copy
+// and take the p95: past TICK_HEALTH_P95_BOUND_MS we emit a single
+// `tick_health_degraded` line, rate-limited to one per
+// TICK_HEALTH_LOG_INTERVAL_MS like tick_overrun. Bound rationale: the nominal
+// interval is 16.7ms and a couple of ms of setInterval jitter is normal; p95
+// at 24ms means at least 5% of the last ~5s of ticks ran at 1.44x the budget
+// or worse - a sustained deficit, not noise. Inter-tick interval (not
+// intra-tick duration) is the sampled quantity because Workers freeze the
+// clock during synchronous execution, so an overrunning tick is only visible
+// as the NEXT tick firing late.
+export const TICK_HEALTH_WINDOW_TICKS = 300;
+export const TICK_HEALTH_P95_BOUND_MS = 24;
+const TICK_HEALTH_LOG_INTERVAL_MS = 5000;
+
+// P2-BACKPRESSURE: fixed-size ring of tick-interval samples. push() is the
+// per-tick hot path: one slot write, one counter increment, no allocation.
+// p95() allocates (copy + sort) and is only called when push() reports a
+// completed pass over the ring - once per window, every ~5s of real time.
+// Exported so the threshold logic is unit-testable in isolation.
+export class TickHealthWindow {
+    constructor(size = TICK_HEALTH_WINDOW_TICKS) {
+        this.size = size;
+        this.buf = new Float64Array(size);
+        this.count = 0;
+    }
+
+    // Record one inter-tick interval. Returns true when this sample completed
+    // a full pass over the ring (the caller's cue to evaluate p95).
+    push(ms) {
+        this.buf[this.count % this.size] = ms;
+        this.count++;
+        return this.count % this.size === 0;
+    }
+
+    // Nearest-rank 95th percentile of the samples currently in the ring.
+    p95() {
+        const n = Math.min(this.count, this.size);
+        if (n === 0) return 0;
+        const sorted = Array.from(this.buf.subarray(0, n)).sort((a, b) => a - b);
+        return sorted[Math.min(n - 1, Math.floor(0.95 * n))];
+    }
+}
+
 // P-PERF-2: per-tick allocation reduction.
 //
 // `validateEntityState` (shared/MovementPhysics.js) only ever reads its
@@ -179,6 +229,11 @@ export class GameSimulation {
         // P0-OBS: tick_overrun rate-limit state (see _recordTickHealth).
         this._tickOverrunLastLog = 0;
         this._tickOverrunSuppressed = 0;
+
+        // P2-BACKPRESSURE: rolling tick-interval window + tick_health_degraded
+        // rate-limit state (see _recordTickHealth).
+        this._tickHealthWindow = new TickHealthWindow();
+        this._tickHealthLastLog = 0;
         
         // Determine game mode
         this.isCompetitive = room.gameMode === 'competitive';
@@ -548,6 +603,24 @@ export class GameSimulation {
         const lateMs = this.lastTickTime > 0
             ? (tickStart - this.lastTickTime) - nominalMs
             : 0;
+        // P2-BACKPRESSURE: tick-variance window. Sample the inter-tick
+        // interval (accurate in production, unlike intraMs - see the
+        // TICK_HEALTH_* constant block). The window is only evaluated when
+        // the ring completes a full pass, every ~5s; the per-tick cost here
+        // is one slot write.
+        if (this.lastTickTime > 0 && this._tickHealthWindow.push(tickStart - this.lastTickTime)) {
+            const p95 = this._tickHealthWindow.p95();
+            if (p95 > TICK_HEALTH_P95_BOUND_MS
+                && tickStart - this._tickHealthLastLog >= TICK_HEALTH_LOG_INTERVAL_MS) {
+                log.warn('tick_health_degraded', {
+                    roomCode: this.room?.roomCode,
+                    p95Ms: Math.round(p95 * 100) / 100,
+                    boundMs: TICK_HEALTH_P95_BOUND_MS,
+                    windowTicks: this._tickHealthWindow.size,
+                });
+                this._tickHealthLastLog = tickStart;
+            }
+        }
         if (intraMs <= TICK_OVERRUN_THRESHOLD_MS && lateMs <= TICK_OVERRUN_THRESHOLD_MS) return;
         this._tickOverrunSuppressed++;
         if (tickStart - this._tickOverrunLastLog < TICK_OVERRUN_LOG_INTERVAL_MS) return;

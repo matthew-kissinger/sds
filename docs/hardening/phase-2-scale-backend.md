@@ -95,14 +95,62 @@ Acceptance:
 ## [P2-BACKPRESSURE] DO backpressure + tick-health
 
 - **Owner hint:** backend agent
-- **Status:** pending
+- **Status:** done (2026-06-09, uncommitted on `agent/p2-backpressure`; worktree `../sds-p2-backpressure` because the primary checkout was on a codex branch at dispatch time)
 - **Deps:** P2-DELTA-IMPL (shares the broadcast loop it modifies)
-- **Files:** `worker/src/RoomDO.ts:1077-1092`
+- **Files:** `worker/src/RoomDO.ts` (broadcastGameFrame + evictSlowClient), `worker/src/GameSim.js` (TickHealthWindow + _recordTickHealth), `tests/worker/backpressure.spec.ts`
 
 Acceptance:
 
-- [ ] When a client fails N consecutive broadcasts or its bufferedAmount exceeds a threshold, then it shall be evicted.
-- [ ] When tick duration variance exceeds a bound, then a metric shall fire.
+- [x] When a client fails N consecutive broadcasts or its bufferedAmount exceeds a threshold, then it shall be evicted.
+- [x] When tick duration variance exceeds a bound, then a metric shall fire.
+
+Evidence (2026-06-09):
+
+- Slow-client eviction, both knobs exported from `worker/src/RoomDO.ts`:
+  - `BACKPRESSURE_MAX_BUFFERED_BYTES = 256 KB`. A healthy client drains a
+    broadcast frame in single-digit ms, so a standing quarter-megabyte backlog
+    is saturation, not jitter. Scale: ~12 full 200-sheep keyframes (~20.8 kB
+    each, ~200ms of legacy full-frame egress at 60Hz), about half of one Chaos
+    (5,000-sheep, ~520 kB) keyframe. Read defensively: a runtime without
+    `bufferedAmount` reports 0 and the clause is inert (send-throw eviction
+    still applies).
+  - `BACKPRESSURE_EVICT_INTERVALS = 250` consecutive unhealthy broadcast
+    intervals (~4s at 16ms). Above transient stalls (mobile radio handoff, GC
+    pause, brief tab backgrounding: 1-2s); one healthy interval resets the
+    streak. A Chaos keyframe spike drains within a few intervals on any link
+    that can play the mode, so it never accrues 250.
+  - An unhealthy interval is `ws.send` threw OR standing backlog over the
+    ceiling. While over the ceiling the client's broadcast send is skipped
+    (backpressure relief: bounds DO-held buffering at ~ceiling + one frame;
+    protocol-safe because a v3 client recovers a missed delta via the
+    baseTick-mismatch `requestKeyframe` path and a legacy client just gets the
+    next full frame). Cohort semantics, frame shapes, and wire protocol are
+    untouched.
+  - Eviction closes 1013 ("try again later") and routes through
+    `handlePlayerDisconnect`, the same path a network close takes: the 15s
+    reconnect grace arms, and host migration fires after the grace exactly as
+    for any drop. No second disconnect path. Emits structured
+    `player_evicted` with `reason: 'backpressure'` + the measured
+    `bufferedAmount`.
+- Tick variance metric (`worker/src/GameSim.js`): rolling window of the last
+  `TICK_HEALTH_WINDOW_TICKS = 300` inter-tick intervals (5s at 60Hz) in a
+  preallocated `Float64Array` ring (`TickHealthWindow`, exported). Happy-path
+  cost is one slot write + one modulo per tick, zero allocation; p95 is
+  computed only when the ring completes a pass (~every 5s). When p95 >
+  `TICK_HEALTH_P95_BOUND_MS = 24` (at least 5% of the window ran at 1.44x the
+  16.7ms budget: sustained deficit, not a spike; spikes stay `tick_overrun`'s
+  job), one `tick_health_degraded` line fires, rate-limited to one per 5s like
+  `tick_overrun`. Inter-tick interval is the sampled quantity because Workers
+  freeze the clock inside the tick body.
+- Tests: `tests/worker/backpressure.spec.ts` (13 tests): sustained backlog
+  evicts at exactly 250 intervals, transient backlog does not (streak resets),
+  sends skipped while saturated + resume on drain, send-throw evicts, host
+  eviction migrates the host via the normal grace path, structured log
+  asserted, rebind clears the streak; TickHealthWindow ring/p95/aging
+  unit-tested plus threshold + rate-limit driven directly through
+  `_recordTickHealth`.
+- Validation: `npm run lint` clean, `npm test` green (full suite),
+  `npx tsc --noEmit -p worker` clean.
 
 ---
 
