@@ -41,3 +41,11 @@ feels immediate enough for playtesting.
 - A real mobile pass is still required before calling the playtest loop fully
   ready. If no physical or hosted mobile device is available in the run, record
   that as the remaining blocker.
+
+## Local Validation
+
+- 2026-06-09 v2.2.12: `git diff --check`, full `npm test`, `npm run lint`,
+  `npm run build`, cross-browser smoke
+  (`chromium`, `firefox`, `webkit`), GitHub Deploy-equivalent Chromium E2E
+  (`--grep-invert='@local-only'`), and the focused Open Country local-only
+  objective helper passed locally.

@@ -40,7 +40,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Validation
 
-- Pending.
+- `git diff --check`, full `npm test`, `npm run lint`, and `npm run build`
+  passed locally.
+- `npx playwright test tests/e2e/smoke.spec.ts --project=chromium
+  --project=firefox --project=webkit` passed locally.
+- `npx playwright test --project=chromium --grep-invert='@local-only'` passed
+  locally, matching the GitHub Deploy E2E command.
+- `npx playwright test tests/e2e/scene-swap-stability.spec.ts -g "open
+  country objective" --project=chromium` passed locally for the updated
+  Open Country helper path.
 
 ## [2.2.11] - 2026-06-09
 
