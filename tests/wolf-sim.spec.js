@@ -113,11 +113,20 @@ describe('WolfSim repel + retreat', () => {
         const sim = new WolfSim({ seed: 1, tuning: { base: 2, perDay: 0, max: 2 } });
         const sheep = [makeSheep(0, 0)];
         sim.spawnNight(1, sheep);
-        // Park both wolves at a known point, then bark on top of them.
-        for (const w of sim.wolves) { w.x = 5; w.z = 0; }
-        const n = sim.repel(5, 0, 22, 1.6);
+        // Park both wolves at a known long-repel point, then bark from origin.
+        for (const w of sim.wolves) { w.x = 40; w.z = 0; }
+        const n = sim.repel(0, 0);
         expect(n).toBe(2);
         expect(sim.wolves.every((w) => w.state === WolfState.FLEE)).toBe(true);
+        expect(sim.wolves.every((w) => w.fleeT === 2.0)).toBe(true);
+    });
+
+    it('leaves wolves beyond the bark-repel radius hunting', () => {
+        const sim = new WolfSim({ seed: 1, tuning: { base: 1, perDay: 0, max: 1 } });
+        sim.spawnNight(1, [makeSheep(0, 0)]);
+        sim.wolves[0].x = 46; sim.wolves[0].z = 0;
+        expect(sim.repel(0, 0)).toBe(0);
+        expect(sim.wolves[0].state).toBe(WolfState.HUNT);
     });
 
     it('retreats and despawns the whole pack by dawn', () => {

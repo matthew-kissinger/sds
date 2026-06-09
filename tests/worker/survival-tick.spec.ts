@@ -122,11 +122,12 @@ describe('GameSim survival tick (Cycle 67 P3)', () => {
       expect(sim._survival.wolves.count).toBeGreaterThan(0);
       const dog = sim.sheepdogs.get('p1');
       const w = sim._survival.wolves.wolves[0];
-      w.x = dog.position.x + 2; w.z = dog.position.z; // park a wolf next to the dog
+      w.x = dog.position.x + 40; w.z = dog.position.z;
       sim.applyPlayerInput('p1', {
         direction: { x: 1, z: 0 }, sprint: false, inputSequence: 1, bark: true, timestamp: 1,
       });
       expect(w.state).toBe('flee');
+      expect(w.fleeT).toBe(2.0);
     } finally {
       sim.cleanup?.();
     }

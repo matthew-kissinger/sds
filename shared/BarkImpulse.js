@@ -21,7 +21,7 @@
  */
 
 /**
- * Default bark feel constants (Q2 strawman, tuned in Phase 7). One place so the
+ * Default bark feel constants (Medium/Long). One place so the
  * cone / range / strength is a single taste knob shared by every consumer.
  * - range: metres the bark reaches.
  * - minDot: cos(50 deg), the forward half-cone. Hardcoded literal so no trig
@@ -30,7 +30,7 @@
  * - strength: velocity units added point-blank; scales linearly to 0 at the edge.
  */
 export const DEFAULT_BARK_CONFIG = {
-    range: 12,
+    range: 24,
     minDot: 0.6427876096865393, // cos(50 deg)
     strength: 6,
     cooldownMs: 2500, // the single bark gate (Q2); client + DO both read this

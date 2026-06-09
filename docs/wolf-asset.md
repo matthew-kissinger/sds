@@ -1,10 +1,8 @@
 # Wolf asset
 
-> Added Cycle 61 Phase 6. The wolf is an **asset-only** drop-in: it is sourced,
-> loaded, animated, and documented as ready, but it is wired into **no game
-> mode** this cycle. No wolf AI, no wolf in the deterministic sim, no wolf on
-> the wire. This doc is the handoff for the future predator mode that will use
-> it.
+> Added Cycle 61 Phase 6 as an asset-only drop-in. Cycle 66 promoted the wolf
+> into the Newsheepdogland survival predator layer; Cycle 83 keeps the same
+> vetted CC0 rig and fixes its live scale/material read plus bark-repel feel.
 
 ## Source and license
 
@@ -46,6 +44,14 @@ idempotent and skips files already under 70 percent of their original size, so
 re-running it leaves the wolf alone once compressed. To force a fresh wolf bake,
 delete `assets/models/Wolf.glb`, copy the raw GLB back from
 `assets/_originals/models/Wolf.glb`, and re-run the command.
+
+Cycle 83 re-checked the source because the live wolves were too small and read
+textureless. The official Quaternius pack page is still the accepted source and
+still CC0, but it marks the pack as **not textured**. A runtime GLB inspect on
+2026-06-09 also found no texture slots in `assets/models/Wolf.glb`. This branch
+therefore keeps the vetted CC0 animated rig and fixes the shipped read in code:
+the loader applies a grey-wolf material palette to the four flat materials and
+fits by vertical bone height rather than body length.
 
 ## The rig
 
@@ -89,10 +95,10 @@ the action map, available for a future mode to drive directly):
 - `WOLF_SPEED_STATE_MAX` scales each gait clip's mixer `timeScale` to the body's
   actual speed, so the legs match the ground speed instead of churning at 1x
   (the same trick as the dog's `SPEED_STATE_MAX`).
-- The raw export is tiny in model units (about 0.055 units tall), so the loader
-  fits the wolf to a target world height (default 1.1 metres, a touch taller
-  than the roughly 1 metre dog read) via a `Box3` measurement at construction.
-  Pass `{ scale }` to pin an explicit scale instead.
+- The raw export is tiny in model units, so the loader fits the wolf to a target
+  world height (default 1.35 metres, larger than the dog and sheep for threat
+  read) using the vertical bone extent at construction. Pass `{ scale }` to pin
+  an explicit scale instead.
 
 ## How to spawn it (verification harness)
 
@@ -126,35 +132,26 @@ Entry point wiring: `js/main.js` checks `?wolf=1` at the top of its
 mirroring the existing `webgpuDiagnostic` short-circuit. The harness module ships
 nothing to normal players (it is behind the flag and dynamically imported).
 
-## Design intent for the future predator mode
+## Survival predator wiring
 
-When a predator-bearing mode is built, the wolf becomes a live antagonist. The
-intended shape:
+Newsheepdogland survival now uses this rig as the live night predator:
 
 - **Behavior:** the wolf prowls the pasture, picks a target, and chases, which
   scatters the flock (the opposite pressure to the dog's gather). It reads as a
   threat the player has to manage, not a thing to ignore.
-- **Bark repel (the Cycle 61 link):** Cycle 61 Phase 4 added a deterministic
-  bark impulse that drives sheep forward along the dog's facing. The bark is
-  emitted as an event, by design a superset that a future wolf reacts to: the
-  same bark event repels the wolf (the wolf flees the bark origin, and its
-  `Idle_HitReact_*` or a flee gait sells the recoil). So the bark already gives
-  the player the tool to push the wolf off the flock. No wolf reacts to bark
-  this cycle (no wolf is in any mode), but the event the next mode needs is
-  already there.
-- **Determinism and the wire (the next cycle's work, not this one):** to work in
-  multiplayer co-op the wolf's chase and flee must be deterministic, so it would
-  become a `shared/WolfAI.js` module (pure, no DOM, no Three.js), ticked
-  identically by the Worker authoritative sim and the client predictor, with the
-  wolf's state added to the wire as an additive field. That is a deliberate
-  future-cycle scope, with its own deterministic-sim and wire migration story
-  (see `.claude/rules/shared-sim.md` and `.claude/rules/multiplayer.md`). It is
-  explicitly out of scope for Cycle 61. `js/Wolf.js` is render-only and imports
-  nothing from `shared/`, so it stays a clean client asset until that cycle.
+- **Bark repel:** player bark remains the same deterministic sheep cone from
+  `shared/BarkImpulse.js`, and survival also scares wolves radially through
+  `WolfSim.repel()`. Cycle 83 pins the player-facing feel at a 24 m sheep cone
+  and a 45 m wolf repel radius for 2.0 s.
+- **Determinism and the wire:** wolf positions and state live in
+  `shared/survival/wolves.js`, a pure render-free module used by solo survival
+  and the Worker simulation. Client rendering stays in `js/Wolf.js`,
+  `js/gamestate/wolfRenderer.js`, and `js/gamestate/wolfPack.js`.
 
-## What this cycle did not do
+## What Cycle 83 did not do
 
-- Did not place a wolf in any scene or mode (asset-only).
-- Did not add wolf AI, a wolf to the sim, or a wolf wire field.
-- Did not make the bark affect a wolf (no wolf exists in a mode to affect). The
-  bark-repel reaction is documented intent above, inherited by the next mode.
+- Did not replace the CC0 Quaternius wolf with an unverifiable, paid, or
+  non-commercial asset.
+- Did not change `shared/scenes/types.js` or day-clock phase timing.
+- Did not add a version bump, release tag, changelog entry, deploy, or live
+  production proof.

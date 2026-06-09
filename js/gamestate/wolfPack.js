@@ -31,7 +31,7 @@ export class WolfPack {
      */
     constructor({ scene, groundY, pen, onKill, tuning = {}, seed = 0x5eed }) {
         this._sim = new WolfSim({ pen, onKill, tuning, seed });
-        this._renderer = new WolfRenderer({ scene, groundY, targetHeight: 1.15 });
+        this._renderer = new WolfRenderer({ scene, groundY, targetHeight: 1.35 });
         this._lastDt = 0.016;
     }
 

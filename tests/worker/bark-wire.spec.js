@@ -76,13 +76,16 @@ describe('Cycle 61 P5: bark over the wire', () => {
             dogFacingForward(sim);
             const ahead = sim.gameState.sheep[0]; parkSheep(ahead, 0, 4);   // in cone + range
             const behind = sim.gameState.sheep[1]; parkSheep(behind, 0, -4); // behind => out of cone
+            const medium = sim.gameState.sheep[2]; parkSheep(medium, 0, 20);
             const beforeAhead = ahead.velocity.z;
             const beforeBehind = behind.velocity.z;
+            const beforeMedium = medium.velocity.z;
 
             sim.applyPlayerInput('p1', { direction: { x: 0, z: 1 }, sprint: false, inputSequence: 1, bark: true });
 
             expect(ahead.velocity.z).toBeGreaterThan(beforeAhead); // driven forward
             expect(behind.velocity.z).toBe(beforeBehind);          // untouched (behind)
+            expect(medium.velocity.z).toBeGreaterThan(beforeMedium);
         } finally { sim.cleanup?.(); }
     });
 

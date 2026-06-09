@@ -18,6 +18,12 @@ const ORIGIN = { x: 0, z: 0 };
 const FORWARD = { x: 0, z: 1 }; // dog facing +z
 
 describe('applyBarkImpulse - deterministic bark cone (Cycle 61 P4)', () => {
+    it('exports the Medium/Long range while keeping the forward cone', () => {
+        expect(DEFAULT_BARK_CONFIG.range).toBe(24);
+        expect(DEFAULT_BARK_CONFIG.minDot).toBeCloseTo(0.6427876096865393, 15);
+        expect(DEFAULT_BARK_CONFIG.cooldownMs).toBe(2500);
+    });
+
     it('pushes a sheep directly ahead forward along the facing', () => {
         const s = sheepAt(0, 5);
         const pushed = applyBarkImpulse([s], ORIGIN, FORWARD, DEFAULT_BARK_CONFIG);
@@ -55,7 +61,7 @@ describe('applyBarkImpulse - deterministic bark cone (Cycle 61 P4)', () => {
 
     it('falls off with distance: a nearer sheep gets a stronger push', () => {
         const near = sheepAt(0, 2);
-        const far = sheepAt(0, 10);
+        const far = sheepAt(0, 20);
         applyBarkImpulse([near], ORIGIN, FORWARD, DEFAULT_BARK_CONFIG);
         applyBarkImpulse([far], ORIGIN, FORWARD, DEFAULT_BARK_CONFIG);
         expect(near.velocity.z).toBeGreaterThan(far.velocity.z);

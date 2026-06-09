@@ -99,6 +99,13 @@ export const WOLF_SPEED_THRESHOLDS = {
     RUN: 11.0,
 };
 
+const WOLF_MATERIAL_COLORS = {
+    Main: 0x4f5150,
+    Main_Light: 0x9aa0a0,
+    Eyes_Black: 0x030303,
+    Nose: 0x090806,
+};
+
 /** Hysteresis margin (units/sec) so the gait does not flip-flop at a boundary. */
 const WOLF_SPEED_HYSTERESIS = 1.0;
 
@@ -162,8 +169,8 @@ export class Wolf {
      * @param {number} [opts.scale]   Uniform scale override. Omit to auto-fit so
      *        the wolf stands a sensible height in world units (the raw rig is
      *        ~0.055 model-units tall, so a fit is required to read at game scale).
-     * @param {number} [opts.targetHeight=1.1]  Desired world height in metres
-     *        when auto-fitting (a wolf is a touch taller than the ~1m dog read).
+     * @param {number} [opts.targetHeight=1.35]  Desired world height in metres
+     *        when auto-fitting (larger than sheep and dog for threat read).
      */
     constructor(gltf, opts = {}) {
         if (!gltf || !gltf.scene) {
@@ -184,14 +191,14 @@ export class Wolf {
         if (typeof opts.scale === 'number') {
             this.model.scale.setScalar(opts.scale);
         } else {
-            const targetHeight = opts.targetHeight ?? 1.1;
+            const targetHeight = opts.targetHeight ?? 1.35;
             // Fit to the posed SKELETON extent, NOT Box3.setFromObject. The
             // FBX2glTF export gives the skinned-mesh geometry a ~500-unit bind
             // box (a unit-conversion artifact), while the bones that actually
             // drive the rendered wolf sit at ~6 native units. A geometry-box fit
             // therefore divides by ~500 and collapses the visible wolf to ~1cm.
-            // Bone world positions carry every nested node scale, so their extent
-            // is the true rendered size (here ~6 units -> scale ~0.18 -> ~1.1m).
+            // Bone world positions carry every nested node scale. Fit vertical
+            // height rather than body length so the quadruped does not read tiny.
             this.model.updateWorldMatrix(true, true);
             const box = new THREE.Box3();
             const p = new THREE.Vector3();
@@ -201,8 +208,8 @@ export class Wolf {
             });
             if (!anyBone) box.setFromObject(this.model); // boneless fallback
             const size = box.getSize(new THREE.Vector3());
-            const largest = Math.max(size.x, size.y, size.z, 1e-6);
-            this.model.scale.setScalar(targetHeight / largest);
+            const verticalHeight = Math.max(size.y, 1e-6);
+            this.model.scale.setScalar(targetHeight / verticalHeight);
         }
         this.model.position.set(0, 0, 0);
 
@@ -219,9 +226,14 @@ export class Wolf {
                 // with nothing to reflect renders flat and ~40% too dark. The dog
                 // rigs are metalness 0; match them so the wolf reads correctly in
                 // real scene lighting (and the harness) without needing IBL. Its
-                // colour is four flat baseColorFactors (textureless), shown
-                // faithfully at metalness 0.
+                // colour is four flat baseColorFactors (textureless), tuned below
+                // into a grey wolf palette because the official CC0 pack is not
+                // texture-backed.
+                if (!m.map && Object.prototype.hasOwnProperty.call(WOLF_MATERIAL_COLORS, m.name)) {
+                    m.color.setHex(WOLF_MATERIAL_COLORS[m.name]);
+                }
                 m.metalness = 0;
+                m.roughness = Math.max(m.roughness ?? 0.8, 0.82);
             }
         });
         this.mesh.add(this.model);
