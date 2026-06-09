@@ -23,6 +23,11 @@ type SurvivalState = {
   viewport: { width: number; height: number };
 };
 
+type ButtonQuery = {
+  text?: string;
+  aria?: string;
+};
+
 const IOS_BASE_URL = process.env.IOS_WATER_BASE_URL || 'http://localhost:3000';
 const FIRST_SESSION_URL = new URL(`/?proof=browserstack-newsheepdogland-${Date.now()}`, IOS_BASE_URL).toString();
 const LOADING_COPY = [
@@ -70,8 +75,61 @@ async function seedReturningPlayer(context: BrowserContext) {
 }
 
 async function waitForEntrance(page: Page) {
-  await page.getByRole('button', { name: 'Play', exact: true }).waitFor({ state: 'visible', timeout: 120_000 });
-  await expect(page.getByText('Newsheepdogland', { exact: true })).toBeVisible({ timeout: 30_000 });
+  await waitForVisibleButton(page, { text: 'Play' }, 120_000);
+  await page.waitForFunction(() => (document.body?.innerText ?? '').includes('Newsheepdogland'), null, {
+    timeout: 30_000,
+  });
+}
+
+async function waitForVisibleButton(page: Page, query: ButtonQuery, timeout = 45_000) {
+  await page.waitForFunction(
+    ({ text, aria }) => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.some((button) => {
+        const style = getComputedStyle(button);
+        const rect = button.getBoundingClientRect();
+        const visible = style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && rect.width > 0
+          && rect.height > 0;
+        if (!visible) return false;
+        if (aria && button.getAttribute('aria-label') !== aria) return false;
+        if (text && button.textContent?.replace(/\s+/g, ' ').trim() !== text) return false;
+        return true;
+      });
+    },
+    query,
+    { timeout },
+  );
+}
+
+async function tapVisibleButton(page: Page, query: ButtonQuery, timeout = 45_000) {
+  await waitForVisibleButton(page, query, timeout);
+  const rect = await page.evaluate(({ text, aria }) => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    for (const button of buttons) {
+      const style = getComputedStyle(button);
+      const bounds = button.getBoundingClientRect();
+      const visible = style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && bounds.width > 0
+        && bounds.height > 0;
+      if (!visible) continue;
+      if (aria && button.getAttribute('aria-label') !== aria) continue;
+      if (text && button.textContent?.replace(/\s+/g, ' ').trim() !== text) continue;
+      return {
+        x: Math.round(bounds.x),
+        y: Math.round(bounds.y),
+        width: Math.round(bounds.width),
+        height: Math.round(bounds.height),
+      };
+    }
+    return null;
+  }, query);
+  if (!rect) throw new Error(`button not found: ${JSON.stringify(query)}`);
+  const x = rect.x + Math.round(rect.width / 2);
+  const y = rect.y + Math.round(rect.height / 2);
+  await page.touchscreen.tap(x, y).catch(() => page.mouse.click(x, y));
 }
 
 async function ensureServiceWorkerController(page: Page) {
@@ -192,7 +250,7 @@ async function waitForState(
 }
 
 async function waitForGameplayVisible(page: Page) {
-  await page.getByRole('button', { name: 'Pause game' }).waitFor({ state: 'visible', timeout: 45_000 });
+  await waitForVisibleButton(page, { aria: 'Pause game' }, 45_000);
   await page.waitForFunction(
     (labels) => {
       const text = document.body?.innerText ?? '';
@@ -282,7 +340,7 @@ test('Newsheepdogland first-session loop survives stale cache and stale scene st
     report.entranceScreenshot = await screenshot(page, testInfo, 'newsheepdogland-entrance');
     report.cacheProof = await verifyMutableCacheOverwrite(page);
 
-    await page.getByRole('button', { name: 'Play', exact: true }).click({ timeout: 45_000 });
+    await tapVisibleButton(page, { text: 'Play' }, 45_000);
     await page.locator('#canvas-container canvas').waitFor({ state: 'attached', timeout: 150_000 });
     const firstReady = await waitForState(page, {
       scene: 'newsheepdogland',
@@ -295,8 +353,8 @@ test('Newsheepdogland first-session loop survives stale cache and stale scene st
     await waitForGameplayVisible(page);
     const firstHud = await assertHudLayout(page, 'first session');
 
-    await page.getByRole('button', { name: 'Pause game' }).click({ timeout: 45_000 });
-    await page.getByRole('button', { name: 'Main Menu' }).click({ timeout: 45_000 });
+    await tapVisibleButton(page, { aria: 'Pause game' }, 45_000);
+    await tapVisibleButton(page, { text: 'Main Menu' }, 45_000);
     await waitForEntrance(page);
     const returned = await waitForState(page, {
       scene: 'newsheepdogland',
@@ -307,7 +365,7 @@ test('Newsheepdogland first-session loop survives stale cache and stale scene st
       minimap: false,
     }, 90_000);
 
-    await page.getByRole('button', { name: 'Play', exact: true }).click({ timeout: 45_000 });
+    await tapVisibleButton(page, { text: 'Play' }, 45_000);
     const secondReady = await waitForState(page, {
       scene: 'newsheepdogland',
       active: true,
