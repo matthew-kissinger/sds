@@ -30,6 +30,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # P0-CI: lint + typecheck are required gates. They run inside this job so
+      # every downstream job (e2e, migrate, pages, worker) inherits them through
+      # its existing `needs: test` edge; a lint or typecheck failure fails this
+      # job and the deploy jobs (gated on needs.test.result == 'success') never run.
+      - run: npm run lint
+      - run: npm run typecheck
       - run: npm test --if-present
 
   e2e:
