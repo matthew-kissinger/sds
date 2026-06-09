@@ -4,6 +4,10 @@ import { defineConfig } from '@playwright/test';
 
 const baseURL = process.env.IOS_WATER_BASE_URL || 'http://localhost:3000';
 const useLocalServer = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(baseURL);
+const testMatch = process.env.BROWSERSTACK_TEST_MATCH
+  || (useLocalServer
+    ? '**/ios-water.spec.ts'
+    : ['**/ios-water.spec.ts', '**/newsheepdogland-first-session.spec.ts']);
 
 export default defineConfig({
   testDir: './tests/browserstack',
@@ -33,7 +37,7 @@ export default defineConfig({
         browserName: 'safari',
         channel: 'safari',
       },
-      testMatch: '**/ios-water.spec.ts',
+      testMatch,
     },
   ],
   webServer: useLocalServer
