@@ -62,7 +62,9 @@ function makeSunBillboardMaterial() {
 }
 
 function sunIntensityAtElevation(elevation) {
-    return Math.max(0.65, Math.min(2.2, 0.65 + elevation * 3.1));
+    if (elevation <= 0) return 0;
+    const horizonFade = Math.min(1, elevation / 0.08);
+    return horizonFade * Math.min(2.2, 0.65 + elevation * 3.1);
 }
 
 export class SunBillboard {
@@ -117,7 +119,7 @@ export class SunBillboard {
         this.mesh.position.copy(camera.position).addScaledVector(this._sunDir, this.distance);
         this.mesh.lookAt(camera.position);
 
-        const elevation = Math.max(0, this._sunDir.y);
+        const elevation = this._sunDir.y;
         const intensity = sunIntensityAtElevation(elevation);
         this._lastIntensity = intensity;
         this._lastElevation = elevation;
