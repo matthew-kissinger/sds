@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
+import { createContextLossRecovery, watchWebGpuDeviceLost } from './webglContextRecovery.js';
 
 export function createProductionWebGLRendererOptions({ isIOS = false, isCinematic = false } = {}) {
     return {
@@ -52,18 +53,32 @@ export function readWebGLRendererInfo(renderer) {
     return info;
 }
 
-export function installWebGLContextHandlers(renderer, logger = console) {
+export function installWebGLContextHandlers(renderer, logger = console, options = {}) {
     const gl = safeGetWebGLContext(renderer);
     const element = renderer?.domElement;
     if (!gl || !element || typeof element.addEventListener !== 'function') return false;
 
+    // P4-CTX-RESTORE: guard double-install. configureProductionRenderer can
+    // run again against the same long-lived renderer (in-process scene
+    // rebuilds keep the canvas alive); one recovery state machine per canvas.
+    if (element.dataset?.sdsCtxRecovery === '1') return true;
+    if (element.dataset) element.dataset.sdsCtxRecovery = '1';
+
+    const recovery = options.recovery
+        ?? createContextLossRecovery({ rendererKind: 'webgl', logger });
+
     element.addEventListener('webglcontextlost', (event) => {
         logger.error?.('[WEBGL] Context lost!', event);
+        // preventDefault tells the browser we want webglcontextrestored.
         event.preventDefault();
+        recovery.onContextLost();
     });
 
     element.addEventListener('webglcontextrestored', () => {
         logger.log?.('[WEBGL] Context restored');
+        // Three.js re-uploads what it can, but baked-once render targets
+        // (far-tree billboard bakes) stay invalid - reload for a clean world.
+        recovery.onContextRestored();
     });
     return true;
 }
@@ -117,6 +132,13 @@ export function configureProductionRenderer(renderer, {
 
     const contextHandlersInstalled = installWebGLContextHandlers(renderer, logger);
 
+    // P4-CTX-RESTORE: the WebGPU path has no contextlost event; the live
+    // GPUDevice's `lost` promise is the equivalent signal. The production
+    // boot only preflights a throwaway device, so watch the real one here.
+    const deviceLostWatchInstalled = renderer?.isWebGPURenderer === true
+        ? watchWebGpuDeviceLost(renderer, { logger })
+        : false;
+
     if (renderer?.shadowMap) {
         if (isMobile) {
             renderer.shadowMap.enabled = false;
@@ -149,6 +171,7 @@ export function configureProductionRenderer(renderer, {
         rendererMode: webglInfo.mode,
         webglInfo,
         contextHandlersInstalled,
+        deviceLostWatchInstalled,
         toneMapping: {
             name: toneMapping.name,
             isApplePlatform: toneMapping.isApplePlatform,

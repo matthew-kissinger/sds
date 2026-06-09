@@ -103,6 +103,12 @@ export default {
         body: 'このブラウザではWebGLレンダラーで動作しています。ゲーム内容は同じですが、一部の視覚効果が簡略化されます。'
     },
 
+    // P4-CTX-RESTORE: グラフィックスコンテキスト喪失時、自動リロード直前のオーバーレイ。
+    contextLost: {
+        title: 'グラフィックスが中断されました',
+        body: 'レンダラーを再起動しています。まもなくゲームを再読み込みします。'
+    },
+
     // Settings panel
     settings: {
         title: '設定',
@@ -141,7 +147,13 @@ export default {
             sprint: 'ダッシュ',
             bark: '吠える',
             cameraCycle: 'カメラ切り替え',
-            pause: 'ポーズ'
+            pause: 'ポーズ',
+            zoomIn: 'ズームイン',
+            zoomOut: 'ズームアウト',
+            bank: 'スコアを確定',
+            note: 'メモを開く',
+            moveX: '移動（横）',
+            moveY: '移動（縦）'
         },
         cameraModeSection: 'カメラモード（{{key}}で切り替え）',
         cameraModes: {
@@ -154,6 +166,17 @@ export default {
         },
         gamepadSupport: 'ゲームパッド対応',
         gamepadDesc: 'コントローラーは自動検出されます。左スティックで移動、トリガーでダッシュします。',
+        // Gamepad config ([P4-GAMEPAD-UI])
+        gamepadDeadzone: 'スティックのデッドゾーン',
+        gamepadDeadzoneDesc: 'この値未満のスティック入力は無視されます',
+        stickPreview: 'スティック入力（デッドゾーン適用後）',
+        gamepadButtons: 'ゲームパッドのボタン',
+        gamepadAxes: '移動スティックの軸',
+        pressButton: 'ボタンを押してください...',
+        moveAxis: 'スティックを動かしてください...',
+        axisLabel: '軸 {{index}}',
+        padConflict: 'そのボタンは「{{action}}」に使用中です',
+        axisConflict: 'その軸は「{{action}}」に使用中です',
         resetDefaults: 'デフォルトに戻す',
         language: '言語',
         accessibility: 'アクセシビリティ',

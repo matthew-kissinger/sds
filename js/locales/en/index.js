@@ -137,6 +137,13 @@ export default {
         body: 'Running the WebGL renderer on this browser. The game plays the same; some visual detail is reduced.'
     },
 
+    // P4-CTX-RESTORE: overlay shown when the graphics context is lost,
+    // just before the automatic reload.
+    contextLost: {
+        title: 'Graphics context lost',
+        body: 'Restarting the renderer. The game will reload in a moment.'
+    },
+
     // Settings panel
     settings: {
         title: 'Settings',
@@ -181,7 +188,13 @@ export default {
             sprint: 'Sprint',
             bark: 'Bark',
             cameraCycle: 'Cycle Camera',
-            pause: 'Pause'
+            pause: 'Pause',
+            zoomIn: 'Zoom In',
+            zoomOut: 'Zoom Out',
+            bank: 'Bank Score',
+            note: 'Open Note',
+            moveX: 'Move (horizontal)',
+            moveY: 'Move (vertical)'
         },
         cameraModeSection: 'Camera mode (press {{key}} to cycle)',
         cameraModes: {
@@ -194,6 +207,17 @@ export default {
         },
         gamepadSupport: 'Gamepad Support',
         gamepadDesc: 'Controllers are automatically detected. Use left stick to move, triggers to sprint.',
+        // Gamepad config ([P4-GAMEPAD-UI])
+        gamepadDeadzone: 'Stick deadzone',
+        gamepadDeadzoneDesc: 'Stick input below this is ignored',
+        stickPreview: 'Stick input (after deadzone)',
+        gamepadButtons: 'Gamepad Buttons',
+        gamepadAxes: 'Movement Stick Axes',
+        pressButton: 'Press a button...',
+        moveAxis: 'Move a stick...',
+        axisLabel: 'Axis {{index}}',
+        padConflict: 'Button already used for {{action}}',
+        axisConflict: 'Axis already used for {{action}}',
         // General
         resetDefaults: 'Reset All',
         language: 'Language',

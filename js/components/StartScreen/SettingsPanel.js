@@ -8,7 +8,7 @@
  * rebinder covers the full bindable action set, and the tutorial re-trigger
  * calls the P1-TUTORIAL startTutorial() hook.
  */
-import { createElement, useState, useEffect, useCallback } from 'react';
+import { createElement, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Panel, PanelTitle } from '../ui/Panel.js';
@@ -21,8 +21,24 @@ import {
     applyPerformancePreset,
     getKeyDisplayName,
     DEFAULT_KEY_BINDINGS,
-    isKeyAlreadyBound
+    isKeyAlreadyBound,
+    updateGamepadPrefs
 } from '../shared/settings.js';
+import {
+    normalizeGamepadPrefs,
+    getDefaultGamepadPrefs,
+    DEADZONE_MIN,
+    DEADZONE_MAX
+} from '../../gamepadPrefs.js';
+import {
+    getGamepadButtonLabel,
+    captureBaseline,
+    detectNewButtonPress,
+    detectMovedAxis,
+    isButtonAlreadyBound,
+    isAxisAlreadyBound,
+    applyCircularDeadzone
+} from '../shared/gamepadCapture.js';
 import { CameraMode } from '../../CameraController.js';
 import { NameField } from '../shared/NameField.js';
 import { startTutorial } from '../Tutorial/index.js';
@@ -186,6 +202,41 @@ function KeyBindButton({ action, keyCode, onRebind, isListening, t }) {
     }, isListening ? t('settings.pressKey') : displayName);
 }
 
+// [P4-GAMEPAD-UI] First connected pad, or null. Settings polls this for
+// capture and the deadzone preview; GamepadManager keeps its own loop.
+function getFirstConnectedPad() {
+    try {
+        if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
+            return null;
+        }
+        for (const pad of navigator.getGamepads()) {
+            if (pad) return pad;
+        }
+    } catch (_) { /* getGamepads can throw in permissions-restricted frames */ }
+    return null;
+}
+
+// Gamepad bind button: same visual language as KeyBindButton, but the value
+// is a pad button/axis label and the armed state waits on pad input.
+function PadBindButton({ label, listeningLabel, isListening, onClick }) {
+    return createElement('button', {
+        onClick,
+        style: {
+            minWidth: '80px',
+            padding: '0.5rem 0.75rem',
+            background: isListening ? 'rgba(94, 158, 110, 0.3)' : 'rgba(247,241,230,0.1)',
+            border: isListening ? '2px solid #5e9e6e' : '1px solid rgba(247,241,230,0.2)',
+            borderRadius: '0.5rem',
+            color: isListening ? '#7dbf8e' : '#f7f1e6',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            fontFamily: 'monospace'
+        }
+    }, isListening ? listeningLabel : label);
+}
+
 // Tab button component
 function TabButton({ id, label, icon, isActive, onClick, isCompact }) {
     return createElement('button', {
@@ -285,6 +336,126 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
     const [listeningForKey, setListeningForKey] = useState(null);
     const [keyConflict, setKeyConflict] = useState(null);
     const [cameraMode, setCameraMode] = useState(loadCameraMode);
+
+    // [P4-GAMEPAD-UI] Gamepad remap/deadzone state. The section renders only
+    // while a pad is connected; otherwise the static support note stays.
+    const [padConnected, setPadConnected] = useState(() => !!getFirstConnectedPad());
+    const [padCapture, setPadCapture] = useState(null); // { kind: 'button'|'axis', action }
+    const [padConflict, setPadConflict] = useState(null); // { kind, action }
+    const [stickPreview, setStickPreview] = useState(0);
+
+    // Memoized so the capture/preview effects do not re-arm on unrelated
+    // renders (the preview interval itself re-renders this component).
+    const gamepadPrefs = useMemo(() => normalizeGamepadPrefs(settings.gamepad), [settings.gamepad]);
+
+    // Persist + broadcast a full prefs object (settings.js saves the blob and
+    // dispatches 'gamepad-prefs-changed' for GamepadManager), then sync the
+    // React settings state.
+    const commitGamepadPrefs = useCallback((nextPrefs) => {
+        const newSettings = updateGamepadPrefs(nextPrefs);
+        onSettingsChange({ ...settings, gamepad: newSettings.gamepad });
+    }, [settings, onSettingsChange]);
+
+    // Track pad connection; a disconnect also cancels any armed capture.
+    useEffect(() => {
+        const scan = () => {
+            const connected = !!getFirstConnectedPad();
+            setPadConnected(connected);
+            if (!connected) setPadCapture(null);
+        };
+        scan();
+        window.addEventListener('gamepadconnected', scan);
+        window.addEventListener('gamepaddisconnected', scan);
+        return () => {
+            window.removeEventListener('gamepadconnected', scan);
+            window.removeEventListener('gamepaddisconnected', scan);
+        };
+    }, []);
+
+    // Capture flow: poll the pad against a baseline snapshot so held buttons
+    // and resting axis positions (triggers rest at -1 on some pads) do not
+    // self-assign. Escape cancels; disconnection mid-capture cancels.
+    useEffect(() => {
+        if (!padCapture) return;
+
+        // Suppress in-game gamepad reads while armed so binding Start/A does
+        // not simultaneously toggle pause/zoom (GamepadManager listens).
+        window.dispatchEvent(new CustomEvent('sds-gamepad-capture', { detail: true }));
+
+        let baseline = null;
+        const poll = setInterval(() => {
+            const pad = getFirstConnectedPad();
+            if (!pad) {
+                setPadCapture(null);
+                return;
+            }
+            if (!baseline) {
+                baseline = captureBaseline(pad);
+                return;
+            }
+            if (padCapture.kind === 'button') {
+                const index = detectNewButtonPress(pad, baseline);
+                if (index === null) return;
+                const conflict = isButtonAlreadyBound(index, padCapture.action, gamepadPrefs.buttons);
+                if (conflict) {
+                    setPadConflict({ kind: 'button', action: conflict });
+                    setTimeout(() => setPadConflict(null), 2000);
+                } else {
+                    commitGamepadPrefs({
+                        ...gamepadPrefs,
+                        buttons: { ...gamepadPrefs.buttons, [padCapture.action]: index }
+                    });
+                }
+                setPadCapture(null);
+            } else {
+                const index = detectMovedAxis(pad, baseline);
+                if (index === null) return;
+                const conflict = isAxisAlreadyBound(index, padCapture.action, gamepadPrefs.axes);
+                if (conflict) {
+                    setPadConflict({ kind: 'axis', action: conflict });
+                    setTimeout(() => setPadConflict(null), 2000);
+                } else {
+                    commitGamepadPrefs({
+                        ...gamepadPrefs,
+                        axes: { ...gamepadPrefs.axes, [padCapture.action]: index }
+                    });
+                }
+                setPadCapture(null);
+            }
+        }, 50);
+
+        const handleKeyDown = (e) => {
+            if (e.code === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                setPadCapture(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown, true);
+
+        return () => {
+            clearInterval(poll);
+            window.removeEventListener('keydown', handleKeyDown, true);
+            window.dispatchEvent(new CustomEvent('sds-gamepad-capture', { detail: false }));
+        };
+    }, [padCapture, gamepadPrefs, commitGamepadPrefs]);
+
+    // Deadzone live preview: post-deadzone left-stick magnitude, polled only
+    // while the Controls tab is open with a pad connected. Functional set +
+    // rounding keeps idle polls from re-rendering.
+    useEffect(() => {
+        if (!padConnected || activeTab !== 'controls') return;
+        const poll = setInterval(() => {
+            const pad = getFirstConnectedPad();
+            const x = pad ? (pad.axes[gamepadPrefs.axes.moveX] || 0) : 0;
+            const y = pad ? (pad.axes[gamepadPrefs.axes.moveY] || 0) : 0;
+            const magnitude = Math.round(
+                applyCircularDeadzone(x, y, gamepadPrefs.deadzone).magnitude * 100
+            ) / 100;
+            setStickPreview((prev) => (prev === magnitude ? prev : magnitude));
+        }, 120);
+        return () => clearInterval(poll);
+    }, [padConnected, activeTab, gamepadPrefs]);
 
     const handleCameraModeChange = useCallback((mode) => {
         setCameraMode(mode);
@@ -593,6 +764,173 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
         }, t('settings.resetProfile')))
     ]);
 
+    // [P4-GAMEPAD-UI] Arm/disarm a capture; clicking the armed control again
+    // cancels it.
+    const togglePadCapture = (kind, action) => setPadCapture(
+        (cur) => (cur && cur.kind === kind && cur.action === action ? null : { kind, action })
+    );
+
+    // [P4-GAMEPAD-UI] Gamepad block for the Controls tab: the static support
+    // note when no pad is connected, the remap + deadzone editor when one is.
+    const renderGamepadSection = () => {
+        if (!padConnected) {
+            return [
+                createElement('div', {
+                    key: 'gamepad-note',
+                    style: {
+                        marginTop: '1rem',
+                        padding: '0.75rem',
+                        background: 'rgba(94, 158, 110, 0.1)',
+                        borderRadius: '0.5rem',
+                        border: '1px solid rgba(94, 158, 110, 0.2)'
+                    }
+                }, [
+                    createElement('div', {
+                        key: 'title',
+                        style: { color: '#7dbf8e', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }
+                    }, t('settings.gamepadSupport')),
+                    createElement('div', {
+                        key: 'desc',
+                        style: { color: 'rgba(247,241,230,0.6)', fontSize: '0.75rem' }
+                    }, t('settings.gamepadDesc'))
+                ])
+            ];
+        }
+
+        return [
+            // Section header + reset
+            createElement('div', {
+                key: 'gamepad-header',
+                style: {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    margin: '1.25rem 0 0.5rem'
+                }
+            }, [
+                createElement('span', {
+                    key: 'title',
+                    style: {
+                        color: 'rgba(247,241,230,0.7)',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                    }
+                }, t('settings.gamepadSupport')),
+                createElement(Button, {
+                    key: 'reset',
+                    variant: 'ghost',
+                    size: 'sm',
+                    onClick: () => commitGamepadPrefs(getDefaultGamepadPrefs())
+                }, t('settings.resetBindings'))
+            ]),
+
+            // Conflict feedback (mirrors the keyboard conflict box)
+            padConflict && createElement('div', {
+                key: 'pad-conflict',
+                style: {
+                    background: 'rgba(217, 154, 143, 0.2)',
+                    border: '1px solid rgba(217, 154, 143, 0.5)',
+                    borderRadius: '0.5rem',
+                    padding: '0.5rem 0.75rem',
+                    marginBottom: '0.5rem',
+                    color: '#e8b4ab',
+                    fontSize: '0.8rem'
+                }
+            }, t(
+                padConflict.kind === 'axis' ? 'settings.axisConflict' : 'settings.padConflict',
+                { action: t(`settings.actions.${padConflict.action}`) }
+            )),
+
+            // Deadzone slider + live post-deadzone stick preview
+            createElement(SettingRow, {
+                key: 'pad-deadzone',
+                label: t('settings.gamepadDeadzone'),
+                description: t('settings.gamepadDeadzoneDesc'),
+                isCompact
+            }, createElement(Slider, {
+                value: gamepadPrefs.deadzone,
+                min: DEADZONE_MIN,
+                max: DEADZONE_MAX,
+                step: 0.01,
+                onChange: (v) => commitGamepadPrefs({ ...gamepadPrefs, deadzone: v }),
+                formatValue: (v) => v.toFixed(2)
+            })),
+            createElement('div', {
+                key: 'pad-preview',
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.5rem 0',
+                    borderBottom: '1px solid rgba(247,241,230,0.08)'
+                }
+            }, [
+                createElement('div', {
+                    key: 'label',
+                    style: { color: 'rgba(247,241,230,0.55)', fontSize: '0.75rem', flexShrink: 0 }
+                }, t('settings.stickPreview')),
+                createElement('div', {
+                    key: 'track',
+                    style: {
+                        flex: 1,
+                        height: '6px',
+                        borderRadius: '3px',
+                        background: '#374151',
+                        overflow: 'hidden'
+                    }
+                }, createElement('div', {
+                    style: {
+                        width: `${Math.round(stickPreview * 100)}%`,
+                        height: '100%',
+                        background: '#5e9e6e',
+                        transition: 'width 0.1s linear'
+                    }
+                })),
+                createElement('span', {
+                    key: 'value',
+                    style: {
+                        minWidth: '3rem',
+                        textAlign: 'right',
+                        color: '#f7f1e6',
+                        fontSize: '0.875rem',
+                        fontFamily: 'monospace'
+                    }
+                }, stickPreview.toFixed(2))
+            ]),
+
+            // Button remap rows
+            sectionHeader('pad-buttons-label', t('settings.gamepadButtons'), '0.75rem'),
+            ...Object.entries(gamepadPrefs.buttons).map(([action, index]) =>
+                createElement(SettingRow, {
+                    key: `pad-btn-${action}`,
+                    label: t(`settings.actions.${action}`),
+                    isCompact
+                }, createElement(PadBindButton, {
+                    label: getGamepadButtonLabel(index),
+                    listeningLabel: t('settings.pressButton'),
+                    isListening: padCapture?.kind === 'button' && padCapture.action === action,
+                    onClick: () => togglePadCapture('button', action)
+                }))
+            ),
+
+            // Movement axis assignment rows
+            sectionHeader('pad-axes-label', t('settings.gamepadAxes'), '0.75rem'),
+            ...Object.entries(gamepadPrefs.axes).map(([axis, index]) =>
+                createElement(SettingRow, {
+                    key: `pad-axis-${axis}`,
+                    label: t(`settings.actions.${axis}`),
+                    isCompact
+                }, createElement(PadBindButton, {
+                    label: t('settings.axisLabel', { index }),
+                    listeningLabel: t('settings.moveAxis'),
+                    isListening: padCapture?.kind === 'axis' && padCapture.action === axis,
+                    onClick: () => togglePadCapture('axis', axis)
+                }))
+            )
+        ];
+    };
+
     // Controls tab content
     const renderControlsTab = () => createElement('div', {
         style: { display: 'flex', flexDirection: 'column', gap: '0.25rem' }
@@ -662,26 +1000,9 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             }))
         ),
 
-        // Gamepad note
-        createElement('div', {
-            key: 'gamepad-note',
-            style: {
-                marginTop: '1rem',
-                padding: '0.75rem',
-                background: 'rgba(94, 158, 110, 0.1)',
-                borderRadius: '0.5rem',
-                border: '1px solid rgba(94, 158, 110, 0.2)'
-            }
-        }, [
-            createElement('div', {
-                key: 'title',
-                style: { color: '#7dbf8e', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }
-            }, t('settings.gamepadSupport')),
-            createElement('div', {
-                key: 'desc',
-                style: { color: 'rgba(247,241,230,0.6)', fontSize: '0.75rem' }
-            }, t('settings.gamepadDesc'))
-        ])
+        // Gamepad: note when disconnected, remap + deadzone editor when
+        // connected ([P4-GAMEPAD-UI])
+        ...renderGamepadSection()
     ]);
 
     // Main render

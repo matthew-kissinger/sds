@@ -103,6 +103,12 @@ export default {
         body: 'Este navegador usa o renderizador WebGL. O jogo funciona igual; alguns detalhes visuais são reduzidos.'
     },
 
+    // P4-CTX-RESTORE: aviso ao perder o contexto gráfico, antes da recarga automática.
+    contextLost: {
+        title: 'Contexto gráfico perdido',
+        body: 'Reiniciando o renderizador. O jogo será recarregado em instantes.'
+    },
+
     // Settings panel
     settings: {
         title: 'Configurações',
@@ -141,7 +147,13 @@ export default {
             sprint: 'Correr',
             bark: 'Latir',
             cameraCycle: 'Alternar Câmera',
-            pause: 'Pausar'
+            pause: 'Pausar',
+            zoomIn: 'Aproximar',
+            zoomOut: 'Afastar',
+            bank: 'Guardar Pontos',
+            note: 'Abrir Nota',
+            moveX: 'Mover (horizontal)',
+            moveY: 'Mover (vertical)'
         },
         cameraModeSection: 'Modo de câmera (pressione {{key}} para alternar)',
         cameraModes: {
@@ -154,6 +166,17 @@ export default {
         },
         gamepadSupport: 'Suporte a Controle',
         gamepadDesc: 'Controles são detectados automaticamente. Use o analógico esquerdo para mover e os gatilhos para correr.',
+        // Gamepad config ([P4-GAMEPAD-UI])
+        gamepadDeadzone: 'Zona morta do analógico',
+        gamepadDeadzoneDesc: 'A entrada do analógico abaixo deste valor é ignorada',
+        stickPreview: 'Entrada do analógico (após a zona morta)',
+        gamepadButtons: 'Botões do Controle',
+        gamepadAxes: 'Eixos de Movimento do Analógico',
+        pressButton: 'Pressione um botão...',
+        moveAxis: 'Mova um analógico...',
+        axisLabel: 'Eixo {{index}}',
+        padConflict: 'Botão já usado para {{action}}',
+        axisConflict: 'Eixo já usado para {{action}}',
         resetDefaults: 'Restaurar Padrões',
         language: 'Idioma',
         accessibility: 'Acessibilidade',

@@ -5,6 +5,7 @@
  * Handles loading, saving, and applying game settings
  */
 import { getTerrainBuilder, getAudioManager, getPerformanceMonitor, getSceneManager, getGrassSystem } from '../../GameBridge.js';
+import { getDefaultGamepadPrefs, normalizeGamepadPrefs } from '../../gamepadPrefs.js';
 
 // Default key bindings. Must mirror InputHandler's DEFAULT_BINDINGS: the
 // settings UI edits this set, InputHandler consumes it via the
@@ -96,6 +97,9 @@ export function getDefaultSettings() {
         keyBindings: { ...DEFAULT_KEY_BINDINGS },
         mouseSensitivity: 1.0,
 
+        // Gamepad ([P4-GAMEPAD-UI]): deadzone + button/axis remap.
+        gamepad: getDefaultGamepadPrefs(),
+
         // Accessibility ([P1-SETTINGS-A11Y]): daltonizer-safe medal/rank colors.
         colorblindMode: false,
 
@@ -114,6 +118,8 @@ export function loadSettings() {
             const settings = { ...getDefaultSettings(), ...parsed };
             // Ensure keyBindings has all keys
             settings.keyBindings = { ...DEFAULT_KEY_BINDINGS, ...parsed.keyBindings };
+            // Ensure gamepad prefs are complete and sane ([P4-GAMEPAD-UI])
+            settings.gamepad = normalizeGamepadPrefs(parsed.gamepad);
             return settings;
         }
     } catch (error) {
@@ -280,6 +286,21 @@ export function updateKeyBinding(action, keyCode) {
     // Dispatch event for InputHandler to update
     window.dispatchEvent(new CustomEvent('keybindings-changed', {
         detail: settings.keyBindings
+    }));
+
+    return settings;
+}
+
+// Persist a full gamepad prefs object and notify GamepadManager
+// ([P4-GAMEPAD-UI]). Mirrors the keyBindings flow: save the settings blob,
+// then dispatch the live-update event the input side listens for.
+export function updateGamepadPrefs(gamepadPrefs) {
+    const settings = loadSettings();
+    settings.gamepad = normalizeGamepadPrefs(gamepadPrefs);
+    saveSettings(settings);
+
+    window.dispatchEvent(new CustomEvent('gamepad-prefs-changed', {
+        detail: settings.gamepad
     }));
 
     return settings;

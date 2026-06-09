@@ -103,6 +103,12 @@ export default {
         body: '此浏览器正在使用 WebGL 渲染器。游戏玩法不变，部分画面细节有所降低。'
     },
 
+    // P4-CTX-RESTORE: 图形上下文丢失时显示的提示，随后自动重新加载。
+    contextLost: {
+        title: '图形上下文丢失',
+        body: '正在重启渲染器，游戏即将重新加载。'
+    },
+
     // Settings panel
     settings: {
         title: '设置',
@@ -141,7 +147,13 @@ export default {
             sprint: '冲刺',
             bark: '吠叫',
             cameraCycle: '切换镜头',
-            pause: '暂停'
+            pause: '暂停',
+            zoomIn: '放大',
+            zoomOut: '缩小',
+            bank: '存入得分',
+            note: '打开笔记',
+            moveX: '移动（横向）',
+            moveY: '移动（纵向）'
         },
         cameraModeSection: '镜头模式（按 {{key}} 切换）',
         cameraModes: {
@@ -154,6 +166,17 @@ export default {
         },
         gamepadSupport: '手柄支持',
         gamepadDesc: '自动检测手柄。左摇杆移动，扳机键冲刺。',
+        // Gamepad config ([P4-GAMEPAD-UI])
+        gamepadDeadzone: '摇杆死区',
+        gamepadDeadzoneDesc: '低于该值的摇杆输入将被忽略',
+        stickPreview: '摇杆输入（应用死区后）',
+        gamepadButtons: '手柄按键',
+        gamepadAxes: '移动摇杆轴',
+        pressButton: '请按手柄按键...',
+        moveAxis: '请拨动摇杆...',
+        axisLabel: '轴 {{index}}',
+        padConflict: '该按键已用于“{{action}}”',
+        axisConflict: '该轴已用于“{{action}}”',
         resetDefaults: '恢复默认',
         language: '语言',
         accessibility: '无障碍',

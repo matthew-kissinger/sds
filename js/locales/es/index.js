@@ -103,6 +103,12 @@ export default {
         body: 'Este navegador usa el renderizador WebGL. El juego funciona igual; algunos detalles visuales se reducen.'
     },
 
+    // P4-CTX-RESTORE: aviso al perder el contexto gráfico, antes de la recarga automática.
+    contextLost: {
+        title: 'Contexto gráfico perdido',
+        body: 'Reiniciando el renderizador. El juego se recargará en un momento.'
+    },
+
     // Settings panel
     settings: {
         title: 'Ajustes',
@@ -141,7 +147,13 @@ export default {
             sprint: 'Esprintar',
             bark: 'Ladrar',
             cameraCycle: 'Cambiar Cámara',
-            pause: 'Pausa'
+            pause: 'Pausa',
+            zoomIn: 'Acercar',
+            zoomOut: 'Alejar',
+            bank: 'Guardar Puntos',
+            note: 'Abrir Nota',
+            moveX: 'Mover (horizontal)',
+            moveY: 'Mover (vertical)'
         },
         cameraModeSection: 'Modo de cámara (pulsa {{key}} para cambiar)',
         cameraModes: {
@@ -154,6 +166,17 @@ export default {
         },
         gamepadSupport: 'Compatibilidad con Mando',
         gamepadDesc: 'Los mandos se detectan automáticamente. Usa el stick izquierdo para moverte y los gatillos para esprintar.',
+        // Gamepad config ([P4-GAMEPAD-UI])
+        gamepadDeadzone: 'Zona muerta del stick',
+        gamepadDeadzoneDesc: 'La entrada del stick por debajo de este valor se ignora',
+        stickPreview: 'Entrada del stick (tras la zona muerta)',
+        gamepadButtons: 'Botones del Mando',
+        gamepadAxes: 'Ejes de Movimiento del Stick',
+        pressButton: 'Pulsa un botón...',
+        moveAxis: 'Mueve un stick...',
+        axisLabel: 'Eje {{index}}',
+        padConflict: 'Botón ya usado para {{action}}',
+        axisConflict: 'Eje ya usado para {{action}}',
         resetDefaults: 'Restaurar Valores Predeterminados',
         language: 'Idioma',
         accessibility: 'Accesibilidad',

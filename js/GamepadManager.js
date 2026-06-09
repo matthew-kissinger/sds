@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2D } from './Vector2D.js';
+import { normalizeGamepadPrefs, DEFAULT_GAMEPAD_BUTTONS } from './gamepadPrefs.js';
 
 /**
  * GamepadManager - Robust gamepad input handling for desktop users
@@ -15,19 +16,19 @@ export class GamepadManager {
         this.previousButtons = [];
         this.deadzone = 0.15; // Configurable deadzone for analog sticks
         this.triggerThreshold = 0.1; // Threshold for trigger activation
-        
+
         // Button mappings (standard gamepad layout)
         /** @type {Record<string, number>} */
         this.buttonMap = {
             A: 0,        // A button - Zoom In
             B: 1,        // B button - Zoom Out
-            X: 2,        // X button (unused)
-            Y: 3,        // Y button (unused)
+            X: 2,        // X button - Bank (Counting Sheep)
+            Y: 3,        // Y button - Cycle camera
             LB: 4,       // Left bumper (unused)
-            RB: 5,       // Right bumper (unused)
+            RB: 5,       // Right bumper - Bark
             LT: 6,       // Left trigger (unused)
-            RT: 7,       // Right trigger (unused - using axis instead)
-            SELECT: 8,   // Select/Back button (unused)
+            RT: 7,       // Right trigger - Sprint (axis fallback below)
+            SELECT: 8,   // Select/Back button - Playtest note
             START: 9,    // Start/Menu button - Pause
             LS: 10,      // Left stick button (unused)
             RS: 11,      // Right stick button (unused)
@@ -36,7 +37,7 @@ export class GamepadManager {
             DPAD_LEFT: 14,  // D-pad left (unused)
             DPAD_RIGHT: 15  // D-pad right (unused)
         };
-        
+
         // Axis mappings
         /** @type {Record<string, number>} */
         this.axisMap = {
@@ -46,26 +47,92 @@ export class GamepadManager {
             RIGHT_Y: 3,     // Right stick vertical (unused)
             RT_AXIS: 7      // Right trigger axis (varies by controller)
         };
-        
+
         // Connection state tracking
         this.connectionState = 'disconnected';
         this.lastConnectionCheck = 0;
         this.connectionCheckInterval = 100; // Check every 100ms
-        
+
+        // [P4-GAMEPAD-UI] While the Settings capture UI is armed, game-facing
+        // reads are suppressed so binding Start/A does not also toggle
+        // pause/zoom mid-capture.
+        this.uiCaptureActive = false;
+
+        // [P4-GAMEPAD-UI] Persisted prefs (deadzone + button/axis remap):
+        // read once at init, then kept live via the settings events below.
+        this.applyGamepadPrefs(this._loadPersistedPrefs());
+
         this.setupGamepadEvents();
         console.log('[GAMEPAD] GamepadManager initialized');
     }
-    
+
+    /**
+     * Read the gamepad prefs block from the persisted sds-settings blob.
+     * Mirrors InputHandler.loadKeyBindings: a direct localStorage read keeps
+     * the input path free of the React-side settings module.
+     * @returns {unknown}
+     */
+    _loadPersistedPrefs() {
+        try {
+            const saved = typeof localStorage !== 'undefined' && localStorage.getItem('sds-settings');
+            if (saved) return JSON.parse(saved).gamepad;
+        } catch (error) {
+            console.warn('[GAMEPAD] Failed to load gamepad prefs:', error);
+        }
+        return null;
+    }
+
+    /**
+     * Apply a (possibly partial/raw) prefs blob to the live maps. The Settings
+     * panel edits action names (sprint, bark, zoomIn, ...); this translates
+     * them onto the legacy physical-name maps so every existing consumer
+     * (main.js wasJustPressed('Y'), SceneManager zoom, pause) follows the
+     * remap without changes.
+     * @param {unknown} rawPrefs
+     */
+    applyGamepadPrefs(rawPrefs) {
+        const prefs = normalizeGamepadPrefs(rawPrefs);
+        this.deadzone = prefs.deadzone;
+        this.buttonMap.A = prefs.buttons.zoomIn;
+        this.buttonMap.B = prefs.buttons.zoomOut;
+        this.buttonMap.X = prefs.buttons.bank;
+        this.buttonMap.Y = prefs.buttons.cameraCycle;
+        this.buttonMap.RB = prefs.buttons.bark;
+        this.buttonMap.RT = prefs.buttons.sprint;
+        this.buttonMap.SELECT = prefs.buttons.note;
+        this.buttonMap.START = prefs.buttons.pause;
+        this.axisMap.LEFT_X = prefs.axes.moveX;
+        this.axisMap.LEFT_Y = prefs.axes.moveY;
+    }
+
     /**
      * Set up gamepad connection/disconnection event listeners
      */
     setupGamepadEvents() {
+        if (typeof window === 'undefined') return;
+
         window.addEventListener('gamepadconnected', (event) => {
             this.onGamepadConnected(event);
         });
-        
+
         window.addEventListener('gamepaddisconnected', (event) => {
             this.onGamepadDisconnected(event);
+        });
+
+        // [P4-GAMEPAD-UI] Live prefs updates: the Settings gamepad section
+        // dispatches 'gamepad-prefs-changed' on every remap/deadzone edit;
+        // 'settings-changed' covers the Reset All path (applySettingsToGame).
+        window.addEventListener('gamepad-prefs-changed', (event) => {
+            this.applyGamepadPrefs(/** @type {CustomEvent} */ (event).detail);
+        });
+
+        window.addEventListener('settings-changed', (event) => {
+            const detail = /** @type {CustomEvent} */ (event).detail;
+            if (detail && detail.gamepad) this.applyGamepadPrefs(detail.gamepad);
+        });
+
+        window.addEventListener('sds-gamepad-capture', (event) => {
+            this.uiCaptureActive = !!(/** @type {CustomEvent} */ (event).detail);
         });
     }
     
@@ -197,7 +264,7 @@ export class GamepadManager {
      * Get movement direction from left analog stick
      */
     getMovementDirection() {
-        if (!this.connected || !this.gamepad) {
+        if (!this.connected || !this.gamepad || this.uiCaptureActive) {
             return new Vector2D(0, 0);
         }
         
@@ -225,20 +292,22 @@ export class GamepadManager {
      * Check if sprint input is active (right trigger)
      */
     isSprinting() {
-        if (!this.connected || !this.gamepad) {
+        if (!this.connected || !this.gamepad || this.uiCaptureActive) {
             return false;
         }
-        
-        // Check right trigger axis (most common)
-        if (this.gamepad.axes[this.axisMap.RT_AXIS] !== undefined) {
+
+        // Configured sprint button (default RT, remappable via Settings)
+        if (this.gamepad.buttons[this.buttonMap.RT]?.pressed) {
+            return true;
+        }
+
+        // Legacy non-standard pads expose RT as an axis; keep that heuristic
+        // only while sprint sits on its default button so a remap wins.
+        if (this.buttonMap.RT === DEFAULT_GAMEPAD_BUTTONS.sprint &&
+            this.gamepad.axes[this.axisMap.RT_AXIS] !== undefined) {
             return this.gamepad.axes[this.axisMap.RT_AXIS] > this.triggerThreshold;
         }
-        
-        // Fallback to right trigger button
-        if (this.gamepad.buttons[this.buttonMap.RT]) {
-            return this.gamepad.buttons[this.buttonMap.RT].pressed;
-        }
-        
+
         return false;
     }
     
@@ -263,7 +332,7 @@ export class GamepadManager {
      * @param {number} otherIndex
      */
     _deadzonedAxis(primaryIndex, otherIndex) {
-        if (!this.connected || !this.gamepad) return 0;
+        if (!this.connected || !this.gamepad || this.uiCaptureActive) return 0;
         const primary = this.gamepad.axes[primaryIndex] || 0;
         const other = this.gamepad.axes[otherIndex] || 0;
         const mag = Math.sqrt(primary * primary + other * other);
@@ -276,7 +345,7 @@ export class GamepadManager {
      * Check if zoom in button is pressed (A button)
      */
     isZoomInPressed() {
-        if (!this.connected || !this.gamepad) {
+        if (!this.connected || !this.gamepad || this.uiCaptureActive) {
             return false;
         }
         
@@ -287,7 +356,7 @@ export class GamepadManager {
      * Check if zoom out button is pressed (B button)
      */
     isZoomOutPressed() {
-        if (!this.connected || !this.gamepad) {
+        if (!this.connected || !this.gamepad || this.uiCaptureActive) {
             return false;
         }
         
@@ -298,7 +367,7 @@ export class GamepadManager {
      * Check if pause button was just pressed (Start button - edge detection)
      */
     isPausePressed() {
-        if (!this.connected || !this.gamepad) {
+        if (!this.connected || !this.gamepad || this.uiCaptureActive) {
             return false;
         }
         
@@ -316,7 +385,7 @@ export class GamepadManager {
      * @param {string} buttonName
      */
     wasJustPressed(buttonName) {
-        if (!this.connected || !this.gamepad) return false;
+        if (!this.connected || !this.gamepad || this.uiCaptureActive) return false;
         const idx = this.buttonMap[buttonName];
         if (idx === undefined) return false;
         const current = this.gamepad.buttons[idx]?.pressed || false;
