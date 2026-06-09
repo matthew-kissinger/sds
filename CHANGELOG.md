@@ -29,6 +29,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.6] - 2026-06-09
+
+### Changed
+
+- Newsheepdogland is now the default URL-less scene, matching the entrance's
+  flagship survival world instead of dropping new sessions back to Rolling
+  Hills.
+- The first Play click now paints the loading surface before the heavy
+  Newsheepdogland scene rebuild starts, so the button no longer reads as stale
+  or ignored during production loading.
+
+### Fixed
+
+- Returning from Newsheepdogland to the menu now tears down survival-only
+  runtime surfaces before the entrance remounts, then starts a fresh survival
+  run when Play is clicked again.
+- Entrance dog selection now reads the canonical `selectedDog` key before the
+  older `sds.last-dog` key, aligning the entrance with the actual game-start
+  path.
+- Production cache policy now treats `/sw.js`, entrance renders, and terrain
+  binaries as mutable network-first assets with short Cloudflare Pages TTLs.
+
+### Validation
+
+- Full `npm test`, `npm run lint`, and `npm run build` passed locally.
+- Chromium Playwright smoke passed, including the Newsheepdogland Play -> pause
+  -> Main Menu -> Play regression.
+- Local production preview confirmed the loading surface appears after Play.
+
 ## [2.2.5] - 2026-06-09 (Cycle 84 - Mobile WebGPU primary hotfix)
 
 ### Fixed

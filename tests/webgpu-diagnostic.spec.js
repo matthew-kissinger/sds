@@ -518,7 +518,7 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(scene).toMatchObject({
       active: true,
       requestedSceneId: 'missing',
-      sceneId: 'rolling-hills',
+      sceneId: 'newsheepdogland',
       skyPresetName: 'dusk',
       fallbackReason: 'unknown-scene',
     });

@@ -232,7 +232,7 @@ export class MenuController {
     
     // Load dog selection from localStorage if available
     loadDogSelection() {
-        const savedDog = localStorage.getItem('selectedDog');
+        const savedDog = localStorage.getItem('selectedDog') || localStorage.getItem('sds.last-dog');
         if (savedDog && ['jep', 'pip', 'sally', 'shiloh', 'george_washington'].includes(savedDog)) {
             this.selectedDog = savedDog;
         }

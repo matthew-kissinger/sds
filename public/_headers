@@ -5,3 +5,12 @@
 # (social scrapers cache independently; this only affects browser + CF edge)
 /assets/marketing/og/*
   Cache-Control: public, max-age=300, s-maxage=300, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/assets/scenes/entrance/*
+  Cache-Control: public, max-age=300, s-maxage=300, must-revalidate
+
+/terrain/*
+  Cache-Control: public, max-age=300, s-maxage=300, must-revalidate

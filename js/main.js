@@ -910,8 +910,10 @@ class SheepDogSimulation {
      * hard-reloads via location.href (rooms lock the scene at creation).
      *
      * @param {string} toId  Target scene id (e.g. 'field', 'rolling-hills').
-     * @param {{ hash?: string }} [opts]  hash: raw hash payload to preserve
-     *   across an MP reload (no leading '#'), e.g. 's/<encoded>' or '/r/<code>'.
+     * @param {{ hash?: string, f?: boolean }} [opts]  hash: raw hash
+     *   payload to preserve across an MP reload (no leading '#'), e.g.
+     *   's/<encoded>' or '/r/<code>'. f bypasses the same-scene no-op
+     *   for entrance Play, where a fresh run needs scene-owned HUD/survival state.
      * @returns {Promise<void>}  In-process branch resolves when the rebuild
      *   completes; the MP hard-reload branch returns a never-resolving Promise
      *   because the page is reloading. Callers fire-and-forget — do not await.
@@ -922,7 +924,7 @@ class SheepDogSimulation {
             return;
         }
         const fromId = this.currentScene?.id;
-        if (fromId === toId && !opts.hash && !this._attractMode) {
+        if (fromId === toId && !opts.hash && !this._attractMode && !opts.f) {
             // Same-scene no-op (no opts.hash payload to honor). In attract mode
             // the scene def is loaded but its body was never built, so a pick
             // of the default scene must still fall through and build it.
@@ -1375,18 +1377,16 @@ class SheepDogSimulation {
         try {
             await this._disposeAndRebuildCurrentScene();
 
-            // Cycle 8X: the rebuild above re-mounts the day-loop HUD (day/night
-            // chip + survival minimap) for the backdrop scene, but we are
-            // returning to the StartScreen - gameplay HUD must not sit on top of
-            // the menu. Tear it back down and stop the day-loop ticker (no-op on
-            // non-day-loop scenes). A fresh Play re-enters via swapScene, which
-            // re-mounts the HUD cleanly.
-            this._tickDayLoop = null;
-            this.dayLoop = null;
-            try { this._unmountDayNightChip?.(); } catch (err) { console.warn('[SWAP] menu dayNightChip unmount:', err); }
-            this._unmountDayNightChip = null;
-            try { this._unmountMinimap?.(); } catch (err) { console.warn('[SWAP] menu minimap unmount:', err); }
-            this._unmountMinimap = null;
+            // Cycle 85: the rebuild above re-mounts survival gameplay surfaces
+            // for the backdrop scene, but we are returning to the StartScreen.
+            // Tear them back down so the menu is inert; entrance Play forces a
+            // rebuild and re-mounts the run surfaces cleanly.
+            this._wolfPack?.dispose?.();
+            this._unmountDayNightChip?.();
+            this._unmountMinimap?.();
+            this._tickDayLoop = this.dayLoop = this._wolfPack = this._survivalRun =
+                this._penContainment = this._unmountDayNightChip = this._unmountMinimap =
+                this._updateMinimap = null;
 
             // Reset gameplay flags — but NOT gameMode/competitiveGates,
             // which the menu wants to remember for "Play Again" UX.
@@ -2485,6 +2485,7 @@ class SheepDogSimulation {
         // Skip for local multiplayer - handled in updateLocalMultiplayer
         if (!isPaused && !this.isLocalMultiplayer) {
             this.gameState.updateSheepBehaviors(deltaTime);
+            const updateSurvival = this.gameState.gameActive && !this.isMultiplayer;
             // Cycle 59 (Counting Sheep): once the active batch is fully penned,
             // bring the next batch online. Self-guards to a no-op for every
             // non-counting mode, so standard runs are untouched.
@@ -2495,7 +2496,7 @@ class SheepDogSimulation {
             // a no-op everywhere else.
             // Cycle 67 P6: solo only. In co-op the DO runs the pen authoritatively
             // and the client renders the corrected sheep from the broadcast.
-            if (!this.isMultiplayer && this._penContainment) {
+            if (updateSurvival && this._penContainment) {
                 // Always pass the dog: it collides with the fence whether or not
                 // the round is "active" (the fence is a physical barrier).
                 this._penContainment.update(
@@ -2511,7 +2512,7 @@ class SheepDogSimulation {
             // safety). Survival scenes only; a no-op everywhere else.
             // Cycle 67 P6: solo only. In co-op the DO runs the wolves and the
             // client renders them from the broadcast (initNetwork WolfRenderer).
-            if (!this.isMultiplayer && this._wolfPack) {
+            if (updateSurvival && this._wolfPack) {
                 this._wolfPack.update(deltaTime, this.gameState.sheep, this.sheepdog ?? null);
             }
         }

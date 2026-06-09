@@ -5,6 +5,7 @@
  *
  * - Navigations/HTML: network-first, cache fallback (so deploys propagate immediately).
  * - Hashed /assets/: cache-first (filenames are content-addressed, so they're immutable).
+ * - Mutable un-hashed files: network-first, cache fallback.
  * - Other GETs: stale-while-revalidate.
  *
  * BUILD_ID is substituted at build time by vite.config.js serviceWorkerPlugin; a new
@@ -23,6 +24,12 @@ const NEVER_CACHE = [
     /\/\.wrtc\//,
     /socket\.io/,
     /\.db$/
+];
+
+const MUTABLE_UNHASHED = [
+    /\/sw\.js$/,
+    /\/assets\/scenes\/entrance\//,
+    /\/terrain\//
 ];
 
 self.addEventListener('install', (event) => {
@@ -46,6 +53,11 @@ self.addEventListener('fetch', (event) => {
     if (NEVER_CACHE.some((re) => re.test(url.pathname))) return;
 
     if (req.mode === 'navigate' || req.destination === 'document') {
+        event.respondWith(networkFirst(req));
+        return;
+    }
+
+    if (MUTABLE_UNHASHED.some((re) => re.test(url.pathname))) {
         event.respondWith(networkFirst(req));
         return;
     }

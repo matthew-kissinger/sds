@@ -231,6 +231,7 @@ export async function initReactUI() {
                 if (!game) return;
                 try { window.__sdsBootLoading = true; } catch {}
                 setScreen('loading');
+                await new Promise(requestAnimationFrame);
                 selectDog(dog.id);
                 const chosenDogId = getSelectedDog() || dog.id;
                 const chosenModeId = mode.id;
@@ -260,7 +261,7 @@ export async function initReactUI() {
                     // the same backdrop webp dissolves into the built scene when
                     // the loading surface hands off (see App's reveal hand-off).
                     unsubscribeSceneEnd = subscribeGameEvent('scene-swap-end', startCommittedSolo);
-                    await game.swapScene(world.id, { noCrossfade: true, revealBackdrop: world.render });
+                    await game.swapScene(world.id, { noCrossfade: true, revealBackdrop: world.render, f: true });
                 } catch (err) {
                     console.error('[UI] scene build for Play failed:', err);
                 } finally {

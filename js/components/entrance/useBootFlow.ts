@@ -18,7 +18,8 @@ import { subscribeGameEvent } from '../../GameBridge.js';
 import { COUNTING_GAME_MODE, COUNTING_CURVES } from '../../../shared/countingModes.js';
 import { mapLoadStep, FIRST_LOAD_LABEL } from './loadStages';
 
-const LAST_DOG = 'sds.last-dog';
+const LAST_DOG = 'selectedDog';
+const LEGACY_LAST_DOG = 'sds.last-dog';
 const LAST_MODE = 'sds.last-mode';
 // Cycle 59 (Counting Sheep): the chosen family and the counting curve persist
 // separately from the solo difficulty, so visiting Counting Sheep does not erase
@@ -78,7 +79,7 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   const [modeId, setModeId] = useState(() => readLS(LAST_MODE) ?? MODES[0].id);
   const [curveId, setCurveId] = useState(() => readLS(LAST_CURVE) ?? COUNTING_CURVES[0]);
   const [familyId, setFamilyId] = useState(() => readLS(LAST_FAMILY) ?? '');
-  const [dogId, setDogId] = useState(() => readLS(LAST_DOG) ?? DOGS[0].id);
+  const [dogId, setDogId] = useState(() => readLS(LAST_DOG) ?? readLS(LEGACY_LAST_DOG) ?? DOGS[0].id);
 
   // The real loading bar: the boot emits 'scene-load-step' per build mark; we
   // map the raw label (carried on a window global) to a friendly caption + a

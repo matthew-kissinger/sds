@@ -133,4 +133,73 @@ test.describe('SDS smoke', () => {
 
     expect(errors, `Unexpected console errors during gameplay: ${errors.join('\n')}`).toEqual([]);
   });
+
+  test('Newsheepdogland returns to menu and starts again with survival surfaces', async ({ page, context }) => {
+    test.setTimeout(240_000);
+    const errors = collectConsoleErrors(page);
+
+    await context.addInitScript(() => {
+      const identity = {
+        persistentId: 'player_e2e_loop_' + Date.now(),
+        displayName: 'LoopTester',
+        fullName: 'LoopTester#0001',
+        discriminator: '0001',
+        nameType: 'custom',
+        createdAt: Date.now(),
+        isRegistered: false,
+      };
+      localStorage.setItem('playerIdentity', JSON.stringify(identity));
+    });
+
+    const readSurvivalState = () => page.evaluate(() => {
+      const game = (window as any).__sds?.gameInstanceRef;
+      return {
+        scene: game?.currentScene?.id ?? null,
+        active: game?.gameState?.gameActive ?? null,
+        dayLoop: Boolean(game?.dayLoop),
+        survivalRun: Boolean(game?._survivalRun),
+        wolfPack: Boolean(game?._wolfPack),
+        minimap: Boolean(document.getElementById('sds-minimap')),
+      };
+    });
+
+    const expectSurvivalRunReady = async () => {
+      await expect(async () => {
+        expect(await readSurvivalState()).toMatchObject({
+          scene: 'newsheepdogland',
+          active: true,
+          dayLoop: true,
+          survivalRun: true,
+          wolfPack: true,
+          minimap: true,
+        });
+      }).toPass({ timeout: 90_000 });
+    };
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Newsheepdogland', { exact: true })).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole('button', { name: 'Play', exact: true }).dispatchEvent('click');
+    await expect(page.locator('#canvas-container canvas')).toBeAttached({ timeout: 90_000 });
+    await expectSurvivalRunReady();
+
+    await page.getByRole('button', { name: 'Pause game' }).click();
+    await page.getByRole('button', { name: 'Main Menu' }).dispatchEvent('click');
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible({ timeout: 90_000 });
+    await expect(async () => {
+      expect(await readSurvivalState()).toMatchObject({
+        scene: 'newsheepdogland',
+        active: false,
+        dayLoop: false,
+        survivalRun: false,
+        wolfPack: false,
+        minimap: false,
+      });
+    }).toPass({ timeout: 30_000 });
+
+    await page.getByRole('button', { name: 'Play', exact: true }).dispatchEvent('click');
+    await expectSurvivalRunReady();
+
+    expect(errors, `Unexpected console errors during Newsheepdogland loop: ${errors.join('\n')}`).toEqual([]);
+  });
 });

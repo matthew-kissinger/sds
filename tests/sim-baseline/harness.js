@@ -149,7 +149,7 @@ export function makeCoopGameState() {
     // Cycle 25 follow-up: pin sceneId to 'field' explicitly. Sim baselines
     // exercise the gated-pasture coop case; relying on DEFAULT_SCENE_ID
     // would couple the fixtures to whatever scene is currently the
-    // landing-page default (now 'rolling-hills' which is gateless island).
+    // landing-page default.
     return createGameState({
         sceneId: 'field',
         totalSheep: 200,

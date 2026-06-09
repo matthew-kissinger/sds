@@ -11,10 +11,13 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_WORLD_INDEX, WORLDS, familiesForWorld, modesForWorld } from '../js/components/entrance/worlds.ts';
 import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
+import { DEFAULT_SCENE_ID, loadScene } from '../shared/scenes/index.js';
 
 describe('familiesForWorld (Cycle 59 P7)', () => {
     it('the entrance leads with Newsheepdogland survival', () => {
         expect(WORLDS[DEFAULT_WORLD_INDEX]?.id).toBe('newsheepdogland');
+        expect(DEFAULT_SCENE_ID).toBe('newsheepdogland');
+        expect(loadScene().id).toBe(WORLDS[DEFAULT_WORLD_INDEX]?.id);
         expect(familiesForWorld('newsheepdogland').map((f) => f.id)).toEqual(['survival']);
     });
 
