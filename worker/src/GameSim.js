@@ -120,6 +120,13 @@ const TICK_OVERRUN_LOG_INTERVAL_MS = 5000;
 const DOG_VALIDATE_FALLBACK = new Vector2D(0, 0);
 const SHEEP_VALIDATE_FALLBACK = new Vector2D(-20, -20);
 
+// P2-DOSPILL: reusable scratch vector for calculateGateAttraction. The DO is
+// single-threaded and the caller (updateSheep's gate-seek branch) only reads
+// the returned steer via acceleration.add(...) before the next call, so one
+// module-level instance reused per call is aliasing-safe. The math performed
+// on it is operation-for-operation identical to the old clone()-based chain.
+const GATE_STEER_SCRATCH = new Vector2D(0, 0);
+
 // Hoisted named predicate for the per-tick "active sheep" filter in
 // updateSheep(). Defined once at module scope so the filter does not allocate
 // a fresh closure every tick (and so the filter itself runs once per tick
@@ -701,32 +708,53 @@ export class GameSimulation {
         const dampingFactor = 0.85; // More aggressive damping for snappier stops
         const velocitySmoothing = 0.6; // Less smoothing for more responsive movement
         const minMovementThreshold = 0.1; // Higher threshold for quicker stops
-        
-        // Store previous velocity for smoothing
-        const previousVelocity = sheepdog.velocity.clone();
-        
-        // Update velocity with acceleration
-        sheepdog.velocity.add(sheepdog.acceleration);
-        sheepdog.velocity.limit(maxSpeed);
-        
-        // Apply velocity damping to reduce oscillations
-        sheepdog.velocity.multiply(dampingFactor);
-        
-        // Smooth velocity with previous velocity to reduce jittering
-        const smoothedVelocity = previousVelocity
-            .multiply(velocitySmoothing)
-            .add(sheepdog.velocity.clone().multiply(1 - velocitySmoothing));
-        
-        // Only apply movement if above threshold to prevent micro-movements
-        if (smoothedVelocity.magnitude() > minMovementThreshold) {
-            sheepdog.velocity = smoothedVelocity;
-            // TIME-BASED position update (WITH deltaTime) - matches client
-            sheepdog.position.add(sheepdog.velocity.clone().multiply(this.deltaTime));
-        } else {
-            // Stop micro-movements
-            sheepdog.velocity.multiply(0);
+
+        // P2-DOSPILL: scalar form of the old clone()-based pipeline. Same
+        // operations on the same values in the same order, so the result is
+        // bit-identical - just without the three Vector2D allocations per call
+        // (previousVelocity clone, smoothing clone, position-step clone).
+
+        // Store previous velocity for smoothing (was: velocity.clone())
+        const prevX = sheepdog.velocity.x;
+        const prevZ = sheepdog.velocity.z;
+
+        // Update velocity with acceleration (was: add + limit + multiply)
+        let vx = sheepdog.velocity.x + sheepdog.acceleration.x;
+        let vz = sheepdog.velocity.z + sheepdog.acceleration.z;
+        // Inline Vector2D.limit: magnitude check, then normalize + rescale.
+        // limit() computes the same sqrt twice (check + normalize); both see
+        // identical x/z, so a single computation yields the identical value.
+        const len = Math.sqrt(vx * vx + vz * vz);
+        if (len > maxSpeed && len > 0.00001) {
+            vx /= len;
+            vz /= len;
+            vx *= maxSpeed;
+            vz *= maxSpeed;
         }
-        
+
+        // Apply velocity damping to reduce oscillations
+        vx *= dampingFactor;
+        vz *= dampingFactor;
+
+        // Smooth velocity with previous velocity to reduce jittering
+        // (was: previousVelocity.multiply(s).add(velocity.clone().multiply(1 - s)))
+        const sx = prevX * velocitySmoothing + vx * (1 - velocitySmoothing);
+        const sz = prevZ * velocitySmoothing + vz * (1 - velocitySmoothing);
+
+        // Only apply movement if above threshold to prevent micro-movements
+        if (Math.sqrt(sx * sx + sz * sz) > minMovementThreshold) {
+            sheepdog.velocity.x = sx;
+            sheepdog.velocity.z = sz;
+            // TIME-BASED position update (WITH deltaTime) - matches client
+            sheepdog.position.x += sx * this.deltaTime;
+            sheepdog.position.z += sz * this.deltaTime;
+        } else {
+            // Stop micro-movements (was: multiply(0) on the post-damping
+            // velocity - vx * 0 preserves the old -0/NaN propagation exactly)
+            sheepdog.velocity.x = vx * 0;
+            sheepdog.velocity.z = vz * 0;
+        }
+
         // Reset acceleration for next frame
         sheepdog.acceleration.multiply(0);
     }
@@ -950,14 +978,13 @@ export class GameSimulation {
             }
             sheep.position = constrainedPosition;
         } else if (sheep.isRetiring && sheep.retirementTarget) {
-            const extendedBounds = {
-                minX: this.gameState.bounds.minX - 35,
-                maxX: this.gameState.bounds.maxX + 35,
-                minZ: this.gameState.bounds.minZ - 35,
-                maxZ: this.gameState.bounds.maxZ + 35
-            };
-            sheep.position.x = Math.max(extendedBounds.minX, Math.min(extendedBounds.maxX, sheep.position.x));
-            sheep.position.z = Math.max(extendedBounds.minZ, Math.min(extendedBounds.maxZ, sheep.position.z));
+            // P2-DOSPILL: inline the extended +-35m clamp (was a fresh
+            // extendedBounds object literal per retiring sheep per tick).
+            // Same arithmetic, same Math.max/Math.min nesting; this is the
+            // form the sim-baseline harness already mirrors.
+            const b = this.gameState.bounds;
+            sheep.position.x = Math.max(b.minX - 35, Math.min(b.maxX + 35, sheep.position.x));
+            sheep.position.z = Math.max(b.minZ - 35, Math.min(b.maxZ + 35, sheep.position.z));
         }
     }
 
@@ -969,32 +996,55 @@ export class GameSimulation {
         const dampingFactor = 0.98;
         const velocitySmoothing = 0.85;
         const minMovementThreshold = 0.001;
-        
-        // Store previous velocity for smoothing
-        const previousVelocity = sheep.velocity.clone();
-        
-        // Update velocity with acceleration
-        sheep.velocity.add(sheep.acceleration);
-        sheep.velocity.limit(maxSpeed);
-        
-        // Apply velocity damping to reduce oscillations
-        sheep.velocity.multiply(dampingFactor);
-        
-        // Smooth velocity with previous velocity to reduce jittering
-        const smoothedVelocity = previousVelocity
-            .multiply(velocitySmoothing)
-            .add(sheep.velocity.clone().multiply(1 - velocitySmoothing));
-        
-        // Only apply movement if above threshold to prevent micro-movements
-        if (smoothedVelocity.magnitude() > minMovementThreshold) {
-            sheep.velocity = smoothedVelocity;
-            // Time-based position update calibrated to 60 FPS baseline (server tick rate)
-            sheep.position.add(sheep.velocity.clone().multiply(this.deltaTime * 60));
-        } else {
-            // Stop micro-movements
-            sheep.velocity.multiply(0);
+
+        // P2-DOSPILL: scalar form of the old clone()-based pipeline. Same
+        // operations on the same values in the same order, so the result is
+        // bit-identical - just without the three Vector2D allocations per
+        // sheep per tick (previousVelocity clone, smoothing clone, position-
+        // step clone). The sim-baseline fixtures are the guard.
+
+        // Store previous velocity for smoothing (was: velocity.clone())
+        const prevX = sheep.velocity.x;
+        const prevZ = sheep.velocity.z;
+
+        // Update velocity with acceleration (was: add + limit + multiply)
+        let vx = sheep.velocity.x + sheep.acceleration.x;
+        let vz = sheep.velocity.z + sheep.acceleration.z;
+        // Inline Vector2D.limit: magnitude check, then normalize + rescale.
+        // limit() computes the same sqrt twice (check + normalize); both see
+        // identical x/z, so a single computation yields the identical value.
+        const len = Math.sqrt(vx * vx + vz * vz);
+        if (len > maxSpeed && len > 0.00001) {
+            vx /= len;
+            vz /= len;
+            vx *= maxSpeed;
+            vz *= maxSpeed;
         }
-        
+
+        // Apply velocity damping to reduce oscillations
+        vx *= dampingFactor;
+        vz *= dampingFactor;
+
+        // Smooth velocity with previous velocity to reduce jittering
+        // (was: previousVelocity.multiply(s).add(velocity.clone().multiply(1 - s)))
+        const sx = prevX * velocitySmoothing + vx * (1 - velocitySmoothing);
+        const sz = prevZ * velocitySmoothing + vz * (1 - velocitySmoothing);
+
+        // Only apply movement if above threshold to prevent micro-movements
+        if (Math.sqrt(sx * sx + sz * sz) > minMovementThreshold) {
+            sheep.velocity.x = sx;
+            sheep.velocity.z = sz;
+            // Time-based position update calibrated to 60 FPS baseline (server tick rate)
+            const step = this.deltaTime * 60;
+            sheep.position.x += sx * step;
+            sheep.position.z += sz * step;
+        } else {
+            // Stop micro-movements (was: multiply(0) on the post-damping
+            // velocity - vx * 0 preserves the old -0/NaN propagation exactly)
+            sheep.velocity.x = vx * 0;
+            sheep.velocity.z = vz * 0;
+        }
+
         // Reset acceleration for next frame
         sheep.acceleration.multiply(0);
     }
@@ -1084,12 +1134,17 @@ export class GameSimulation {
                 
                 if (closestGate) {
                     const distanceToDog = sheep.position.distanceTo(sheepdog.position);
-                    
+
                     if (distanceToDog < sheep.fleeRadius * 1.5 && closestDistance < 30) {
-                        const toGate = closestGate.position.clone().subtract(sheep.position);
-                        const toDog = sheepdog.position.clone().subtract(sheep.position);
-                        
-                        const dotProduct = toGate.x * toDog.x + toGate.z * toDog.z;
+                        // P2-DOSPILL: inline the dot product (was two
+                        // clone().subtract() temporaries per check). Same
+                        // subtractions, same products, same order.
+                        const toGateX = closestGate.position.x - sheep.position.x;
+                        const toGateZ = closestGate.position.z - sheep.position.z;
+                        const toDogX = sheepdog.position.x - sheep.position.x;
+                        const toDogZ = sheepdog.position.z - sheep.position.z;
+
+                        const dotProduct = toGateX * toDogX + toGateZ * toDogZ;
                         if (dotProduct < 0) { // Gate is opposite direction from dog
                             return true;
                         }
@@ -1103,10 +1158,15 @@ export class GameSimulation {
                 const distanceToDog = sheep.position.distanceTo(sheepdog.position);
 
                 if (distanceToDog < sheep.fleeRadius * 1.5 && distanceToGate < 30) {
-                    const toGate = this.gameState.gate.position.clone().subtract(sheep.position);
-                    const toDog = sheepdog.position.clone().subtract(sheep.position);
+                    // P2-DOSPILL: inline the dot product (was two
+                    // clone().subtract() temporaries per check). Same
+                    // subtractions, same products, same order.
+                    const toGateX = this.gameState.gate.position.x - sheep.position.x;
+                    const toGateZ = this.gameState.gate.position.z - sheep.position.z;
+                    const toDogX = sheepdog.position.x - sheep.position.x;
+                    const toDogZ = sheepdog.position.z - sheep.position.z;
 
-                    const dotProduct = toGate.x * toDog.x + toGate.z * toDog.z;
+                    const dotProduct = toGateX * toDogX + toGateZ * toDogZ;
                     if (dotProduct < 0) { // Gate is opposite direction from dog
                         return true;
                     }
@@ -1139,17 +1199,23 @@ export class GameSimulation {
         }
         
         if (!targetGate) {
-            return new Vector2D(0, 0);
+            return GATE_STEER_SCRATCH.set(0, 0);
         }
-        
-        const desired = targetGate.position.clone().subtract(sheep.position);
+
+        // P2-DOSPILL: scratch reuse. set(gate.x - sheep.x, ...) produces the
+        // same components as the old clone().subtract(); the method chain
+        // below is unchanged, so every float op matches the old code exactly.
+        const desired = GATE_STEER_SCRATCH.set(
+            targetGate.position.x - sheep.position.x,
+            targetGate.position.z - sheep.position.z
+        );
         desired.normalize();
         desired.multiply(this.sheepConfig.maxSpeed);
-        
+
         const steer = desired.subtract(sheep.velocity);
         steer.limit(this.sheepConfig.maxForce);
         steer.multiply(sheep.gateAttraction);
-        
+
         return steer;
     }
 
