@@ -217,9 +217,14 @@
     }
     </script>
 
-    <!-- Preconnect for performance (Core Web Vitals boost) -->
+    <!-- [P4-PRELOAD] Preconnect to the Worker origin: main.js fires a
+         renderer_mode_resolved telemetry POST to /api/event during boot, so
+         the DNS+TLS handshake is on the first-load path. crossorigin because
+         it is a CORS fetch; dns-prefetch kept as the older-browser fallback.
+         (The stale unpkg.com preconnect was removed: nothing references
+         unpkg, so it only burned a socket + TLS handshake at boot.) -->
+    <link rel="preconnect" href="https://sds-worker.matt-m-kissinger.workers.dev" crossorigin>
     <link rel="dns-prefetch" href="https://sds-worker.matt-m-kissinger.workers.dev">
-    <link rel="preconnect" href="https://unpkg.com">
 
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
     <link rel="apple-touch-icon" href="assets/images/favicon.png">

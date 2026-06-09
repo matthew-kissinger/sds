@@ -58,6 +58,53 @@ function htmlRuntimeConfigPlugin() {
   }
 }
 
+// [P4-PRELOAD] Inject <link rel="modulepreload"> for the chunks that gate the
+// entrance's first render. Vite only emits modulepreload for the entry's
+// STATIC imports (three, vendor); the React overlay is reached through two
+// serialized dynamic-import hops (entry -> App.js -> the Promise.all wave in
+// initReactUI), so none of those chunks start downloading until main-*.js has
+// fully downloaded and executed. Hinting them in the HTML lets the browser
+// fetch them in parallel with the entry. The set is computed from the bundle
+// graph (App chunk + its direct dynamic-import wave + their static closure),
+// so it tracks refactors and never preloads speculative game-world chunks
+// (GrassSystem, scenes, GLBs), which are NOT in App's wave.
+function entranceModulePreloadPlugin() {
+  return {
+    name: 'entrance-modulepreload',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        if (!ctx.bundle || !/(^|[\\/])index\.html$/.test(ctx.filename)) return
+        const chunks = Object.values(ctx.bundle).filter((c) => c.type === 'chunk')
+        // The App chunk has no facadeModuleId (Vite folds the facade), so
+        // locate it by the module it carries.
+        const appChunk = chunks.find((c) =>
+          c.moduleIds.some((id) => id.replace(/\\/g, '/').endsWith('/js/components/App.js')))
+        if (!appChunk) return
+        const byFile = new Map(chunks.map((c) => [c.fileName, c]))
+        const gating = new Set()
+        const addStaticClosure = (fileName) => {
+          if (gating.has(fileName)) return
+          gating.add(fileName)
+          const c = byFile.get(fileName)
+          if (c) for (const imp of c.imports) addStaticClosure(imp)
+        }
+        addStaticClosure(appChunk.fileName)
+        for (const dyn of appChunk.dynamicImports) addStaticClosure(dyn)
+        // Skip anything the HTML already references (the entry script and the
+        // modulepreloads Vite emitted for its static imports).
+        for (const m of html.matchAll(/(?:src|href)="\/([^"]+\.js)"/g)) gating.delete(m[1])
+        return [...gating].map((fileName) => ({
+          tag: 'link',
+          attrs: { rel: 'modulepreload', crossorigin: true, href: '/' + fileName },
+          injectTo: 'head'
+        }))
+      }
+    }
+  }
+}
+
 export default defineConfig({
   base: (isItchio || isNative) ? './' : '/',
   define: {
@@ -104,6 +151,8 @@ export default defineConfig({
       ]
     }),
     excludeBlendFilesPlugin(),
+    // Absolute /assets/ hrefs assume the web base ('/'); itchio/native use './'.
+    ...((!isItchio && !isNative) ? [entranceModulePreloadPlugin()] : []),
     ...(!isNative ? [serviceWorkerPlugin()] : [])
   ],
   build: {
