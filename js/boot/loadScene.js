@@ -141,6 +141,32 @@ export async function disposeScene(game) {
     } catch (err) { console.warn('[SWAP] sheepdog dispose:', err); }
     if (driftLog) baseSnap = step('sheepdog', baseSnap);
 
+    // 3b. [P3-LISTENER-AUDIT] Local 2-player session teardown. A local game
+    //     never survives a dispose (both dogs and the flock are torn down
+    //     above), but the session state used to: LocalInputHandler leaked a
+    //     window keydown/keyup/blur set per local game (its Escape handler
+    //     kept firing pause toggles from the menu), and player 2's dog mesh
+    //     stayed in the scene. No-op on solo/MP paths (all fields null/false).
+    try {
+        game.localInputHandler?.destroy?.();
+    } catch (err) { console.warn('[SWAP] localInputHandler destroy:', err); }
+    game.localInputHandler = null;
+    game.localMultiplayerManager = null;
+    game.twoPlayerCamera = null;
+    game.isLocalMultiplayer = false;
+    try {
+        game.sheepdog2?.removeDistanceIndicator?.();
+        game.sheepdog2?.removePlayerIcon?.();
+        if (game.sheepdogMesh2?.parent) {
+            // Same rule as the player-1 dog above: the mesh is a
+            // SkeletonUtils.clone sharing the cached GLB's geometry +
+            // materials. Remove from scene only; never dispose.
+            game.sheepdogMesh2.parent.remove(game.sheepdogMesh2);
+        }
+        game.sheepdog2 = null;
+        game.sheepdogMesh2 = null;
+    } catch (err) { console.warn('[SWAP] sheepdog2 dispose:', err); }
+
     // 4. Other-player dogs (MP — solo path is no-op, harmless).
     if (game.otherPlayers?.size) {
         for (const [, dog] of game.otherPlayers) {

@@ -2091,6 +2091,11 @@ export class GrassSystem {
             if (chunk.mesh.geometry && (chunk.isMeadowQuad || chunk.ownsGeometry === true)) {
                 chunk.mesh.geometry.dispose();
             }
+            // [P3-LISTENER-AUDIT] InstancedMesh chunks hold a per-chunk
+            // instanceMatrix GPU buffer that geometry/material disposal does
+            // not free; InstancedMesh.dispose() releases it. Optional call:
+            // meadow-quad chunks are plain Meshes with no dispose().
+            chunk.mesh.dispose?.();
         }
 
         this.chunks.clear();

@@ -1369,6 +1369,11 @@ export class OptimizedSheepSystem {
 
         if (this.instancedMesh) {
             if (this.instancedMesh.parent) this.instancedMesh.parent.remove(this.instancedMesh);
+            // [P3-LISTENER-AUDIT] InstancedMesh.dispose() dispatches the
+            // 'dispose' event so the renderer frees the instanceMatrix GPU
+            // buffer (and morph texture, if any). Geometry + material are
+            // disposed separately below.
+            this.instancedMesh.dispose?.();
             this.instancedMesh = null;
         }
         if (this.mergedGeometry) {

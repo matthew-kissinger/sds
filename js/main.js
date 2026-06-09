@@ -638,9 +638,15 @@ class SheepDogSimulation {
         // Persist in-game mode changes to the per-scene key. The 'C' hotkey
         // dispatches camera-mode-changed; the SettingsPanel writes the legacy
         // global key on start-screen change. Both writes are kept for back-compat.
+        // [P3-LISTENER-AUDIT] Compute the key at fire time: this listener is
+        // app-lifetime (registered once here in the constructor) but scenes
+        // swap in-process, so a key captured at construction would persist
+        // every later change to the boot scene's slot.
         window.addEventListener('camera-mode-changed', (e) => {
             if (!e?.detail) return;
-            try { localStorage.setItem(sceneCameraKey, e.detail); } catch (_) { /* ignore */ }
+            const sceneId = this.currentScene?.id;
+            if (!sceneId) return;
+            try { localStorage.setItem(`camera-mode-${sceneId}`, e.detail); } catch (_) { /* ignore */ }
         });
         
         // Connect performance monitor and game state to input handler

@@ -30,10 +30,18 @@ export class LocalInputHandler {
         this.isPaused = false;
         this.pauseCallbacks = [];
 
+        // [P3-LISTENER-AUDIT] One handler is created per local 2-player game
+        // start (main.js startLocalGame), so the window listeners below must
+        // die with the instance. destroy() aborts this controller; the
+        // scene-swap teardown (boot/loadScene.js disposeScene) calls it.
+        this._abort = new AbortController();
+
         this.setupEventListeners();
     }
 
     setupEventListeners() {
+        const signal = this._abort.signal;
+
         // Keydown event
         window.addEventListener('keydown', (event) => {
             // Handle pause toggle with Escape key
@@ -96,7 +104,7 @@ export class LocalInputHandler {
                 this.player2Keys.shift = true;
                 event.preventDefault();
             }
-        });
+        }, { signal });
 
         // Keyup event
         window.addEventListener('keyup', (event) => {
@@ -148,12 +156,12 @@ export class LocalInputHandler {
                 this.player2Keys.shift = false;
                 event.preventDefault();
             }
-        });
+        }, { signal });
 
         // Reset keys when window loses focus
         window.addEventListener('blur', () => {
             this.resetAllKeys();
-        });
+        }, { signal });
     }
 
     resetAllKeys() {
@@ -251,6 +259,11 @@ export class LocalInputHandler {
 
     // Cleanup
     destroy() {
+        // [P3-LISTENER-AUDIT] Tear down the window keydown/keyup/blur
+        // listeners; without this every local 2-player game start leaked a
+        // set, and the leaked Escape handler kept toggling pause after the
+        // session ended.
+        this._abort.abort();
         this.resetAllKeys();
         this.pauseCallbacks = [];
     }
