@@ -2,11 +2,13 @@
 
 > Drafted 2026-06-08 after Cycle 81 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
 >
-> Cycle 81 lifted the flagship live on desktop WebGPU. Cycle 82 opens with a post-ship flagship-stability phase (Phase 1, locally committed and pending deploy) and carries the standing player-visible `feel-and-media-live` thread as the follow-on work.
+> Closed 2026-06-09. Cycle 81 lifted the flagship live on desktop WebGPU. Cycle 82 opened with a post-ship flagship-stability phase, then shipped the standing player-visible `feel-and-media-live` thread as `v2.2.3`.
+>
+> Release proof: tag `v2.2.3` at `dc1855e`; CI follow-up `8b0936e`; Deploy run `27180799572` green; live Pages root 200 with `/assets/main-CLV5WhDs.js`; live Newsheepdogland hero asset 254,128 bytes, sha256 `2b80c17e0ac95b20554944eb6a9c85c0eb220cd0a7d8a428215fbed857dab5f3`; direct Worker `/healthz` 200 with `{"ok":true,"worker":"sds-worker"}`.
 
 ## Goal
 
-Keep the freshly-lifted desktop WebGPU flagship correct and stable, then return to player-visible feel/media work. Phase 1 (locally committed, pending deploy) fixes three live regressions Matt hit testing newsheepdogland: the farmhouse spawned in the sea instead of attached to the pen, grass came and went, and loads flip-flopped between WebGPU and WebGL. All three trace to two mechanisms (a field-bounds reset that clobbered the scene-pinned homestead, and a QualityGovernor that false-floored on transient spikes and wrote a 24h sticky WebGL fallback from a desktop step-down). Phase 2 (locally committed, pending deploy) fixes a fourth newsheepdogland regression: grass was fully invisible on the desktop WebGPU path (a grass-blade distance-fade shader bug that keyed the fade off the world origin instead of the camera), corrected at the shader source. Phases 3 and 4 complete the deferred `feel-and-media-live` thread locally: survival pacing is sharper, two-dog co-op survives the shorter day/night cycle, the entrance now leads with Newsheepdogland, and the 3070 production-build steady-state profile holds full quality.
+Keep the freshly-lifted desktop WebGPU flagship correct and stable, then return to player-visible feel/media work. Phase 1 fixed three live regressions Matt hit testing newsheepdogland: the farmhouse spawned in the sea instead of attached to the pen, grass came and went, and loads flip-flopped between WebGPU and WebGL. All three trace to two mechanisms (a field-bounds reset that clobbered the scene-pinned homestead, and a QualityGovernor that false-floored on transient spikes and wrote a 24h sticky WebGL fallback from a desktop step-down). Phase 2 fixed a fourth newsheepdogland regression: grass was fully invisible on the desktop WebGPU path (a grass-blade distance-fade shader bug that keyed the fade off the world origin instead of the camera), corrected at the shader source. Phases 3 and 4 completed the deferred `feel-and-media-live` thread: survival pacing is sharper, two-dog co-op survives the shorter day/night cycle, the entrance now leads with Newsheepdogland, and the 3070 production-build steady-state profile holds full quality.
 
 ## How to read this plan
 
@@ -16,7 +18,7 @@ This doc fixes the *shape* of the changes (data contracts, where new code slots 
 
 1. **Q1: Does the 3070 genuinely exceed the desktop frame budget on newsheepdogland, or was the floor purely a transient false-positive?** Resolved by Phase 4: a local production preview on the 3070 passed 5/5 foreground steady-state runs at `qualityIndex 0` with worst p95 7.0 ms and worst p99 7.1 ms, no WebGL fallback, no console/page errors, and the WebGPU grass compute-cull path active. The budget miss was not a steady-state production problem.
 
-## Phase 1 - Flagship stability fixes (LOCAL COMMITTED 2026-06-08, pending deploy, ~3hr)
+## Phase 1 - Flagship stability fixes (SHIPPED LIVE 2026-06-09, ~3hr)
 
 **Independently testable.** Three live regressions in the shipped Cycle 81 flagship, fixed and verified on the 3070 + WebGPU. No `shared/` sim change; sim-baselines untouched.
 
@@ -42,7 +44,7 @@ Files: [`js/world/sandbox.js`](../js/world/sandbox.js), [`js/perf/QualityGoverno
 - [x] When the grass auto-LOD ticks inside the first 6 s of a scene, then it shall hold `_autoLodFactor` steady.
 - [x] When `npm test` runs, then the suite shall stay green with 7 new specs (1142 pass / 8 skip), and `npm run build` shall stay clean at the Phase 1 checkpoint bundle baseline (mainKB 591).
 
-## Phase 2 - Flagship grass visibility on WebGPU (LOCAL COMMITTED 2026-06-08, pending deploy, ~4hr)
+## Phase 2 - Flagship grass visibility on WebGPU (SHIPPED LIVE 2026-06-09, ~4hr)
 
 **Independently testable.** A live regression in the shipped Cycle 81 flagship: grass was completely invisible on newsheepdogland on the desktop WebGPU path (both the compute-cull path it ships and the per-chunk fallback), while it rendered correctly on WebGL and on every near-origin scene. Fixed at the shader source. No render-path or architecture change, no `shared/` sim change, sim-baselines untouched.
 
@@ -64,7 +66,7 @@ Files: [`js/world/konveyorGrassBladeNodeMaterial.js`](../js/world/konveyorGrassB
 - [x] While on the newsheepdogland flagship, when the fix lands, then the compute-cull consolidation shall be unchanged (8 InstancedMeshes, `grassControllerPresent: true`, 0 console errors).
 - [x] When `npm test` runs, then the suite shall stay green (1142 pass / 8 skip, exit 0), and `npm run build` shall stay clean at the Phase 2 checkpoint bundle baseline (main 591 / three 604 KB).
 
-## Phase 3 - feel-and-media-live (LOCAL VALIDATION COMPLETE 2026-06-09, packaged for v2.2.3)
+## Phase 3 - feel-and-media-live (SHIPPED LIVE 2026-06-09 as v2.2.3)
 
 **Independently testable.** Turns Newsheepdogland from a correct-but-secondary option into the lead survival island. This phase touches shared scene/survival tuning; the active-cycle acceptance is recorded here, `npm test` including sim-baseline passed, and no sim-baseline golden was regenerated.
 
@@ -87,9 +89,9 @@ Files: [`shared/scenes/newsheepdogland.js`](../shared/scenes/newsheepdogland.js)
 - [x] When the mobile entrance renders, then the fullscreen prompt shall not overlap the title and the full survival tagline shall be visible without ellipsis. Verified by `cycle82-validation/entrance-proof/mobile.png`.
 - [x] When `npm test` runs after the shared survival tuning change, then sim-baselines shall still pass without regenerating any golden.
 
-## Phase 4 - production steady-state profile on the 3070 (VALIDATED 2026-06-09, packaged for v2.2.3)
+## Phase 4 - production steady-state profile on the 3070 (SHIPPED LIVE 2026-06-09 as v2.2.3)
 
-**Independently testable.** A measure-first production-build profile against a local `vite preview` confirmed that Newsheepdogland sustains the desktop WebGPU flagship at full quality on the 3070. This validates the claim for the production bundle, not for the already-deployed live site; production remains old until the `v2.2.3` commit is pushed and the deploy completes.
+**Independently testable.** A measure-first production-build profile against a local `vite preview` confirmed that Newsheepdogland sustains the desktop WebGPU flagship at full quality on the 3070. The same release bundle is now live on Pages; the live main bundle contains the Newsheepdogland scene data plus the `lossThreshold:.45`, `killCooldown:1.6`, and `secondsPerDay:360` release markers.
 
 Probe: [`tools/cycle82-steady-state-profile.mjs`](../tools/cycle82-steady-state-profile.mjs). Artifacts: `cycle82-validation/steady-state-profile-3070.json`, `cycle82-validation/steady-state-profile-screens/run-1.png`.
 
@@ -103,8 +105,8 @@ Probe: [`tools/cycle82-steady-state-profile.mjs`](../tools/cycle82-steady-state-
 ## Dependencies
 
 ```
-Phase 1 + Phase 2 (locally committed, pending deploy) -> Phase 4 measurement (validated locally)
-Phase 3 feel-and-media-live (validated locally)
+Phase 1 + Phase 2 (shipped live) -> Phase 4 measurement (validated locally, release shipped live)
+Phase 3 feel-and-media-live (shipped live)
 Mobile WebGPU validation remains blocked on a WebGPU-capable mobile device
 ```
 
@@ -128,10 +130,10 @@ Durable hard stops apply on every cycle — see [`EMERGENCY_STOPS.md`](EMERGENCY
 
 `/cycle-close` reads this section and asks the user to confirm each item. Don't pre-check.
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover. Cycle 82 shipped live; mobile WebGPU validation remains carryover.
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass. Passed before release commit; GH Actions `Test` passed in deploy run `27180799572`.
+- [x] When `npm run build` runs at cycle close, production build shall be clean. Passed locally before release; GH Actions `Deploy Pages` built and deployed successfully in run `27180799572`.
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions. Run `27180799572` green; live Pages and direct Worker proof recorded above.
 
 ## References
 

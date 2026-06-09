@@ -4,6 +4,21 @@
 
 ## Recently Completed
 
+### Cycle 82 - `feel-and-media-live` (closed 2026-06-09)
+
+Plan archived at [`docs/archive/cycles/cycle-82-plan.md`](archive/cycles/cycle-82-plan.md). Autonomous release closeout from Matt's request to validate the claims, fix what was needed, then commit/push/deploy after aligning docs. **SHIPPED: `v2.2.3` turns Newsheepdogland from technically correct into the lead survival island while keeping the desktop WebGPU flagship stable.** Release tag `v2.2.3` points at `dc1855e`; CI helper follow-up `8b0936e`; Deploy run `27180799572` green.
+
+- **Flagship stability (P1/P2).** Fixed the scene-pinned homestead being reset into the sea, stopped transient desktop WebGPU quality misses from writing a sticky WebGL fallback, added quality-window transient rejection, and fixed invisible far-from-origin WebGPU grass by measuring blade fade from `positionView` instead of world-origin distance. Desktop WebGPU keeps the Cycle 81 compute-cull consolidation.
+- **Survival feel (P3).** Newsheepdogland day length is now 360 s, initial morning reaches night at about 187 s, daily flock growth is +6, survival loss threshold is 45%, and wolf kill cooldown is 1.6 s.
+- **Two-dog co-op (P3).** The live two-client integration test now derives the night advance from `newsheepdogland.dayNight.secondsPerDay` and proved both clients in the same survival snapshot with 2 wolves.
+- **Entrance hero (P3).** The root entrance defaults to Newsheepdogland with a fresh WebGPU homestead/pen/grass capture, Newsheepdogland preload, baseline SEO/OG/Twitter copy, and mobile prompt/tagline layout fixes.
+- **3070 steady state (P4).** Production preview on the RTX 3070 passed 5/5 foreground WebGPU runs at `qualityIndex 0`, no fallback, no console/page errors, WebGPU grass compute-cull active, worst p95 7.0 ms, worst p99 7.1 ms.
+- **Live proof.** `https://sheepdogsim.com/?proof=8b0936e` returned 200 with `/assets/main-CLV5WhDs.js`; live main contains Newsheepdogland scene data plus `lossThreshold:.45`, `killCooldown:1.6`, `secondsPerDay:360`; live hero asset is 254,128 bytes, sha256 `2b80c17e0ac95b20554944eb6a9c85c0eb220cd0a7d8a428215fbed857dab5f3`; direct Worker `/healthz` returned `{"ok":true,"worker":"sds-worker"}`.
+
+**Validation gates:** `npm test` green; `npm run lint` green; `npm run build` green; local exact CI Chromium e2e command green after the helper fix; GH Actions Deploy run `27180799572` green (Test, E2E Chromium, D1 migrate, Worker deploy, Pages deploy). Sim-baselines passed without regeneration.
+
+- **Carryover:** mobile WebGPU validation remains blocked on a real WebGPU-capable mobile device; prior tablet draw-call perf remains open.
+
 ### Cycle 81 - `webgpu-flagship-ship` (closed 2026-06-08)
 
 Plan archived at [`docs/archive/cycles/cycle-81-plan.md`](archive/cycles/cycle-81-plan.md). Autonomous (Matt: "complete autonomously, device is connected (tablet - lower end)", then "commit and push then run cycle close"). **SHIPPED: the 7-cycle newsheepdogland WebGL pin is lifted on desktop WebGPU; mobile keeps it.** Cycle 80 proved the mechanism; this cycle turned the reverted spike into clean production code and flipped the live default for the experimental-WebGPU cohort. Commit `7c8e74c` (deploy run 27161107853 green) + the close. Full evidence + exact edits: `cycle81-validation/README.md` (gitignored).

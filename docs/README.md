@@ -9,7 +9,7 @@
 You're a fresh agent (Claude / Codex / Cursor / etc.) on this repo with no session context. Read in this order:
 
 1. **[`../NEXT_SESSION.md`](../NEXT_SESSION.md)** — current pickup state. Tells you which cycle is active, when the snapshot was taken, and where to start.
-2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open. At this snapshot, NEXT_SESSION points to Cycle 82.
+2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open. At this snapshot there is no active cycle; the latest closed plan is [`archive/cycles/cycle-82-plan.md`](archive/cycles/cycle-82-plan.md).
 3. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
 4. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
 5. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).
@@ -74,7 +74,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 
 After Cycle 28 Stream A3's consolidation, the only files at `docs/` root are:
 
-- The **active cycle plan**, when a cycle is open (`cycle-N-plan.md`; Cycle 82 is open at this snapshot).
+- The **active cycle plan**, when a cycle is open (`cycle-N-plan.md`; none is open at this snapshot).
 - The **append-only [`BACKLOG.md`](BACKLOG.md)** — closed-cycle log + deferred items.
 - The **fence + template + contract triad**: [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md), [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md).
 - A small set of **stable how-tos and references**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md), [`native-desktop-package-cycle-54.md`](native-desktop-package-cycle-54.md), [`native-packaging-proof-0.md`](native-packaging-proof-0.md), [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md).
