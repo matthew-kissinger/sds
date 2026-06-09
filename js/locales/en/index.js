@@ -130,6 +130,13 @@ export default {
         goBack: 'Go back'
     },
 
+    // P1-MOBILE-FALLBACK: one-per-session toast when the boot lands on WebGL
+    // because WebGPU was unavailable (never for an explicit ?renderer=webgl).
+    rendererFallback: {
+        title: 'Compatibility rendering',
+        body: 'Running the WebGL renderer on this browser. The game plays the same; some visual detail is reduced.'
+    },
+
     // Settings panel
     settings: {
         title: 'Settings',
@@ -137,7 +144,8 @@ export default {
         tabs: {
             graphics: 'Graphics',
             audio: 'Audio',
-            controls: 'Controls'
+            controls: 'Controls',
+            general: 'General'
         },
         // Presets
         presets: 'Performance Preset',
@@ -171,13 +179,35 @@ export default {
             moveLeft: 'Move Left',
             moveRight: 'Move Right',
             sprint: 'Sprint',
+            bark: 'Bark',
+            cameraCycle: 'Cycle Camera',
             pause: 'Pause'
+        },
+        cameraModeSection: 'Camera mode (press {{key}} to cycle)',
+        cameraModes: {
+            follow: 'Follow',
+            followDesc: 'Cinematic close-up behind the dog (default)',
+            free: 'Free',
+            freeDesc: 'Right-mouse-drag to orbit the dog',
+            classic: 'Classic',
+            classicDesc: 'High isometric overhead view'
         },
         gamepadSupport: 'Gamepad Support',
         gamepadDesc: 'Controllers are automatically detected. Use left stick to move, triggers to sprint.',
         // General
         resetDefaults: 'Reset All',
-        language: 'Language'
+        language: 'Language',
+        accessibility: 'Accessibility',
+        colorblindMode: 'Colorblind-friendly colors',
+        colorblindModeDesc: 'Use a colorblind-safe palette for medal and rank colors',
+        tutorialLabel: 'Tutorial',
+        tutorialDesc: 'Run the guided herding lesson again',
+        replayTutorial: 'Replay tutorial',
+        profile: 'Player Profile',
+        resetProfile: 'Reset profile',
+        resetProfileDesc: 'Clears the local player identity. A new one is created on reload; stats and key bindings stay.',
+        resetProfileConfirm: 'Reset your player profile? A new shepherd identity is created when the game reloads.',
+        aboutLink: 'About this game'
     },
 
     // Sandbox setup

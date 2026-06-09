@@ -24,6 +24,7 @@ import { subscribeGameEvent } from '../../GameBridge.js';
 import { getPlayerIdentity } from '../shared/playerIdentity.js';
 import { NameField } from '../shared/NameField';
 import { copyTextToClipboard } from '../shared/clipboard.js';
+import { getMedalColors, useColorblindMode } from '../shared/medalColors';
 import { buildShareText } from './shareText';
 
 // Decorative celebration glyphs kept inline (no clean shared equivalent): the
@@ -66,13 +67,10 @@ function StarGlyph({ size = 24, color = 'currentColor', filled = false }: { size
     );
 }
 
-// Medal colors for rankings (semantic/decorative - kept as-is: gold/silver/
-// bronze are a universal rank convention, only shown in the MP standings list).
-const MEDAL_COLORS: Record<number, { bg: string; text: string; glow: string }> = {
-    1: { bg: 'linear-gradient(135deg, #FFD700, #FFA500)', text: '#000', glow: 'rgba(255, 215, 0, 0.4)' },
-    2: { bg: 'linear-gradient(135deg, #E8E8E8, #B8B8B8)', text: '#000', glow: 'rgba(192, 192, 192, 0.4)' },
-    3: { bg: 'linear-gradient(135deg, #CD7F32, #8B4513)', text: '#fff', glow: 'rgba(205, 127, 50, 0.4)' }
-};
+// Medal colors for rankings (only shown in the MP standings list) live in
+// shared/medalColors: gold/silver/bronze by default, the Okabe-Ito orange/
+// grey/sky-blue trio when colorblind mode is on ([P1-SETTINGS-A11Y]). The
+// badge always renders the rank number, so color is never the only signal.
 
 // Cycle 58 close: pastoral result palette. The Cycle 51 P9 conversion warmed the
 // glass + text but left the accents/gradients on the old tech palette (emerald
@@ -182,8 +180,9 @@ function Confetti() {
 
 // Rank badge component
 function RankBadge({ rank, size = 'normal' }: { rank: number; size?: 'normal' | 'large' }) {
+    const colorblind = useColorblindMode();
     const isTopThree = rank <= 3;
-    const medal = MEDAL_COLORS[rank];
+    const medal = getMedalColors(colorblind)[rank];
     const sizeClass: CSSProperties = size === 'large'
         ? { width: '48px', height: '48px', fontSize: '20px' }
         : { width: '32px', height: '32px', fontSize: '14px' };

@@ -3411,6 +3411,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     emitRendererModeTelemetry(gameInstance);
 
+    // P1-MOBILE-FALLBACK: if this load landed on WebGL because WebGPU was
+    // unavailable (capability-driven, not an explicit ?renderer=webgl or the
+    // experimentalWebGpu opt-out), surface a one-per-session non-blocking
+    // compatibility-rendering toast and emit `renderer_fallback`. Lazy import
+    // keeps i18n/telemetry out of the critical boot path.
+    import('./rendering/rendererFallbackNotice.js')
+        .then((m) => m.maybeNotifyRendererFallback())
+        .catch(() => {});
+
     // Delegate menu/network flows from gameInstance to menuController for GameBridge
     gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {
         gameInstance.menuController.selectSolo(dogType, singlePlayerMode);

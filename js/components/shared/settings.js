@@ -6,13 +6,19 @@
  */
 import { getTerrainBuilder, getAudioManager, getPerformanceMonitor, getSceneManager, getGrassSystem } from '../../GameBridge.js';
 
-// Default key bindings
+// Default key bindings. Must mirror InputHandler's DEFAULT_BINDINGS: the
+// settings UI edits this set, InputHandler consumes it via the
+// 'keybindings-changed' event + the persisted sds-settings keyBindings.
+// [P1-SETTINGS-REBIND] bark and cameraCycle joined the bindable set (they
+// were InputHandler-only before, so the UI could not remap them).
 export const DEFAULT_KEY_BINDINGS = {
     moveUp: 'KeyW',
     moveDown: 'KeyS',
     moveLeft: 'KeyA',
     moveRight: 'KeyD',
     sprint: 'ShiftLeft',
+    bark: 'Space',
+    cameraCycle: 'KeyC',
     pause: 'Escape'
 };
 
@@ -89,6 +95,9 @@ export function getDefaultSettings() {
         // Controls
         keyBindings: { ...DEFAULT_KEY_BINDINGS },
         mouseSensitivity: 1.0,
+
+        // Accessibility ([P1-SETTINGS-A11Y]): daltonizer-safe medal/rank colors.
+        colorblindMode: false,
 
         // Debug
         showStats: false
@@ -276,9 +285,10 @@ export function updateKeyBinding(action, keyCode) {
     return settings;
 }
 
-// Check if a key is already bound to another action
-export function isKeyAlreadyBound(keyCode, excludeAction) {
-    const bindings = getKeyBindings();
+// Check if a key is already bound to another action. Pass the live bindings
+// (e.g. the React settings state) to check against them; defaults to the
+// persisted set so existing callers keep working.
+export function isKeyAlreadyBound(keyCode, excludeAction, bindings = getKeyBindings()) {
     for (const [action, code] of Object.entries(bindings)) {
         if (action !== excludeAction && code === keyCode) {
             return action;

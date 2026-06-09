@@ -97,20 +97,76 @@ export default {
         goBack: '戻る'
     },
 
+    // P1-MOBILE-FALLBACK: 互換レンダリング通知（WebGPU -> WebGL フォールバック）。
+    rendererFallback: {
+        title: '互換レンダリング',
+        body: 'このブラウザではWebGLレンダラーで動作しています。ゲーム内容は同じですが、一部の視覚効果が簡略化されます。'
+    },
+
     // Settings panel
     settings: {
         title: '設定',
+        tabs: {
+            graphics: 'グラフィック',
+            audio: 'オーディオ',
+            controls: '操作',
+            general: '全般'
+        },
+        presets: 'パフォーマンスプリセット',
         performanceMode: 'パフォーマンスモード',
         performanceOption: 'パフォーマンス - 最大FPS',
         balancedOption: 'バランス - デフォルト設定',
         qualityOption: 'クオリティ - 最高のビジュアル',
+        shadows: '影',
+        shadowsDesc: '動的な影を有効にする（デスクトップのみ）',
         experimentalWebGpu: 'WebGPUレンダラー',
         experimentalWebGpuDesc: '実験的機能です。利用可能な場合はWebGPUを使います。オフにするとWebGLで再読み込みします。',
+        shadowQuality: '影の品質',
+        low: '低',
+        medium: '中',
+        high: '高',
         audioEnabled: 'オーディオ有効',
         audioVolume: 'オーディオ音量',
         showStats: 'パフォーマンス統計を表示',
+        showStatsDesc: 'FPSと描画統計を表示',
+        keyBindings: 'キーボード操作',
+        resetBindings: '初期設定に戻す',
+        pressKey: 'キーを押してください...',
+        keyConflict: 'そのキーは「{{action}}」に使用されています',
+        actions: {
+            moveUp: '前進',
+            moveDown: '後退',
+            moveLeft: '左に移動',
+            moveRight: '右に移動',
+            sprint: 'ダッシュ',
+            bark: '吠える',
+            cameraCycle: 'カメラ切り替え',
+            pause: 'ポーズ'
+        },
+        cameraModeSection: 'カメラモード（{{key}}で切り替え）',
+        cameraModes: {
+            follow: 'フォロー',
+            followDesc: '犬の後ろからの映画的なクローズアップ（デフォルト）',
+            free: 'フリー',
+            freeDesc: '右ドラッグで犬の周りを回転',
+            classic: 'クラシック',
+            classicDesc: '高所からの俯瞰ビュー'
+        },
+        gamepadSupport: 'ゲームパッド対応',
+        gamepadDesc: 'コントローラーは自動検出されます。左スティックで移動、トリガーでダッシュします。',
         resetDefaults: 'デフォルトに戻す',
-        language: '言語'
+        language: '言語',
+        accessibility: 'アクセシビリティ',
+        colorblindMode: '色覚サポート配色',
+        colorblindModeDesc: 'メダルとランクの色に色覚多様性に配慮したパレットを使用します',
+        tutorialLabel: 'チュートリアル',
+        tutorialDesc: 'ガイド付きの牧羊レッスンをもう一度プレイ',
+        replayTutorial: 'チュートリアルをやり直す',
+        profile: 'プレイヤープロフィール',
+        resetProfile: 'プロフィールをリセット',
+        resetProfileDesc: 'ローカルのプレイヤー識別情報を消去します。再読み込み時に新しく作成され、統計とキー設定は残ります。',
+        resetProfileConfirm: 'プレイヤープロフィールをリセットしますか？再読み込み時に新しい羊飼いの識別情報が作成されます。',
+        aboutLink: 'このゲームについて'
     },
 
     // Sandbox setup

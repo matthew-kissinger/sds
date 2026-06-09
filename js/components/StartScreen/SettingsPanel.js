@@ -2,7 +2,11 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * SettingsPanel Component
- * Modern tabbed settings UI with Graphics, Audio, and Controls sections
+ * Modern tabbed settings UI with Graphics, Audio, Controls, and General
+ * (language / accessibility / tutorial / profile) sections.
+ * [P1-SETTINGS-PANEL] integration pass: every control is live, the key
+ * rebinder covers the full bindable action set, and the tutorial re-trigger
+ * calls the P1-TUTORIAL startTutorial() hook.
  */
 import { createElement, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +25,7 @@ import {
 } from '../shared/settings.js';
 import { CameraMode } from '../../CameraController.js';
 import { NameField } from '../shared/NameField.js';
+import { startTutorial } from '../Tutorial/index.js';
 
 const CAMERA_MODE_STORAGE_KEY = 'camera-mode';
 
@@ -227,14 +232,14 @@ function PresetButton({ id, label, isActive, onClick, color }) {
 }
 
 // Cycle 23 Phase A2 (Q6): Follow is the default; Classic demoted to
-// third option. Order here matches the C-key cycle in MODE_ORDER.
+// third option. Order here matches the camera-cycle hotkey's MODE_ORDER.
 const CAMERA_MODE_OPTIONS = [
-    { id: CameraMode.FOLLOW,  label: 'Follow',   desc: 'Cinematic close-up behind the dog (default)' },
-    { id: CameraMode.FREE,    label: 'Free',     desc: 'Right-mouse-drag to orbit the dog' },
-    { id: CameraMode.CLASSIC, label: 'Classic',  desc: 'High isometric overhead view' }
+    { id: CameraMode.FOLLOW,  labelKey: 'settings.cameraModes.follow',  descKey: 'settings.cameraModes.followDesc' },
+    { id: CameraMode.FREE,    labelKey: 'settings.cameraModes.free',    descKey: 'settings.cameraModes.freeDesc' },
+    { id: CameraMode.CLASSIC, labelKey: 'settings.cameraModes.classic', descKey: 'settings.cameraModes.classicDesc' }
 ];
 
-function CameraModePicker({ mode, onChange }) {
+function CameraModePicker({ mode, onChange, cycleKey, t }) {
     return createElement('div', {
         style: { marginBottom: '0.75rem' }
     }, [
@@ -247,7 +252,7 @@ function CameraModePicker({ mode, onChange }) {
                 letterSpacing: '0.05em',
                 marginBottom: '0.5rem'
             }
-        }, 'Camera Mode (press C to cycle)'),
+        }, t('settings.cameraModeSection', { key: getKeyDisplayName(cycleKey) })),
         createElement('div', {
             key: 'options',
             style: { display: 'flex', gap: '0.5rem' }
@@ -255,7 +260,7 @@ function CameraModePicker({ mode, onChange }) {
             createElement('button', {
                 key: opt.id,
                 onClick: () => onChange(opt.id),
-                title: opt.desc,
+                title: t(opt.descKey),
                 style: {
                     flex: 1,
                     padding: '0.6rem 0.5rem',
@@ -268,7 +273,7 @@ function CameraModePicker({ mode, onChange }) {
                     cursor: 'pointer',
                     transition: 'all 0.2s'
                 }
-            }, opt.label)
+            }, t(opt.labelKey))
         ))
     ]);
 }
@@ -295,7 +300,9 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
         return () => window.removeEventListener('camera-mode-changed', onChange);
     }, []);
 
-    // Handle key binding capture
+    // Handle key binding capture. Capture-phase listener so the press never
+    // reaches InputHandler's window listener (Escape would toggle pause, Space
+    // would queue a bark) while the rebinder is armed.
     useEffect(() => {
         if (!listeningForKey) return;
 
@@ -310,8 +317,17 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
 
             const keyCode = e.code;
 
-            // Check for conflicts
-            const conflictAction = isKeyAlreadyBound(keyCode, listeningForKey);
+            // Escape cancels the capture instead of binding (it is the
+            // hardwired pause fallback in InputHandler anyway).
+            if (keyCode === 'Escape') {
+                setListeningForKey(null);
+                return;
+            }
+
+            // Conflict detection against the live bindings: a key bound to
+            // another action is rejected with feedback, not silently swapped.
+            const currentBindings = { ...DEFAULT_KEY_BINDINGS, ...settings.keyBindings };
+            const conflictAction = isKeyAlreadyBound(keyCode, listeningForKey, currentBindings);
             if (conflictAction) {
                 setKeyConflict({ key: keyCode, action: conflictAction });
                 setTimeout(() => setKeyConflict(null), 2000);
@@ -320,7 +336,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             }
 
             // Update the binding
-            const newBindings = { ...settings.keyBindings, [listeningForKey]: keyCode };
+            const newBindings = { ...currentBindings, [listeningForKey]: keyCode };
             const newSettings = { ...settings, keyBindings: newBindings };
             onSettingsChange(newSettings);
             saveSettings(newSettings);
@@ -332,8 +348,8 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             }));
         };
 
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', handleKeyDown, true);
+        return () => window.removeEventListener('keydown', handleKeyDown, true);
     }, [listeningForKey, settings, onSettingsChange]);
 
     const handleSettingChange = useCallback((key, value) => {
@@ -370,7 +386,8 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
     const tabs = [
         { id: 'graphics', label: t('settings.tabs.graphics'), icon: '\u2699' },
         { id: 'audio', label: t('settings.tabs.audio'), icon: '\u266B' },
-        { id: 'controls', label: t('settings.tabs.controls'), icon: '\u2328' }
+        { id: 'controls', label: t('settings.tabs.controls'), icon: '\u2328' },
+        { id: 'general', label: t('settings.tabs.general'), icon: '\u2630' }
     ];
 
     // Graphics tab content
@@ -503,55 +520,77 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             onChange: (v) => handleSettingChange('audioVolume', v),
             formatValue: (v) => `${v}%`,
             color: '#22c55e'
+        }))
+    ]);
+
+    // Small uppercase section header used inside the General tab.
+    const sectionHeader = (key, label, topMargin = '1.25rem') => createElement('div', {
+        key,
+        style: {
+            color: 'rgba(247,241,230,0.7)',
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            margin: `${topMargin} 0 0.5rem`
+        }
+    }, label);
+
+    // General tab content: language, accessibility, tutorial, player profile.
+    // ([P1-SETTINGS-LANG] / [P1-SETTINGS-A11Y] / [P1-SETTINGS-PANEL])
+    const renderGeneralTab = () => createElement('div', {
+        style: { display: 'flex', flexDirection: 'column', gap: '0.25rem' }
+    }, [
+        // Language selector (shared component, full variant).
+        sectionHeader('language-label', t('settings.language'), '0'),
+        createElement(LanguageSelector, { key: 'language-selector', variant: 'full' }),
+
+        // Accessibility: colorblind-safe medal/rank palette.
+        sectionHeader('a11y-label', t('settings.accessibility')),
+        createElement(SettingRow, {
+            key: 'colorblind',
+            label: t('settings.colorblindMode'),
+            description: t('settings.colorblindModeDesc'),
+            isCompact
+        }, createElement(Toggle, {
+            value: settings.colorblindMode === true,
+            onChange: (v) => handleSettingChange('colorblindMode', v)
         })),
 
-        // Language selector
-        createElement('div', {
-            key: 'language',
-            style: { marginTop: '1rem' }
-        }, [
-            createElement('div', {
-                key: 'label',
-                style: {
-                    color: 'rgba(247,241,230,0.7)',
-                    fontSize: '0.75rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '0.5rem'
-                }
-            }, t('settings.language')),
-            createElement(LanguageSelector, { key: 'selector', variant: 'full' })
-        ]),
+        // Tutorial re-trigger ([P1-TUTORIAL] hook). startTutorial() drives the
+        // Home Field scene swap itself; leave Settings first so the entrance
+        // (and its scene-swap overlay) is what the player watches, and the
+        // whole start surface unmounts once the run goes live.
+        createElement(SettingRow, {
+            key: 'tutorial',
+            label: t('settings.tutorialLabel'),
+            description: t('settings.tutorialDesc'),
+            isCompact
+        }, createElement(Button, {
+            variant: 'secondary',
+            size: 'sm',
+            onClick: () => {
+                if (onBack) onBack();
+                void startTutorial();
+            }
+        }, t('settings.replayTutorial'))),
 
-        // Cycle 57 P5: view + change the leaderboard display name.
+        // Player profile: leaderboard display name + identity reset.
+        sectionHeader('profile-label', t('settings.profile')),
         createElement(DisplayNameField, { key: 'display-name' }),
-
-        // Reset player profile (re-trigger onboarding) — Cycle 11 Phase 2.
-        createElement('div', {
+        createElement(SettingRow, {
             key: 'reset-profile',
-            style: { marginTop: '1.25rem' }
-        }, [
-            createElement('div', {
-                key: 'label',
-                style: {
-                    color: 'rgba(247,241,230,0.7)',
-                    fontSize: '0.75rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '0.5rem'
-                }
-            }, 'Player profile'),
-            createElement(Button, {
-                key: 'btn',
-                variant: 'danger',
-                size: 'sm',
-                onClick: () => {
-                    if (!confirm('Reset your player profile and re-run onboarding? Your local stats and bindings stay.')) return;
-                    try { localStorage.removeItem('playerIdentity'); } catch {}
-                    window.location.reload();
-                }
-            }, 'Reset & re-run onboarding')
-        ])
+            label: t('settings.resetProfile'),
+            description: t('settings.resetProfileDesc'),
+            isCompact
+        }, createElement(Button, {
+            variant: 'danger',
+            size: 'sm',
+            onClick: () => {
+                if (!confirm(t('settings.resetProfileConfirm'))) return;
+                try { localStorage.removeItem('playerIdentity'); } catch {}
+                window.location.reload();
+            }
+        }, t('settings.resetProfile')))
     ]);
 
     // Controls tab content
@@ -561,7 +600,9 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
         createElement(CameraModePicker, {
             key: 'camera-mode',
             mode: cameraMode,
-            onChange: handleCameraModeChange
+            onChange: handleCameraModeChange,
+            cycleKey: (settings.keyBindings || DEFAULT_KEY_BINDINGS).cameraCycle || DEFAULT_KEY_BINDINGS.cameraCycle,
+            t
         }),
 
         // Keyboard bindings header
@@ -605,8 +646,9 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             }
         }, t('settings.keyConflict', { action: t(`settings.actions.${keyConflict.action}`) })),
 
-        // Key bindings
-        ...Object.entries(settings.keyBindings || DEFAULT_KEY_BINDINGS).map(([action, keyCode]) =>
+        // Key bindings: merge over defaults so a stale persisted set (saved
+        // before bark/cameraCycle became bindable) still lists every action.
+        ...Object.entries({ ...DEFAULT_KEY_BINDINGS, ...settings.keyBindings }).map(([action, keyCode]) =>
             createElement(SettingRow, {
                 key: action,
                 label: t(`settings.actions.${action}`),
@@ -716,7 +758,8 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             }, [
                 activeTab === 'graphics' && renderGraphicsTab(),
                 activeTab === 'audio' && renderAudioTab(),
-                activeTab === 'controls' && renderControlsTab()
+                activeTab === 'controls' && renderControlsTab(),
+                activeTab === 'general' && renderGeneralTab()
             ]),
 
             // Footer
@@ -748,7 +791,7 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                         fontSize: '0.75rem',
                         textDecoration: 'none'
                     }
-                }, 'About this game')
+                }, t('settings.aboutLink'))
             ])
         ])
     );

@@ -97,20 +97,76 @@ export default {
         goBack: 'Voltar'
     },
 
+    // P1-MOBILE-FALLBACK: aviso de renderização de compatibilidade (WebGPU -> WebGL).
+    rendererFallback: {
+        title: 'Renderização de compatibilidade',
+        body: 'Este navegador usa o renderizador WebGL. O jogo funciona igual; alguns detalhes visuais são reduzidos.'
+    },
+
     // Settings panel
     settings: {
         title: 'Configurações',
+        tabs: {
+            graphics: 'Gráficos',
+            audio: 'Áudio',
+            controls: 'Controles',
+            general: 'Geral'
+        },
+        presets: 'Predefinição de Desempenho',
         performanceMode: 'Modo de Performance',
         performanceOption: 'Performance - FPS Máximo',
         balancedOption: 'Equilibrado - Configurações padrão',
         qualityOption: 'Qualidade - Melhores visuais',
+        shadows: 'Sombras',
+        shadowsDesc: 'Ativar sombras dinâmicas (somente desktop)',
         experimentalWebGpu: 'Renderizador WebGPU',
         experimentalWebGpuDesc: 'Experimental. Usa WebGPU quando disponível; desative para recarregar com WebGL.',
+        shadowQuality: 'Qualidade das Sombras',
+        low: 'Baixa',
+        medium: 'Média',
+        high: 'Alta',
         audioEnabled: 'Áudio Ativado',
         audioVolume: 'Volume do Áudio',
         showStats: 'Mostrar Estatísticas de Performance',
+        showStatsDesc: 'Mostrar FPS e estatísticas de renderização',
+        keyBindings: 'Controles do Teclado',
+        resetBindings: 'Restaurar Padrão',
+        pressKey: 'Pressione uma tecla...',
+        keyConflict: 'A tecla já é usada para {{action}}',
+        actions: {
+            moveUp: 'Avançar',
+            moveDown: 'Recuar',
+            moveLeft: 'Mover para a Esquerda',
+            moveRight: 'Mover para a Direita',
+            sprint: 'Correr',
+            bark: 'Latir',
+            cameraCycle: 'Alternar Câmera',
+            pause: 'Pausar'
+        },
+        cameraModeSection: 'Modo de câmera (pressione {{key}} para alternar)',
+        cameraModes: {
+            follow: 'Seguir',
+            followDesc: 'Close cinematográfico atrás do cão (padrão)',
+            free: 'Livre',
+            freeDesc: 'Arraste com o botão direito para orbitar o cão',
+            classic: 'Clássica',
+            classicDesc: 'Vista isométrica elevada'
+        },
+        gamepadSupport: 'Suporte a Controle',
+        gamepadDesc: 'Controles são detectados automaticamente. Use o analógico esquerdo para mover e os gatilhos para correr.',
         resetDefaults: 'Restaurar Padrões',
-        language: 'Idioma'
+        language: 'Idioma',
+        accessibility: 'Acessibilidade',
+        colorblindMode: 'Cores para daltônicos',
+        colorblindModeDesc: 'Usa uma paleta segura para daltônicos em medalhas e classificações',
+        tutorialLabel: 'Tutorial',
+        tutorialDesc: 'Refaça a lição guiada de pastoreio',
+        replayTutorial: 'Repetir tutorial',
+        profile: 'Perfil do Jogador',
+        resetProfile: 'Redefinir perfil',
+        resetProfileDesc: 'Apaga a identidade local do jogador. Uma nova é criada ao recarregar; estatísticas e teclas permanecem.',
+        resetProfileConfirm: 'Redefinir seu perfil de jogador? Uma nova identidade de pastor será criada ao recarregar o jogo.',
+        aboutLink: 'Sobre este jogo'
     },
 
     // Sandbox setup

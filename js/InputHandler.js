@@ -3,7 +3,7 @@
 import { Vector2D } from './Vector2D.js';
 import { GamepadManager } from './GamepadManager.js';
 
-// Default key bindings (matches settings.js)
+// Default key bindings (matches settings.js DEFAULT_KEY_BINDINGS)
 const DEFAULT_BINDINGS = {
     moveUp: 'KeyW',
     moveDown: 'KeyS',
@@ -11,7 +11,8 @@ const DEFAULT_BINDINGS = {
     moveRight: 'KeyD',
     sprint: 'ShiftLeft',
     pause: 'Escape',
-    bark: 'Space'
+    bark: 'Space',
+    cameraCycle: 'KeyC'
 };
 
 /**
@@ -164,8 +165,9 @@ export class InputHandler {
                 event.preventDefault();
             }
 
-            // Cycle camera mode (Classic -> Follow -> Free) with 'C'
-            if (code === 'KeyC' && this.cameraController) {
+            // Cycle camera mode (Classic -> Follow -> Free). Default 'C';
+            // rebindable via Settings ([P1-SETTINGS-REBIND]).
+            if (code === this.keyBindings.cameraCycle && this.cameraController) {
                 const next = this.cameraController.cycleMode();
                 console.log(`[CAMERA] Mode -> ${next}`);
                 window.dispatchEvent(new CustomEvent('camera-mode-changed', { detail: next }));

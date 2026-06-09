@@ -97,20 +97,76 @@ export default {
         goBack: '返回'
     },
 
+    // P1-MOBILE-FALLBACK: 兼容渲染提示（WebGPU -> WebGL 回退）。
+    rendererFallback: {
+        title: '兼容渲染模式',
+        body: '此浏览器正在使用 WebGL 渲染器。游戏玩法不变，部分画面细节有所降低。'
+    },
+
     // Settings panel
     settings: {
         title: '设置',
+        tabs: {
+            graphics: '图形',
+            audio: '音频',
+            controls: '操作',
+            general: '通用'
+        },
+        presets: '性能预设',
         performanceMode: '性能模式',
         performanceOption: '性能优先 - 最高帧率',
         balancedOption: '均衡 - 默认设置',
         qualityOption: '画质优先 - 最佳视觉效果',
+        shadows: '阴影',
+        shadowsDesc: '启用动态阴影（仅桌面端）',
         experimentalWebGpu: 'WebGPU 渲染器',
         experimentalWebGpuDesc: '实验性功能。可用时使用 WebGPU；关闭后将以 WebGL 重新加载。',
+        shadowQuality: '阴影质量',
+        low: '低',
+        medium: '中',
+        high: '高',
         audioEnabled: '启用音效',
         audioVolume: '音量',
         showStats: '显示性能统计',
+        showStatsDesc: '显示帧率和渲染统计',
+        keyBindings: '键盘控制',
+        resetBindings: '恢复默认按键',
+        pressKey: '请按一个键...',
+        keyConflict: '该键已用于“{{action}}”',
+        actions: {
+            moveUp: '前进',
+            moveDown: '后退',
+            moveLeft: '向左移动',
+            moveRight: '向右移动',
+            sprint: '冲刺',
+            bark: '吠叫',
+            cameraCycle: '切换镜头',
+            pause: '暂停'
+        },
+        cameraModeSection: '镜头模式（按 {{key}} 切换）',
+        cameraModes: {
+            follow: '跟随',
+            followDesc: '牧羊犬身后的电影式特写（默认）',
+            free: '自由',
+            freeDesc: '按住鼠标右键拖动以环绕牧羊犬',
+            classic: '经典',
+            classicDesc: '高空等距俯视视角'
+        },
+        gamepadSupport: '手柄支持',
+        gamepadDesc: '自动检测手柄。左摇杆移动，扳机键冲刺。',
         resetDefaults: '恢复默认',
-        language: '语言'
+        language: '语言',
+        accessibility: '无障碍',
+        colorblindMode: '色觉友好配色',
+        colorblindModeDesc: '奖牌和排名颜色使用色盲安全调色板',
+        tutorialLabel: '教程',
+        tutorialDesc: '再次进行引导牧羊课程',
+        replayTutorial: '重玩教程',
+        profile: '玩家档案',
+        resetProfile: '重置档案',
+        resetProfileDesc: '清除本地玩家身份。重新加载时会创建新身份；统计数据和按键设置保留。',
+        resetProfileConfirm: '要重置玩家档案吗？重新加载游戏时将创建新的牧羊人身份。',
+        aboutLink: '关于本游戏'
     },
 
     // Sandbox setup
