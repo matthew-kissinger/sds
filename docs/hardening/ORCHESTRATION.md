@@ -2,7 +2,34 @@
 
 > **Created:** 2026-06-09
 > **Source:** External consultation spec, scaffolded for autonomous orchestration.
-> **Status:** Not started. Phase 0 is the entry point.
+> **Status:** COMPLETE 2026-06-09. All five phase gates PASSED (42 tasks;
+> two recorded acceptance caveats). Executed autonomously under /goal; see
+> "Post-run review items" below for what Matt still owes a look.
+
+## Post-run review items (Matt)
+
+1. FENCE post-hoc reviews owed: the delta wire protocol design + impl
+   ([phase-2](phase-2-scale-backend.md), [`delta-protocol-design.md`](delta-protocol-design.md)),
+   the P0-DETBUG tie-break sim change, the GSV split and BoundaryCollision
+   DRY ([phase-3](phase-3-retention-maintainability.md)), and the
+   multiplayer.md rule rewrite. All executed under the autonomous
+   directive with migration stories recorded in place.
+2. Egress caveat: the >=50% delta savings hold from ~65% round progress,
+   not at round start (active flocks never settle below the wire quantum).
+   Never worse than baseline by construction. Levers recorded in the
+   design doc Deviations section: fixed-point encoding or a calm/settle
+   sim change.
+3. Operator TODOs for staging: create the preview D1, set repo var
+   CF_PREVIEW_D1_ID, wrangler secret put JWT_SECRET --env preview
+   ([phase-2 P2-STAGING](phase-2-scale-backend.md)).
+4. Worker findings from chaos validation (diagnosed, not fixed):
+   full-room rehydration 409 lockout until the 60s idle alarm;
+   host_migration.reclaimedByOriginal always logs true
+   ([phase-4 P4-CHAOS](phase-4-polish-launch.md)).
+5. Nothing was pushed to origin. The work sits on local main (checked
+   out in the sds-p2-backpressure worktree at completion time because a
+   Codex agent held the primary checkout). Push triggers the production
+   deploy pipeline; that stays Matt's call.
 
 This directory is the single source of truth for the hardening program. It is a
 multi-cycle body of work and sits alongside (not inside) the numbered cycle
