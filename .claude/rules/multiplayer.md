@@ -9,7 +9,18 @@ Durable rules for the Cloudflare backend (Worker + DO + D1 + Pages) and the wire
 - **Leaderboard storage:** Cloudflare D1 (`sds-db`). Migrations are **append-only** — see [`worker/migrations/`](../../worker/migrations/).
 - **Auth:** server-minted `persistent_id` bound to a device-held `auth_secret` (trust-on-first-use; a returning client re-proves with both, a leaked id without the secret is rejected - P-SEC-1, migration `0007_player_auth_secret.sql`). The session token is a Worker-issued signed JWT (24h), signed with the `JWT_SECRET` Workers secret; WS upgrades additionally carry a short-lived admission ticket (P-SEC-2).
 - **Tick rate:** 60Hz server-side inside the DO. Clients run the same shared sim and predict; the DO is authoritative.
-- **Wire protocol:** MessagePack over WebSocket with delta-encoded sheep state. JSON exists only for the REST handshake.
+- **Wire protocol:** MessagePack over WebSocket, `PROTOCOL_VERSION 3` with changed-sheep delta frames (next section). JSON exists only for the REST handshake.
+
+## Wire protocol (v3)
+
+Shipped 2026-06-09 (server `d20d775`, client `0e992f9`, backpressure `3f4f385`). Full spec including the measured Deviations section: [`docs/hardening/delta-protocol-design.md`](../../docs/hardening/delta-protocol-design.md). Constants live in [`shared/protocol.js`](../../shared/protocol.js); the delta builder is `getDeltaPathFrame` in [`worker/src/GameSim.js`](../../worker/src/GameSim.js); the broadcast loop is `broadcastGameFrame` in [`worker/src/RoomDO.ts`](../../worker/src/RoomDO.ts); client reconstruction lives entirely in [`js/NetworkManager.js`](../../js/NetworkManager.js) (downstream consumers still see full snapshots).
+
+- **Delta frames:** v3 sessions get `gameStateDelta` carrying only the sheep whose quantized wire record changed since the previous broadcast frame, keyed by array index (`changed[j].i`, full record per changed sheep). Top-level scalars, the full `sheepdogs` array, and the conditional blocks ride every frame.
+- **Keyframes:** a full `gameStateUpdate` (tick-stamped) every `KEYFRAME_INTERVAL_TICKS = 60` ticks, plus on game start, on socket bind mid-game, and on a client `requestKeyframe` (unicast, capped at 2 per second per client).
+- **Degenerate rule:** past 85% of the flock changed, the DO sends a keyframe instead of a delta, so the delta path is never meaningfully worse than the old full-frame cost.
+- **Per-client soft-degrade:** sessions that joined with `protocolVersion < 3` (or none) get full `gameStateUpdate` frames every broadcast interval, byte-compatible with v2 except the additive `tick` field. No refusal; `SURVIVAL_MIN_PROTOCOL_VERSION` stays 2.
+- **Backpressure eviction:** a client whose socket backlog stays over 256 KB (or whose sends keep throwing) for ~4s of consecutive broadcast intervals is evicted (close 1013, routed through the normal disconnect/grace/host-migration path). While saturated its frames are skipped; a v3 client recovers via `requestKeyframe`, a legacy client just gets the next full frame.
+- **Measured reality:** active flocks never settle below the 0.01 wire quantum, so delta savings scale with round progress (43.4% of baseline at the 140-of-200-retired gate scenario, 100% at round start with the degenerate rule holding the bound). See the design doc's Deviations section before reasoning about egress.
 
 ## The DO is authoritative; clients predict
 

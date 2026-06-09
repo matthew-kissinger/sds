@@ -97,13 +97,20 @@ Evidence (2026-06-09):
 ## [P2-DELTA-DOC] Reconcile multiplayer.md with shipped reality
 
 - **Owner hint:** docs agent
-- **Status:** pending
+- **Status:** done (2026-06-09, uncommitted in worktree `sds-p2-backpressure`)
 - **Deps:** P2-DELTA-CLIENT
 - **Files:** `.claude/rules/multiplayer.md`, `DECISIONS.md`
 
 Acceptance:
 
-- [ ] After delta encoding ships, then the rule file shall describe the actual implemented protocol.
+- [x] After delta encoding ships, then the rule file shall describe the actual implemented protocol.
+
+Evidence (2026-06-09):
+
+- `.claude/rules/multiplayer.md`: the Architecture "delta-encoded sheep state" bullet now points at a new "Wire protocol (v3)" section describing the shipped mechanism: PROTOCOL_VERSION 3, changed-sheep-only `gameStateDelta` keyed by array index, keyframes every 60 ticks plus game start / socket bind / capped requestKeyframe (2/s per client), the 85% degenerate rule, per-client soft-degrade for v<3 sessions (byte-compatible full frames, additive `tick`), backpressure eviction (256 KB / ~4s sustained, close 1013 via the normal disconnect path), and the measured progress-scaled-savings reality, with a pointer to `delta-protocol-design.md`. The four-point wire-change rule text is unchanged.
+- `DECISIONS.md`: appended a dated 2026-06-09 entry (item 5 untouched, append-only) recording the ship, the measured finding (active flocks never settle below the 0.01 wire quantum; 43.4% of baseline at the 140-retired gate scenario, never worse at round start), and the future levers (fixed-point encoding, calm/settle sim change) recorded but not adopted.
+- Every protocol claim was verified against the shipped code, not the design doc: `worker/src/GameSim.js` (`getDeltaPathFrame`, `DELTA_DEGENERATE_FRACTION = 0.85`, `_buildDeltaFrame`), `worker/src/RoomDO.ts` (`broadcastGameFrame` cohort split + backpressure constants 256 KB / 250 intervals, `bindSocket` mid-game keyframe, `requestKeyframe` handler + `allowKeyframeRequest` 2-per-1000ms cap, `gameStarted` full snapshot), `shared/protocol.js` (PROTOCOL_VERSION 3, DELTA_MIN_PROTOCOL_VERSION 3, KEYFRAME_INTERVAL_TICKS 60, SURVIVAL_MIN 2).
+- Em-dash check on the added text (grep for U+2014 over the diff's added lines): 0 in all three files (pre-existing em-dashes in untouched prose left alone).
 
 ---
 
@@ -277,11 +284,22 @@ Operator TODO (one time, before the preview Worker leg activates):
 
 ## Gate
 
-- [ ] `npm test` green
-- [ ] `npm run build` green
-- [ ] Bandwidth/cost is bounded and measured (egress drop verified at 200 sheep / 4 players)
-- [ ] The DO survives slow clients (backpressure eviction verified)
-- [ ] Migrations cannot silently drift
-- [ ] A safe staging surface exists for testing
+- [x] `npm test` green
+- [x] `npm run build` green
+- [x] Bandwidth/cost is bounded and measured (egress drop verified at 200 sheep / 4 players)
+- [x] The DO survives slow clients (backpressure eviction verified)
+- [x] Migrations cannot silently drift
+- [x] A safe staging surface exists for testing
 
-Gate result: (record date, commit, and evidence here)
+Gate result: PASSED 2026-06-09 with two recorded caveats. npm test 1296
+passed / 9 skipped, lint clean, typecheck clean, worker tsc clean, build
+green; sim-baselines byte-identical throughout the phase. Egress: bounded
+at never-worse-than-baseline by the degenerate rule, 43.4% of baseline at
+the 140-retired gate scenario; the >=50% drop holds from ~65% round
+progress, not at round start (recorded in [P2-DELTA-IMPL] and DECISIONS.md
+for Matt). Staging: workflow ships disabled until the operator provisions
+the preview D1 and sets CF_PREVIEW_D1_ID ([P2-STAGING] TODO). Fence items
+(protocol design + impl, multiplayer.md rewrite) executed under the
+autonomous directive and flagged for Matt's post-hoc review. Commits:
+15700d8, 4e363d9, 3d1fd37, d20d775, 3f4f385, 0e992f9, plus the doc
+reconciliation commit.
