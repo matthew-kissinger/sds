@@ -44,10 +44,10 @@ const WORLD_NAME: Record<string, string> = {
     'open-country': 'Open Country',
 };
 
-// Cycle 51 world-first entrance: the world is armed via the prev/next switcher
-// (default Rolling Hills), not a ?scene= deep-link. Cycle the Next-world chip
-// until the target biome name shows; the switcher wraps, so the target is
-// reached in <= N clicks regardless of the default.
+// Cycle 51 world-first entrance: the world is armed via the prev/next switcher,
+// not a ?scene= deep-link. Cycle the Next-world chip until the target biome
+// name shows; the switcher wraps, so the target is reached in <= N clicks
+// regardless of the default.
 async function armWorld(page: Page, sceneId: string) {
     const wanted = WORLD_NAME[sceneId];
     const nameLoc = page.getByText(wanted, { exact: true });

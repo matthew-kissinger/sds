@@ -13,9 +13,9 @@
  * Flow (Cycle 58 update — was stale since the Cycle 51 entrance rework):
  *   1. Boot ONCE through the world-first entrance. Identity is deferred (no
  *      name gate), so the armed-world panel is the first interactive surface;
- *      its `Play` button commits and builds the default world (Rolling Hills,
- *      Classic). We seed a player identity defensively so no identity surface
- *      can intercept. `?debug=gl` installs window.__sdsDiag + the sampler.
+ *      its `Play` button commits and builds the current entrance flagship.
+ *      We seed a player identity defensively so no identity surface can
+ *      intercept. `?debug=gl` installs window.__sdsDiag + the sampler.
  *   2. For each requested scene, swap to it IN-ENGINE via window.__sdsSwapTo
  *      (always installed on the first scene build, js/boot/debugProbes.js).
  *      Each swap runs disposeScene + rebuildScene + _buildSceneBody, so it
@@ -27,8 +27,8 @@
  *
  * Why no `?scene=` deep-link and no "Solo Play -> Confirm -> Classic Mode"
  * click chain any more: the Cycle 51 world-first entrance removed those
- * buttons and always lands on Rolling Hills regardless of the URL. Driving the
- * in-engine swap harness is both robust (no per-biome label differences, no
+ * buttons and always lands on the current entrance flagship regardless of the
+ * URL. Driving the in-engine swap harness is both robust (no per-biome label differences, no
  * next-world click counting) and a stronger render exercise than the old
  * start-screen sample, since the entrance is now a static image, not a live
  * 3D scene.
@@ -187,7 +187,7 @@ try {
   await driver.executeScript(SEED_IDENTITY_SCRIPT);
   await driver.get(bootUrl);
 
-  // Commit the default armed world (Rolling Hills / Classic). This builds the
+  // Commit the default armed world. This builds the
   // first scene, which is where __sdsSwapTo + the GL canvas come up.
   await clickPlay();
 

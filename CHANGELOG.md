@@ -29,6 +29,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.3] - 2026-06-09 (Cycle 82 - Newsheepdogland feel and hero)
+
+### Added
+
+- Newsheepdogland is now the first entrance world, with a new WebGPU homestead,
+  pen, grass, trees, and sea capture as the default hero image.
+- Repeatable Cycle 82 proof tools for the Newsheepdogland entrance hero capture
+  and 3070 production-build steady-state profile.
+
+### Changed
+
+- Newsheepdogland survival pacing is shorter and clearer: the scene day is now
+  360 seconds, first night arrives about 187 seconds into a fresh run, surviving
+  dawns add 6 sheep, a 45% night loss ends the run, and wolves wait 1.6 seconds
+  between kills.
+- Root page metadata, preload, Open Graph, Twitter, and structured-data imagery
+  now lead with Newsheepdogland and describe the survival island directly.
+- The mobile entrance wraps the Newsheepdogland survival tagline and keeps the
+  fullscreen prompt below the top title/actions.
+- The live two-client co-op survival integration test derives its night advance
+  from the scene day length instead of hard-coding the prior 600-second day.
+
+### Fixed
+
+- The Newsheepdogland desktop WebGPU flagship keeps the homestead pinned to the
+  pen, rejects transient quality-governor false floors, and renders grass on
+  both far-from-origin and near-origin scenes.
+
+### Validation
+
+- `npm test`, `npm run build`, and `git diff --check` passed.
+- Focused survival, farmhouse-pin, render-cost, SEO, and entrance-family tests
+  passed.
+- Production-build 3070 steady-state profile passed 5/5 foreground runs at full
+  quality (`qualityIndex 0`, `webgpu-production`, no fallback/errors, worst p95
+  7.0 ms, worst p99 7.1 ms).
+- Live local two-dog co-op survival proof passed against Wrangler with both
+  clients synced into the same night/wolf state.
+- Desktop/mobile entrance proof passed with the Newsheepdogland image loaded,
+  preloaded, and exposed as the root OG image.
+
 ## [2.2.2] - 2026-06-06 (Cycle 63 - Collision stutter profile)
 
 ### Added

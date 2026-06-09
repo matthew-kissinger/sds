@@ -72,8 +72,8 @@ export interface BootFlowOptions {
 export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   const reducedMotion = useReducedMotion();
 
-  // The entrance always lands on Rolling Hills (the hero); only dog + mode +
-  // family persist per-player. Browsing worlds is session-local.
+  // The entrance always lands on the current flagship; only dog + mode + family
+  // persist per-player. Browsing worlds is session-local.
   const [worldIndex, setWorldIndex] = useState(DEFAULT_WORLD_INDEX);
   const [modeId, setModeId] = useState(() => readLS(LAST_MODE) ?? MODES[0].id);
   const [curveId, setCurveId] = useState(() => readLS(LAST_CURVE) ?? COUNTING_CURVES[0]);

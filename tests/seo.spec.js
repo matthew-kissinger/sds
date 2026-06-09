@@ -17,11 +17,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..');
 
 describe('per-scene SEO meta', () => {
-    it('registers all 3 canonical scenes', () => {
+    it('registers the entrance scene set', () => {
         const ids = Object.keys(__TEST_ONLY__.SCENE_META);
         expect(ids).toContain('field');
         expect(ids).toContain('rolling-hills');
         expect(ids).toContain('open-country');
+        expect(ids).toContain('newsheepdogland');
     });
 
     it('every registered social image exists on disk under assets/scenes/entrance/', () => {

@@ -17,8 +17,8 @@ describe('survival tuning is single-source (Cycle 68 P2)', () => {
     it('exports the run-economy feel defaults', () => {
         expect(SURVIVAL_RUN_DEFAULTS).toMatchObject({
             startFlock: 10,
-            growth: 5,
-            lossThreshold: 1 / 3,
+            growth: 6,
+            lossThreshold: 0.45,
         });
     });
 
@@ -42,6 +42,7 @@ describe('survival tuning is single-source (Cycle 68 P2)', () => {
         expect(sim.t.huntSpeed).toBe(WOLF_TUNING.huntSpeed);
         expect(sim.t.killRadius).toBe(WOLF_TUNING.killRadius);
         expect(sim.t.barkRepelSecs).toBe(WOLF_TUNING.barkRepelSecs);
+        expect(sim.t.killCooldown).toBe(1.6);
     });
 
     it('spawnCountForDay defaults resolve from WOLF_TUNING (no duplicated 2/1/8)', () => {

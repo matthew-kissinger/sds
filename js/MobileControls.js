@@ -289,7 +289,7 @@ export class MobileControls {
         // Simple, reliable styling
         this.fullscreenButton.style.cssText = `
             position: fixed;
-            top: calc(env(safe-area-inset-top, 0px) + 1rem);
+            top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
             left: 50%;
             transform: translateX(-50%);
             z-index: 1001;

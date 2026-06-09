@@ -21,8 +21,8 @@
  * flock died, the flock grows by `growth` and the run advances to the next day;
  * otherwise the run ends. The score is the peak flock size reached.
  *
- * Named numbers (10 start / 33% threshold / +5 growth) are Matt's spec, exposed
- * as constructor opts for his feel pass.
+ * Named numbers (10 start / 45% threshold / +6 growth) are exposed as
+ * constructor opts for feel tuning.
  */
 
 import { SURVIVAL_RUN_DEFAULTS } from './tuning.js';
@@ -34,8 +34,8 @@ export class SurvivalRun {
     /**
      * @param {Object} [opts]
      * @param {number} [opts.startFlock=10]
-     * @param {number} [opts.growth=5]
-     * @param {number} [opts.lossThreshold=1/3]  Die when the night's loss ratio reaches this.
+     * @param {number} [opts.growth=6]
+     * @param {number} [opts.lossThreshold=0.45] Die when the night's loss ratio reaches this.
      * @param {number} [opts.maxFlock=Infinity]  Cap on the flock (matches the rendered
      *        OptimizedSheep ceiling) so the score never drifts above the visible sheep.
      */

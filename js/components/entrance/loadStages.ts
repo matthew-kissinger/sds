@@ -13,7 +13,7 @@
  * slows through the heavy stages and feels honest.
  *
  * Captions follow .claude/rules/prose-and-voice.md: the quiet end of a working
- * day on one pasture and two islands. No hype, no em-dashes.
+ * day on one pasture and three islands. No hype, no em-dashes.
  */
 interface LoadStage {
   /** Exact logStep label buildSceneBody emits. */

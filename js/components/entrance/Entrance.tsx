@@ -222,7 +222,7 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
             <button onClick={flow.prevWorld} title="Previous world" aria-label="Previous world" style={chipRound}><Icon name="prev" size={18} /></button>
             <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: compact ? 22 : 26, fontWeight: 600, lineHeight: 1.1 }}>{flow.world.name}</div>
-              <div style={{ fontSize: 13, color: pastoral.inkSoft, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{flow.world.tagline}</div>
+              <div style={{ fontSize: 13, color: pastoral.inkSoft, marginTop: 3, lineHeight: 1.25, overflow: 'hidden', textOverflow: compact ? undefined : 'ellipsis', whiteSpace: compact ? 'normal' : 'nowrap' }}>{flow.world.tagline}</div>
             </div>
             <button onClick={flow.nextWorld} title="Next world" aria-label="Next world" style={chipRound}><Icon name="next" size={18} /></button>
           </div>

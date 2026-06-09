@@ -6,7 +6,7 @@
  * Drives a survival room through the day clock and asserts the authoritative
  * survival subsystem: startFlock active + a dormant pool, wolves spawning at
  * nightfall (seeded from room.seed), the pen protecting penned sheep, the bark
- * wolf-repel, the run ending on a 33%+ night loss with each player's peak flock
+ * wolf-repel, the run ending on a 45%+ night loss with each player's peak flock
  * submitted, flock growth on a surviving dawn, and the additive survival/wolves
  * snapshot blocks (absent on non-survival rooms).
  *
@@ -132,14 +132,14 @@ describe('GameSim survival tick (Cycle 67 P3)', () => {
     }
   });
 
-  it('ends the run + submits each player peak flock on a 33%+ night loss', () => {
+  it('ends the run + submits each player peak flock on a 45%+ night loss', () => {
     const { room, submitted } = makeRoomAdapter();
     const sim = new GameSimulation(room as any);
     try {
       forcePhaseTo(sim, 0.85);
       sim._tickSurvival(1 / 60); // nightfall (nightStartFlock = 10)
       expect(sim._survival.run.flock).toBe(10);
-      for (let i = 0; i < 4; i++) sim._survival.run.recordKill(); // 4/10 = 40% >= 33%
+      for (let i = 0; i < 5; i++) sim._survival.run.recordKill(); // 5/10 = 50% >= 45%
       forcePhaseTo(sim, 0.28, 1); // dawn (next morning)
       sim._tickSurvival(1 / 60);
       expect(sim._survival.ended).toBe(true);
@@ -164,8 +164,8 @@ describe('GameSim survival tick (Cycle 67 P3)', () => {
       sim._tickSurvival(1 / 60);
       expect(sim._survival.run.isAlive()).toBe(true);
       expect(sim._survival.run.day).toBe(2);
-      expect(sim._survival.run.flock).toBe(15);
-      expect(sim._countActiveSurvivalSheep()).toBe(15);
+      expect(sim._survival.run.flock).toBe(16);
+      expect(sim._countActiveSurvivalSheep()).toBe(16);
     } finally {
       sim.cleanup?.();
     }

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 66 P3: the survival run economy.
- * Start 10 -> herd before night -> lose <33% grows +5 -> 33%+ ends the run.
+ * Start 10 -> herd before night -> lose <45% grows +6 -> 45%+ ends the run.
  * Score is the peak flock size.
  */
 import { describe, it, expect } from 'vitest';
@@ -35,27 +35,27 @@ describe('SurvivalRun (Cycle 66 P3)', () => {
         expect(ev).toEqual({ type: 'nightfall', nightStartFlock: 10 });
     });
 
-    it('grows +5 and advances the day when no sheep are lost', () => {
+    it('grows +6 and advances the day when no sheep are lost', () => {
         const run = new SurvivalRun();
         const ev = runNight(run, 0);
         expect(ev.type).toBe('survived');
-        expect(run.flock).toBe(15);
+        expect(run.flock).toBe(16);
         expect(run.day).toBe(2);
-        expect(run.peak).toBe(15);
+        expect(run.peak).toBe(16);
     });
 
-    it('survives a night that loses under 33% (3 of 10), then grows', () => {
+    it('survives a night that loses under 45% (4 of 10), then grows', () => {
         const run = new SurvivalRun();
-        const ev = runNight(run, 3); // 30% < 33%
+        const ev = runNight(run, 4); // 40% < 45%
         expect(ev.type).toBe('survived');
-        // 10 - 3 lost = 7, + 5 growth = 12
+        // 10 - 4 lost = 6, + 6 growth = 12
         expect(run.flock).toBe(12);
         expect(run.day).toBe(2);
     });
 
-    it('ends the run when 33% or more is lost (4 of 10)', () => {
+    it('ends the run when 45% or more is lost (5 of 10)', () => {
         const run = new SurvivalRun();
-        const ev = runNight(run, 4); // 40% >= 33%
+        const ev = runNight(run, 5); // 50% >= 45%
         expect(ev.type).toBe('death');
         expect(run.isAlive()).toBe(false);
         expect(run.state).toBe(SurvivalState.DEAD);
@@ -64,14 +64,14 @@ describe('SurvivalRun (Cycle 66 P3)', () => {
 
     it('scores the peak flock size across several days', () => {
         const run = new SurvivalRun();
-        runNight(run, 0); // -> 15
-        runNight(run, 0); // -> 20
-        expect(run.peak).toBe(20);
-        // Day 3 starts at 20; lose 10 (50%) -> death. Peak stays 20.
+        runNight(run, 0); // -> 16
+        runNight(run, 0); // -> 22
+        expect(run.peak).toBe(22);
+        // Day 3 starts at 22; lose 10 (45.5%) -> death. Peak stays 22.
         const ev = runNight(run, 10);
         expect(ev.type).toBe('death');
-        expect(ev.score).toBe(20);
-        expect(run.getScore()).toBe(20);
+        expect(ev.score).toBe(22);
+        expect(run.getScore()).toBe(22);
     });
 
     it('ignores kills once dead', () => {
@@ -86,7 +86,7 @@ describe('SurvivalRun (Cycle 66 P3)', () => {
         const run = new SurvivalRun({ startFlock: 10 });
         const ev = runNight(run, 0);
         expect(ev.type).toBe('survived');
-        expect(run.flock).toBe(15);
+        expect(run.flock).toBe(16);
     });
 
     it('caps the flock (and the score) at maxFlock so it never exceeds the rendered ceiling', () => {

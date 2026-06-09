@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * Cycle 51 P6: the world-first entrance data, promoted from the bake-off shell
- * into the live app. Three worlds (one fenced pasture and two islands), five
+ * into the live app. Four worlds (one fenced pasture and three islands), five
  * dogs, the five-step solo difficulty ladder, and the secondary ways to play.
  *
  * The world `render` is the fresh close-eye WebGPU capture promoted in P5
@@ -98,7 +98,7 @@ export const WORLDS: World[] = [
   {
     id: 'rolling-hills',
     name: 'Rolling Hills',
-    tagline: 'A 180-metre island at golden hour. The hero scene.',
+    tagline: 'A 180-metre island at golden hour.',
     render: '/assets/scenes/entrance/rolling-hills.webp',
     accent: color.sceneRollingHills,
     gradient: 'linear-gradient(180deg, #f6d8a8 0%, #f0b878 45%, #d99a8f 78%, #b9a6c4 100%)',
@@ -114,7 +114,7 @@ export const WORLDS: World[] = [
   {
     id: 'newsheepdogland',
     name: 'Newsheepdogland',
-    tagline: 'A boot-shaped survival island under a dusk sky. Herd the flock home before the wolves come out.',
+    tagline: 'A boot-shaped survival island. Herd them home before the wolves come out.',
     render: '/assets/scenes/entrance/newsheepdogland.webp',
     accent: color.sceneNewsheepdogland,
     gradient: 'linear-gradient(180deg, #b9a98c 0%, #8f8a86 45%, #6a6f8c 78%, #3f4a63 100%)',
@@ -198,8 +198,8 @@ export const WAYS: Way[] = [
 export const formatSheep = (n: number): string => n.toLocaleString('en-US');
 
 /**
- * The entrance always leads with Rolling Hills, the hero scene (Matt, 2026-06-03).
+ * The entrance leads with Newsheepdogland during the Cycle 82 flagship push.
  * Dog and difficulty persist per-player, but the landing world is fixed so the
- * prettiest biome is always the first frame.
+ * current flagship is always the first frame.
  */
-export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'rolling-hills'));
+export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'newsheepdogland'));

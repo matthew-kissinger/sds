@@ -37,6 +37,12 @@ const SCENE_META = {
         description: 'A wild island of meadow and woods. Drive the flock through the trees to the portal.',
         ogImage: '/assets/scenes/entrance/open-country.webp',
         ogImageAlt: 'Sheep Dog Sim — Open Country current renderer capture with sheepdog facing the portal'
+    },
+    newsheepdogland: {
+        title: 'Sheep Dog Sim · Newsheepdogland - Survival Herding Game',
+        description: 'A boot-shaped survival island. Bring the flock home before wolves thin it after dark.',
+        ogImage: '/assets/scenes/entrance/newsheepdogland.webp',
+        ogImageAlt: 'Sheep Dog Sim - Newsheepdogland WebGPU capture with homestead, pen, grass, trees, and dusk sea'
     }
 };
 
@@ -52,7 +58,7 @@ function setMeta(selector, attr, value) {
  * Update document.title + OG/Twitter meta + canonical for the active scene.
  * Safe to call before DOM is fully parsed (queries no-op on missing nodes).
  *
- * @param {'field' | 'rolling-hills' | 'open-country' | string} sceneId
+ * @param {'field' | 'rolling-hills' | 'open-country' | 'newsheepdogland' | string} sceneId
  */
 export function updateSceneMetadata(sceneId) {
     const meta = SCENE_META[sceneId];

@@ -9,10 +9,15 @@
  * Objective family and no counting.
  */
 import { describe, it, expect } from 'vitest';
-import { familiesForWorld, modesForWorld } from '../js/components/entrance/worlds.ts';
+import { DEFAULT_WORLD_INDEX, WORLDS, familiesForWorld, modesForWorld } from '../js/components/entrance/worlds.ts';
 import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
 
 describe('familiesForWorld (Cycle 59 P7)', () => {
+    it('the entrance leads with Newsheepdogland survival', () => {
+        expect(WORLDS[DEFAULT_WORLD_INDEX]?.id).toBe('newsheepdogland');
+        expect(familiesForWorld('newsheepdogland').map((f) => f.id)).toEqual(['survival']);
+    });
+
     it('Home Field offers Solo then Counting Sheep (counting)', () => {
         const fams = familiesForWorld('field');
         expect(fams.map((f) => f.id)).toEqual(['solo', COUNTING_GAME_MODE]);

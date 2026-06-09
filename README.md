@@ -2,17 +2,17 @@
 
 [![Play now](https://img.shields.io/badge/play-sheepdogsim.com-2563eb?style=for-the-badge)](https://sheepdogsim.com) &nbsp; [![AGPL-3.0 Code](https://img.shields.io/badge/code-AGPL--3.0-22c55e?style=for-the-badge)](LICENSE) &nbsp; [![CC BY-SA 4.0 Assets](https://img.shields.io/badge/assets-CC%20BY--SA%204.0-f97316?style=for-the-badge)](LICENSE-ASSETS) &nbsp; [![Star on GitHub](https://img.shields.io/github/stars/matthew-kissinger/sds?style=for-the-badge&logo=github&color=eab308)](https://github.com/matthew-kissinger/sds)
 
-[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests 868](https://img.shields.io/badge/tests-868%20passing-22c55e)](tests/)
+[![Three.js 0.184](https://img.shields.io/badge/three.js-0.184-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/) [![Tests](https://img.shields.io/badge/tests-passing-22c55e)](tests/)
 
-**Herd up to 5,000 sheep across three biomes in a modern browser, with progressive WebGPU on supported hardware and WebGL fallback everywhere else.** No install, no signup, no ads. Free to play, source-readable, and forkable under AGPL-3.0; hosted or modified versions must publish corresponding source and preserve attribution.
+**Herd up to 5,000 sheep across four biomes in a modern browser, with progressive WebGPU on supported hardware and WebGL fallback everywhere else.** No install, no signup, no ads. Free to play, source-readable, and forkable under AGPL-3.0; hosted or modified versions must publish corresponding source and preserve attribution.
 
 > [Play it now → sheepdogsim.com](https://sheepdogsim.com)
 
 Current WebGPU scene captures:
 
-| Home Field | Rolling Hills | Open Country |
-|---|---|---|
-| ![Sheep Dog Sim Home Field capture with the sheepdog and flock in grass](assets/scenes/entrance/field.webp) | ![Sheep Dog Sim Rolling Hills capture with the sheepdog by the shoreline](assets/scenes/entrance/rolling-hills.webp) | ![Sheep Dog Sim Open Country capture with the sheepdog facing the portal objective](assets/scenes/entrance/open-country.webp) |
+| Newsheepdogland | Home Field | Rolling Hills | Open Country |
+|---|---|---|---|
+| ![Sheep Dog Sim Newsheepdogland WebGPU capture with homestead, pen, grass, trees, and sea](assets/scenes/entrance/newsheepdogland.webp) | ![Sheep Dog Sim Home Field capture with the sheepdog and flock in grass](assets/scenes/entrance/field.webp) | ![Sheep Dog Sim Rolling Hills capture with the sheepdog by the shoreline](assets/scenes/entrance/rolling-hills.webp) | ![Sheep Dog Sim Open Country capture with the sheepdog facing the portal objective](assets/scenes/entrance/open-country.webp) |
 
 ---
 
@@ -25,7 +25,7 @@ The whole stack:
 - **Client engine:** vanilla JavaScript, Three.js, progressive WebGPU on supported browsers, and WebGL fallback
 - **Server:** ~600-line TypeScript Cloudflare Worker with Durable Objects and D1
 - **Shared sim:** deterministic boid + obstacle modules imported byte-identically by both
-- **Tests:** 868 passing / 7 skipped (Vitest 4) covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO, and water shoreline math
+- **Tests:** Vitest 4 coverage for renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode, SEO, and water shoreline math
 
 If you're learning 3D web games, real-time multiplayer on edge compute, or large-scale boid simulation, this codebase is a rare opportunity to read a complete shipped product instead of yet another minimal example.
 
@@ -38,11 +38,12 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - Force-based steering on **real obstacles** — sheep + dog actually route around tree trunks, large rocks, and terrain via a deterministic [`kdbush`](https://github.com/mourner/kdbush) spatial index
 - Adaptive boid AI: tighter cohesion at higher counts so 5,000 sheep stay readable instead of dissolving into noise
 
-### 🌍 Three hand-built biomes
+### 🌍 Four hand-built biomes
 | Scene | Shape | Hook |
 |---|---|---|
 | **Home Field** | Flat fenced rect (±100 m) | Single perimeter pen, gate-passage retirement. The starter. |
-| **Rolling Hills** ⭐ | 180 m island with rolling heightfield | Lightning-zap corral, water + Mediterranean tree mix, golden-hour mood. The hero scene. |
+| **Newsheepdogland** ⭐ | Boot-shaped survival island | Homestead pen, wolves after dark, shorter day/night pressure, and the current WebGPU hero scene. |
+| **Rolling Hills** | 180 m island with rolling heightfield | Lightning-zap corral, water + Mediterranean tree mix, golden-hour mood. |
 | **Open Country** | 380 m island (~4.2× area) | Multi-stage objective: gather **40 sheep into the round-up zone for 2 sec**, then drive them through a magical portal at the north shore. |
 
 ### 🎮 Six gameplay modes
@@ -51,6 +52,7 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - **Solo Extreme** (1,000 sheep)
 - **Solo Insane** (3,000 sheep)
 - **Solo Chaos** (5,000 sheep — the flock is the antagonist)
+- **Survival** (Newsheepdogland — start with 10 sheep, bring them home before wolves thin the flock after dark)
 - **Multiplayer:** 2–4 player real-time co-op + competitive rooms + 3-minute timed mode + 2-player local split-screen + sandbox editor with shareable URLs
 
 ### ⚡ Authoritative 60 Hz multiplayer on Cloudflare's edge
@@ -99,15 +101,16 @@ npm run dev:client     # just Vite (no multiplayer worker)
 npm run dev:worker     # just wrangler
 npm run dev:lan        # vite --host + wrangler (LAN-accessible — for mobile testing)
 
-npm test               # Vitest — 868 passing / 7 skipped in ~2s on the current branch
+npm test               # Vitest suite
 npm run test:ios-water # BrowserStack real iOS Safari water canary
 npm run build          # production output to dist/
 ```
 
 URL params for fast scene picking + shoot setup:
 - `?scene=field` — Home Field
-- `?scene=rolling-hills` — Rolling Hills (default)
+- `?scene=rolling-hills` — Rolling Hills
 - `?scene=open-country` — Open Country
+- `?scene=newsheepdogland` — Newsheepdogland survival island (default entrance world)
 - `?cinematic=1` — exposes `window.__sdsCinema` for scripted captures + free-fly camera + tone-map override
 - `?ui=off` — hide React overlay (canvas-only render)
 - `?sun=N` — N in 0..1 (`0.06` = dusk, `0.20` = golden hour, `0.50` = noon)
@@ -186,7 +189,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 **Shared:** `shared/` deterministic boid + physics + obstacle modules, imported by both runtimes
 
-**Testing:** Vitest 4.1 (868 passing / 7 skipped · 87 files · ~2 s full run) covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright covers browser smoke and perf-baseline harnesses; BrowserStack covers the real iOS Safari water canary.
+**Testing:** Vitest 4.1 covering renderer adapters, atmosphere, heightfield, scene-obstacles, island-boundary, tree-placement, sim-baseline, refactor-baseline characterization goldens, worker D1 validation, integration harness, practice-mode contracts, SEO, and water shoreline math. ESLint enforces the `shared/` deterministic boundary (`npm run lint`). Playwright covers browser smoke and perf-baseline harnesses; BrowserStack covers the real iOS Safari water canary.
 
 ---
 
@@ -194,6 +197,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANGELOG entry. The last cycles delivered everything you see today; here's where the surface is moving right now:
 
+- **`v2.2.3`** (2026-06-09) - Newsheepdogland feel-and-hero release: desktop WebGPU flagship proof on the 3070, shorter survival pressure, validated two-dog survival co-op, and the Newsheepdogland homestead/pen/grass hero as the entrance default.
 - **Cycle 54 closed** (2026-06-04) - Windows Electron distributor path: installer/portable/unpacked artifacts, app identity, logs/crash paths, signing-ready posture, packaged WebGL/WebGPU proofs, native resize proof, and Steam/store handoff. Local Steam depot dry-run is plausible; public store submission is still gated on signing policy, metadata, install QA, screenshots/capsules, controller/cloud-save policy, and release-channel decisions.
 - **`v2.2.0`** (2026-06-03) - forward-only license transition: current source is AGPL-3.0-or-later, current assets are CC BY-SA 4.0, visible AGPL source notices are in the app, and the first Windows Electron / Capacitor Android native-shell proof is documented.
 - **`v2.1.10`** (2026-05-28) - Cycle 42 WebGPU material parity: warmer sun/sky, darker water, and octahedral tree-impostor proof.

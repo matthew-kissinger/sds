@@ -160,9 +160,9 @@ export const newsheepdogland = {
     // Cycle 65/66: the day/night cycle + the homestead herd-back day loop. You
     // wake at the homestead just after sunrise on day one; the sun arcs over
     // secondsPerDay; dayLoop opts in the gate-by-phase + herd-back-before-dusk
-    // controller. Cycle 66 lengthens the day to ~10 minutes (Matt's spec) so
-    // there is time to herd before the wolves. Tunable for Matt's feel pass.
-    dayNight: { enabled: true, secondsPerDay: 600, initialT: 0.28, dayLoop: true },
+    // controller. The 6-minute day puts the first night a little over 3 minutes
+    // in, so survival reaches pressure during a short play session.
+    dayNight: { enabled: true, secondsPerDay: 360, initialT: 0.28, dayLoop: true },
 
     // Cycle 66 P3: this scene is the survival run. Start with startFlock sheep (no
     // count selection); each surviving day the flock grows by `growth`; a night

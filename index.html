@@ -8,8 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <!-- SEO Meta Tags -->
-    <title>Sheep Dog Sim. Browser herding game with one pasture, two islands, multiplayer.</title>
-    <meta name="description" content="Browser-based herding sim. One fenced pasture, two islands, up to 5,000 sheep, 2-4 player multiplayer. Free to play, source-readable, no signup.">
+    <title>Sheep Dog Sim. Browser herding game with survival island and multiplayer.</title>
+    <meta name="description" content="Browser-based herding sim. One fenced pasture, two herding islands, one survival island with wolves, up to 5,000 sheep, 2-4 player multiplayer. Free to play, source-readable, no signup.">
     <!-- Cycle 31 Phase 2: meta-keywords tag removed. Google ignores it;
          the prior multilingual stuffing was a faint negative signal at
          smaller engines and looked unprofessional in view-source. Keyword
@@ -45,22 +45,22 @@
     <meta name="msapplication-TileColor" content="#00BFFF">
     <meta name="application-name" content="Sheep Dog Sim">
 
-    <!-- Cycle 51 P11: high-priority preload of the entrance's first backdrop.
-         The entrance always lands on Rolling Hills, so the first frame is instant. -->
-    <link rel="preload" as="image" href="/assets/scenes/entrance/rolling-hills.webp" fetchpriority="high">
+    <!-- Cycle 82: high-priority preload of the entrance's first backdrop.
+         The entrance lands on Newsheepdogland, so the first frame is instant. -->
+    <link rel="preload" as="image" href="/assets/scenes/entrance/newsheepdogland.webp" fetchpriority="high">
 
     <!-- Open Graph Tags -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sheep Dog Sim">
-    <meta property="og:title" content="Sheep Dog Sim. One pasture, two islands, herd 5,000 sheep.">
-    <meta property="og:description" content="Browser-based herding sim. One fenced pasture, two islands, up to 5,000 sheep, 2-4 player multiplayer. Free to play, source-readable, no signup.">
+    <meta property="og:title" content="Sheep Dog Sim. Survival island herding in your browser.">
+    <meta property="og:description" content="Browser-based herding sim. One fenced pasture, two herding islands, one survival island with wolves, up to 5,000 sheep, 2-4 player multiplayer. Free to play, source-readable, no signup.">
     <meta property="og:url" content="https://sheepdogsim.com/">
     <meta property="og:logo" content="https://sheepdogsim.com/assets/images/favicon.png">
-    <meta property="og:image" content="https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/scenes/entrance/newsheepdogland.webp">
     <meta property="og:image:type" content="image/webp">
     <meta property="og:image:width" content="1920">
     <meta property="og:image:height" content="1080">
-    <meta property="og:image:alt" content="Sheep Dog Sim current Rolling Hills renderer capture with the sheepdog by the shoreline.">
+    <meta property="og:image:alt" content="Sheep Dog Sim Newsheepdogland WebGPU capture with homestead, pen, grass, trees, and dusk sea.">
     <meta property="og:locale" content="en_US">
     <meta property="og:locale:alternate" content="es_ES">
     <meta property="og:locale:alternate" content="pt_BR">
@@ -84,10 +84,10 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@sheepdogsim">
     <meta name="twitter:creator" content="@sheepdogsim">
-    <meta name="twitter:title" content="Sheep Dog Sim. One pasture, two islands, herd 5,000 sheep.">
-    <meta name="twitter:description" content="Browser-based herding sim. One fenced pasture, two islands, up to 5,000 sheep, 2-4 player multiplayer. Free, no signup.">
-    <meta name="twitter:image" content="https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp">
-    <meta name="twitter:image:alt" content="Sheep Dog Sim current Rolling Hills renderer capture with the sheepdog by the shoreline.">
+    <meta name="twitter:title" content="Sheep Dog Sim. Survival island herding in your browser.">
+    <meta name="twitter:description" content="Browser-based herding sim. One fenced pasture, two herding islands, one survival island with wolves, up to 5,000 sheep, 2-4 player multiplayer. Free, no signup.">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/scenes/entrance/newsheepdogland.webp">
+    <meta name="twitter:image:alt" content="Sheep Dog Sim Newsheepdogland WebGPU capture with homestead, pen, grass, trees, and dusk sea.">
     
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -96,14 +96,15 @@
         "@type": "VideoGame",
         "name": "Sheep Dog Sim",
         "alternateName": ["Sheep Dog Simulator", "SheepDog Simulator", "SheepDogSim", "Sheepdog Sim"],
-        "description": "Browser-based herding sim. Guide a sheepdog across one fenced pasture and two hand-built islands and try to herd up to 5,000 sheep. Six modes scale from 30 sheep (Just Play) to 5,000 (Solo Chaos), plus 2-4 player co-op and competitive multiplayer rooms. Free to play, source-readable, no signup.",
+        "description": "Browser-based herding sim. Guide a sheepdog across one fenced pasture and three hand-built islands, including a survival island with wolves. Six modes scale from 30 sheep (Just Play) to 5,000 (Solo Chaos), plus 2-4 player co-op and competitive multiplayer rooms. Free to play, source-readable, no signup.",
         "genre": ["Simulation", "Casual", "Relaxing", "Zen"],
         "gamePlatform": "Web Browser",
         "operatingSystem": "Any",
         "applicationCategory": "Game",
         "url": "https://sheepdogsim.com/",
-        "image": "https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp",
+        "image": "https://sheepdogsim.com/assets/scenes/entrance/newsheepdogland.webp",
         "screenshot": [
+            "https://sheepdogsim.com/assets/scenes/entrance/newsheepdogland.webp",
             "https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp",
             "https://sheepdogsim.com/assets/scenes/entrance/open-country.webp",
             "https://sheepdogsim.com/assets/scenes/entrance/field.webp"
@@ -288,13 +289,14 @@
     -->
     <main id="seo-content" class="seo-only" aria-hidden="true" tabindex="-1">
         <h1>Sheep Dog Sim</h1>
-        <p>Guide your sheepdog across one fenced pasture and two hand-built islands and try to herd up to 5,000 sheep. Free, browser-based, no install.</p>
-        <p>Three biomes, six modes, real-time multiplayer for 2-4 players. Open the tab, herd some sheep, close the tab. No ads, no signup, source-readable under AGPL-3.0.</p>
+        <p>Guide your sheepdog across one fenced pasture and three hand-built islands and try to herd up to 5,000 sheep. Free, browser-based, no install.</p>
+        <p>Four biomes, survival wolves, six modes, real-time multiplayer for 2-4 players. Open the tab, herd some sheep, close the tab. No ads, no signup, source-readable under AGPL-3.0.</p>
         <h2>Biomes</h2>
         <ul>
             <li><a href="/scenes/home-field">Home Field</a>. Flat fenced pasture with a perimeter pen. The starter.</li>
             <li><a href="/scenes/rolling-hills">Rolling Hills</a>. 180-metre island, golden-hour mood, lightning-zap corral.</li>
             <li><a href="/scenes/open-country">Open Country</a>. 380-metre island; gather sheep, then drive them through a magical portal.</li>
+            <li><a href="/scenes/newsheepdogland">Newsheepdogland</a>. Boot-shaped survival island with wolves after dark.</li>
         </ul>
         <h2>Modes</h2>
         <ul>
@@ -303,6 +305,7 @@
             <li>Solo Extreme. 1,000 sheep.</li>
             <li>Solo Insane. 3,000 sheep.</li>
             <li>Solo Chaos. 5,000 sheep.</li>
+            <li>Survival. Start with 10 sheep, bring them home before the wolves thin the flock.</li>
             <li>Multiplayer. 2-4 player co-op, competitive, and timed rooms with shareable invite URLs.</li>
         </ul>
         <p><a href="/about">About the developer</a> · <a href="/scenes/home-field">Scene pages</a> · <a href="https://github.com/matthew-kissinger/sds">Source on GitHub</a></p>
@@ -312,7 +315,7 @@
         <div style="max-width: 640px; margin: 3rem auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; color: #e8f5e8; background: #0f1a0f;">
             <h1 style="color: #a7f3d0;">Sheep Dog Sim</h1>
             <p>Sheep Dog Sim is a free browser-based herding game built with Three.js and WebGL. The game requires JavaScript to run; please enable it in your browser settings to play.</p>
-            <p>Guide your sheepdog across one fenced pasture and two islands. Home Field is a flat starter pasture. Rolling Hills is a 180-metre sunset island with a corral. Open Country is a 380-metre island with a multi-stage gather-and-portal objective. Six modes scale from 30 sheep to 5,000, with real-time multiplayer rooms for 2-4 players.</p>
+            <p>Guide your sheepdog across one fenced pasture and three islands. Home Field is a flat starter pasture. Rolling Hills is a 180-metre sunset island with a corral. Open Country is a 380-metre island with a multi-stage gather-and-portal objective. Newsheepdogland is a boot-shaped survival island with wolves after dark. Six modes scale from 30 sheep to 5,000, with real-time multiplayer rooms for 2-4 players.</p>
             <p>The game is free to play, with no ads or signup. Source is licensed AGPL-3.0-or-later and assets are CC BY-SA 4.0. <a href="/about" style="color: #34d399;">Read more about Sheep Dog Sim</a> or <a href="https://github.com/matthew-kissinger/sds" style="color: #34d399;">browse the source code on GitHub</a>.</p>
         </div>
     </noscript>

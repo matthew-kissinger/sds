@@ -152,9 +152,11 @@ class SheepDogSimulation {
         this._revealDur = 0.8;
         this._attractPrefetchPromise = null;
         // Cycle 26 v2.1.0: per-scene SEO meta (title + OG + Twitter) for
-        // deep-link sharing previews. index.html ships rolling-hills as
-        // default; this updates if the URL requested a different scene.
-        updateSceneMetadata(activeSceneId);
+        // deep-link sharing previews. Plain opens keep index.html's entrance
+        // metadata; only an explicit valid ?scene= should replace it.
+        if (requestedSceneId && validSceneIds.includes(requestedSceneId)) {
+            updateSceneMetadata(activeSceneId);
+        }
         // Cycle 5+: propagate discriminated boundary if the scene declares one.
         // Field stays on legacy bounds; Rolling Hills + Open Country migrate
         // to island in Phases 2/3.

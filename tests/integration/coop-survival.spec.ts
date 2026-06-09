@@ -25,11 +25,21 @@ import { describe, expect, test } from "vitest";
 
 import { TestClient } from "./helpers/wsClient";
 import { PROTOCOL_VERSION } from "../../shared/protocol.js";
+import { newsheepdogland } from "../../shared/scenes/newsheepdogland.js";
 
 const RUN_LIVE = process.env.COOP_SURVIVAL_LIVE === "1";
 const HTTP_BASE = process.env.INTEGRATION_WORKER_URL ?? "http://localhost:8787";
 const WS_BASE = process.env.INTEGRATION_WORKER_WS ?? HTTP_BASE.replace(/^http/, "ws");
 const ARTIFACT_DIR = "cycle68-validation/coop";
+const NIGHT_PROBE_T = 0.85;
+
+function secondsToNightProbe(): number {
+  const secondsPerDay = newsheepdogland.dayNight?.secondsPerDay ?? 600;
+  const initialT = newsheepdogland.dayNight?.initialT ?? 0.28;
+  let delta = NIGHT_PROBE_T - initialT;
+  while (delta < 0) delta += 1;
+  return Math.ceil(delta * secondsPerDay);
+}
 
 interface RegisterResult { token: string; persistentId: string; }
 interface RoomResult { roomCode: string; playerId: string; wsTicket: string; }
@@ -144,7 +154,7 @@ describe.skipIf(!RUN_LIVE)("Cycle 68 P3: two-client live co-op survival", () => 
 
       // Force the day clock to nightfall via the env-gated test seam; the DO
       // spawns the wolf pack and broadcasts it to BOTH clients.
-      clientA.send({ t: "__testAdvanceSurvival", seconds: 420 });
+      clientA.send({ t: "__testAdvanceSurvival", seconds: secondsToNightProbe() });
       const wolvesA = await waitForState(clientA, (s) => Array.isArray(s.wolves) && s.wolves.length >= 1, 10000);
       const wolvesB = await waitForState(clientB, (s) => Array.isArray(s.wolves) && s.wolves.length >= 1, 10000);
       expect(wolvesA.wolves.length).toBeGreaterThanOrEqual(1);

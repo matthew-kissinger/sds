@@ -1,12 +1,12 @@
-# Next Session - Cycle 82 feel-and-media-live (Phase 1 + 2 flagship-stability SHIPPED + committed, pending deploy)
+# Next Session - Cycle 82 feel-and-media-live (v2.2.3 release-ready, deploy proof pending)
 
-> **Updated:** 2026-06-08
-> **For:** Cycle 82 `feel-and-media-live`. Plan: [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md). Phase 1 + 2 (flagship-stability fixes) are code-complete, verified live on the 3070, and committed; Phase 3+ (`feel-and-media-live`) is the open thread.
-> **Pickup priority:** Phase 1 (house-in-water + QualityGovernor WebGPU/WebGL split + transient quality-floor + grass warmup) and Phase 2 (newsheepdogland grass was fully invisible on WebGPU, a distance-fade shader bug, now fixed) are test-green, verified live on desktop WebGPU, and committed to `main` locally. Next is the deploy call, then the Phase 4 production steady-state profile and the Phase 3 feel-and-media-live work.
+> **Updated:** 2026-06-09
+> **For:** Cycle 82 `feel-and-media-live`. Plan: [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md). Phase 1 + 2 (flagship-stability fixes) are committed locally on `main`; Phase 3 + 4 (survival feel, two-dog co-op, entrance hero, 3070 steady-state proof) are locally validated and packaged as the `v2.2.3` release.
+> **Pickup priority:** Push `main` + tag `v2.2.3`, watch GH Actions deploy, then prove the live Pages bundle and direct Worker health before calling the release live.
 
 ## Cold-Start Orientation
 
-Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) (fill it in) -> [`DECISIONS.md`](DECISIONS.md) (the Cycle 81 lift decision). Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file -> [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) -> [`DECISIONS.md`](DECISIONS.md) (the Cycle 81 lift decision). Authoritative closed-cycle log: [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Where It Stands
 
@@ -16,23 +16,28 @@ Read in order: [`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) -> this file
 - Tier-gated by a shared `isMobileClient()`: desktop loads WebGPU (with the Hosek sky + water that were dark on the WebGL fallback), mobile keeps WebGL byte-identical. The scene def keeps `renderer:'webgl'`.
 - Mobile: the connected tablet (Galaxy Tab S9 FE, Mali-G68) has no `navigator.gpu`, so mobile is WebGL regardless; the pin is retained for any future WebGPU-capable mobile.
 
-Validation: `npm test` 1135 pass / 8 skip; `npm run build` clean; bundle baseline 591 KB.
+Validation: `npm test` 1135 pass / 8 skip; `npm run build` clean at the Cycle 81 bundle baseline.
 
 ## What To Pick Up Next
 
-**Cycle 82 Phase 1 + Phase 2 (flagship-stability) are SHIPPED + verified live + committed, pending deploy.** Four live newsheepdogland regressions are fixed: Phase 1 (house-in-water, the WebGPU/WebGL load split, the transient quality-floor + grass thinning) and Phase 2 (grass fully invisible on WebGPU - the blade distance-fade keyed off the world origin instead of the camera, so the ~1.2km-out play area fell entirely past `grassFadeEnd`; fixed by using `positionView`/`positionWorld` like every sibling konveyor material). See [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) Phases 1-2 for root causes, fixes, and live proof. `npm test` 1142 pass / 8 skip (exit 0); `npm run build` clean within the 591/604 KB bundle baseline.
+**Cycle 82 Phase 1 + Phase 2 (flagship-stability) are committed locally, pending deploy.** Four live newsheepdogland regressions are fixed: Phase 1 (house-in-water, the WebGPU/WebGL load split, the transient quality-floor + grass thinning) and Phase 2 (grass fully invisible on WebGPU - the blade distance-fade keyed off the world origin instead of the camera, so the ~1.2km-out play area fell entirely past `grassFadeEnd`; fixed by using `positionView`/`positionWorld` like every sibling konveyor material). See [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) Phases 1-2 for root causes, fixes, and live proof.
+
+**Cycle 82 Phase 3 + Phase 4 are code-complete, locally validated, and packaged for `v2.2.3`.**
+
+- Production-build 3070 profile: `tools/cycle82-steady-state-profile.mjs` passed 5/5 foreground runs against local preview, `qualityIndex 0`, `webgpu-production`, no fallback, no errors, worst p95 7.0 ms, worst p99 7.1 ms. Artifact: `cycle82-validation/steady-state-profile-3070.json`.
+- Survival feel: Newsheepdogland day length is 360 s, first night from initial `t=0.28` is about 187 s, daily growth is +6, loss threshold is 45%, and wolf kill cooldown is 1.6 s.
+- Two-dog co-op: live local Wrangler proof passed with `COOP_SURVIVAL_LIVE=1 INTEGRATION_WORKER_URL=http://127.0.0.1:8787 npx vitest run tests\integration\coop-survival.spec.ts`; proof artifact `cycle68-validation/coop/two-client-proof.json`.
+- Entrance hero: root entrance defaults to Newsheepdogland, preloads the new homestead/pen/grass WebGPU capture, updates baseline SEO/OG/Twitter copy, and passes desktop/mobile proof. Artifacts: `cycle82-validation/entrance-proof/proof.json`, `desktop.png`, `mobile.png`.
+- Current validation after the final UI edit: `npm test` exit 0; `npm run build` exit 0; `git diff --check` exit 0. Current bundle reality is main 605.49 KB and three 618.78 KB, so old 591/604 KB notes are historical checkpoint values, not the current bundle.
 
 Next:
 
-- Deploy. Phases 1-2 are committed to `main` locally but not pushed; production still runs the old code until pushed (a push to `main` triggers the GH Actions deploy). Get Matt's go-ahead first.
-- Phase 4 (measure-first): production-build, foreground, >=5-run steady-state p95/p99 on the 3070 to confirm the flagship sustains qualityIndex 0 (resolves Q1).
-- Phase 3 `feel-and-media-live`: survival-feel retune, two-dog co-op playtest, entrance hero blessing (player-visible, taste/paired).
-- OR mobile WebGPU validation if a WebGPU-capable mobile device comes on hand (this cycle's tablet had none).
+- Push `main` and tag `v2.2.3`; production still runs the old code until the push-triggered GH Actions deploy completes.
+- After deploy, prove both `https://sheepdogsim.com/` and the direct Worker health endpoint before calling the cycle live.
 
 ## Open Carryover (deferred)
 
 - Mobile WebGPU validation on a WebGPU-capable device (Cycle 81's tablet exposed no `navigator.gpu`).
-- The deferred player-visible `feel-and-media-live` thread (survival-feel retune, two-dog co-op playtest, entrance hero blessing).
 - Prior open carryover: tablet draw-call perf.
 
 ## Working Contract
@@ -47,7 +52,7 @@ Next:
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan | [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) (scaffold) |
+| Active cycle plan | [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) |
 | The Cycle 81 lift (mechanism, numbers, exact edits) | `cycle81-validation/README.md` + [`DECISIONS.md`](DECISIONS.md) Cycle 81 entry |
 | The compute-cull modules | [`js/world/grassComputeCull.js`](js/world/grassComputeCull.js), [`js/world/treeComputeCull.js`](js/world/treeComputeCull.js), [`js/world/konveyorWebGpuModules.js`](js/world/konveyorWebGpuModules.js) |
 | The tier-gate | [`js/utils/isMobileClient.js`](js/utils/isMobileClient.js) + [`js/main.js`](js/main.js) boot gate + swap guard + [`js/SceneManager.js`](js/SceneManager.js) |

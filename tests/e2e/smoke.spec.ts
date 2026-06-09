@@ -92,11 +92,13 @@ test.describe('SDS smoke', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    // Cycle 51 world-first entrance: pick the Classic difficulty chip on the
-    // armed-world panel, then Play. dispatchEvent('click') fires React onClick
-    // synchronously without depending on Playwright's hover/stability heuristic.
-    // Cycle 59: match the rung by "Classic <count>" so the bare "Solo"/family
-    // chip (added with the mode-family selector) is never ambiguous here.
+    // Newsheepdogland is the default survival-first entrance world. Cycle once
+    // to Home Field before selecting Classic; dispatchEvent('click') fires
+    // React onClick synchronously without depending on Playwright's
+    // hover/stability heuristic.
+    const nextWorld = page.getByRole('button', { name: 'Next world' });
+    await expect(nextWorld).toBeVisible({ timeout: 30_000 });
+    await nextWorld.dispatchEvent('click');
     const classic = page.getByRole('button', { name: /Classic\s+\d/i });
     await expect(classic).toBeVisible({ timeout: 30_000 });
     await classic.dispatchEvent('click');

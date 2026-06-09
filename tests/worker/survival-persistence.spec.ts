@@ -70,9 +70,9 @@ describe('GameSim survival persistence (Cycle 68 P4)', () => {
     const { room, progress } = makeRoomAdapter();
     const sim = new GameSimulation(room as any);
     try {
-      runNight(sim, 0); // survive day 1 -> day 2, flock 15
+      runNight(sim, 0); // survive day 1 -> day 2, flock 16
       expect(sim._survival.run.day).toBe(2);
-      expect(progress.at(-1)).toEqual({ day: 2, flock: 15, peak: 15, dead: false });
+      expect(progress.at(-1)).toEqual({ day: 2, flock: 16, peak: 16, dead: false });
     } finally { sim.cleanup?.(); }
   });
 
@@ -105,18 +105,18 @@ describe('GameSim survival persistence (Cycle 68 P4)', () => {
     const simA = new GameSimulation(roomA as any);
     let saved: any;
     try {
-      runNight(simA, 0); // -> day 2, flock 15
-      runNight(simA, 0); // -> day 3, flock 20
+      runNight(simA, 0); // -> day 2, flock 16
+      runNight(simA, 0); // -> day 3, flock 22
       saved = simA.serializeSurvival();
-      expect(saved).toEqual({ day: 3, flock: 20, peak: 20, dead: false });
+      expect(saved).toEqual({ day: 3, flock: 22, peak: 22, dead: false });
     } finally { simA.cleanup?.(); }
 
     const { room: roomB } = makeRoomAdapter({ survivalResume: saved });
     const simB = new GameSimulation(roomB as any);
     try {
       expect(simB._survival.run.day).toBe(3);
-      expect(simB._survival.run.flock).toBe(20);
-      expect(simB._countActiveSurvivalSheep()).toBe(20);
+      expect(simB._survival.run.flock).toBe(22);
+      expect(simB._countActiveSurvivalSheep()).toBe(22);
     } finally { simB.cleanup?.(); }
   });
 
@@ -124,7 +124,7 @@ describe('GameSim survival persistence (Cycle 68 P4)', () => {
     const { room, progress } = makeRoomAdapter();
     const sim = new GameSimulation(room as any);
     try {
-      runNight(sim, 4); // 4/10 = 40% >= 33% -> death
+      runNight(sim, 5); // 5/10 = 50% >= 45% -> death
       expect(sim._survival.ended).toBe(true);
       expect(progress.at(-1).dead).toBe(true);
     } finally { sim.cleanup?.(); }

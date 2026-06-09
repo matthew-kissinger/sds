@@ -15,7 +15,7 @@ This document supersedes the zen-boids entrance direction from the entrance/UI s
 
 ## Mood
 
-Calm pastoral, painterly, herding at dusk. The anchor is the Rolling Hills hero scene at golden hour: warm low sun, long soft shadows, sage-green slopes, a dusty-gold sky fading to rose and lavender at the horizon. The feeling is the quiet end of a working day on one fenced pasture and two islands, not a flashy arcade title screen.
+Calm pastoral, painterly, herding at dusk. The current entrance anchor is Newsheepdogland: a boot-shaped survival island with the homestead, pen, grass, autumn trees, and sea visible in the first frame. Rolling Hills remains the golden-hour tone reference: warm low sun, long soft shadows, sage-green slopes, a dusty-gold sky fading to rose and lavender at the horizon. The feeling is the quiet end of a working day on one fenced pasture and three islands, not a flashy arcade title screen.
 
 Touchstones: golden-hour light, hand-painted storybook landscapes, soft watercolor washes, warm frosted glass like morning haze. The opposite of neon, dark slate, and hard sci-fi chrome.
 
