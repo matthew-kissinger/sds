@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { DoubleSide, MeshBasicNodeMaterial, MeshLambertNodeMaterial, MeshStandardNodeMaterial, TSL } from 'three/webgpu';
 
@@ -10,6 +10,7 @@ import {
     createKonveyorGrassMaterial,
     shouldApplyKonveyorGrass,
 } from '../js/world/konveyorGrassMaterialAdapter.js';
+import { setKonveyorWebGpuModules } from '../js/world/konveyorWebGpuModules.js';
 
 function createMaterial(name) {
     const material = new THREE.MeshBasicMaterial();
@@ -18,11 +19,36 @@ function createMaterial(name) {
 }
 
 describe('konveyor grass material adapter', () => {
+    afterEach(() => {
+        setKonveyorWebGpuModules(null);
+    });
+
     it('requires the explicit WebGPU grass flag', () => {
         expect(shouldApplyKonveyorGrass('?renderer=webgpu&konveyorGrass=1')).toBe(true);
         expect(shouldApplyKonveyorGrass('?renderer=webgpu&diagnostic=1')).toBe(false);
         expect(shouldApplyKonveyorGrass('?renderer=webgl&konveyorGrass=1')).toBe(false);
         expect(shouldApplyKonveyorGrass('')).toBe(false);
+    });
+
+    it('keeps the coastline compute-cull path eligible on mobile WebGPU', () => {
+        const grass = new GrassSystem(
+            new THREE.Scene(),
+            true,
+            null,
+            null,
+            {
+                kind: 'coastline',
+                points: [{ x: -10, z: -10 }, { x: 10, z: -10 }, { x: 0, z: 10 }],
+                falloff: 1,
+            },
+        );
+        grass.konveyorGrassBladeMaterialSummary = { applied: true };
+
+        setKonveyorWebGpuModules({ TSL: {} });
+        expect(grass._shouldComputeCullGrass()).toBe(true);
+
+        setKonveyorWebGpuModules(null);
+        expect(grass._shouldComputeCullGrass()).toBe(false);
     });
 
     it('leaves the default meadow quad material untouched without flag and factories', () => {

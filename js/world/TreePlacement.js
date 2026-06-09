@@ -90,11 +90,11 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     builder._konveyorTreeImpostorSync = treeImpostorRuntime?.syncKonveyorTreeImpostorMeshes ?? null;
     const chunkSize = useProductionNativeImpostor ? 160 : (builder.isMobile ? 320 : 192);
 
-    // Cycle 81: on the flagship coastline desktop WebGPU path (renderer-pinned scene,
-    // desktop, lod0-only native trees) consolidate the per-chunk tree fan-out into ONE
-    // compute-culled InstancedMesh per child-mesh (data-compaction storage
-    // instanceMatrix + indirect draw). Null on every other path -> per-chunk fan-out.
-    const treeCullModules = (builder.sceneDef?.renderer === 'webgl' && !builder.isMobile && !useProductionNativeImpostor)
+    // Cycle 84: on the flagship coastline WebGPU path consolidate the per-chunk
+    // tree fan-out into ONE compute-culled InstancedMesh per child-mesh
+    // (data-compaction storage instanceMatrix + indirect draw). Null on WebGL
+    // and non-coastline paths -> per-chunk fan-out.
+    const treeCullModules = (builder.sceneDef?.boundary?.kind === 'coastline' && !useProductionNativeImpostor)
         ? (getKonveyorWebGpuModules() || null)
         : null;
     if (treeCullModules?.TSL) {

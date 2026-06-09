@@ -373,7 +373,7 @@ export class GrassSystem {
             console.log('[GRASS] Creating grass geometry...');
             this.clumpGeometry = this.createClumpGeometry();
 
-            // Generate chunks. Cycle 81: on the flagship coastline desktop WebGPU
+            // Generate chunks. Cycle 84: on the flagship coastline WebGPU
             // path, build ONE consolidated InstancedMesh driven by a TSL compute
             // frustum-cull + indirect draw instead of the per-chunk fan-out
             // (collapses ~740 meshes to 1; pixel-identical). Any failure falls back
@@ -1190,15 +1190,13 @@ export class GrassSystem {
     }
 
     /**
-     * Cycle 81: the flagship coastline renders its whole grass field as one
-     * compute-culled InstancedMesh on the desktop WebGPU path. Gated to that path:
-     * coastline + desktop + the konveyor (WebGPU) blade material applied + the
-     * three.webgpu namespace available. Mobile and every WebGL scene keep the
-     * per-chunk path byte-identical.
+     * Cycle 84: the flagship coastline renders its whole grass field as one
+     * compute-culled InstancedMesh on the WebGPU path. Gated to that path:
+     * coastline + the konveyor (WebGPU) blade material applied + the three.webgpu
+     * namespace available. WebGL keeps the per-chunk path byte-identical.
      */
     _shouldComputeCullGrass() {
         return this._isCoastline
-            && !this.isMobile
             && this.konveyorGrassBladeMaterialSummary?.applied === true
             && !!getKonveyorWebGpuModules()?.TSL;
     }

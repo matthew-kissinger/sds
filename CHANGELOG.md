@@ -29,6 +29,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.5] - 2026-06-09 (Cycle 84 - Mobile WebGPU primary hotfix)
+
+### Fixed
+
+- Newsheepdogland now stays on the production WebGPU path on WebGPU-capable
+  mobile browsers instead of rewriting the first Play click to `renderer=webgl`.
+- Mobile Newsheepdogland terrain now covers the off-origin homestead/play area,
+  so the sheepdog spawns on the terrain surface instead of snapping to the
+  water/skirt height.
+
+### Changed
+
+- WebGPU is documented as the primary/default renderer on capable browsers,
+  with explicit `?renderer=webgl` preserved as the fallback escape hatch.
+- Mobile WebGPU uses the coastline grass/tree compute-cull path for
+  Newsheepdogland, keeping the flagship scene on the consolidated render path.
+
+### Validation
+
+- Targeted WebGPU scene, grass, terrain, and render-cost tests passed.
+- Full `npm test`, `npm run lint`, and `npm run build` passed locally.
+- Mobile-emulated browser proof passed from the normal entrance with one Play
+  click: `webgpu-production`, no WebGL fallback URL params, 3200 m mobile
+  coastline terrain mesh, grass/tree compute-cull active, and sheepdog y
+  matching the terrain surface at the homestead.
+- Chromium Playwright smoke/mobile-asset subset passed locally. Full local
+  `npm run test:e2e` was attempted but exceeded a 3-minute command timeout.
+
 ## [2.2.4] - 2026-06-09 (Cycle 83 - Wolves, bark, and night polish)
 
 ### Changed

@@ -4,6 +4,19 @@
 
 ## Recently Completed
 
+### Cycle 84 - `mobile-webgpu-primary-hotfix` (closed 2026-06-09)
+
+Plan archived at [`docs/archive/cycles/cycle-84-plan.md`](archive/cycles/cycle-84-plan.md). Hotfix from Matt's browser report: first Play click on mobile refreshed into WebGL, and the second click spawned the dog in the water. **SHIPPED: WebGPU-capable mobile browsers now stay on WebGPU for Newsheepdogland, and the homestead spawn sits on terrain instead of the water/skirt edge.** Release tag `v2.2.5`.
+
+- **Mobile WebGPU stays primary.** Removed the Newsheepdogland `renderer:'webgl'` scene pin and the mobile boot/swap guards that rewrote WebGPU sessions to `?renderer=webgl&fallbackReason=scene-pinned-webgl`. Explicit `?renderer=webgl` remains available as the fallback escape hatch.
+- **Coastline terrain covers the gameplay coordinates.** Mobile coastline scenes now use a 3200 m terrain mesh instead of the 720 m inner-grid + skirt split used by smaller fields. That keeps `Heightfield.surfaceY()` aligned with the visible terrain at Newsheepdogland's off-origin homestead (`x=585,z=-1000`), fixing the y=-3 water-spawn snap.
+- **Mobile WebGPU uses the consolidated render path.** The coastline grass compute-cull path is eligible on mobile WebGPU, and tree compute-cull keys from the coastline boundary instead of the removed renderer pin.
+- **Proof.** Mobile-emulated Chrome proof from the normal entrance with one Play click reported `webgpu-production`, no fallback URL params, terrain budget `size=3200`, `splitSkirt=false`, grass compute-cull true, 4 tree compute-cull controllers, and sheepdog y `3.4006` matching terrain surface y `3.4006`.
+
+**Validation gates:** targeted Newsheepdogland/WebGPU grass/terrain/render-cost tests green; full `npm test` green; `npm run lint` green; `npm run build` green with `main-*.js` inside the 592 KB bundle ratchet (606,683 bytes); Chromium smoke/mobile-asset subset green (`5 passed`). Full local `npm run test:e2e` was attempted but exceeded a 3-minute command timeout before useful output, so the focused Chromium browser gate was used for this hotfix.
+
+- **Carryover:** real-device mobile WebGPU proof should still be run on Matt's actual phone after the live deploy, because this cycle used Chrome Pixel 7 emulation on the local machine.
+
 ### Cycle 83 - `wolves-bark-night-polish` (closed 2026-06-09)
 
 Plan archived at [`docs/archive/cycles/cycle-83-plan.md`](archive/cycles/cycle-83-plan.md). Started as two draft PRs, then merged together for the `v2.2.4` release closeout. **SHIPPED: wolves are threat-readable, bark works at the intended medium/long ranges, and Newsheepdogland night finally reads as night.** Release tag `v2.2.4` points at `936531f`; Deploy run `27206254394` green.

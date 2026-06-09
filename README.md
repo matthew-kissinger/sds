@@ -62,7 +62,7 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - Reconnect grace window — drop a tab and rejoin within 15 s without losing your run
 
 ### 🎨 Cinematic visual layer
-- **Progressive WebGPU renderer path** with explicit WebGL fallback and a forced `?renderer=webgl` escape hatch
+- **WebGPU-primary renderer path** on capable browsers, with explicit WebGL fallback and a forced `?renderer=webgl` escape hatch
 - **Hosek-Wilkie analytic sky** with day/night presets, parallax cloud layer, shoreline-aware water with sun-glint, billboarded sun disc
 - **Hundreds of thousands of grass blades** with directional wind shader, dog-bends-grass-along-its-facing interaction, per-scene density tuning, stochastic-dither LOD
 - **Apple-correct tone mapping** — Mac/iPhone/iPad use Neutral instead of ACES so the sky doesn't wash white on Metal-ANGLE
@@ -114,7 +114,7 @@ URL params for fast scene picking + shoot setup:
 - `?cinematic=1` — exposes `window.__sdsCinema` for scripted captures + free-fly camera + tone-map override
 - `?ui=off` — hide React overlay (canvas-only render)
 - `?sun=N` — N in 0..1 (`0.06` = dusk, `0.20` = golden hour, `0.50` = noon)
-- `?renderer=webgpu` — request the production WebGPU path where the browser can create a device
+- `?renderer=webgpu` — request the production WebGPU path where the browser can create a device; this is also the default on capable browsers
 - `?renderer=webgl` — force the WebGL fallback path
 - `?konveyorNativeTreeImpostors=1` — opt into the Cycle 38 explicit three-tier WebGPU tree route for review
 
@@ -198,6 +198,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANGELOG entry. The last cycles delivered everything you see today; here's where the surface is moving right now:
 
+- **`v2.2.5`** (2026-06-09) - Mobile WebGPU primary hotfix: WebGPU-capable mobile browsers stay on the production WebGPU path for Newsheepdogland, and the homestead terrain mesh now covers the spawn so the dog no longer snaps to the water/skirt surface.
 - **`v2.2.4`** (2026-06-09) - Cycle 83 wolf/bark/night polish: wolves are larger and clearer, bark reaches sheep and wolves at the intended medium/long distances, bark audio unlocks from the bark command, and Newsheepdogland night is darker with the visual sun below the horizon at `NIGHT_T`.
 - **`v2.2.3`** (2026-06-09) - Newsheepdogland feel-and-hero release: desktop WebGPU flagship proof on the 3070, shorter survival pressure, validated two-dog survival co-op, and the Newsheepdogland homestead/pen/grass hero as the entrance default.
 - **Cycle 54 closed** (2026-06-04) - Windows Electron distributor path: installer/portable/unpacked artifacts, app identity, logs/crash paths, signing-ready posture, packaged WebGL/WebGPU proofs, native resize proof, and Steam/store handoff. Local Steam depot dry-run is plausible; public store submission is still gated on signing policy, metadata, install QA, screenshots/capsules, controller/cloud-save policy, and release-channel decisions.
@@ -247,7 +248,7 @@ This codebase is **deliberately easy to read**. Whether you want to mod the game
 
 - **More languages.** i18n keys live in [js/locales/](js/locales/); PRs add a new directory + JSON files. Today: 5 languages (en, es, ja, pt, zh-CN). Want German? French? Korean? Open a PR.
 - **Dog GLB compression** via gltf-transform + Draco. Each dog is 25–40k triangles; five dog models. Trims the bundle.
-- **Better Android WebGPU perf.** The Cycle 38 connected-phone matrix is screenshot-valid but budget-red. Reducing Field draw calls, Open Country terrain/tree cost, and sprint-start spikes comes before any mobile-readiness claim.
+- **Real-device mobile WebGPU proof.** `v2.2.5` passes mobile-emulated Chrome WebGPU for Newsheepdogland's Play flow and terrain spawn. Run the same proof on Matt's actual phone after deploy, then keep reducing Android draw-call and sprint-start cost where the measured device budget still says to.
 - **MP joiner renderer sync.** Joiners whose URL-param scene differs from the room's see correct sim but mismatched visuals.
 - **LOD2 → LOD0 cross-fade** at the 100 m boundary. The hard pop is visible — alpha-dither / fade across a 5–10 m hysteresis band would soften it.
 - **Small-window HUD polish.** Native resize is proven, but very small desktop windows still deserve a dedicated HUD comfort pass before public desktop release.

@@ -1337,3 +1337,14 @@ Cycle 83 started from Matt's playtest feedback that wolves were tiny and texture
 - **Bark reach is an intentional shared-sim feel change.** `shared/BarkImpulse.js` now gives the existing forward cone a 24 m sheep reach, and `shared/survival/tuning.js` gives wolves a 45 m bark repel radius for 2.0 s. The cycle plan explicitly authorized these shared changes and the only sim-baseline regeneration is the bark impulse fixture.
 - **The survival clock stays; the atmosphere interpretation changes.** `NIGHT_T` remains `0.80` in `shared/survival/dayClock.js`. The visual day-night loop now treats that same value as the night keyframe, with the sun below the horizon and darker exposure/ambient/fog. This keeps gameplay phase timing compatible while making the visible sky match the survival state.
 - **Co-op visual time sync smooths toward authority.** The Worker still owns `survival.t`; the client atmosphere approaches it over the shortest wrap-around path instead of snapping. This is a rendering/feel fix, not a multiplayer sim contract change.
+
+---
+
+## Cycle 84 - WebGPU is primary on capable mobile browsers; Newsheepdogland pin removed (2026-06-09)
+
+Cycle 84 supersedes the Cycle 81 mobile pin decision. Matt reported that browser/mobile Play refreshed once into WebGL, then the second Play spawned the dog in water. The root causes were separate: the mobile-only Newsheepdogland pin rewrote WebGPU sessions to `?renderer=webgl`, and the mobile terrain mesh only covered 720 m around origin while the Newsheepdogland homestead sits at `x=585,z=-1000`.
+
+- **Decision: do not reintroduce the mobile WebGL pin.** WebGPU is the primary/default renderer on browsers that can create a WebGPU device. Explicit `?renderer=webgl` remains the escape hatch, and the existing frame-budget fallback still protects mobile WebGPU after repeated misses at the floor.
+- **The mobile terrain mesh must match the scene coordinate system.** Smaller mobile fields keep the 720 m inner mesh + 3200 m skirt split. Coastline scenes use a 3200 m mobile mesh so visual surface sampling covers Newsheepdogland's off-origin play area; otherwise `surfaceY()` clamps to the mesh edge and places the dog at the water/skirt height.
+- **Mobile WebGPU uses the same flagship compute-cull route.** Grass compute-cull is no longer desktop-only, and tree compute-cull keys from the coastline boundary instead of the removed `renderer:'webgl'` marker.
+- **Validation scope is honest.** The hotfix passed mobile-emulated Chrome WebGPU proof and Chromium e2e smoke/mobile-asset subset locally. A real-device proof on Matt's actual phone remains a carryover before making stronger device-specific claims.
