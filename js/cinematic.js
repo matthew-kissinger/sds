@@ -184,7 +184,13 @@ export function installCinemaApi(game) {
         setSun(t) {
             const atm = game.atmosphere;
             if (!atm) return;
-            if (typeof atm.dayNight?.setT === 'function') {
+            // Prefer setTimeOfDay: it re-bakes the sky immediately, so a paused
+            // capture (cinema.paused short-circuits the game/atmosphere update
+            // loop) still reflects the requested time instead of freezing the
+            // dome at the pre-pause state.
+            if (typeof atm.setTimeOfDay === 'function') {
+                atm.setTimeOfDay(t);
+            } else if (typeof atm.dayNight?.setT === 'function') {
                 atm.dayNight.setT(t);
             } else if (typeof atm.setSun === 'function') {
                 // Map t in [0..1] to elevation 0 (horizon) → 90° (zenith).
@@ -263,10 +269,31 @@ export function installCinemaApi(game) {
         },
         renderFrame() {
             if (cinema.renderer && cinema.scene && cinema.camera) {
+                // Keep the atmosphere centered on the cinematic camera before we
+                // paint. The gameplay loop does this inside this.update(), which
+                // cinema.paused short-circuits; without it the 500-unit Hosek sky
+                // dome strands at the spawn while the cinematic camera flies the
+                // island, so most of the frame falls through to the clear color.
+                cinema.syncAtmosphereToCamera();
                 cinema.renderer.render(cinema.scene, cinema.camera);
                 return true;
             }
             return false;
+        },
+
+        /**
+         * Re-center the sky dome (and cloud/fog ground anchor) on the current
+         * cinematic camera. Safe to call every frame of a moving shot.
+         */
+        syncAtmosphereToCamera() {
+            const atm = cinema.atmosphere;
+            const cam = cinema.camera;
+            if (!atm || !cam) return false;
+            atm.syncCamera?.(cam.position);
+            if (typeof atm.setTerrainYAtCamera === 'function') {
+                atm.setTerrainYAtCamera(cinema.getTerrainY(cam.position.x, cam.position.z));
+            }
+            return true;
         },
         getCameraPose() {
             const cam = cinema.camera;

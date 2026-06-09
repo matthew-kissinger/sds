@@ -1,6 +1,6 @@
 # Sheep Dog Sim
 
-> A free browser-based herding game where you guide a sheepdog across one fenced pasture and two hand-built islands. No signup, no microtransactions. Current source is AGPL-3.0-or-later and current assets are CC BY-SA 4.0.
+> A free browser-based herding game where you guide a sheepdog across one fenced pasture and three hand-built islands, including a survival island with wolves. No signup, no microtransactions. Current source is AGPL-3.0-or-later and current assets are CC BY-SA 4.0.
 
 The site is the game. Open the URL, herd some sheep, close the tab. Single-player and 2-4 player real-time multiplayer. Built on Three.js with WebGL fallback, progressive WebGPU on supported hardware, and a Cloudflare Workers + Durable Objects + D1 backend. The full source is public on GitHub; hosted or modified versions must publish corresponding source under AGPL and preserve attribution.
 
@@ -14,6 +14,7 @@ The site is the game. Open the URL, herd some sheep, close the tab. Single-playe
 - [Home Field](https://sheepdogsim.com/scenes/home-field): flat fenced pasture with a single gate. The starter biome.
 - [Rolling Hills](https://sheepdogsim.com/scenes/rolling-hills): 180-metre sunset island with rolling heightfield and a lightning corral.
 - [Open Country](https://sheepdogsim.com/scenes/open-country): 380-metre wild island with a multi-stage gather-and-portal objective.
+- [Newsheepdogland](https://sheepdogsim.com/scenes/newsheepdogland): boot-shaped survival island with a homestead pen, a day/night cycle, and wolves after dark. The WebGPU flagship scene and the default entrance world.
 
 ## Source and reuse
 

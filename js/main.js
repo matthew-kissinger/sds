@@ -1393,6 +1393,19 @@ class SheepDogSimulation {
         try {
             await this._disposeAndRebuildCurrentScene();
 
+            // Cycle 8X: the rebuild above re-mounts the day-loop HUD (day/night
+            // chip + survival minimap) for the backdrop scene, but we are
+            // returning to the StartScreen - gameplay HUD must not sit on top of
+            // the menu. Tear it back down and stop the day-loop ticker (no-op on
+            // non-day-loop scenes). A fresh Play re-enters via swapScene, which
+            // re-mounts the HUD cleanly.
+            this._tickDayLoop = null;
+            this.dayLoop = null;
+            try { this._unmountDayNightChip?.(); } catch (err) { console.warn('[SWAP] menu dayNightChip unmount:', err); }
+            this._unmountDayNightChip = null;
+            try { this._unmountMinimap?.(); } catch (err) { console.warn('[SWAP] menu minimap unmount:', err); }
+            this._unmountMinimap = null;
+
             // Reset gameplay flags — but NOT gameMode/competitiveGates,
             // which the menu wants to remember for "Play Again" UX.
             if (this.gameState) {

@@ -181,7 +181,12 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             game.gameState.getPasture(),
             {
                 perimeterFence: game.currentScene.perimeterFence !== false,
-                corral: game.currentScene.corral || null
+                corral: game.currentScene.corral || null,
+                // Scenes with a day-loop homestead gate (Newsheepdogland) build
+                // their own gate + pen below via buildHomesteadGate; suppress the
+                // FieldConfig default gate+pen so a stray gate doesn't strand in
+                // the water at the default origin location.
+                homesteadGate: Boolean(game.currentScene.dayNight?.dayLoop && game.currentScene.gate)
             }
         );
 

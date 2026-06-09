@@ -1,6 +1,6 @@
 # Sheep Dog Sim — Press Kit
 
-A free, browser-based herding game where you guide your sheepdog across three biomes — flat pasture, rolling sunset hills, and a wild island with a magical portal. Zen, satisfying, no microtransactions, no signup.
+A free, browser-based herding game where you guide your sheepdog across four biomes: a flat pasture, rolling sunset hills, a wild island with a magical portal, and a boot-shaped survival island with wolves after dark. Zen, satisfying, no microtransactions, no signup.
 
 ## Tagline
 
@@ -8,7 +8,7 @@ A free, browser-based herding game where you guide your sheepdog across three bi
 
 ## Headline features
 
-- **Three biomes:** Home Field (flat starter pasture), Rolling Hills (180 m sunset island with corral), Open Country (380 m island with multi-stage gather→drive→portal objective).
+- **Four biomes:** Home Field (flat starter pasture), Rolling Hills (180 m sunset island with corral), Open Country (380 m island with multi-stage gather→drive→portal objective), Newsheepdogland (boot-shaped survival island with a homestead pen, day/night cycle, and wolves after dark).
 - **Six modes:** Practice (30 sheep, no timer), Classic (200), Extreme (1,000), Insane (3,000), Chaos (5,000), plus 2–4 player multiplayer co-op + competitive + timed.
 - **Authoritative 60 Hz multiplayer:** Cloudflare Workers + Durable Objects + D1, MessagePack-over-WebSocket state frames, adaptive jitter buffer.
 - **5 languages:** auto-detected via i18next — English, Spanish, Portuguese, Japanese, Simplified Chinese. (Community PRs welcome for more.)
@@ -40,8 +40,9 @@ The codebase is also deliberately easy to read — ~10k lines of vanilla JavaScr
 
 Current 1920×1080 WebGPU scene captures:
 
+- [`assets/scenes/entrance/newsheepdogland.webp`](assets/scenes/entrance/newsheepdogland.webp). Newsheepdogland survival island, the sheepdog on the dusk shore facing the mountain. Default public social image.
 - [`assets/scenes/entrance/field.webp`](assets/scenes/entrance/field.webp) — Home Field with the sheepdog and flock in grass.
-- [`assets/scenes/entrance/rolling-hills.webp`](assets/scenes/entrance/rolling-hills.webp) — Rolling Hills shoreline capture. Default public social image.
+- [`assets/scenes/entrance/rolling-hills.webp`](assets/scenes/entrance/rolling-hills.webp) — Rolling Hills shoreline capture.
 - [`assets/scenes/entrance/open-country.webp`](assets/scenes/entrance/open-country.webp) — Open Country with the sheepdog facing the portal objective.
 
 Older 1200×630 social-card assets remain under [`assets/marketing/og/`](assets/marketing/og/) for historical release material.

@@ -133,3 +133,8 @@ tests/perf-baseline/last-run.json
 # These are per-run proof — regenerable, scene/device-specific, and not
 # collaboratively edited. Keep them out of git to stop pack growth.
 cycle*-validation/
+
+# Hero / media re-capture intermediates (contact sheets, frame PNGs, mp4).
+# Regenerable from tools/newsheepdogland-hero-final.mjs; only the encoded
+# assets/scenes/entrance/*.webp ship.
+hero-recapture/

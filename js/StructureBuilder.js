@@ -198,10 +198,19 @@ export class StructureBuilder {
      *  like Open Country.
      */
     buildSinglePlayerStructures(bounds, gate, pasture, opts = {}) {
-        const { perimeterFence = true, corral = null } = opts;
-        console.log(`[BUILD] Building single player structures (perimeterFence=${perimeterFence}, corral=${!!corral})`);
+        const { perimeterFence = true, corral = null, homesteadGate = false } = opts;
+        console.log(`[BUILD] Building single player structures (perimeterFence=${perimeterFence}, corral=${!!corral}, homesteadGate=${homesteadGate})`);
 
         this.clearAllStructures();
+
+        // Cycle 8X: homestead-gate scenes (Newsheepdogland's day loop) build their
+        // own gate + pen via buildHomesteadGate. The FieldConfig default gate+pen
+        // from buildGateAndPenOnly would strand a stray gate out in the water at
+        // the default origin location, so skip the default fence build entirely.
+        if (homesteadGate) {
+            console.log('[OK] Homestead-gate scene: default gate+pen skipped');
+            return;
+        }
 
         // Cycle 5+ corral scene (Rolling Hills): the corral marker replaces
         // the perimeter pen+gate. Even if FieldConfig still surfaces a legacy

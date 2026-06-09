@@ -12,7 +12,7 @@ Current WebGPU scene captures:
 
 | Newsheepdogland | Home Field | Rolling Hills | Open Country |
 |---|---|---|---|
-| ![Sheep Dog Sim Newsheepdogland WebGPU capture with homestead, pen, grass, trees, and sea](assets/scenes/entrance/newsheepdogland.webp) | ![Sheep Dog Sim Home Field capture with the sheepdog and flock in grass](assets/scenes/entrance/field.webp) | ![Sheep Dog Sim Rolling Hills capture with the sheepdog by the shoreline](assets/scenes/entrance/rolling-hills.webp) | ![Sheep Dog Sim Open Country capture with the sheepdog facing the portal objective](assets/scenes/entrance/open-country.webp) |
+| ![Sheep Dog Sim Newsheepdogland WebGPU capture: the sheepdog on the dusk shore facing the island mountain across the bay](assets/scenes/entrance/newsheepdogland.webp) | ![Sheep Dog Sim Home Field capture with the sheepdog and flock in grass](assets/scenes/entrance/field.webp) | ![Sheep Dog Sim Rolling Hills capture with the sheepdog by the shoreline](assets/scenes/entrance/rolling-hills.webp) | ![Sheep Dog Sim Open Country capture with the sheepdog facing the portal objective](assets/scenes/entrance/open-country.webp) |
 
 ---
 

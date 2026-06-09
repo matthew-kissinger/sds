@@ -13,20 +13,22 @@ Durable rules for any agent-written prose that ships to a player-facing surface 
 
 ## Framing precision
 
-The game has **one fenced pasture and two islands**. Frame it accurately:
+The game has **one fenced pasture and three islands** (four biomes, since v2.2.3 added Newsheepdogland). Frame it accurately:
 
-- ✓ "across one fenced pasture and two islands"
-- ✓ "three biomes" (broader, biome covers either pasture or island)
-- ✗ "three islands" (Home Field is a flat pasture, not an island)
-- ✗ "three sheep dog islands" (same problem)
+- ✓ "across one fenced pasture and three islands"
+- ✓ "four biomes" (broader, a biome covers either the pasture or an island)
+- ✓ "three islands" (Rolling Hills, Open Country, and Newsheepdogland are all islands)
+- ✗ "four islands" (Home Field is a flat pasture, not an island)
+- ✗ "three biomes" (stale pre-v2.2.3 count; Newsheepdogland made it four)
 
 Per-biome:
 
 - **Home Field**: flat fenced pasture, single perimeter pen with a gate. The starter biome.
-- **Rolling Hills**: 180-metre island with rolling heightfield, golden-hour mood, lightning-zap corral. The hero scene.
+- **Rolling Hills**: 180-metre island with rolling heightfield, golden-hour mood, lightning-zap corral.
 - **Open Country**: 380-metre island with multi-stage gather-and-portal objective.
+- **Newsheepdogland**: boot-shaped survival island (~3.2 km^2) with a northern mountain, a homestead pen, a day/night cycle, and wolves after dark. The WebGPU flagship and the default entrance world.
 
-Per-mode (six total):
+Per-mode (six core, plus Survival on Newsheepdogland):
 
 - **Just Play**: 30 sheep, no timer, no fail state.
 - **Solo Classic**: 200 sheep, leaderboard.
@@ -34,6 +36,7 @@ Per-mode (six total):
 - **Solo Insane**: 3,000 sheep.
 - **Solo Chaos**: 5,000 sheep. The flock becomes the antagonist.
 - **Multiplayer**: 2-4 player co-op, competitive, and timed rooms.
+- **Survival**: Newsheepdogland only. Start with a small flock, grow it each day you survive, lose the run if a night thins it past the loss threshold. Score is the peak flock.
 
 Per-dog (five total): Jep, Pip, Sally, Shiloh, George Washington. Different speeds, stamina, and control.
 
@@ -44,7 +47,7 @@ Use these phrasings verbatim or close to them when copy needs to mention a biome
 Matt's prose style on player-facing surfaces (verified against the original itch description, [`PRESSKIT.md`](../../PRESSKIT.md), and [`about.html`](../../about.html)):
 
 - **Conversational, second-person.** "Guide your sheepdog. Get too close and the whole flock scatters."
-- **ALL-CAPS section headers** in description-style prose (not Markdown `##`). "THREE BIOMES", "SIX MODES", "FIVE DOGS", "CONTROLS".
+- **ALL-CAPS section headers** in description-style prose (not Markdown `##`). "FOUR BIOMES", "SIX MODES", "FIVE DOGS", "CONTROLS".
 - **Concrete numbers and details.** "180-metre island", "5,000 sheep", "WASD moves, Shift sprints". Not "huge map", "tons of sheep", "responsive controls".
 - **Self-deprecating asides allowed.** "There's a leaderboard if you're competitive about sheep." "The sheep don't always cooperate."
 - **No hype words.** Don't use "amazing", "incredible", "blazing", "next-gen", "stunning". The numbers carry the weight.
@@ -55,7 +58,7 @@ Matt's prose style on player-facing surfaces (verified against the original itch
 Before saving an itch field, deploying a homepage prose change, or shipping a devlog entry:
 
 - `grep -c '—'` on the file or string. Expect `0`.
-- `grep -i 'three islands\|3 islands'`. Expect no matches.
+- `grep -i 'four islands\|three biomes\|two islands'`. Expect no matches (the game is one pasture and three islands, four biomes).
 - Section headers use ALL-CAPS plain text or `<h2>`-style HTML, not Markdown `##` (the description field on itch renders Markdown but ALL-CAPS reads more like Matt's own prose).
 - No exclamation marks. No emoji.
 - Specific numbers where possible (sheep counts, metres, file sizes), not adjectives.

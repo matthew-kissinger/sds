@@ -293,6 +293,32 @@ export class Atmosphere {
   }
 
   /**
+   * Snap the whole atmosphere to a day/night time-of-day NOW, independent of
+   * whether the cycle is running. The per-frame `update()` only re-bakes the
+   * sky when the cycle is enabled+running and is driven by the game loop; the
+   * cinematic capture path runs with the loop short-circuited (cinema.paused),
+   * so `dayNight.setT()` alone would store the time without ever re-baking the
+   * dome — freezing the sky at the pre-pause state. This applies the sampled
+   * keyframe and re-bakes the sky LUT, sun color, and fog color in one call.
+   * @param {number} t Time of day in [0, 1) (0=midnight, 0.5=noon, 0.75=sunset).
+   * @returns {boolean} true if applied (a day/night cycle exists).
+   */
+  setTimeOfDay(t) {
+    if (!this.dayNight) return false;
+    this.dayNight.setT(t);
+    const sample = this.dayNight.sampleAt(this.dayNight.getT());
+    // dt=0: applyDayNightSample sets angles/tunables/coverage/fog-density
+    // immediately; its sun-color lerp is a no-op at dt=0, so snap the sun
+    // color from the freshly-baked sky right after.
+    this.applyDayNightSample(sample, 0);
+    this.sky.update(0, this.sun.dirVec);
+    this.sky.getSun(this.scratchSunColor);
+    this.sun.setColor(this.scratchSunColor);
+    this.applyFogColor();
+    return true;
+  }
+
+  /**
    * World-space sun direction (unit vector pointing toward the sun).
    * Consumers (anime water shader sparkles, etc.) should call per frame.
    * @returns {import('three').Vector3}
