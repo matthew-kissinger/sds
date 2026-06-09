@@ -11,6 +11,7 @@ import { mulberry32 } from '../shared/Random.js';
 import { field } from '../shared/scenes/field.js';
 import { rollingHills } from '../shared/scenes/rolling-hills.js';
 import { openCountry } from '../shared/scenes/open-country.js';
+import { newsheepdogland } from '../shared/scenes/newsheepdogland.js';
 
 /**
  * TreePlacement (Cycle 6 Phase 1).
@@ -156,6 +157,12 @@ describe('generateTrees — scene counts (sanity)', () => {
         const trees = generateTrees(openCountry, mulberry32(openCountry.terrain.seed));
         expect(trees.length).toBeGreaterThan(80);
         expect(trees.length).toBeLessThan(2000);
+    });
+
+    it('newsheepdogland keeps the default cold-build tree budget bounded', () => {
+        const trees = generateTrees(newsheepdogland, mulberry32(newsheepdogland.terrain.seed));
+        expect(trees.length).toBeGreaterThan(350);
+        expect(trees.length).toBeLessThan(800);
     });
 });
 

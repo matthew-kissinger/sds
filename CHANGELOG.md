@@ -29,6 +29,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
 
+## [2.2.7] - 2026-06-09
+
+### Fixed
+
+- Newsheepdogland's default cold-start tree budget is now bounded to the
+  actual foot and lower-leg play corridor, avoiding a multi-minute hosted
+  Chromium scene-build stall before the first survival run starts.
+
+### Validation
+
+- Full `npm test`, `npm run lint`, `npm run build`, and Chromium Playwright
+  smoke passed locally after the scene budget change.
+
 ## [2.2.6] - 2026-06-09
 
 ### Changed
