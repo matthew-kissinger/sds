@@ -52,6 +52,9 @@ import { WolfSim } from '../../shared/survival/wolves.js';
 import { PenContainment } from '../../shared/survival/pen.js';
 import { secondsToT, phaseForT, gateOpenForPhase } from '../../shared/survival/dayClock.js';
 import { PROTOCOL_VERSION } from '../../shared/protocol.js';
+// P0-OBS: structured one-line JSON logging (worker/src/log.ts). Extensionless
+// import so vitest, wrangler/esbuild, and tsc all resolve the .ts source.
+import { log, errStr } from './log';
 
 // P-SEC-3: server input trust boundary. The DO is authoritative, but a client
 // can send any MessagePack payload it likes over the playerInput channel. Two
@@ -96,6 +99,15 @@ export function coerceInputSequence(value) {
 // 60Hz ticks, so this cap is generous: it only bites a flooder.
 export const MAX_PENDING_INPUTS = 8;
 
+// P0-OBS: tick-health thresholds. A 60Hz tick has a ~16.7ms budget; a tick
+// that measures past TICK_OVERRUN_THRESHOLD_MS emits a `tick_overrun` event.
+// The emission itself is rate-limited to one line per
+// TICK_OVERRUN_LOG_INTERVAL_MS per room; overruns inside the window are
+// counted and reported as `suppressed` on the next emitted line. There is
+// deliberately NO logging on the happy path.
+const TICK_OVERRUN_THRESHOLD_MS = 16;
+const TICK_OVERRUN_LOG_INTERVAL_MS = 5000;
+
 // P-PERF-2: per-tick allocation reduction.
 //
 // `validateEntityState` (shared/MovementPhysics.js) only ever reads its
@@ -125,6 +137,10 @@ export class GameSimulation {
         this.deltaTime = 1 / this.tickRate;
         this.lastTickTime = 0;
         this.tickInterval = null;
+
+        // P0-OBS: tick_overrun rate-limit state (see _recordTickHealth).
+        this._tickOverrunLastLog = 0;
+        this._tickOverrunSuppressed = 0;
         
         // Determine game mode
         this.isCompetitive = room.gameMode === 'competitive';
@@ -186,9 +202,6 @@ export class GameSimulation {
 
         // Initialize game state based on mode
         if (this.isCompetitive || this.isTimedMode) {
-            const modeEmoji = this.isTimedMode ? '⏱️' : '🏆';
-            const modeName = this.isTimedMode ? 'timed' : 'competitive';
-            console.log(`${modeEmoji} Initializing ${modeName} game for ${playerIds.length} players (sheepCount=${roomSheepCount})`);
             this.gameState = createCompetitiveGameState({
                 totalSheep: roomSheepCount,
                 bounds: this.scene.bounds
@@ -232,8 +245,16 @@ export class GameSimulation {
         // Initialize simulation state
         this.initializeSimulation();
         
-        const modeName = this.isTimedMode ? 'timed' : (this.isCompetitive ? 'competitive' : 'cooperative');
-        console.log(`🎮 Game simulation initialized for room ${room.roomCode} in ${modeName} mode`);
+        const modeName = this.isTimedMode
+            ? 'timed'
+            : (this.isCompetitive ? 'competitive' : (this.isSurvival ? 'survival' : 'cooperative'));
+        log.info('sim_initialized', {
+            roomCode: room.roomCode,
+            mode: modeName,
+            players: playerIds.length,
+            sheep: this.gameState.totalSheep,
+            sceneId: this.scene.id,
+        });
     }
 
     initializeSimulation() {
@@ -249,7 +270,6 @@ export class GameSimulation {
             sheepSpawnConfig.competitiveMode = true;
             sheepSpawnConfig.competitiveGates = this.gameState.competitiveGates;
             sheepSpawnConfig.minDistanceFromGates = 35;
-            console.log(`🏆 Using competitive balanced spawning for ${this.gameState.competitiveGates.length} players`);
         }
         
         const sheepPositions = generateInitialSheepPositions(
@@ -352,8 +372,6 @@ export class GameSimulation {
         if (this.isSurvival && this.scene.survival) {
             this._initSurvival();
         }
-
-        console.log(`🐑 Initialized ${this.gameState.totalSheep} sheep and ${this.sheepdogs.size} sheepdogs`);
     }
 
     start() {
@@ -371,8 +389,8 @@ export class GameSimulation {
         this.tickInterval = setInterval(() => {
             this.tick();
         }, 1000 / this.tickRate);
-        
-        console.log(`🚀 Game simulation started for room ${this.room.roomCode} at ${this.tickRate} FPS`);
+
+        log.info('sim_started', { roomCode: this.room.roomCode, tickRate: this.tickRate });
     }
 
     stop() {
@@ -384,8 +402,8 @@ export class GameSimulation {
             clearInterval(this.tickInterval);
             this.tickInterval = null;
         }
-        
-        console.log(`⏹️ Game simulation stopped for room ${this.room.roomCode}`);
+
+        log.info('sim_stopped', { roomCode: this.room.roomCode });
     }
 
     tick() {
@@ -437,10 +455,44 @@ export class GameSimulation {
             // Broadcast state to all clients in room
             this.broadcastGameState();
         } catch (e) {
-            console.error(`[GameSim ${this.room?.roomCode}] tick error (continuing loop):`, e?.stack || e);
+            log.error('tick_error', { roomCode: this.room?.roomCode, error: errStr(e) });
         }
 
+        // P0-OBS: tick health. Happy path is one Date.now() + two compares.
+        this._recordTickHealth(currentTime);
+
         this.lastTickTime = currentTime;
+    }
+
+    // P0-OBS: emit `tick_overrun` when a tick blows the 60Hz budget. Two
+    // measures, either can trigger:
+    //   - intraMs: wall time spent inside this tick body. Accurate in node /
+    //     vitest / `wrangler dev`; reads ~0 in production because Workers
+    //     freeze the clock during synchronous execution (Spectre mitigation).
+    //   - lateMs: how far past the nominal interval this tick fired relative
+    //     to the previous tick's start. Accurate everywhere (the clock
+    //     advances at the I/O boundary between setInterval callbacks), so an
+    //     overrunning tick surfaces as the NEXT tick firing late.
+    // Emission is rate-limited to one log per TICK_OVERRUN_LOG_INTERVAL_MS per
+    // room; overruns inside the window increment `suppressed` and are reported
+    // on the next emitted line. No logging at all when ticks are on budget.
+    _recordTickHealth(tickStart) {
+        const nominalMs = 1000 / this.tickRate;
+        const intraMs = Date.now() - tickStart;
+        const lateMs = this.lastTickTime > 0
+            ? (tickStart - this.lastTickTime) - nominalMs
+            : 0;
+        if (intraMs <= TICK_OVERRUN_THRESHOLD_MS && lateMs <= TICK_OVERRUN_THRESHOLD_MS) return;
+        this._tickOverrunSuppressed++;
+        if (tickStart - this._tickOverrunLastLog < TICK_OVERRUN_LOG_INTERVAL_MS) return;
+        log.warn('tick_overrun', {
+            roomCode: this.room?.roomCode,
+            durationMs: intraMs,
+            lateMs: Math.max(0, Math.round(lateMs)),
+            suppressed: this._tickOverrunSuppressed - 1,
+        });
+        this._tickOverrunLastLog = tickStart;
+        this._tickOverrunSuppressed = 0;
     }
 
     processPlayerInputs() {
@@ -510,7 +562,11 @@ export class GameSimulation {
             // guard as !(d2 <= 25) means a non-finite clientPosition can't slip
             // past the clamp and latch isInterpolatingToClient on a NaN target.
             if (!(d2 <= 25)) {
-                console.warn(`[CHEAT] clientPosition ignored for ${playerId}: delta=${Math.sqrt(d2).toFixed(2)}`);
+                log.warn('client_position_rejected', {
+                    roomCode: this.room?.roomCode,
+                    playerId,
+                    deltaM: Number(Math.sqrt(d2).toFixed(2)),
+                });
                 return;
             }
             // Client is stopping and sent their final position
@@ -1142,10 +1198,8 @@ export class GameSimulation {
                     gameCompleted: true
                 };
                 
-                const modeEmoji = this.isTimedMode ? '⏱️' : '🏆';
-                console.log(`${modeEmoji} ${this.isTimedMode ? 'Timed' : 'Competitive'} game completed! Winner: ${completionResult.winner} (${completionResult.winType})`);
-                
-                // Broadcast completion immediately
+                // Broadcast completion immediately (game_completed is logged
+                // once in broadcastGameCompletion, the single funnel).
                 this.broadcastGameCompletion();
             }
         } else {
@@ -1166,9 +1220,8 @@ export class GameSimulation {
                     completionPercentage: completionResult.completionPercentage
                 };
                 
-                console.log(`🎉 Cooperative game completed! All ${this.gameState.sheepRetired} sheep retired.`);
-                
-                // Broadcast completion immediately
+                // Broadcast completion immediately (game_completed is logged
+                // once in broadcastGameCompletion, the single funnel).
                 this.broadcastGameCompletion();
             }
         }
@@ -1189,18 +1242,28 @@ export class GameSimulation {
         if (!this.gameState.gameCompleted || this.completionBroadcast) return;
         
         this.completionBroadcast = true;
-        
-        console.log(`📡 Broadcasting game completion for room ${this.room.roomCode}:`, 
-                    (this.isCompetitive || this.isTimedMode) ? 
-                    `Winner: ${this.completionData.competitive.winner} (${this.completionData.competitive.winType})` : 
-                    `${this.completionData.sheepRetired}/${this.completionData.totalSheep} sheep retired`);
-        
+
+        // P0-OBS: the single game-completion log line. Every completion path
+        // (competitive, timed, cooperative, survival) funnels through here.
+        log.info('game_completed', {
+            roomCode: this.room.roomCode,
+            mode: this.isTimedMode
+                ? 'timed'
+                : (this.isCompetitive ? 'competitive' : (this.isSurvival ? 'survival' : 'cooperative')),
+            winner: this.completionData.competitive?.winner,
+            winType: this.completionData.competitive?.winType,
+            sheepRetired: this.completionData.sheepRetired,
+            totalSheep: this.completionData.totalSheep,
+            survivalPeak: this.completionData.survival?.score,
+            survivalDay: this.completionData.survival?.day,
+        });
+
         // Submit scores to leaderboard for multiplayer games. Delegated to the DO.
         // Cycle 67 P3/P7: survival posts each player's peak flock (the DO's
         // onSubmitScores routes survival to the party-size-partitioned board).
         if ((this.isCompetitive || this.isTimedMode || this.isSurvival) && this.room.onSubmitScores) {
             try { this.room.onSubmitScores(this.gameState.playerScores, this.completionData); }
-            catch (e) { console.error('score submission error:', e); }
+            catch (e) { log.error('score_error', { roomCode: this.room.roomCode, path: 'sim_submit', error: errStr(e) }); }
         }
 
         if (this.room.broadcastToRoom) {
@@ -1221,7 +1284,7 @@ export class GameSimulation {
                 this.room.state = 'waiting';
                 this.room.simulation = null;
                 this.room.lastActivity = Date.now();
-                console.log(`Room ${this.room.roomCode} cycled to mode: ${this.room.gameMode}, state: waiting`);
+                log.info('room_mode_cycled', { roomCode: this.room.roomCode, gameMode: this.room.gameMode });
                 this.room.broadcastToRoom('roomUpdated', {
                     room: this.room.getSerializableState ? this.room.getSerializableState() : null,
                 });
@@ -1268,8 +1331,6 @@ export class GameSimulation {
         this.gameState = null;
         this.sheepdogs.clear();
         this.dogConfigs.clear();
-        
-        console.log(`🧹 Game simulation cleaned up for room ${this.room.roomCode}`);
     }
 
     // Get current simulation statistics
@@ -1536,8 +1597,6 @@ export class GameSimulation {
                             sheepId: sheepEntity.id,
                             removeTime: sheepEntity.disappearTime
                         });
-                        
-                        console.log(`🐑 Sheep ${sheepEntity.id} scheduled for removal in 5s (gate ${gate.id})`);
                         break;
                     }
                 }
@@ -1591,9 +1650,8 @@ export class GameSimulation {
                         gameCompleted: true
                     };
                     
-                    console.log(`⏱️ Timed game completed for room ${this.room.roomCode} - Winner: ${rankings[0].playerName} with ${rankings[0].score} sheep`);
-                    
-                    // Broadcast completion immediately
+                    // Broadcast completion immediately (game_completed is
+                    // logged once in broadcastGameCompletion, the funnel).
                     this.broadcastGameCompletion();
                 }
             }
@@ -1635,8 +1693,6 @@ export class GameSimulation {
                 removedSheep.retirementTarget = null;
                 removedSheep.disappearTime = null;
                 removedSheep.scheduledForRemoval = false;
-                
-                console.log(`🔄 Respawned sheep ${removedSheep.id} at (${removedSheep.position.x.toFixed(1)}, ${removedSheep.position.z.toFixed(1)})`);
             }
         }
     }
@@ -1720,7 +1776,14 @@ export class GameSimulation {
         // Resumed run: activate dormant sheep so the rendered flock matches the
         // restored day's flock (a fresh run starts at startFlock and grows in).
         if (resuming && run.flock > startFlock) this._syncActiveToFlock();
-        console.log(`🐺 Survival initialized for room ${this.room.roomCode}: startFlock ${startFlock}, pool ${this.gameState.sheep.length}${resuming ? `, RESUMED day ${run.day} flock ${run.flock}` : ''}`);
+        log.info('survival_initialized', {
+            roomCode: this.room.roomCode,
+            startFlock,
+            pool: this.gameState.sheep.length,
+            resumed: !!resuming,
+            day: run.day,
+            flock: run.flock,
+        });
     }
 
     /**
@@ -1872,7 +1935,8 @@ export class GameSimulation {
             totalSheep: this.gameState.totalSheep,
             gameCompleted: true,
         };
-        console.log(`🐺 Survival run ended for room ${this.room.roomCode}: peak ${ev.score} on day ${ev.day}`);
+        // game_completed (with survivalPeak/survivalDay) is logged in
+        // broadcastGameCompletion, the single completion funnel.
         this.broadcastGameCompletion();
     }
 }

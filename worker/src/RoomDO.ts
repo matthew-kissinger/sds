@@ -7,6 +7,7 @@
 import { GameSimulation, isValidInputDirection, coerceInputSequence } from './GameSim.js';
 import { encode, Decoder } from '@msgpack/msgpack';
 import { submitScore as d1SubmitScore } from './d1.js';
+import { log, errStr } from './log';
 import { listScenes, DEFAULT_SCENE_ID } from '../../shared/scenes/index.js';
 import { SURVIVAL_MIN_PROTOCOL_VERSION } from '../../shared/protocol.js';
 
@@ -237,7 +238,11 @@ export class RoomDO {
           if (hostPlayer?.persistentId) this.meta.hostPersistentId = hostPlayer.persistentId;
         }
         // If a sim was running, it's lost; snap back to 'waiting'.
-        if (this.meta.state === 'in-game') this.meta.state = 'waiting';
+        if (this.meta.state === 'in-game') {
+          this.meta.state = 'waiting';
+          // P0-OBS: a DO eviction (or worker redeploy) dropped a live sim.
+          log.warn('do_evicted_midgame', { roomCode: this.meta.roomCode, players: this.players.size });
+        }
       }
       // Cycle 68 P4: restore an in-progress survival run so the next start in this
       // room resumes the multi-day run instead of resetting to day 1.
@@ -297,7 +302,7 @@ export class RoomDO {
     if (!this.meta) return; // already torn down
     if (this.sessions.size > 0) return; // a live socket exists (belt-and-suspenders)
     const roomCode = this.meta.roomCode;
-    console.log(`[RoomDO ${roomCode}] idle-room cleanup: no socket bound within ${IDLE_ROOM_TIMEOUT_MS}ms, deleting`);
+    log.info('room_idle_cleanup', { roomCode, timeoutMs: IDLE_ROOM_TIMEOUT_MS });
     if (this.simulation) {
       this.simulation.cleanup?.();
       this.simulation = null;
@@ -310,7 +315,7 @@ export class RoomDO {
     try {
       await this.releaseLobbyRoom(roomCode);
     } catch (e) {
-      console.warn(`[RoomDO ${roomCode}] lobby release on idle cleanup failed:`, e);
+      log.warn('lobby_release_failed', { roomCode, phase: 'idle_cleanup', error: errStr(e) });
     }
   }
 
@@ -609,7 +614,7 @@ export class RoomDO {
     // Over the soft drop threshold. If the client is hammering well past it,
     // close the socket; otherwise just drop this frame.
     if (win.count > MAX_MSGS_PER_WINDOW * RATE_CLOSE_FACTOR) {
-      console.warn(`[RoomDO] rate-limit close for ${playerId}: ${win.count} msgs in window`);
+      log.warn('ws_rate_limit_close', { roomCode: this.meta?.roomCode, playerId, msgsInWindow: win.count });
       try { ws.close(1008, 'rate limit'); } catch {}
       if (this.sessions.get(playerId) === ws) this.sessions.delete(playerId);
     }
@@ -642,7 +647,7 @@ export class RoomDO {
       clearTimeout(grace.handle);
       this.graceTimeouts.delete(playerId);
       const elapsed = Date.now() - grace.startedAt;
-      console.log(`[RoomDO ${this.meta?.roomCode}] reconnect within grace (${elapsed}ms) for ${playerId}`);
+      log.info('reconnect_within_grace', { roomCode: this.meta?.roomCode, playerId, elapsedMs: elapsed });
     }
 
     ws.addEventListener('message', async (evt) => {
@@ -658,7 +663,7 @@ export class RoomDO {
         if (raw instanceof ArrayBuffer) bytes = new Uint8Array(raw);
         else if (raw instanceof Uint8Array) bytes = raw;
         else if (typeof raw === 'string') {
-          console.warn(`[RoomDO] received text frame from ${playerId}, ignoring`);
+          log.warn('ws_bad_frame', { roomCode: this.meta?.roomCode, playerId, kind: 'text' });
           return;
         } else if (raw && typeof (raw as any).arrayBuffer === 'function') {
           // Blob / Blob-like — convert.
@@ -668,13 +673,25 @@ export class RoomDO {
           bytes = new Uint8Array(raw as any);
         }
         if (!bytes) {
-          console.warn(`[RoomDO] unknown frame type:`, typeof raw, (raw as any)?.constructor?.name);
+          log.warn('ws_bad_frame', {
+            roomCode: this.meta?.roomCode,
+            playerId,
+            kind: 'unknown_type',
+            frameType: typeof raw,
+            frameCtor: (raw as any)?.constructor?.name,
+          });
           return;
         }
         // P-SEC-4 (a): pre-decode byte-length cap. Reject an oversized frame
         // before spending any decode CPU/memory on it.
         if (bytes.byteLength > MAX_INBOUND_BYTES) {
-          console.warn(`[RoomDO] oversized frame from ${playerId}: ${bytes.byteLength}B > ${MAX_INBOUND_BYTES}B, dropping`);
+          log.warn('ws_bad_frame', {
+            roomCode: this.meta?.roomCode,
+            playerId,
+            kind: 'oversized',
+            bytes: bytes.byteLength,
+            maxBytes: MAX_INBOUND_BYTES,
+          });
           return;
         }
         // P-SEC-4 (a): decode through the bounded Decoder (maxStr/maxArray/
@@ -685,12 +702,12 @@ export class RoomDO {
         // P-SEC-4 (a): explicit depth bound. The decoder caps per-level breadth
         // but not total nesting; reject anything nested past MAX_DECODE_DEPTH.
         if (exceedsMaxDepth(msg, MAX_DECODE_DEPTH)) {
-          console.warn(`[RoomDO] over-deep frame from ${playerId}, dropping`);
+          log.warn('ws_bad_frame', { roomCode: this.meta?.roomCode, playerId, kind: 'over_deep' });
           return;
         }
         this.handleClientMessage(playerId, msg);
       } catch (e: any) {
-        console.error(`[RoomDO] ws message error from ${playerId}:`, e?.stack || e);
+        log.error('ws_message_error', { roomCode: this.meta?.roomCode, playerId, error: errStr(e) });
       }
     });
 
@@ -812,7 +829,7 @@ export class RoomDO {
 
   private startGame(): void {
     if (!this.meta || this.meta.state !== 'waiting') return;
-    console.log(`[RoomDO ${this.meta.roomCode}] startGame with ${this.players.size} player(s)`);
+    log.info('game_start', { roomCode: this.meta.roomCode, players: this.players.size, gameMode: this.meta.gameMode });
     // P-SEC-4 (d): minimum-connected-players gate for the heavy sheep counts.
     // The flocking neighbour scan is O(n^2)-ish, so a 3,000/5,000-sheep room is
     // a real per-tick CPU load on the DO. A solo (or under-filled) room at those
@@ -828,10 +845,12 @@ export class RoomDO {
       this.meta.sheepCount >= HIGH_SHEEP_COUNT_THRESHOLD &&
       connectedPlayers < MIN_PLAYERS_FOR_HIGH_SHEEP
     ) {
-      console.log(
-        `[RoomDO ${this.meta.roomCode}] high sheep count ${this.meta.sheepCount} with only ` +
-        `${connectedPlayers} connected player(s) — capping to ${HIGH_SHEEP_COUNT_CAP}`,
-      );
+      log.info('high_sheep_count_capped', {
+        roomCode: this.meta.roomCode,
+        requested: this.meta.sheepCount,
+        connectedPlayers,
+        cappedTo: HIGH_SHEEP_COUNT_CAP,
+      });
       this.meta.sheepCount = HIGH_SHEEP_COUNT_CAP;
     }
     this.meta.state = 'in-game';
@@ -906,11 +925,17 @@ export class RoomDO {
                 ...(isSurvival ? { partySize } : {}),
               });
             } catch (err) {
-              console.error(`score submit failed for ${p.persistentId}:`, err);
+              log.error('score_error', {
+                roomCode: self.meta?.roomCode,
+                path: 'do_submit',
+                persistentId: p.persistentId,
+                gameMode,
+                error: errStr(err),
+              });
             }
           }
         } catch (e) {
-          console.error('onSubmitScores error:', e);
+          log.error('score_error', { roomCode: self.meta?.roomCode, path: 'do_submit_batch', error: errStr(e) });
         }
       },
     };
@@ -919,7 +944,7 @@ export class RoomDO {
       this.simulation = new GameSimulation(adapter);
       this.simulation.start();
     } catch (e: any) {
-      console.error(`[RoomDO ${this.meta!.roomCode}] sim init failed:`, e?.stack || e);
+      log.error('sim_init_failed', { roomCode: this.meta!.roomCode, error: errStr(e) });
       this.meta!.state = 'waiting';
       this.broadcast('roomError', { message: 'Failed to start game: ' + (e?.message || 'unknown') });
       return;
@@ -970,11 +995,11 @@ export class RoomDO {
       // Re-check state — room may have been torn down or the player may
       // have already left explicitly while we were waiting.
       if (!this.meta || !this.players.has(playerId)) return;
-      console.log(`[RoomDO ${this.meta.roomCode}] grace timeout fired for ${playerId} — evicting`);
+      log.info('player_evicted', { roomCode: this.meta.roomCode, playerId, reason: 'grace_timeout' });
       this.handlePlayerLeave(playerId);
     }, RoomDO.RECONNECT_GRACE_MS);
     this.graceTimeouts.set(playerId, { handle, startedAt: Date.now() });
-    console.log(`[RoomDO ${this.meta.roomCode}] in-game disconnect — ${RoomDO.RECONNECT_GRACE_MS}ms grace for ${playerId}`);
+    log.info('disconnect_grace_started', { roomCode: this.meta.roomCode, playerId, graceMs: RoomDO.RECONNECT_GRACE_MS });
   }
 
   private handlePlayerLeave(playerId: string): void {
@@ -1014,7 +1039,7 @@ export class RoomDO {
       // slot now that the room is gone. Best-effort; a failure here only means a
       // slot lingers until the lobby's stale sweep reclaims it.
       this.releaseLobbyRoom(emptiedRoomCode).catch((e) =>
-        console.warn(`[RoomDO ${emptiedRoomCode}] lobby release on teardown failed:`, e),
+        log.warn('lobby_release_failed', { roomCode: emptiedRoomCode, phase: 'teardown', error: errStr(e) }),
       );
       return;
     }
@@ -1050,6 +1075,13 @@ export class RoomDO {
       this.meta.hostPersistentId = newHost.persistentId ?? this.meta.hostPersistentId;
       newHost.isHost = true;
       const newHostName = newHost.displayName || newHost.name || 'Player';
+      log.info('host_migration', {
+        roomCode: this.meta.roomCode,
+        oldHostId: playerId,
+        newHostId,
+        reclaimedByOriginal: newHost.persistentId === this.meta.hostPersistentId && !!this.meta.hostPersistentId,
+        remainingPlayers: this.players.size,
+      });
       this.broadcast('hostChanged', {
         newHostId,
         newHostName,
@@ -1070,7 +1102,7 @@ export class RoomDO {
     try {
       ws.send(encodeMsg(t, data));
     } catch (e) {
-      console.error(`send ${t} failed:`, e);
+      log.error('ws_send_failed', { roomCode: this.meta?.roomCode, msgType: t, error: errStr(e) });
     }
   }
 
@@ -1086,7 +1118,7 @@ export class RoomDO {
           ws.send(buf);
         }
       } catch (e) {
-        console.error(`broadcast ${t} to ${pid} failed:`, e);
+        log.error('ws_broadcast_failed', { roomCode: this.meta?.roomCode, msgType: t, playerId: pid, error: errStr(e) });
       }
     }
   }

@@ -6,6 +6,7 @@
 import { RoomDO } from './RoomDO';
 import { LobbyDO } from './LobbyDO';
 import { signJwt, verifyJwt, signTicket, verifyTicket } from './jwt';
+import { log, errStr } from './log';
 import {
   registerPlayer,
   renamePlayer,
@@ -292,6 +293,7 @@ export default {
     if (rateLimited) {
       const clientIp = request.headers.get('cf-connecting-ip');
       if (!frontDoorAllowed(clientIp)) {
+        log.warn('rate_limit_429', { scope: 'front_door', path, ip: clientIp ?? undefined });
         return err('rate limit exceeded', 429, { ...cors, 'retry-after': '1' });
       }
     }
@@ -412,6 +414,7 @@ export default {
           }),
         );
         if (!claimRes.ok) {
+          log.warn('rate_limit_429', { scope: 'room_cap', path, persistentId: pid, roomCode });
           return err('too many open rooms for this player', 429, cors);
         }
 
@@ -597,6 +600,7 @@ export default {
           }),
         );
         if (!qmClaimRes.ok) {
+          log.warn('rate_limit_429', { scope: 'room_cap', path, persistentId: pid, roomCode });
           return err('too many open rooms for this player', 429, cors);
         }
         const sessionId = makeSessionId();
@@ -665,6 +669,7 @@ export default {
         // (not IP) since the route is authenticated; blunts a script replaying
         // a forged time under one token. 429 with a Retry-After hint.
         if (!scoreSubmitAllowed(pid)) {
+          log.warn('rate_limit_429', { scope: 'score_submit', path, persistentId: pid });
           return err('score submission rate limit exceeded', 429, { ...cors, 'retry-after': '5' });
         }
 
@@ -791,8 +796,8 @@ export default {
             'INSERT INTO events (name, props, player_id) VALUES (?, ?, ?)'
           ).bind(name, propsJson, pid).run();
         } catch (e: any) {
-          // Don't crash — events table may not exist yet on first deploy.
-          console.warn('[event] insert failed:', e?.message);
+          // Don't crash. The events table may not exist yet on first deploy.
+          log.warn('event_insert_failed', { error: errStr(e) });
         }
         return json({ ok: true }, 200, cors);
       }
@@ -803,7 +808,7 @@ export default {
 
       return err('not found', 404, cors);
     } catch (e: any) {
-      console.error('worker error:', e?.stack || e);
+      log.error('worker_error', { path, error: errStr(e) });
       return err(e?.message || 'internal error', 500, cors);
     }
   },

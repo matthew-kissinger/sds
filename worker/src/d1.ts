@@ -10,6 +10,7 @@
 // Worker isolate, same import the router already uses for scene validation).
 import { getSceneById } from '../../shared/scenes/index.js';
 import { getRankedCounts } from '../../shared/difficulty.js';
+import { log, errStr } from './log';
 // Cycle 59 (Counting Sheep): the counting leaderboard modes + ceiling. Shared
 // with the client so the board keys (counting-incremental / counting-exponential)
 // and the 0..5000 bound cannot drift between submit and read.
@@ -854,6 +855,16 @@ export async function submitScore(
         ? (additionalData.sceneId as string)
         : null;
       const reason = (err?.message || String(err) || 'unknown').slice(0, 500);
+      // P0-OBS: structured score_error line alongside the D1 audit row, so a
+      // rejected/failed submission is visible in live logs without a D1 query.
+      log.warn('score_error', {
+        persistentId,
+        gameMode,
+        score: Number.isFinite(score) ? score : null,
+        sheepCount: claimedSheepCount,
+        sceneId: claimedSceneId,
+        reason,
+      });
       await db.prepare(
         'INSERT INTO score_errors (persistent_id, claimed_mode, claimed_score, claimed_sheep_count, claimed_scene_id, reason, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
       ).bind(
@@ -864,7 +875,7 @@ export async function submitScore(
       // Don't double-throw if the score_errors insert itself fails (D1
       // unavailable, table missing pre-migration). Log and let the
       // original error propagate.
-      console.error('[score_errors] insert failed:', logErr?.message);
+      log.error('score_error_insert_failed', { persistentId, gameMode, error: errStr(logErr) });
     }
     throw err;
   }
