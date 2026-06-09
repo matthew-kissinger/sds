@@ -82,16 +82,33 @@ export function calculateBoundaryAvoidance(entity, boundsOrBoundary, config = {}
 }
 
 /**
- * Rect-path implementation. Math preserved byte-identical to pre-Cycle-5.
+ * Shared rect-force core (P3-BOUNDARY-DRY). Executes the EXACT float
+ * operations, in the same order, as the three pre-refactor inline copies
+ * (calculateRectAvoidance, the rect path of calculateBoundaryAvoidanceWithGate,
+ * and calculateBoundaryAvoidanceWithMultipleGates). The per-call-site
+ * differences are parameterized, never harmonized:
+ *
+ * - margin / maxSpeed / maxForce / forceMultiplier come in as plain numbers
+ *   (each caller keeps its own config destructuring and defaults).
+ * - `suppress` holds optional per-side predicates (minX/maxX/minZ/maxZ) that
+ *   replace the inline gate-carve-out booleans. A predicate is evaluated only
+ *   inside its `dist < margin` branch, exactly where the original inline check
+ *   sat, and performs comparisons only — no float op that feeds `steer`.
+ *
+ * Any change to the math here is a sim behavior change. See
+ * .claude/rules/shared-sim.md before touching.
+ *
+ * @param {Object} entity - Entity with position and velocity
+ * @param {Object} bounds - Rect {minX, maxX, minZ, maxZ}
+ * @param {number} margin
+ * @param {number} maxSpeed
+ * @param {number} maxForce
+ * @param {number} forceMultiplier - factor in the final `maxSpeed * forceMultiplier`
+ * @param {Object} [suppress] - optional {minX?, maxX?, minZ?, maxZ?} predicates
+ *   taking `position`; a truthy return suppresses the force on that side
+ * @returns {Vector2D}
  */
-function calculateRectAvoidance(entity, bounds, config = {}) {
-    const {
-        margin = 10,
-        maxSpeed = 1.5,
-        maxForce = 0.05,
-        forceMultiplier = 1.5
-    } = config;
-
+function rectBoundarySteer(entity, bounds, margin, maxSpeed, maxForce, forceMultiplier, suppress) {
     const steer = new Vector2D(0, 0);
     const position = entity.position;
 
@@ -101,19 +118,27 @@ function calculateRectAvoidance(entity, bounds, config = {}) {
     const distToMaxZ = bounds.maxZ - position.z;
 
     if (distToMinX < margin) {
-        const force = (margin - distToMinX) / margin;
-        steer.x = maxSpeed * force * 1.2;
+        if (!(suppress && suppress.minX && suppress.minX(position))) {
+            const force = (margin - distToMinX) / margin;
+            steer.x = maxSpeed * force * 1.2;
+        }
     } else if (distToMaxX < margin) {
-        const force = (margin - distToMaxX) / margin;
-        steer.x = -maxSpeed * force * 1.2;
+        if (!(suppress && suppress.maxX && suppress.maxX(position))) {
+            const force = (margin - distToMaxX) / margin;
+            steer.x = -maxSpeed * force * 1.2;
+        }
     }
 
     if (distToMinZ < margin) {
-        const force = (margin - distToMinZ) / margin;
-        steer.z = maxSpeed * force * 1.2;
+        if (!(suppress && suppress.minZ && suppress.minZ(position))) {
+            const force = (margin - distToMinZ) / margin;
+            steer.z = maxSpeed * force * 1.2;
+        }
     } else if (distToMaxZ < margin) {
-        const force = (margin - distToMaxZ) / margin;
-        steer.z = -maxSpeed * force * 1.2;
+        if (!(suppress && suppress.maxZ && suppress.maxZ(position))) {
+            const force = (margin - distToMaxZ) / margin;
+            steer.z = -maxSpeed * force * 1.2;
+        }
     }
 
     if (steer.magnitude() > 0) {
@@ -124,6 +149,22 @@ function calculateRectAvoidance(entity, bounds, config = {}) {
     }
 
     return steer;
+}
+
+/**
+ * Rect-path implementation. Math preserved byte-identical to pre-Cycle-5
+ * (core shared via rectBoundarySteer since P3-BOUNDARY-DRY; this site has no
+ * gate suppression and a config-driven forceMultiplier).
+ */
+function calculateRectAvoidance(entity, bounds, config = {}) {
+    const {
+        margin = 10,
+        maxSpeed = 1.5,
+        maxForce = 0.05,
+        forceMultiplier = 1.5
+    } = config;
+
+    return rectBoundarySteer(entity, bounds, margin, maxSpeed, maxForce, forceMultiplier);
 }
 
 /**
@@ -212,7 +253,10 @@ export function calculateBoundaryAvoidanceWithGate(entity, boundsOrBoundary, gat
         });
     }
 
-    // Rect path — preserved byte-identical.
+    // Rect path — preserved byte-identical. Gate carve-outs ride in as
+    // suppression predicates (comparisons only, evaluated exactly where the
+    // inline nearSouthGateX/nearNorthGateX checks sat). This site historically
+    // hardcodes the final multiplier at 1.5 (not config-driven) — keep it.
     const bounds = boundary;
     const {
         margin = 3,
@@ -220,46 +264,12 @@ export function calculateBoundaryAvoidanceWithGate(entity, boundsOrBoundary, gat
         maxForce = 0.02
     } = config;
 
-    const steer = new Vector2D(0, 0);
-    const position = entity.position;
-
-    const distToMinX = position.x - bounds.minX;
-    const distToMaxX = bounds.maxX - position.x;
-    const distToMinZ = position.z - bounds.minZ;
-    const distToMaxZ = bounds.maxZ - position.z;
-
-    if (distToMinX < margin) {
-        const force = (margin - distToMinX) / margin;
-        steer.x = maxSpeed * force * 1.2;
-    } else if (distToMaxX < margin) {
-        const force = (margin - distToMaxX) / margin;
-        steer.x = -maxSpeed * force * 1.2;
-    }
-
-    if (distToMinZ < margin) {
-        const nearSouthGateX = gate && gate.position.z <= bounds.minZ + 5 ?
-            Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
-        if (!nearSouthGateX) {
-            const force = (margin - distToMinZ) / margin;
-            steer.z = maxSpeed * force * 1.2;
-        }
-    } else if (distToMaxZ < margin) {
-        const nearNorthGateX = gate && gate.position.z >= bounds.maxZ - 5 ?
-            Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false;
-        if (!nearNorthGateX) {
-            const force = (margin - distToMaxZ) / margin;
-            steer.z = -maxSpeed * force * 1.2;
-        }
-    }
-
-    if (steer.magnitude() > 0) {
-        steer.normalize();
-        steer.multiply(maxSpeed * 1.5);
-        steer.subtract(entity.velocity);
-        steer.limit(maxForce * 2.5);
-    }
-
-    return steer;
+    return rectBoundarySteer(entity, bounds, margin, maxSpeed, maxForce, 1.5, {
+        minZ: (position) => gate && gate.position.z <= bounds.minZ + 5 ?
+            Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false,
+        maxZ: (position) => gate && gate.position.z >= bounds.maxZ - 5 ?
+            Math.abs(position.x - gate.position.x) < gate.width / 2 + 2 : false
+    });
 }
 
 /**
@@ -276,15 +286,9 @@ export function calculateBoundaryAvoidanceWithMultipleGates(entity, bounds, comp
         maxSpeed = 0.1,
         maxForce = 0.02
     } = config;
-    
-    const steer = new Vector2D(0, 0);
+
     const position = entity.position;
-    
-    const distToMinX = position.x - bounds.minX;
-    const distToMaxX = bounds.maxX - position.x;
-    const distToMinZ = position.z - bounds.minZ;
-    const distToMaxZ = bounds.maxZ - position.z;
-    
+
     // Helper function to check if entity is near any gate on a specific boundary
     const isNearGateOnBoundary = (boundaryType) => {
         if (!competitiveGates || !Array.isArray(competitiveGates)) {
@@ -329,40 +333,16 @@ export function calculateBoundaryAvoidanceWithMultipleGates(entity, bounds, comp
         
         return false;
     };
-    
-    // Apply boundary forces, checking for gates at each boundary
-    if (distToMinX < margin) {
-        if (!isNearGateOnBoundary('west')) {
-            const force = (margin - distToMinX) / margin;
-            steer.x = maxSpeed * force * 1.2;
-        }
-    } else if (distToMaxX < margin) {
-        if (!isNearGateOnBoundary('east')) {
-            const force = (margin - distToMaxX) / margin;
-            steer.x = -maxSpeed * force * 1.2;
-        }
-    }
-    
-    if (distToMinZ < margin) {
-        if (!isNearGateOnBoundary('south')) {
-            const force = (margin - distToMinZ) / margin;
-            steer.z = maxSpeed * force * 1.2;
-        }
-    } else if (distToMaxZ < margin) {
-        if (!isNearGateOnBoundary('north')) {
-            const force = (margin - distToMaxZ) / margin;
-            steer.z = -maxSpeed * force * 1.2;
-        }
-    }
-    
-    if (steer.magnitude() > 0) {
-        steer.normalize();
-        steer.multiply(maxSpeed * 1.5);
-        steer.subtract(entity.velocity);
-        steer.limit(maxForce * 2.5);
-    }
-    
-    return steer;
+
+    // Apply boundary forces via the shared rect core; gate carve-outs on all
+    // four sides ride in as suppression predicates (comparisons only). This
+    // site historically hardcodes the final multiplier at 1.5 — keep it.
+    return rectBoundarySteer(entity, bounds, margin, maxSpeed, maxForce, 1.5, {
+        minX: () => isNearGateOnBoundary('west'),
+        maxX: () => isNearGateOnBoundary('east'),
+        minZ: () => isNearGateOnBoundary('south'),
+        maxZ: () => isNearGateOnBoundary('north')
+    });
 }
 
 /**
