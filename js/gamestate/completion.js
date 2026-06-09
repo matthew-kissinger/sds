@@ -167,6 +167,14 @@ export function processCompetitiveCompletion(state, competitiveData) {
         submitScoreToLeaderboard(state, myScore, 'timed');
     } else if (winner === myPlayerId) {
         submitScoreToLeaderboard(state, 1, 'competitive');
+        // [P3-ACHIEVE-DATA] Achievement seam: the local player won a
+        // competitive room. Dynamic import (telemetry precedent above) +
+        // fire-and-forget so the completion flow never blocks on it.
+        try {
+            import('../achievements/index.js').then(({ recordEvent }) => {
+                recordEvent('competitive-win', { winType: winType || null });
+            }).catch((err) => console.warn('[ACHIEVEMENTS] competitive-win record failed:', err));
+        } catch {}
     }
 
     if (isTimedMode) {

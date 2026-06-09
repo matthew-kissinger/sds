@@ -392,6 +392,15 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                         game._wolfPack?.retreatAll();
                         game._penContainment?.releaseAll?.(game.gameState?.sheep);
                         game.gameState?.growSurvivalFlock?.(run.growth);
+                        // [P3-ACHIEVE-DATA] Achievement seam: ev.day is the NEW
+                        // day after dawn, so this run has survived ev.day - 1
+                        // nights. Fire-and-forget; never blocks the day loop.
+                        import('../achievements/index.js').then(({ recordEvent }) => {
+                            recordEvent('survival-night-survived', {
+                                nightsSurvived: ev.day - 1,
+                                sceneId: game.currentScene?.id || 'newsheepdogland',
+                            });
+                        }).catch((err) => console.warn('[ACHIEVEMENTS] survival record failed:', err));
                     } else if (ev?.type === 'death') {
                         game._wolfPack?.retreatAll();
                         if (game.gameState) game.gameState.gameActive = false;

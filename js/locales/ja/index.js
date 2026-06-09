@@ -439,5 +439,45 @@ export default {
         errorEmpty: '表示名を入力するか、他のオプションを選択してください',
         errorTooLong: '表示名は20文字以内にしてください',
         errorFailed: 'プレイヤーIDの作成に失敗しました。もう一度お試しください。'
+    },
+
+    // [P3-ACHIEVE-DATA] 実績の名前と説明。
+    achievements: {
+        firstPen: {
+            name: 'はじめての囲い込み',
+            desc: '初めて群れ全体を囲いに入れる。'
+        },
+        pen200HomeField: {
+            name: 'Home Fieldクラシック',
+            desc: 'Home Fieldのソロクラシックで200頭の羊を囲いに入れる。'
+        },
+        pen200RollingHills: {
+            name: 'Rolling Hillsクラシック',
+            desc: 'Rolling Hillsでクラシックの75頭の群れを囲いに入れる。'
+        },
+        pen200OpenCountry: {
+            name: 'Open Countryクラシック',
+            desc: 'Open Countryでクラシックの50頭の群れを囲いに入れる。'
+        },
+        chaos5000: {
+            name: 'カオスの羊飼い',
+            desc: 'ソロカオスで5,000頭の羊を囲いに入れる。'
+        },
+        allFiveDogs: {
+            name: '犬舎フルメンバー',
+            desc: '5匹の犬それぞれでソロラウンドをクリアする。'
+        },
+        surviveFirstNight: {
+            name: '最初の夜',
+            desc: 'Newsheepdoglandで最初の夜を生き延びる。'
+        },
+        survive5Nights: {
+            name: '5つの夜',
+            desc: 'Newsheepdoglandの1回のランで5晩を生き延びる。'
+        },
+        winCompetitiveRoom: {
+            name: 'トップドッグ',
+            desc: '対戦マルチプレイヤールームで勝利する。'
+        }
     }
 };

@@ -439,5 +439,45 @@ export default {
         errorEmpty: 'Por favor ingresa un nombre o elige otra opción',
         errorTooLong: 'El nombre debe tener 20 caracteres o menos',
         errorFailed: 'Error al crear identidad. Por favor intenta de nuevo.'
+    },
+
+    // [P3-ACHIEVE-DATA] Logros: nombres y descripciones.
+    achievements: {
+        firstPen: {
+            name: 'Primer corral',
+            desc: 'Encierra tu primer rebaño completo.'
+        },
+        pen200HomeField: {
+            name: 'Clásico en Home Field',
+            desc: 'Encierra las 200 ovejas del Clásico en solitario en Home Field.'
+        },
+        pen200RollingHills: {
+            name: 'Clásico en Rolling Hills',
+            desc: 'Encierra el rebaño Clásico de 75 ovejas en Rolling Hills.'
+        },
+        pen200OpenCountry: {
+            name: 'Clásico en Open Country',
+            desc: 'Encierra el rebaño Clásico de 50 ovejas en Open Country.'
+        },
+        chaos5000: {
+            name: 'Pastor del caos',
+            desc: 'Encierra 5.000 ovejas en Caos en solitario.'
+        },
+        allFiveDogs: {
+            name: 'Perrera completa',
+            desc: 'Completa una ronda en solitario con cada uno de los cinco perros.'
+        },
+        surviveFirstNight: {
+            name: 'Primera noche',
+            desc: 'Sobrevive tu primera noche en Newsheepdogland.'
+        },
+        survive5Nights: {
+            name: 'Cinco noches',
+            desc: 'Sobrevive 5 noches en una sola partida en Newsheepdogland.'
+        },
+        winCompetitiveRoom: {
+            name: 'Perro alfa',
+            desc: 'Gana una sala multijugador competitiva.'
+        }
     }
 };

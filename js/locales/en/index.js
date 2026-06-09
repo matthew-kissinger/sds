@@ -509,5 +509,46 @@ export default {
         errorEmpty: 'Please enter a display name or choose another option',
         errorTooLong: 'Display name must be 20 characters or less',
         errorFailed: 'Failed to create player identity. Please try again.'
+    },
+
+    // [P3-ACHIEVE-DATA] Achievement names + descriptions. Ids live in
+    // js/achievements/definitions.js and map here via nameKey/descKey.
+    achievements: {
+        firstPen: {
+            name: 'First Pen',
+            desc: 'Pen your first full flock.'
+        },
+        pen200HomeField: {
+            name: 'Home Field Classic',
+            desc: 'Pen all 200 sheep in Solo Classic on Home Field.'
+        },
+        pen200RollingHills: {
+            name: 'Rolling Hills Classic',
+            desc: 'Pen the 75-sheep Classic flock on Rolling Hills.'
+        },
+        pen200OpenCountry: {
+            name: 'Open Country Classic',
+            desc: 'Pen the 50-sheep Classic flock on Open Country.'
+        },
+        chaos5000: {
+            name: 'Chaos Shepherd',
+            desc: 'Pen 5,000 sheep in Solo Chaos.'
+        },
+        allFiveDogs: {
+            name: 'Full Kennel',
+            desc: 'Complete a solo round with each of the five dogs.'
+        },
+        surviveFirstNight: {
+            name: 'First Night',
+            desc: 'Survive your first night on Newsheepdogland.'
+        },
+        survive5Nights: {
+            name: 'Five Nights',
+            desc: 'Survive 5 nights in a single run on Newsheepdogland.'
+        },
+        winCompetitiveRoom: {
+            name: 'Top Dog',
+            desc: 'Win a competitive multiplayer room.'
+        }
     }
 };

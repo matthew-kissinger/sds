@@ -96,6 +96,25 @@ export async function showCompletionOverlay(game, mode, data = {}) {
         console.log('[GAME] Practice mode - score not submitted to leaderboard');
     }
 
+    // [P3-ACHIEVE-DATA] Achievement seam: a completed non-sandbox solo round
+    // (practice included; it still pens a full flock). Fire-and-forget so the
+    // achievements module can never delay or break the completion UI.
+    if (mode === 'single' && data.finalTime && game.gameMode !== 'sandbox' && game.singlePlayerMode !== 'sandbox') {
+        import('../achievements/index.js').then(({ recordEvent }) => {
+            recordEvent('solo-complete', {
+                sceneId: game.gameState?.sceneId
+                    || game.gameState?.sceneSpawnDef?.sceneId
+                    || (typeof window !== 'undefined' && window.__currentSceneId)
+                    || 'field',
+                mode: game.singlePlayerMode,
+                gameMode: game.gameMode,
+                dog: game.getSelectedDog?.() || null,
+                finalTime: data.finalTime,
+                totalSheep: game.gameState?.totalSheep ?? 0,
+            });
+        }).catch((err) => console.warn('[ACHIEVEMENTS] solo-complete record failed:', err));
+    }
+
     // Check if React CompletionScreen is available
     if (window.CompletionScreen) {
         const container = document.createElement('div');

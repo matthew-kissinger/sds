@@ -439,5 +439,45 @@ export default {
         errorEmpty: '请输入显示名称或选择其他选项',
         errorTooLong: '显示名称必须在20个字符以内',
         errorFailed: '创建玩家身份失败。请重试。'
+    },
+
+    // [P3-ACHIEVE-DATA] 成就名称与描述。
+    achievements: {
+        firstPen: {
+            name: '第一栏',
+            desc: '把你的第一群羊全部赶进羊圈。'
+        },
+        pen200HomeField: {
+            name: 'Home Field经典',
+            desc: '在Home Field的单人经典模式中把200只羊赶进羊圈。'
+        },
+        pen200RollingHills: {
+            name: 'Rolling Hills经典',
+            desc: '在Rolling Hills把经典模式的75只羊赶进羊圈。'
+        },
+        pen200OpenCountry: {
+            name: 'Open Country经典',
+            desc: '在Open Country把经典模式的50只羊赶进羊圈。'
+        },
+        chaos5000: {
+            name: '混乱牧人',
+            desc: '在单人混乱模式中把5000只羊赶进羊圈。'
+        },
+        allFiveDogs: {
+            name: '全员上阵',
+            desc: '用五只牧羊犬各完成一局单人游戏。'
+        },
+        surviveFirstNight: {
+            name: '第一夜',
+            desc: '在Newsheepdogland撑过第一个夜晚。'
+        },
+        survive5Nights: {
+            name: '五个夜晚',
+            desc: '在Newsheepdogland的一局生存中撑过5个夜晚。'
+        },
+        winCompetitiveRoom: {
+            name: '头号牧犬',
+            desc: '赢得一场竞技多人房间的胜利。'
+        }
     }
 };

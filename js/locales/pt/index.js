@@ -421,5 +421,45 @@ export default {
         errorEmpty: 'Por favor, digite um nome de exibição ou escolha outra opção',
         errorTooLong: 'O nome de exibição deve ter 20 caracteres ou menos',
         errorFailed: 'Falha ao criar identidade do jogador. Tente novamente.'
+    },
+
+    // [P3-ACHIEVE-DATA] Conquistas: nomes e descrições.
+    achievements: {
+        firstPen: {
+            name: 'Primeiro curral',
+            desc: 'Leve seu primeiro rebanho completo ao curral.'
+        },
+        pen200HomeField: {
+            name: 'Clássico em Home Field',
+            desc: 'Leve as 200 ovelhas do Clássico solo ao curral em Home Field.'
+        },
+        pen200RollingHills: {
+            name: 'Clássico em Rolling Hills',
+            desc: 'Leve o rebanho Clássico de 75 ovelhas ao curral em Rolling Hills.'
+        },
+        pen200OpenCountry: {
+            name: 'Clássico em Open Country',
+            desc: 'Leve o rebanho Clássico de 50 ovelhas ao curral em Open Country.'
+        },
+        chaos5000: {
+            name: 'Pastor do caos',
+            desc: 'Leve 5.000 ovelhas ao curral no Caos solo.'
+        },
+        allFiveDogs: {
+            name: 'Canil completo',
+            desc: 'Complete uma rodada solo com cada um dos cinco cães.'
+        },
+        surviveFirstNight: {
+            name: 'Primeira noite',
+            desc: 'Sobreviva à sua primeira noite em Newsheepdogland.'
+        },
+        survive5Nights: {
+            name: 'Cinco noites',
+            desc: 'Sobreviva 5 noites em uma única partida em Newsheepdogland.'
+        },
+        winCompetitiveRoom: {
+            name: 'Cão alfa',
+            desc: 'Vença uma sala multijogador competitiva.'
+        }
     }
 };
