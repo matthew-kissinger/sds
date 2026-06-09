@@ -109,6 +109,11 @@ export default {
         body: '正在重启渲染器，游戏即将重新加载。'
     },
 
+    // P4-SW-TOAST: 新的 Service Worker 接管页面时显示的常驻提示。
+    swUpdate: {
+        ready: '新版本已就绪。'
+    },
+
     // Settings panel
     settings: {
         title: '设置',

@@ -109,6 +109,11 @@ export default {
         body: 'Reiniciando o renderizador. O jogo será recarregado em instantes.'
     },
 
+    // P4-SW-TOAST: aviso persistente quando um novo service worker assume o controle.
+    swUpdate: {
+        ready: 'Uma nova versão está pronta.'
+    },
+
     // Settings panel
     settings: {
         title: 'Configurações',

@@ -109,6 +109,11 @@ export default {
         body: 'レンダラーを再起動しています。まもなくゲームを再読み込みします。'
     },
 
+    // P4-SW-TOAST: 新しいサービスワーカーが制御を引き継いだときの常設トースト。
+    swUpdate: {
+        ready: '新しいバージョンが利用できます。'
+    },
+
     // Settings panel
     settings: {
         title: '設定',

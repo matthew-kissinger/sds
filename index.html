@@ -332,37 +332,13 @@
                         .then((registration) => { console.log('[SW] registered:', registration.scope); })
                         .catch((error) => { console.warn('[SW] registration failed:', error); });
                 });
-                // When a new SW takes control of an already-controlled page
-                // (i.e., a new deploy landed), reload once to pick up the
-                // fresh shell — but DEFER the reload until the page is
-                // hidden (user switches tabs / minimises / closes), so the
-                // reload never yanks them mid-interaction. The previous
-                // behaviour (immediate reload on controllerchange) was the
-                // source of "site refreshes back to home screen while I'm
-                // clicking" reports — a deploy landing during an active
-                // session would auto-bounce the user.
-                if (navigator.serviceWorker.controller) {
-                    let reloading = false;
-                    const deferredReload = () => {
-                        if (reloading) return;
-                        if (document.visibilityState === 'hidden') {
-                            reloading = true;
-                            window.location.reload();
-                        }
-                    };
-                    navigator.serviceWorker.addEventListener('controllerchange', () => {
-                        // If the tab is already hidden when the swap fires,
-                        // reload immediately (user isn't looking). Otherwise
-                        // wait for the next visibilitychange-to-hidden.
-                        if (document.visibilityState === 'hidden') {
-                            if (reloading) return;
-                            reloading = true;
-                            window.location.reload();
-                        } else {
-                            document.addEventListener('visibilitychange', deferredReload);
-                        }
-                    });
-                }
+                // P4-SW-TOAST: a new SW taking control of an already-
+                // controlled page (a new deploy landed) is handled by
+                // js/boot/swUpdateToast.js, installed from main.js. It shows
+                // a persistent "A new version is ready" toast with a Refresh
+                // button; the player chooses when to reload. The old inline
+                // reload-when-hidden here could still yank an active run
+                // when the player tabbed away mid-game.
             }
         }
     </script>

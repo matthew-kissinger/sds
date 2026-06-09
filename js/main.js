@@ -3321,6 +3321,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         .then((m) => m.maybeNotifyRendererFallback())
         .catch(() => {});
 
+    // P4-SW-TOAST: when a new service worker takes control mid-session (a
+    // fresh deploy; sw.js promotes via skipWaiting + clients.claim), show a
+    // persistent "A new version is ready" toast with a Refresh button. The
+    // player chooses when to reload; nothing auto-reloads mid-game. Lazy
+    // import keeps it out of the critical boot path.
+    import('./boot/swUpdateToast.js')
+        .then((m) => m.installSwUpdateToast())
+        .catch(() => {});
+
     // Delegate menu/network flows from gameInstance to menuController for GameBridge
     gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {
         gameInstance.menuController.selectSolo(dogType, singlePlayerMode);

@@ -144,6 +144,12 @@ export default {
         body: 'Restarting the renderer. The game will reload in a moment.'
     },
 
+    // P4-SW-TOAST: persistent toast when a new service worker takes control
+    // mid-session (a fresh deploy landed). Button label rides common.refresh.
+    swUpdate: {
+        ready: 'A new version is ready.'
+    },
+
     // Settings panel
     settings: {
         title: 'Settings',
