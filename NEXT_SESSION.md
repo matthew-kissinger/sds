@@ -1,8 +1,8 @@
-# Next Session - Cycle 82 feel-and-media-live (Phase 1 flagship-stability SHIPPED, pending deploy)
+# Next Session - Cycle 82 feel-and-media-live (Phase 1 + 2 flagship-stability SHIPPED + committed, pending deploy)
 
 > **Updated:** 2026-06-08
-> **For:** Cycle 82 `feel-and-media-live`. Plan: [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md). Phase 1 (flagship-stability fixes) is code-complete and verified live on the 3070; Phase 2+ (`feel-and-media-live`) is the open thread.
-> **Pickup priority:** Phase 1 (newsheepdogland house-in-water + QualityGovernor WebGPU/WebGL split + transient quality-floor + grass warmup) is test-green and verified live on desktop WebGPU. Next is the commit/deploy call, then the Phase 3 production steady-state profile and the Phase 2+ feel-and-media-live work.
+> **For:** Cycle 82 `feel-and-media-live`. Plan: [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md). Phase 1 + 2 (flagship-stability fixes) are code-complete, verified live on the 3070, and committed; Phase 3+ (`feel-and-media-live`) is the open thread.
+> **Pickup priority:** Phase 1 (house-in-water + QualityGovernor WebGPU/WebGL split + transient quality-floor + grass warmup) and Phase 2 (newsheepdogland grass was fully invisible on WebGPU, a distance-fade shader bug, now fixed) are test-green, verified live on desktop WebGPU, and committed to `main` locally. Next is the deploy call, then the Phase 4 production steady-state profile and the Phase 3 feel-and-media-live work.
 
 ## Cold-Start Orientation
 
@@ -20,13 +20,13 @@ Validation: `npm test` 1135 pass / 8 skip; `npm run build` clean; bundle baselin
 
 ## What To Pick Up Next
 
-**Cycle 82 Phase 1 (flagship-stability) is SHIPPED + verified live, pending commit/deploy.** Three live newsheepdogland regressions are fixed (house-in-water, the WebGPU/WebGL load split, the transient quality-floor + grass thinning). See [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) Phase 1 for root causes, fixes, and the live proof (house at (640,-956) on land attached to the pen; no sticky fallback flag written even through a 60,008ms backgrounded frame; real frame cost 7.3ms / ~137fps on the 3070). `npm test` 1142 pass / 8 skip; `npm run build` clean at the 591KB baseline.
+**Cycle 82 Phase 1 + Phase 2 (flagship-stability) are SHIPPED + verified live + committed, pending deploy.** Four live newsheepdogland regressions are fixed: Phase 1 (house-in-water, the WebGPU/WebGL load split, the transient quality-floor + grass thinning) and Phase 2 (grass fully invisible on WebGPU - the blade distance-fade keyed off the world origin instead of the camera, so the ~1.2km-out play area fell entirely past `grassFadeEnd`; fixed by using `positionView`/`positionWorld` like every sibling konveyor material). See [`docs/cycle-82-plan.md`](docs/cycle-82-plan.md) Phases 1-2 for root causes, fixes, and live proof. `npm test` 1142 pass / 8 skip (exit 0); `npm run build` clean within the 591/604 KB bundle baseline.
 
 Next:
 
-- Commit + deploy the Phase 1 fixes. The verification was on the local dev build; production still runs the old code until deployed.
-- Phase 3 (measure-first): production-build, foreground, >=5-run steady-state p95/p99 on the 3070 to confirm the flagship sustains qualityIndex 0 (resolves Q1).
-- Phase 2 `feel-and-media-live`: survival-feel retune, two-dog co-op playtest, entrance hero blessing (player-visible, taste/paired).
+- Deploy. Phases 1-2 are committed to `main` locally but not pushed; production still runs the old code until pushed (a push to `main` triggers the GH Actions deploy). Get Matt's go-ahead first.
+- Phase 4 (measure-first): production-build, foreground, >=5-run steady-state p95/p99 on the 3070 to confirm the flagship sustains qualityIndex 0 (resolves Q1).
+- Phase 3 `feel-and-media-live`: survival-feel retune, two-dog co-op playtest, entrance hero blessing (player-visible, taste/paired).
 - OR mobile WebGPU validation if a WebGPU-capable mobile device comes on hand (this cycle's tablet had none).
 
 ## Open Carryover (deferred)

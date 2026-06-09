@@ -6,7 +6,7 @@ export function createKonveyorGrassBladeNodeMaterial(
   { MeshBasicNodeMaterial, MeshStandardNodeMaterial, DoubleSide, Vector2 = ThreeVector2, Vector3 = ThreeVector3, TSL },
   grassBlade
 ) {
-  const { abs, attribute, cameraPosition, clamp, cos, dot, float, fract, instanceIndex, length, max, mix, normalize, positionLocal, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
+  const { abs, attribute, cameraPosition, clamp, cos, dot, float, fract, instanceIndex, length, max, mix, normalize, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
   const linearColor = (color) => color;
   const vector2 = (value) => (
     typeof Vector2 === 'function'
@@ -157,18 +157,23 @@ export function createKonveyorGrassBladeNodeMaterial(
     tipColor,
     smoothstep(0.4, 1.0, height01)
   );
-  const colorVariation = sin(worldX.mul(0.2)).mul(cos(worldZ.mul(0.15))).mul(0.5).add(0.5);
+  // Fragment-stage colour jitter keys off positionWorld (engine-varied), not the
+  // worldX/worldZ derived from bladeWorld, which is ~0 in the fragment (see below).
+  const colorVariation = sin(positionWorld.x.mul(0.2)).mul(cos(positionWorld.z.mul(0.15))).mul(0.5).add(0.5);
   const variation = vec3(
     colorVariation.mul(0.08),
     colorVariation.mul(0.05).sub(0.02),
     colorVariation.mul(-0.03)
   );
-  const hueOffset = fract(sin(worldX.mul(12.9898).add(worldZ.mul(78.233))).mul(43758.5453123))
+  const hueOffset = fract(sin(positionWorld.x.mul(12.9898).add(positionWorld.z.mul(78.233))).mul(43758.5453123))
     .sub(0.5)
     .mul(grassBlade.hueVariation ?? 0.04);
   const hueNudge = vec3(hueOffset.negate(), hueOffset, hueOffset.mul(0.5));
   const ao = mix(0.7, 1.0, height01);
-  const toCamera = normalize(cameraPosition.sub(bladeWorld));
+  // World-space fragment->camera direction (dotted against world up + sun below).
+  // positionWorld is the engine's correctly-varied world position; bladeWorld is
+  // ~0 in the fragment stage (see viewDistance note) so it can't be used here.
+  const toCamera = normalize(cameraPosition.sub(positionWorld));
   const toSun = normalize(sunDirection);
   const backlightStrength = grassBlade.backlightStrength ?? 0.7;
   const rimStrength = grassBlade.rimStrength ?? 0.2;
@@ -183,7 +188,17 @@ export function createKonveyorGrassBladeNodeMaterial(
   const backlitSun = pow(max(dot(toCamera, toSun.mul(-1.0)), 0.0), 4.0);
   const sunTip = tipColor.mul(backlitSun.mul(backlightStrength).mul(tipMask));
   const verticalRim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
-  const viewDistance = length(cameraPosition.sub(bladeWorld));
+  // Camera distance for the fog blend + distance fade. MUST use positionView (the
+  // engine's view-space fragment position; its length is the camera-to-fragment
+  // distance) like every sibling konveyor material (terrain/tree/meadow fog). The
+  // hand-rolled `cameraPosition.sub(bladeWorld)` was wrong: bladeWorld is built from
+  // a per-instance source (the instanceWorldOffset attribute, or the compute-cull
+  // storage read indexed by instanceIndex) that collapses to ~0 in the FRAGMENT
+  // stage, so viewDistance became |cameraPosition| = the camera's distance from the
+  // world ORIGIN. Near-origin scenes survived; newsheepdogland's play area (~1.2km
+  // out) fell entirely past grassFadeEnd, so densityFade -> 0 and every blade went
+  // fully transparent in both the compute-cull and per-chunk paths. (Cycle 82.)
+  const viewDistance = length(positionView);
   const fogBlend = smoothstep(grassBlade.fogNear, grassBlade.fogFar, viewDistance).mul(fogStrength);
   const densityFade = float(1.0).sub(
     smoothstep(grassBlade.grassFadeStart, grassBlade.grassFadeEnd, viewDistance)

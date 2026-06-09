@@ -6,7 +6,7 @@
 
 ## Goal
 
-Keep the freshly-lifted desktop WebGPU flagship correct and stable, then return to player-visible feel/media work. Phase 1 (shipped this cycle) fixes three live regressions Matt hit testing newsheepdogland: the farmhouse spawned in the sea instead of attached to the pen, grass came and went, and loads flip-flopped between WebGPU and WebGL. All three trace to two mechanisms (a field-bounds reset that clobbered the scene-pinned homestead, and a QualityGovernor that false-floored on transient spikes and wrote a 24h sticky WebGL fallback from a desktop step-down). Later phases pick up the deferred `feel-and-media-live` thread (survival-feel retune, two-dog co-op playtest, entrance hero blessing) and the measure-first production steady-state profile.
+Keep the freshly-lifted desktop WebGPU flagship correct and stable, then return to player-visible feel/media work. Phase 1 (shipped this cycle) fixes three live regressions Matt hit testing newsheepdogland: the farmhouse spawned in the sea instead of attached to the pen, grass came and went, and loads flip-flopped between WebGPU and WebGL. All three trace to two mechanisms (a field-bounds reset that clobbered the scene-pinned homestead, and a QualityGovernor that false-floored on transient spikes and wrote a 24h sticky WebGL fallback from a desktop step-down). Phase 2 (shipped) fixes a fourth newsheepdogland regression: grass was fully invisible on the desktop WebGPU path (a grass-blade distance-fade shader bug that keyed the fade off the world origin instead of the camera), corrected at the shader source. Later phases pick up the deferred `feel-and-media-live` thread (survival-feel retune, two-dog co-op playtest, entrance hero blessing) and the measure-first production steady-state profile.
 
 ## How to read this plan
 
@@ -14,7 +14,7 @@ This doc fixes the *shape* of the changes (data contracts, where new code slots 
 
 ## Open questions to resolve before writing code
 
-1. **Q1: Does the 3070 genuinely exceed the desktop frame budget on newsheepdogland, or was the floor purely a transient false-positive?** Author lean: false-positive. A live dev-mode read showed 7.3 ms (~137 fps) real frame cost; the floor came from cold-load and backgrounded-tab spikes, not steady state. Confirm with a production-build, foreground, >= 5-run steady-state profile (Phase 3).
+1. **Q1: Does the 3070 genuinely exceed the desktop frame budget on newsheepdogland, or was the floor purely a transient false-positive?** Author lean: false-positive. A live dev-mode read showed 7.3 ms (~137 fps) real frame cost; the floor came from cold-load and backgrounded-tab spikes, not steady state. Confirm with a production-build, foreground, >= 5-run steady-state profile (Phase 4).
 
 ## Phase 1 - Flagship stability fixes (SHIPPED 2026-06-08, ~3hr)
 
@@ -42,21 +42,43 @@ Files: [`js/world/sandbox.js`](../js/world/sandbox.js), [`js/perf/QualityGoverno
 - [x] When the grass auto-LOD ticks inside the first 6 s of a scene, then it shall hold `_autoLodFactor` steady.
 - [x] When `npm test` runs, then the suite shall stay green with 7 new specs (1142 pass / 8 skip), and `npm run build` shall stay clean at the bundle baseline (mainKB 591).
 
-## Phase 2+ - feel-and-media-live (TODO, the standing thread)
+## Phase 2 - Flagship grass visibility on WebGPU (SHIPPED 2026-06-08, ~4hr)
+
+**Independently testable.** A live regression in the shipped Cycle 81 flagship: grass was completely invisible on newsheepdogland on the desktop WebGPU path (both the compute-cull path it ships and the per-chunk fallback), while it rendered correctly on WebGL and on every near-origin scene. Fixed at the shader source. No render-path or architecture change, no `shared/` sim change, sim-baselines untouched.
+
+Root cause:
+
+- The grass blade node material ([`js/world/konveyorGrassBladeNodeMaterial.js`](../js/world/konveyorGrassBladeNodeMaterial.js)) computed its distance-fade opacity from a hand-rolled `bladeWorld = instanceWorldOffset + positionLocal`. `bladeWorld` is built from a per-instance source (the `instanceWorldOffset` attribute, or the compute-cull storage read indexed by `instanceIndex`) that collapses to ~0 in the FRAGMENT stage, so `viewDistance = length(cameraPosition - bladeWorld)` became `|cameraPosition|` (the camera's distance from the world ORIGIN, not the blade). newsheepdogland's play area sits ~1.2km from origin, entirely past `grassFadeEnd` (260m), so `densityFade -> 0` and every blade went fully transparent. Near-origin scenes (Rolling Hills, Home Field, Open Country) survived by accident because their grass never exceeded the origin-keyed threshold, which also means the intended camera-distance LOD had been silently dead on every WebGPU scene.
+
+Fix:
+
+- Use the engine built-ins like every sibling konveyor material (terrain, tree branch, tree leaf, meadow): `viewDistance = length(positionView)` (the view-space fragment position, whose length is the true camera-to-fragment distance), plus `positionWorld` for the colour jitter and the `toCamera` view vector. Size-neutral (both nodes are already bundled by the sibling materials). The Cycle 81 compute-cull consolidation (8 InstancedMeshes, the cold-load freeze fix) is untouched.
+
+Files: [`js/world/konveyorGrassBladeNodeMaterial.js`](../js/world/konveyorGrassBladeNodeMaterial.js). Regression probe: [`tools/grass-fix-validate-cycle82.mjs`](../tools/grass-fix-validate-cycle82.mjs).
+
+**Acceptance (EARS):**
+
+- [x] While on a far-from-origin scene (newsheepdogland, play area ~1.2km from origin) on desktop WebGPU, when grass is in view near the camera, then it shall render visible blades (was fully transparent). Verified live on the shipped compute-cull path (grass field around the dog; grass-only isolation shows the full field) - `cycle82-validation/fix-newsheepdogland-*.png`.
+- [x] When the grass distance fade evaluates `viewDistance`, then it shall measure camera-to-fragment distance (via `positionView`), not distance from the world origin.
+- [x] While on a near-origin scene (Rolling Hills), when the fix lands, then near grass shall stay solid and only far grass fades (no regression) - `cycle82-validation/fix-rollinghills-closeup.png`.
+- [x] While on the newsheepdogland flagship, when the fix lands, then the compute-cull consolidation shall be unchanged (8 InstancedMeshes, `grassControllerPresent: true`, 0 console errors).
+- [x] When `npm test` runs, then the suite shall stay green (1142 pass / 8 skip, exit 0), and `npm run build` shall stay clean within the bundle baseline (main 591 / three 604 KB).
+
+## Phase 3+ - feel-and-media-live (TODO, the standing thread)
 
 Pick up at `/cycle-start`. Candidates from carryover:
 
 - Survival-feel retune (day length, flock growth, loss threshold; Matt's taste pass).
 - Two-dog co-op playtest.
 - Entrance hero blessing (player-visible, paired).
-- **Phase 3 (measure-first):** production-build, foreground, >= 5-run cold-load + steady-state p95/p99 on the 3070 to confirm the flagship sustains `qualityIndex 0` (resolves Q1). Optional spawn/shore-fade polish if the dog start still reads grass-light (it sits inside the 28 m coastline shore-fade band).
+- **Phase 4 (measure-first):** production-build, foreground, >= 5-run cold-load + steady-state p95/p99 on the 3070 to confirm the flagship sustains `qualityIndex 0` (resolves Q1). Optional spawn/shore-fade polish if the dog start still reads grass-light (it sits inside the 28 m coastline shore-fade band).
 - Mobile WebGPU validation once a WebGPU-capable mobile device is on hand.
 
 ## Dependencies
 
 ```
-Phase 1 (shipped) → Phase 3 measurement → optional grass/spawn polish
-Phase 2 feel-and-media-live (independent)
+Phase 1 + Phase 2 (shipped) → Phase 4 measurement → optional grass/spawn polish
+Phase 3 feel-and-media-live (independent)
 ```
 
 ## Frozen files (cycle-specific additions)
