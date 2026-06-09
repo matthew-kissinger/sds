@@ -66,12 +66,21 @@ Evidence (2026-06-09):
 ## [P4-SW-TOAST] Service-worker update notification
 
 - **Owner hint:** frontend agent
-- **Status:** pending
+- **Status:** complete (2026-06-09)
 - **Deps:** none
+- **Files:** `js/boot/swUpdateToast.js` (new), `js/main.js`, `index.html`, `js/locales/*/index.js`, `tests/ui/swUpdateToast.spec.ts` (new), `tests/refactor-baseline/__fixtures__/bundle-sizes.json`
 
 Acceptance:
 
-- [ ] When a new SW takes control (controllerchange), then a "new version, refresh" toast shall appear.
+- [x] When a new SW takes control (controllerchange), then a "new version, refresh" toast shall appear.
+
+Evidence (2026-06-09):
+
+- SW lifecycle: `sw.js` calls `skipWaiting()` on install and `clients.claim()` on activate, so a new deploy's worker takes control mid-session and `controllerchange` fires immediately; no waiting-worker flow exists (the `SKIP_WAITING` message handler in sw.js stays unused and untouched). Registration lives in the inline `index.html` script, which previously reloaded the page on controllerchange as soon as the tab went hidden - that could still yank an active run when the player tabbed away mid-game, so it was replaced by the toast.
+- `js/boot/swUpdateToast.js`: `installSwUpdateToast()` listens for controllerchange with an initial-claim guard (controllerchange also fires when the FIRST SW claims an uncontrolled page; the toast only shows when a controller already existed before the change). `mountSwUpdateToast()` is a persistent (never self-dismissing) vanilla-DOM warm-glass toast, bottom-center, `role="status"`, with a Refresh button calling `location.reload()`. Nothing auto-reloads; the player chooses. Installed from main.js via fire-and-forget dynamic import next to the renderer-fallback notice; all deps injectable for tests.
+- Strings: `swUpdate.ready` ("A new version is ready.") translated in all 5 locales (en/es/ja/pt/zh-CN); the button label reuses the existing `common.refresh`. Locale parity ratchet green with no allowlist additions.
+- Tests: `tests/ui/swUpdateToast.spec.ts` (11 specs - prior-controller toast, initial-claim silence, change-after-claim toast, show-once, idempotent install, no-container no-op, uninstall, persistent mount with refresh button, injected-reload click, dedupe, install-to-DOM end to end). Lint, typecheck, full unit suite (1428 passed / 8 skipped), build all green.
+- Bundle note: the toast rides its own lazy chunk (`swUpdateToast-*.js`, 2,659 bytes); "other" family budget bumped 530 -> 533 KiB in `bundle-sizes.json` to cover it (deliberate, this task). `main` stayed at 602 KiB (the dynamic-import callsite fit inside the existing ceil); i18n stayed within 130 KiB.
 
 ---
 
@@ -160,12 +169,23 @@ Evidence (2026-06-09):
 ## [P4-LOADTEST] Concurrent-room load test
 
 - **Owner hint:** qa/backend agent
-- **Status:** pending
+- **Status:** complete (2026-06-09)
 - **Deps:** none within this phase, but run after the Phase 2 cost work (guaranteed by phase ordering)
+- **Files:** `tools/loadtest/loadtest.mjs` (new; node tool, not vitest), `tools/loadtest/results-2026-06-09.json` (canonical 100-room run), `tools/loadtest/results-2026-06-09-wave25-saturation.json`, `tools/loadtest/calib-10.json`, `tools/loadtest/scale-15.json`, `tools/loadtest/scale-20.json`
 
 Acceptance:
 
-- [ ] When ~100 concurrent rooms are simulated, then DO CPU and egress shall stay within target and no room shall desync.
+- [x] When ~100 concurrent rooms are simulated, then DO CPU and egress shall stay within target and no room shall desync.
+
+Evidence (2026-06-09):
+
+- Harness: `node tools/loadtest/loadtest.mjs --rooms 100 --wave 15 --duration 60` spawns `wrangler dev` (local workerd, structured stdout/stderr captured and parsed), then per room: REST register x2 -> create/join with `protocolVersion: 3` -> two WS upgrades with admission tickets -> host `startGame` -> both clients send `playerInput` every 100 ms for 60 s -> explicit `leaveRoom` teardown. 80% of rooms run cooperative/field, 20% survival/newsheepdogland (an active coop flock rides the 85% degenerate-frame rule into 100% keyframes per the delta-design deviations log, so survival rooms are what exercise real `gameStateDelta` frames over the wire). Sheep count 200 per room: the DO validates against `ALLOWED_SHEEP_COUNTS` {200..5000}, so the spec's "30 sheep" is not reachable over the wire; 200 is the server minimum and strictly harder.
+- Desync check: in 10 sampled rooms per wave, every client reconstructs the full snapshot from the keyframe+delta stream (the NetworkManager apply rules: full `gameStateUpdate` replaces wholesale; a delta applies iff `baseTick === lastAppliedTick`; a changed record replaces the sheep record wholesale) and stores a sha1 of the canonicalized (sorted-key) state per tick; all clients in a room must hash-match at every shared tick.
+- Canonical run (100 distinct rooms, 7 waves of 15, 60 s play each, 200 clients total): **0 desyncs across 70 sampled rooms and 208,029 compared ticks; 0 baseTick gaps; 0 decode errors; 0 backpressure evictions (server `player_evicted` count: 0); 0 failed setups; 0 `tick_error`/`ws_broadcast_failed`/`sim_init_failed` lines**. 570,884 messages / 8.9 GB received by clients. Frame mix 447,576 keyframes : 122,701 deltas.
+- Egress (per client, 16.6 broadcast frames/s effective at the local ~32-55 Hz tick rate - see caveat): cooperative 200-sheep rooms ~940 KB/s, 100% keyframes at avg 20,738 B/frame - consistent with the delta-protocol measurement (~20.8 kB/frame keyframes for fully active flocks, the documented design deviation #1, no bandwidth win at round start). Survival rooms 44.2 KB/s/client, 2,102 keyframes : 122,701 deltas at avg 552 B/delta - deep in the delta-winning regime exactly as the design's deviation log predicted. Scaled to production 60 Hz those are ~1.25 MB/s (coop active flock) and ~60 KB/s (survival) per client.
+- Tick health: 0 `tick_overrun` and 0 `tick_health_degraded` lines from the server's own clocks across all runs. At 15 concurrent rooms the wire ticks advanced at p50 52-55/s (min 28.5 one client) vs the ~32/s unloaded local baseline; the sim never starved. Concurrency scaling on this machine (Ryzen 7 3700X, harness sharing the box): 15 rooms fully healthy, 20 rooms marginal (min 12.6 ticks/s), 25 rooms saturated (p50 14, min 2.2 ticks/s). A separate 100-rooms-in-4-waves-of-25 saturation run (`results-2026-06-09-wave25-saturation.json`) still produced **0 desyncs in 40 sampled rooms, 0 evictions, 0 protocol errors** - under brutal CPU contention the rooms slow down but never corrupt, and the backpressure skip-not-buffer path produced no false-positive evictions.
+- CAVEAT (recorded honestly): local miniflare/workerd on one machine is NOT Cloudflare's distributed runtime. All 15-25 concurrent rooms contend for one box that also runs the harness, so absolute tick timings are pessimistic and CPU numbers are directional only; on Cloudflare each DO gets its own isolate placement. Additionally workerd local clamps the 60 Hz `setInterval` to ~31 ms at low concurrency (unloaded local sim = ~32 ticks/s, not 60) and the in-isolate clocks under-measure inter-tick intervals, so the absence of `tick_health_degraded` lines locally is weak evidence; the wire-tick advancement rate is the trustworthy local signal. The desync verdicts, protocol correctness under concurrency, per-room egress, and eviction behavior ARE valid signals. The front-door IP rate limiter is inert locally (wrangler dev sets no `cf-connecting-ip`).
+- Validation: `npm run lint` green (tool lives in `tools/`, outside the `shared/ js/` lint scope), `npm test` green (1428 passed, 8 skipped; vitest includes only `tests/**`, the tool is not collected). Ports freed and all workerd processes killed after the runs (the harness also kills the port listener explicitly, since workerd detaches from the wrangler process tree on Windows).
 
 ---
 

@@ -1,0 +1,876 @@
+{
+  "task": "P4-LOADTEST",
+  "date": "2026-06-09T22:10:43.374Z",
+  "config": {
+    "rooms": 10,
+    "wave": 10,
+    "clients": 2,
+    "sheep": 200,
+    "durationS": 30,
+    "sample": 10,
+    "port": 8799,
+    "url": null,
+    "setupConc": 12,
+    "inputMs": 100,
+    "out": "tools/loadtest/calib-10.json"
+  },
+  "caveat": "Local miniflare/workerd on one machine is NOT the Cloudflare distributed runtime: all rooms contend for one box (which also runs the harness), so tick timings are pessimistic and CPU-bound numbers are directional only. Desync verdicts, protocol correctness under concurrency, and per-room egress are valid signals. The front-door IP rate limiter is inert locally (no cf-connecting-ip in wrangler dev).",
+  "totalRuntimeS": 33.7,
+  "waves": [
+    {
+      "wave": 1,
+      "rooms": 10,
+      "roomsLive": 10,
+      "roomsFailedSetup": [],
+      "durationS": 30,
+      "aggregate": {
+        "simTicksPerSecP50": 36.7,
+        "simTicksPerSecMin": 36.6,
+        "clients": 20,
+        "msgs": 22113,
+        "bytes": 455016473,
+        "keyframes": 22035,
+        "deltas": 0,
+        "keyframeShare": 1,
+        "avgKeyframeBytes": 20633,
+        "avgDeltaBytes": 0,
+        "framesPerSecP50": 36.7,
+        "framesPerSecMin": 36.6,
+        "framesPerSecMax": 36.9,
+        "egressKBsPerClientAvg": 740.6,
+        "egressKBsPerRoomAvg": 1481.2,
+        "gaps": 0,
+        "clientObservedEvictions": 0,
+        "decodeErrors": 0,
+        "gamesCompleted": 0,
+        "sampledRooms": 10,
+        "desyncRooms": 0,
+        "desyncCommonTicks": 11016,
+        "desyncMismatches": 0
+      },
+      "serverLogDelta": {
+        "counts": {
+          "game_start": 10,
+          "sim_initialized": 10,
+          "sim_started": 10,
+          "host_migration": 9,
+          "sim_stopped": 10
+        },
+        "tickOverrunsTotal": 0,
+        "maxP95Ms": 0,
+        "evictionsByReason": {}
+      },
+      "roomReports": [
+        {
+          "room": "YDG115",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "0cd403b6ffcad732",
+              "msgs": 1109,
+              "bytes": 22765485,
+              "keyframes": 1106,
+              "deltas": 0,
+              "keyframeBytes": 22746978,
+              "deltaBytes": 0,
+              "framesPerSec": 36.9,
+              "egressKBs": 741.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.8,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "511ae657236dac22",
+              "msgs": 1107,
+              "bytes": 22724789,
+              "keyframes": 1104,
+              "deltas": 0,
+              "keyframeBytes": 22706282,
+              "deltaBytes": 0,
+              "framesPerSec": 36.8,
+              "egressKBs": 739.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.8,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2216,
+            "bytes": 45490274,
+            "keyframes": 2210,
+            "deltas": 0,
+            "roomEgressKBs": 1480.8
+          },
+          "desync": {
+            "commonTicks": 1104,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1106,
+              1104
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "ZPB079",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "b17ddeb1787d306a",
+              "msgs": 1107,
+              "bytes": 22962692,
+              "keyframes": 1103,
+              "deltas": 0,
+              "keyframeBytes": 22943796,
+              "deltaBytes": 0,
+              "framesPerSec": 36.8,
+              "egressKBs": 747.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "c99d44ff959fa7dc",
+              "msgs": 1107,
+              "bytes": 22962692,
+              "keyframes": 1103,
+              "deltas": 0,
+              "keyframeBytes": 22943796,
+              "deltaBytes": 0,
+              "framesPerSec": 36.8,
+              "egressKBs": 747.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2214,
+            "bytes": 45925384,
+            "keyframes": 2206,
+            "deltas": 0,
+            "roomEgressKBs": 1495
+          },
+          "desync": {
+            "commonTicks": 1103,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1103,
+              1103
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "TMG810",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "0c470fec4a1e992b",
+              "msgs": 1107,
+              "bytes": 22938805,
+              "keyframes": 1103,
+              "deltas": 0,
+              "keyframeBytes": 22919933,
+              "deltaBytes": 0,
+              "framesPerSec": 36.8,
+              "egressKBs": 746.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "c0af5e7305d2a6fd",
+              "msgs": 1108,
+              "bytes": 22959914,
+              "keyframes": 1104,
+              "deltas": 0,
+              "keyframeBytes": 22941042,
+              "deltaBytes": 0,
+              "framesPerSec": 36.8,
+              "egressKBs": 747.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.8,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2215,
+            "bytes": 45898719,
+            "keyframes": 2207,
+            "deltas": 0,
+            "roomEgressKBs": 1494.1
+          },
+          "desync": {
+            "commonTicks": 1103,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1103,
+              1104
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "YKG624",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "498bdea9eff04a26",
+              "msgs": 1107,
+              "bytes": 22741951,
+              "keyframes": 1103,
+              "deltas": 0,
+              "keyframeBytes": 22723071,
+              "deltaBytes": 0,
+              "framesPerSec": 36.8,
+              "egressKBs": 740.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "5ac39123f128ef31",
+              "msgs": 1107,
+              "bytes": 22741951,
+              "keyframes": 1103,
+              "deltas": 0,
+              "keyframeBytes": 22723071,
+              "deltaBytes": 0,
+              "framesPerSec": 36.8,
+              "egressKBs": 740.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2214,
+            "bytes": 45483902,
+            "keyframes": 2206,
+            "deltas": 0,
+            "roomEgressKBs": 1480.6
+          },
+          "desync": {
+            "commonTicks": 1103,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1103,
+              1103
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "PGI751",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "9cc304b29fd721f9",
+              "msgs": 1106,
+              "bytes": 22730963,
+              "keyframes": 1102,
+              "deltas": 0,
+              "keyframeBytes": 22712075,
+              "deltaBytes": 0,
+              "framesPerSec": 36.7,
+              "egressKBs": 739.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "930720a9f62c75e2",
+              "msgs": 1106,
+              "bytes": 22730963,
+              "keyframes": 1102,
+              "deltas": 0,
+              "keyframeBytes": 22712075,
+              "deltaBytes": 0,
+              "framesPerSec": 36.7,
+              "egressKBs": 739.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2212,
+            "bytes": 45461926,
+            "keyframes": 2204,
+            "deltas": 0,
+            "roomEgressKBs": 1479.9
+          },
+          "desync": {
+            "commonTicks": 1102,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1102,
+              1102
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "FRQ297",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "e4df852b5ba44f25",
+              "msgs": 1106,
+              "bytes": 22691793,
+              "keyframes": 1102,
+              "deltas": 0,
+              "keyframeBytes": 22672937,
+              "deltaBytes": 0,
+              "framesPerSec": 36.7,
+              "egressKBs": 738.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "f68fb07ac512b260",
+              "msgs": 1106,
+              "bytes": 22691793,
+              "keyframes": 1102,
+              "deltas": 0,
+              "keyframeBytes": 22672937,
+              "deltaBytes": 0,
+              "framesPerSec": 36.7,
+              "egressKBs": 738.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2212,
+            "bytes": 45383586,
+            "keyframes": 2204,
+            "deltas": 0,
+            "roomEgressKBs": 1477.3
+          },
+          "desync": {
+            "commonTicks": 1102,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1102,
+              1102
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "UUA533",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "84324c21e1303342",
+              "msgs": 1105,
+              "bytes": 22715268,
+              "keyframes": 1101,
+              "deltas": 0,
+              "keyframeBytes": 22696388,
+              "deltaBytes": 0,
+              "framesPerSec": 36.7,
+              "egressKBs": 739.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "54f70f4c6ad29641",
+              "msgs": 1105,
+              "bytes": 22715268,
+              "keyframes": 1101,
+              "deltas": 0,
+              "keyframeBytes": 22696388,
+              "deltaBytes": 0,
+              "framesPerSec": 36.7,
+              "egressKBs": 739.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2210,
+            "bytes": 45430536,
+            "keyframes": 2202,
+            "deltas": 0,
+            "roomEgressKBs": 1478.9
+          },
+          "desync": {
+            "commonTicks": 1101,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1101,
+              1101
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "GTZ697",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "68c128a78810c5cf",
+              "msgs": 1104,
+              "bytes": 22647653,
+              "keyframes": 1100,
+              "deltas": 0,
+              "keyframeBytes": 22628797,
+              "deltaBytes": 0,
+              "framesPerSec": 36.7,
+              "egressKBs": 737.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.6,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "291642a29afb148a",
+              "msgs": 1104,
+              "bytes": 22647653,
+              "keyframes": 1100,
+              "deltas": 0,
+              "keyframeBytes": 22628797,
+              "deltaBytes": 0,
+              "framesPerSec": 36.7,
+              "egressKBs": 737.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.6,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2208,
+            "bytes": 45295306,
+            "keyframes": 2200,
+            "deltas": 0,
+            "roomEgressKBs": 1474.5
+          },
+          "desync": {
+            "commonTicks": 1100,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1100,
+              1100
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "BTQ847",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "81b2b59f3becbc63",
+              "msgs": 1103,
+              "bytes": 22622716,
+              "keyframes": 1099,
+              "deltas": 0,
+              "keyframeBytes": 22603860,
+              "deltaBytes": 0,
+              "framesPerSec": 36.6,
+              "egressKBs": 736.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.6,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "2be07578b5b60477",
+              "msgs": 1103,
+              "bytes": 22622716,
+              "keyframes": 1099,
+              "deltas": 0,
+              "keyframeBytes": 22603860,
+              "deltaBytes": 0,
+              "framesPerSec": 36.6,
+              "egressKBs": 736.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.6,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2206,
+            "bytes": 45245432,
+            "keyframes": 2198,
+            "deltas": 0,
+            "roomEgressKBs": 1472.8
+          },
+          "desync": {
+            "commonTicks": 1099,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1099,
+              1099
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "JTZ415",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "2211e0dfd0f26824",
+              "msgs": 1103,
+              "bytes": 22700704,
+              "keyframes": 1099,
+              "deltas": 0,
+              "keyframeBytes": 22681831,
+              "deltaBytes": 0,
+              "framesPerSec": 36.6,
+              "egressKBs": 739,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.6,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "2ada5bf1d19f38cf",
+              "msgs": 1103,
+              "bytes": 22700704,
+              "keyframes": 1099,
+              "deltas": 0,
+              "keyframeBytes": 22681831,
+              "deltaBytes": 0,
+              "framesPerSec": 36.6,
+              "egressKBs": 739,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 36.6,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2206,
+            "bytes": 45401408,
+            "keyframes": 2198,
+            "deltas": 0,
+            "roomEgressKBs": 1477.9
+          },
+          "desync": {
+            "commonTicks": 1099,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              1099,
+              1099
+            ],
+            "desynced": false
+          }
+        }
+      ]
+    }
+  ],
+  "serverLogTotals": {
+    "counts": {
+      "game_start": 10,
+      "sim_initialized": 10,
+      "sim_started": 10,
+      "host_migration": 9,
+      "sim_stopped": 10
+    },
+    "tickOverrunsTotal": 0,
+    "maxP95Ms": 0,
+    "evictionsByReason": {}
+  },
+  "serverLogSamples": {
+    "game_start": [
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043010100,
+        "roomCode": "YDG115",
+        "players": 2,
+        "gameMode": "cooperative"
+      },
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043010106,
+        "roomCode": "ZPB079",
+        "players": 2,
+        "gameMode": "cooperative"
+      },
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043010117,
+        "roomCode": "TMG810",
+        "players": 2,
+        "gameMode": "cooperative"
+      },
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043010142,
+        "roomCode": "YKG624",
+        "players": 2,
+        "gameMode": "cooperative"
+      },
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043010173,
+        "roomCode": "PGI751",
+        "players": 2,
+        "gameMode": "cooperative"
+      }
+    ],
+    "sim_initialized": [
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043010102,
+        "roomCode": "YDG115",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      },
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043010106,
+        "roomCode": "ZPB079",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      },
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043010117,
+        "roomCode": "TMG810",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      },
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043010142,
+        "roomCode": "YKG624",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      },
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043010174,
+        "roomCode": "PGI751",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      }
+    ],
+    "sim_started": [
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043010103,
+        "roomCode": "YDG115",
+        "tickRate": 60
+      },
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043010106,
+        "roomCode": "ZPB079",
+        "tickRate": 60
+      },
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043010117,
+        "roomCode": "TMG810",
+        "tickRate": 60
+      },
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043010142,
+        "roomCode": "YKG624",
+        "tickRate": 60
+      },
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043010174,
+        "roomCode": "PGI751",
+        "tickRate": 60
+      }
+    ],
+    "host_migration": [
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043040271,
+        "roomCode": "ZPB079",
+        "oldHostId": "b17ddeb1787d306a",
+        "newHostId": "c99d44ff959fa7dc",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      },
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043040283,
+        "roomCode": "TMG810",
+        "oldHostId": "0c470fec4a1e992b",
+        "newHostId": "c0af5e7305d2a6fd",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      },
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043040299,
+        "roomCode": "YKG624",
+        "oldHostId": "498bdea9eff04a26",
+        "newHostId": "5ac39123f128ef31",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      },
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043040308,
+        "roomCode": "PGI751",
+        "oldHostId": "9cc304b29fd721f9",
+        "newHostId": "930720a9f62c75e2",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      },
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043040311,
+        "roomCode": "FRQ297",
+        "oldHostId": "e4df852b5ba44f25",
+        "newHostId": "f68fb07ac512b260",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      }
+    ],
+    "sim_stopped": [
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043040273,
+        "roomCode": "ZPB079"
+      },
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043040293,
+        "roomCode": "TMG810"
+      },
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043040303,
+        "roomCode": "YKG624"
+      },
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043040310,
+        "roomCode": "PGI751"
+      },
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043040312,
+        "roomCode": "FRQ297"
+      }
+    ]
+  }
+}

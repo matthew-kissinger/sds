@@ -1,0 +1,6486 @@
+{
+  "task": "P4-LOADTEST",
+  "date": "2026-06-09T22:21:11.180Z",
+  "config": {
+    "rooms": 100,
+    "wave": 25,
+    "clients": 2,
+    "sheep": 200,
+    "durationS": 60,
+    "sample": 10,
+    "survivalShare": 0.2,
+    "port": 8799,
+    "url": null,
+    "setupConc": 12,
+    "inputMs": 100,
+    "out": "tools/loadtest/results-2026-06-09.json"
+  },
+  "caveat": "Local miniflare/workerd on one machine is NOT the Cloudflare distributed runtime: all rooms contend for one box (which also runs the harness), so tick timings are pessimistic and CPU-bound numbers are directional only. Desync verdicts, protocol correctness under concurrency, and per-room egress are valid signals. The front-door IP rate limiter is inert locally (no cf-connecting-ip in wrangler dev). Local workerd clamps the 60Hz setInterval to ~31ms, so the UNLOADED local sim rate is ~32 ticks/s (not 60) and the server-side tick_overrun/tick_health clocks under-measure; sim-rate degradation under load is therefore judged against the ~32/s local baseline via the wire tick numbers, not against 60.",
+  "totalRuntimeS": 351,
+  "waves": [
+    {
+      "wave": 1,
+      "rooms": 25,
+      "roomsLive": 25,
+      "roomsFailedSetup": [],
+      "durationS": 60,
+      "aggregate": {
+        "simTicksPerSecP50": 14.3,
+        "simTicksPerSecMin": 2.4,
+        "clients": 50,
+        "msgs": 25463,
+        "bytes": 334715507,
+        "keyframes": 16000,
+        "deltas": 9357,
+        "keyframeShare": 0.631,
+        "avgKeyframeBytes": 20543,
+        "avgDeltaBytes": 544,
+        "framesPerSecP50": 2.3,
+        "framesPerSecMin": 1.6,
+        "framesPerSecMax": 46.8,
+        "egressKBsPerClientAvg": 108.9,
+        "egressKBsPerRoomAvg": 217.9,
+        "gaps": 0,
+        "clientObservedEvictions": 47,
+        "decodeErrors": 0,
+        "gamesCompleted": 0,
+        "sampledRooms": 10,
+        "desyncRooms": 0,
+        "desyncCommonTicks": 8878,
+        "desyncMismatches": 0,
+        "byMode": {
+          "cooperative": {
+            "rooms": 20,
+            "keyframes": 15837,
+            "deltas": 0,
+            "avgKeyframeBytes": 20559,
+            "avgDeltaBytes": 0,
+            "egressKBsPerClientAvg": 132.7
+          },
+          "survival": {
+            "rooms": 5,
+            "keyframes": 163,
+            "deltas": 9357,
+            "avgKeyframeBytes": 19081,
+            "avgDeltaBytes": 544,
+            "egressKBsPerClientAvg": 13.7
+          }
+        }
+      },
+      "serverLogDelta": {
+        "counts": {
+          "game_start": 25,
+          "survival_initialized": 5,
+          "sim_initialized": 25,
+          "sim_started": 25,
+          "disconnect_grace_started": 25,
+          "host_migration": 24,
+          "sim_stopped": 25
+        },
+        "tickOverrunsTotal": 0,
+        "maxP95Ms": 0,
+        "evictionsByReason": {}
+      },
+      "roomReports": [
+        {
+          "room": "PUY474",
+          "mode": "survival",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "5217e21924e598cd",
+              "msgs": 2811,
+              "bytes": 2433811,
+              "keyframes": 47,
+              "deltas": 2760,
+              "keyframeBytes": 897508,
+              "deltaBytes": 1515762,
+              "framesPerSec": 46.8,
+              "egressKBs": 39.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 46.8,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "a95be150cc264f79",
+              "msgs": 2811,
+              "bytes": 2433811,
+              "keyframes": 47,
+              "deltas": 2760,
+              "keyframeBytes": 897508,
+              "deltaBytes": 1515762,
+              "framesPerSec": 46.8,
+              "egressKBs": 39.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 46.8,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 5622,
+            "bytes": 4867622,
+            "keyframes": 94,
+            "deltas": 5520,
+            "roomEgressKBs": 79.2
+          },
+          "desync": {
+            "commonTicks": 2807,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              2807,
+              2807
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "XVJ571",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "a390abf644d0e765",
+              "msgs": 962,
+              "bytes": 19733243,
+              "keyframes": 960,
+              "deltas": 0,
+              "keyframeBytes": 19715085,
+              "deltaBytes": 0,
+              "framesPerSec": 16,
+              "egressKBs": 321.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 16,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "cdaf27ff8d17fb14",
+              "msgs": 861,
+              "bytes": 17657383,
+              "keyframes": 859,
+              "deltas": 0,
+              "keyframeBytes": 17639225,
+              "deltaBytes": 0,
+              "framesPerSec": 14.3,
+              "egressKBs": 287.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1823,
+            "bytes": 37390626,
+            "keyframes": 1819,
+            "deltas": 0,
+            "roomEgressKBs": 608.4
+          },
+          "desync": {
+            "commonTicks": 859,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              960,
+              859
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "SSO133",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "bba0c00b48de9bf6",
+              "msgs": 865,
+              "bytes": 17784892,
+              "keyframes": 863,
+              "deltas": 0,
+              "keyframeBytes": 17766718,
+              "deltaBytes": 0,
+              "framesPerSec": 14.4,
+              "egressKBs": 289.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.4,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "7f22050dcfad61a3",
+              "msgs": 584,
+              "bytes": 11983069,
+              "keyframes": 582,
+              "deltas": 0,
+              "keyframeBytes": 11964895,
+              "deltaBytes": 0,
+              "framesPerSec": 9.7,
+              "egressKBs": 195,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 9.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1449,
+            "bytes": 29767961,
+            "keyframes": 1445,
+            "deltas": 0,
+            "roomEgressKBs": 484.4
+          },
+          "desync": {
+            "commonTicks": 582,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              863,
+              582
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "UTP388",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "264668b7dbe69198",
+              "msgs": 361,
+              "bytes": 7395619,
+              "keyframes": 359,
+              "deltas": 0,
+              "keyframeBytes": 7377462,
+              "deltaBytes": 0,
+              "framesPerSec": 6,
+              "egressKBs": 120.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 6,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "f91e8b0d71c1b4d2",
+              "msgs": 859,
+              "bytes": 17644998,
+              "keyframes": 857,
+              "deltas": 0,
+              "keyframeBytes": 17626841,
+              "deltaBytes": 0,
+              "framesPerSec": 14.3,
+              "egressKBs": 287.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1220,
+            "bytes": 25040617,
+            "keyframes": 1216,
+            "deltas": 0,
+            "roomEgressKBs": 407.5
+          },
+          "desync": {
+            "commonTicks": 359,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              359,
+              857
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "QTO889",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "d5a49601c3c152f9",
+              "msgs": 858,
+              "bytes": 17634782,
+              "keyframes": 856,
+              "deltas": 0,
+              "keyframeBytes": 17616609,
+              "deltaBytes": 0,
+              "framesPerSec": 14.3,
+              "egressKBs": 287,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "82e97139ebc65449",
+              "msgs": 858,
+              "bytes": 17634782,
+              "keyframes": 856,
+              "deltas": 0,
+              "keyframeBytes": 17616609,
+              "deltaBytes": 0,
+              "framesPerSec": 14.3,
+              "egressKBs": 287,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1716,
+            "bytes": 35269564,
+            "keyframes": 1712,
+            "deltas": 0,
+            "roomEgressKBs": 573.9
+          },
+          "desync": {
+            "commonTicks": 856,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              856,
+              856
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "SHH521",
+          "mode": "survival",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "f14aeed758a0e31e",
+              "msgs": 149,
+              "bytes": 149037,
+              "keyframes": 3,
+              "deltas": 144,
+              "keyframeBytes": 57087,
+              "deltaBytes": 72183,
+              "framesPerSec": 2.4,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.4,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "506f50cecc72ae8c",
+              "msgs": 2810,
+              "bytes": 2432343,
+              "keyframes": 47,
+              "deltas": 2759,
+              "keyframeBytes": 896519,
+              "deltaBytes": 1515304,
+              "framesPerSec": 46.8,
+              "egressKBs": 39.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 46.7,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 2959,
+            "bytes": 2581380,
+            "keyframes": 50,
+            "deltas": 2903,
+            "roomEgressKBs": 42
+          },
+          "desync": {
+            "commonTicks": 147,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              147,
+              2806
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "YPZ010",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "83264a63e294dde1",
+              "msgs": 862,
+              "bytes": 17723917,
+              "keyframes": 860,
+              "deltas": 0,
+              "keyframeBytes": 17705760,
+              "deltaBytes": 0,
+              "framesPerSec": 14.3,
+              "egressKBs": 288.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "0e3f2042c9b056f0",
+              "msgs": 864,
+              "bytes": 17765196,
+              "keyframes": 862,
+              "deltas": 0,
+              "keyframeBytes": 17747039,
+              "deltaBytes": 0,
+              "framesPerSec": 14.4,
+              "egressKBs": 289.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1726,
+            "bytes": 35489113,
+            "keyframes": 1722,
+            "deltas": 0,
+            "roomEgressKBs": 577.5
+          },
+          "desync": {
+            "commonTicks": 860,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              860,
+              862
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "MIU105",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "c8147f10b13a87e5",
+              "msgs": 856,
+              "bytes": 17598172,
+              "keyframes": 854,
+              "deltas": 0,
+              "keyframeBytes": 17580031,
+              "deltaBytes": 0,
+              "framesPerSec": 14.2,
+              "egressKBs": 286.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "099765a597359e26",
+              "msgs": 857,
+              "bytes": 17618802,
+              "keyframes": 855,
+              "deltas": 0,
+              "keyframeBytes": 17600661,
+              "deltaBytes": 0,
+              "framesPerSec": 14.2,
+              "egressKBs": 286.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1713,
+            "bytes": 35216974,
+            "keyframes": 1709,
+            "deltas": 0,
+            "roomEgressKBs": 573.1
+          },
+          "desync": {
+            "commonTicks": 854,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              854,
+              855
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "KRJ060",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "586af069213de3a8",
+              "msgs": 852,
+              "bytes": 17526466,
+              "keyframes": 850,
+              "deltas": 0,
+              "keyframeBytes": 17508317,
+              "deltaBytes": 0,
+              "framesPerSec": 14.2,
+              "egressKBs": 285.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.1,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "c2f624cab0845645",
+              "msgs": 602,
+              "bytes": 12371026,
+              "keyframes": 600,
+              "deltas": 0,
+              "keyframeBytes": 12352877,
+              "deltaBytes": 0,
+              "framesPerSec": 10,
+              "egressKBs": 201.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 10,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1454,
+            "bytes": 29897492,
+            "keyframes": 1450,
+            "deltas": 0,
+            "roomEgressKBs": 486.5
+          },
+          "desync": {
+            "commonTicks": 600,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              850,
+              600
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "AVU025",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "573f557b324f08de",
+              "msgs": 956,
+              "bytes": 19650578,
+              "keyframes": 954,
+              "deltas": 0,
+              "keyframeBytes": 19632429,
+              "deltaBytes": 0,
+              "framesPerSec": 15.9,
+              "egressKBs": 319.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15.9,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "35624157d13e62a9",
+              "msgs": 956,
+              "bytes": 19650578,
+              "keyframes": 954,
+              "deltas": 0,
+              "keyframeBytes": 19632429,
+              "deltaBytes": 0,
+              "framesPerSec": 15.9,
+              "egressKBs": 319.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15.9,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1912,
+            "bytes": 39301156,
+            "keyframes": 1908,
+            "deltas": 0,
+            "roomEgressKBs": 639.5
+          },
+          "desync": {
+            "commonTicks": 954,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              954,
+              954
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "ZIZ761",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "a1ef01878b21175e",
+              "msgs": 141,
+              "bytes": 145043,
+              "keyframes": 3,
+              "deltas": 136,
+              "keyframeBytes": 57105,
+              "deltaBytes": 68159,
+              "framesPerSec": 2.3,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "4df02e1920aa92ea",
+              "msgs": 141,
+              "bytes": 145043,
+              "keyframes": 3,
+              "deltas": 136,
+              "keyframeBytes": 57105,
+              "deltaBytes": 68159,
+              "framesPerSec": 2.3,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 282,
+            "bytes": 290086,
+            "keyframes": 6,
+            "deltas": 272,
+            "roomEgressKBs": 4.7
+          }
+        },
+        {
+          "room": "YGJ133",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "a577a8e232d08ecc",
+              "msgs": 135,
+              "bytes": 2741908,
+              "keyframes": 133,
+              "deltas": 0,
+              "keyframeBytes": 2723729,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 44.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "08a793d5abde7570",
+              "msgs": 141,
+              "bytes": 2865308,
+              "keyframes": 139,
+              "deltas": 0,
+              "keyframeBytes": 2847129,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 276,
+            "bytes": 5607216,
+            "keyframes": 272,
+            "deltas": 0,
+            "roomEgressKBs": 91.2
+          }
+        },
+        {
+          "room": "ONX049",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "f41bc0cef7bc6269",
+              "msgs": 123,
+              "bytes": 2491482,
+              "keyframes": 121,
+              "deltas": 0,
+              "keyframeBytes": 2473327,
+              "deltaBytes": 0,
+              "framesPerSec": 2,
+              "egressKBs": 40.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "9ad0f0f063cf0f23",
+              "msgs": 130,
+              "bytes": 2635031,
+              "keyframes": 128,
+              "deltas": 0,
+              "keyframeBytes": 2616876,
+              "deltaBytes": 0,
+              "framesPerSec": 2.1,
+              "egressKBs": 42.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 253,
+            "bytes": 5126513,
+            "keyframes": 249,
+            "deltas": 0,
+            "roomEgressKBs": 83.4
+          }
+        },
+        {
+          "room": "JUI936",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "4c74ef19365a7f76",
+              "msgs": 148,
+              "bytes": 3009024,
+              "keyframes": 146,
+              "deltas": 0,
+              "keyframeBytes": 2990853,
+              "deltaBytes": 0,
+              "framesPerSec": 2.4,
+              "egressKBs": 49,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "615d7d37ceb42ece",
+              "msgs": 117,
+              "bytes": 2371588,
+              "keyframes": 115,
+              "deltas": 0,
+              "keyframeBytes": 2353417,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 38.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 265,
+            "bytes": 5380612,
+            "keyframes": 261,
+            "deltas": 0,
+            "roomEgressKBs": 87.6
+          }
+        },
+        {
+          "room": "KWE326",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "6504d7c14994d522",
+              "msgs": 129,
+              "bytes": 2623518,
+              "keyframes": 127,
+              "deltas": 0,
+              "keyframeBytes": 2605361,
+              "deltaBytes": 0,
+              "framesPerSec": 2.1,
+              "egressKBs": 42.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "a880e203cceca6b5",
+              "msgs": 127,
+              "bytes": 2582368,
+              "keyframes": 125,
+              "deltas": 0,
+              "keyframeBytes": 2564211,
+              "deltaBytes": 0,
+              "framesPerSec": 2.1,
+              "egressKBs": 42,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 256,
+            "bytes": 5205886,
+            "keyframes": 252,
+            "deltas": 0,
+            "roomEgressKBs": 84.7
+          }
+        },
+        {
+          "room": "PUA486",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "cacf384107b700ee",
+              "msgs": 125,
+              "bytes": 136948,
+              "keyframes": 3,
+              "deltas": 120,
+              "keyframeBytes": 57063,
+              "deltaBytes": 60120,
+              "framesPerSec": 2,
+              "egressKBs": 2.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "bf7a2368f57c039a",
+              "msgs": 329,
+              "bytes": 301756,
+              "keyframes": 6,
+              "deltas": 321,
+              "keyframeBytes": 114226,
+              "deltaBytes": 167765,
+              "framesPerSec": 5.4,
+              "egressKBs": 4.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 454,
+            "bytes": 438704,
+            "keyframes": 9,
+            "deltas": 441,
+            "roomEgressKBs": 7.1
+          }
+        },
+        {
+          "room": "TJY509",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "50a44bb0f0fb6b89",
+              "msgs": 135,
+              "bytes": 2738572,
+              "keyframes": 133,
+              "deltas": 0,
+              "keyframeBytes": 2720425,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 44.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "23fe92363e368d6f",
+              "msgs": 114,
+              "bytes": 2309735,
+              "keyframes": 112,
+              "deltas": 0,
+              "keyframeBytes": 2291588,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 37.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 249,
+            "bytes": 5048307,
+            "keyframes": 245,
+            "deltas": 0,
+            "roomEgressKBs": 82.1
+          }
+        },
+        {
+          "room": "LQB292",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "66a12ecd0df0c5c1",
+              "msgs": 124,
+              "bytes": 2515549,
+              "keyframes": 122,
+              "deltas": 0,
+              "keyframeBytes": 2497410,
+              "deltaBytes": 0,
+              "framesPerSec": 2,
+              "egressKBs": 40.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "07881cb2c5b40814",
+              "msgs": 115,
+              "bytes": 2331092,
+              "keyframes": 113,
+              "deltas": 0,
+              "keyframeBytes": 2312953,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 37.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 239,
+            "bytes": 4846641,
+            "keyframes": 235,
+            "deltas": 0,
+            "roomEgressKBs": 78.9
+          }
+        },
+        {
+          "room": "AVA118",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "d307d04f96cb5058",
+              "msgs": 112,
+              "bytes": 2273405,
+              "keyframes": 110,
+              "deltas": 0,
+              "keyframeBytes": 2255289,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 37,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "5ec05c0e49a85c6b",
+              "msgs": 119,
+              "bytes": 2416951,
+              "keyframes": 117,
+              "deltas": 0,
+              "keyframeBytes": 2398835,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 39.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 231,
+            "bytes": 4690356,
+            "keyframes": 227,
+            "deltas": 0,
+            "roomEgressKBs": 76.3
+          }
+        },
+        {
+          "room": "SAQ902",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "cd043a25d056fa65",
+              "msgs": 110,
+              "bytes": 2230361,
+              "keyframes": 108,
+              "deltas": 0,
+              "keyframeBytes": 2212174,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 36.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "4b9c5328f71946c7",
+              "msgs": 118,
+              "bytes": 2394201,
+              "keyframes": 116,
+              "deltas": 0,
+              "keyframeBytes": 2376014,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 39,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 228,
+            "bytes": 4624562,
+            "keyframes": 224,
+            "deltas": 0,
+            "roomEgressKBs": 75.3
+          }
+        },
+        {
+          "room": "VZP899",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "60104c950baafc43",
+              "msgs": 115,
+              "bytes": 113460,
+              "keyframes": 2,
+              "deltas": 111,
+              "keyframeBytes": 38070,
+              "deltaBytes": 55611,
+              "framesPerSec": 1.9,
+              "egressKBs": 1.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "0d91dc97a0965d1c",
+              "msgs": 114,
+              "bytes": 112959,
+              "keyframes": 2,
+              "deltas": 110,
+              "keyframeBytes": 38070,
+              "deltaBytes": 55110,
+              "framesPerSec": 1.9,
+              "egressKBs": 1.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 229,
+            "bytes": 226419,
+            "keyframes": 4,
+            "deltas": 221,
+            "roomEgressKBs": 3.7
+          }
+        },
+        {
+          "room": "YMC369",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "d2859258a682a26b",
+              "msgs": 120,
+              "bytes": 2436147,
+              "keyframes": 118,
+              "deltas": 0,
+              "keyframeBytes": 2418016,
+              "deltaBytes": 0,
+              "framesPerSec": 2,
+              "egressKBs": 39.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "7b9485611f07110f",
+              "msgs": 139,
+              "bytes": 2826174,
+              "keyframes": 137,
+              "deltas": 0,
+              "keyframeBytes": 2808043,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 259,
+            "bytes": 5262321,
+            "keyframes": 255,
+            "deltas": 0,
+            "roomEgressKBs": 85.6
+          }
+        },
+        {
+          "room": "VFQ470",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "fce4ffe8e198f4d1",
+              "msgs": 117,
+              "bytes": 2373738,
+              "keyframes": 115,
+              "deltas": 0,
+              "keyframeBytes": 2355559,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 38.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "218ecac3ba116b97",
+              "msgs": 107,
+              "bytes": 2168141,
+              "keyframes": 105,
+              "deltas": 0,
+              "keyframeBytes": 2149962,
+              "deltaBytes": 0,
+              "framesPerSec": 1.7,
+              "egressKBs": 35.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 224,
+            "bytes": 4541879,
+            "keyframes": 220,
+            "deltas": 0,
+            "roomEgressKBs": 73.9
+          }
+        },
+        {
+          "room": "XWQ065",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "7d079f53529f9783",
+              "msgs": 113,
+              "bytes": 2295944,
+              "keyframes": 111,
+              "deltas": 0,
+              "keyframeBytes": 2277789,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 37.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "563a22cd20b3a8eb",
+              "msgs": 113,
+              "bytes": 2295944,
+              "keyframes": 111,
+              "deltas": 0,
+              "keyframeBytes": 2277789,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 37.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 226,
+            "bytes": 4591888,
+            "keyframes": 222,
+            "deltas": 0,
+            "roomEgressKBs": 74.7
+          }
+        },
+        {
+          "room": "GOA521",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "b8930be47b14352e",
+              "msgs": 99,
+              "bytes": 2005806,
+              "keyframes": 97,
+              "deltas": 0,
+              "keyframeBytes": 1987627,
+              "deltaBytes": 0,
+              "framesPerSec": 1.6,
+              "egressKBs": 32.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "aca37b36011cc041",
+              "msgs": 99,
+              "bytes": 2005806,
+              "keyframes": 97,
+              "deltas": 0,
+              "keyframeBytes": 1987627,
+              "deltaBytes": 0,
+              "framesPerSec": 1.6,
+              "egressKBs": 32.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 198,
+            "bytes": 4011612,
+            "keyframes": 194,
+            "deltas": 0,
+            "roomEgressKBs": 65.3
+          }
+        }
+      ]
+    },
+    {
+      "wave": 2,
+      "rooms": 25,
+      "roomsLive": 25,
+      "roomsFailedSetup": [],
+      "durationS": 60,
+      "aggregate": {
+        "simTicksPerSecP50": 2.3,
+        "simTicksPerSecMin": 2.2,
+        "clients": 50,
+        "msgs": 13252,
+        "bytes": 143197769,
+        "keyframes": 6777,
+        "deltas": 6371,
+        "keyframeShare": 0.515,
+        "avgKeyframeBytes": 20483,
+        "avgDeltaBytes": 543,
+        "framesPerSecP50": 1.9,
+        "framesPerSecMin": 1.5,
+        "framesPerSecMax": 45.8,
+        "egressKBsPerClientAvg": 46.6,
+        "egressKBsPerRoomAvg": 93.2,
+        "gaps": 0,
+        "clientObservedEvictions": 48,
+        "decodeErrors": 0,
+        "gamesCompleted": 0,
+        "sampledRooms": 10,
+        "desyncRooms": 0,
+        "desyncCommonTicks": 3994,
+        "desyncMismatches": 0,
+        "byMode": {
+          "cooperative": {
+            "rooms": 20,
+            "keyframes": 6665,
+            "deltas": 0,
+            "avgKeyframeBytes": 20507,
+            "avgDeltaBytes": 0,
+            "egressKBsPerClientAvg": 55.9
+          },
+          "survival": {
+            "rooms": 5,
+            "keyframes": 112,
+            "deltas": 6371,
+            "avgKeyframeBytes": 19085,
+            "avgDeltaBytes": 543,
+            "egressKBsPerClientAvg": 9.4
+          }
+        }
+      },
+      "serverLogDelta": {
+        "counts": {
+          "game_start": 25,
+          "survival_initialized": 5,
+          "sim_initialized": 25,
+          "sim_started": 25,
+          "disconnect_grace_started": 25,
+          "host_migration": 25,
+          "sim_stopped": 25
+        },
+        "tickOverrunsTotal": 0,
+        "maxP95Ms": 0,
+        "evictionsByReason": {}
+      },
+      "roomReports": [
+        {
+          "room": "MUN941",
+          "mode": "survival",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "170477164d279024",
+              "msgs": 146,
+              "bytes": 147550,
+              "keyframes": 3,
+              "deltas": 141,
+              "keyframeBytes": 57102,
+              "deltaBytes": 70674,
+              "framesPerSec": 2.4,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.4,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "1d37ef1386626bba",
+              "msgs": 146,
+              "bytes": 147550,
+              "keyframes": 3,
+              "deltas": 141,
+              "keyframeBytes": 57102,
+              "deltaBytes": 70674,
+              "framesPerSec": 2.4,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.4,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 292,
+            "bytes": 295100,
+            "keyframes": 6,
+            "deltas": 282,
+            "roomEgressKBs": 4.8
+          },
+          "desync": {
+            "commonTicks": 144,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              144,
+              144
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "WRK121",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "1fcfe75086dc81ec",
+              "msgs": 761,
+              "bytes": 15608003,
+              "keyframes": 759,
+              "deltas": 0,
+              "keyframeBytes": 15589828,
+              "deltaBytes": 0,
+              "framesPerSec": 12.6,
+              "egressKBs": 254,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 12.6,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "d36a7e8eaa214323",
+              "msgs": 143,
+              "bytes": 2909410,
+              "keyframes": 141,
+              "deltas": 0,
+              "keyframeBytes": 2891235,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 904,
+            "bytes": 18517413,
+            "keyframes": 900,
+            "deltas": 0,
+            "roomEgressKBs": 301.4
+          },
+          "desync": {
+            "commonTicks": 141,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              759,
+              141
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "BEN613",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "5e9c8dfd7c7ec0a2",
+              "msgs": 143,
+              "bytes": 2908571,
+              "keyframes": 141,
+              "deltas": 0,
+              "keyframeBytes": 2890483,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "4cde136baaf9db7f",
+              "msgs": 143,
+              "bytes": 2908571,
+              "keyframes": 141,
+              "deltas": 0,
+              "keyframeBytes": 2890483,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 286,
+            "bytes": 5817142,
+            "keyframes": 282,
+            "deltas": 0,
+            "roomEgressKBs": 94.7
+          },
+          "desync": {
+            "commonTicks": 141,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              141,
+              141
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "RTW514",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "7e6620c23233e3b7",
+              "msgs": 142,
+              "bytes": 2892069,
+              "keyframes": 140,
+              "deltas": 0,
+              "keyframeBytes": 2873910,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "129d7f9b0890e023",
+              "msgs": 142,
+              "bytes": 2892069,
+              "keyframes": 140,
+              "deltas": 0,
+              "keyframeBytes": 2873910,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 284,
+            "bytes": 5784138,
+            "keyframes": 280,
+            "deltas": 0,
+            "roomEgressKBs": 94.1
+          },
+          "desync": {
+            "commonTicks": 140,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              140,
+              140
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "XTX167",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "4222182f6b78c6e6",
+              "msgs": 141,
+              "bytes": 2867246,
+              "keyframes": 139,
+              "deltas": 0,
+              "keyframeBytes": 2849077,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "317ad9d7b79f0123",
+              "msgs": 141,
+              "bytes": 2867246,
+              "keyframes": 139,
+              "deltas": 0,
+              "keyframeBytes": 2849077,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 282,
+            "bytes": 5734492,
+            "keyframes": 278,
+            "deltas": 0,
+            "roomEgressKBs": 93.3
+          },
+          "desync": {
+            "commonTicks": 139,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              139,
+              139
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "MSL952",
+          "mode": "survival",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "ccac30cf83cbe888",
+              "msgs": 2753,
+              "bytes": 2374985,
+              "keyframes": 46,
+              "deltas": 2703,
+              "keyframeBytes": 878270,
+              "deltaBytes": 1476170,
+              "framesPerSec": 45.8,
+              "egressKBs": 38.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 45.8,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "abd7d65884418d94",
+              "msgs": 2754,
+              "bytes": 2375538,
+              "keyframes": 46,
+              "deltas": 2704,
+              "keyframeBytes": 878270,
+              "deltaBytes": 1476723,
+              "framesPerSec": 45.8,
+              "egressKBs": 38.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 45.8,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 5507,
+            "bytes": 4750523,
+            "keyframes": 92,
+            "deltas": 5407,
+            "roomEgressKBs": 77.3
+          },
+          "desync": {
+            "commonTicks": 2749,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              2749,
+              2750
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "FWN727",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "dc100e3a349352a3",
+              "msgs": 138,
+              "bytes": 2808952,
+              "keyframes": 136,
+              "deltas": 0,
+              "keyframeBytes": 2790808,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 45.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "9000b4e7ffeaa4ea",
+              "msgs": 138,
+              "bytes": 2808952,
+              "keyframes": 136,
+              "deltas": 0,
+              "keyframeBytes": 2790808,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 45.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 276,
+            "bytes": 5617904,
+            "keyframes": 272,
+            "deltas": 0,
+            "roomEgressKBs": 91.4
+          },
+          "desync": {
+            "commonTicks": 136,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              136,
+              136
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "QOD716",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "edbc19e10797154a",
+              "msgs": 136,
+              "bytes": 2758068,
+              "keyframes": 134,
+              "deltas": 0,
+              "keyframeBytes": 2739949,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 44.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "c4078091253a3b55",
+              "msgs": 136,
+              "bytes": 2758068,
+              "keyframes": 134,
+              "deltas": 0,
+              "keyframeBytes": 2739949,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 44.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 272,
+            "bytes": 5516136,
+            "keyframes": 268,
+            "deltas": 0,
+            "roomEgressKBs": 89.8
+          },
+          "desync": {
+            "commonTicks": 134,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              134,
+              134
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "SYJ132",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "63f227712cf22159",
+              "msgs": 141,
+              "bytes": 2866119,
+              "keyframes": 139,
+              "deltas": 0,
+              "keyframeBytes": 2847975,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "1af67ecc6860085c",
+              "msgs": 753,
+              "bytes": 15441342,
+              "keyframes": 751,
+              "deltas": 0,
+              "keyframeBytes": 15423198,
+              "deltaBytes": 0,
+              "framesPerSec": 12.5,
+              "egressKBs": 251.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 12.5,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 894,
+            "bytes": 18307461,
+            "keyframes": 890,
+            "deltas": 0,
+            "roomEgressKBs": 298
+          },
+          "desync": {
+            "commonTicks": 139,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              139,
+              751
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "NHD877",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "85a0684b5209f671",
+              "msgs": 133,
+              "bytes": 2697445,
+              "keyframes": 131,
+              "deltas": 0,
+              "keyframeBytes": 2679285,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 43.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "e098c1f41c0a82f3",
+              "msgs": 748,
+              "bytes": 15355141,
+              "keyframes": 746,
+              "deltas": 0,
+              "keyframeBytes": 15336981,
+              "deltaBytes": 0,
+              "framesPerSec": 12.4,
+              "egressKBs": 249.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 12.4,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 881,
+            "bytes": 18052586,
+            "keyframes": 877,
+            "deltas": 0,
+            "roomEgressKBs": 293.8
+          },
+          "desync": {
+            "commonTicks": 131,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              131,
+              746
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "EFW086",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "cfa55af11a24bd2f",
+              "msgs": 131,
+              "bytes": 140089,
+              "keyframes": 3,
+              "deltas": 126,
+              "keyframeBytes": 57165,
+              "deltaBytes": 63129,
+              "framesPerSec": 2.1,
+              "egressKBs": 2.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "04f128b75be57e25",
+              "msgs": 131,
+              "bytes": 140089,
+              "keyframes": 3,
+              "deltas": 126,
+              "keyframeBytes": 57165,
+              "deltaBytes": 63129,
+              "framesPerSec": 2.1,
+              "egressKBs": 2.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 262,
+            "bytes": 280178,
+            "keyframes": 6,
+            "deltas": 252,
+            "roomEgressKBs": 4.6
+          }
+        },
+        {
+          "room": "YYO971",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "9fd73cb592540cd6",
+              "msgs": 128,
+              "bytes": 2598538,
+              "keyframes": 126,
+              "deltas": 0,
+              "keyframeBytes": 2580386,
+              "deltaBytes": 0,
+              "framesPerSec": 2.1,
+              "egressKBs": 42.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "cbb0d29d634dacb2",
+              "msgs": 128,
+              "bytes": 2598538,
+              "keyframes": 126,
+              "deltas": 0,
+              "keyframeBytes": 2580386,
+              "deltaBytes": 0,
+              "framesPerSec": 2.1,
+              "egressKBs": 42.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 256,
+            "bytes": 5197076,
+            "keyframes": 252,
+            "deltas": 0,
+            "roomEgressKBs": 84.6
+          }
+        },
+        {
+          "room": "PUE343",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "bc2aea6bdfc0e071",
+              "msgs": 118,
+              "bytes": 2395639,
+              "keyframes": 116,
+              "deltas": 0,
+              "keyframeBytes": 2377476,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 39,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "0a2536234fa6b290",
+              "msgs": 118,
+              "bytes": 2395639,
+              "keyframes": 116,
+              "deltas": 0,
+              "keyframeBytes": 2377476,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 39,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 236,
+            "bytes": 4791278,
+            "keyframes": 232,
+            "deltas": 0,
+            "roomEgressKBs": 78
+          }
+        },
+        {
+          "room": "IBG014",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "8cd7b8feda9c2eb8",
+              "msgs": 117,
+              "bytes": 2375843,
+              "keyframes": 115,
+              "deltas": 0,
+              "keyframeBytes": 2357696,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 38.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "2c02c91e9399fdb7",
+              "msgs": 116,
+              "bytes": 2355337,
+              "keyframes": 114,
+              "deltas": 0,
+              "keyframeBytes": 2337190,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 38.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 233,
+            "bytes": 4731180,
+            "keyframes": 229,
+            "deltas": 0,
+            "roomEgressKBs": 77
+          }
+        },
+        {
+          "room": "YCO998",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "900ff316101936bd",
+              "msgs": 118,
+              "bytes": 2393041,
+              "keyframes": 116,
+              "deltas": 0,
+              "keyframeBytes": 2374910,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 38.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "115653b81e599587",
+              "msgs": 119,
+              "bytes": 2413466,
+              "keyframes": 117,
+              "deltas": 0,
+              "keyframeBytes": 2395335,
+              "deltaBytes": 0,
+              "framesPerSec": 1.9,
+              "egressKBs": 39.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 237,
+            "bytes": 4806507,
+            "keyframes": 233,
+            "deltas": 0,
+            "roomEgressKBs": 78.2
+          }
+        },
+        {
+          "room": "CLI053",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "366fe51949225bc9",
+              "msgs": 114,
+              "bytes": 124452,
+              "keyframes": 2,
+              "deltas": 110,
+              "keyframeBytes": 38132,
+              "deltaBytes": 66522,
+              "framesPerSec": 1.9,
+              "egressKBs": 2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "928a4202bf1f235c",
+              "msgs": 113,
+              "bytes": 123847,
+              "keyframes": 2,
+              "deltas": 109,
+              "keyframeBytes": 38132,
+              "deltaBytes": 65917,
+              "framesPerSec": 1.8,
+              "egressKBs": 2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 227,
+            "bytes": 248299,
+            "keyframes": 4,
+            "deltas": 219,
+            "roomEgressKBs": 4
+          }
+        },
+        {
+          "room": "UXY686",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "8aa153586458f67e",
+              "msgs": 111,
+              "bytes": 2254062,
+              "keyframes": 109,
+              "deltas": 0,
+              "keyframeBytes": 2235930,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 36.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "6a9800b774b4797c",
+              "msgs": 110,
+              "bytes": 2233515,
+              "keyframes": 108,
+              "deltas": 0,
+              "keyframeBytes": 2215383,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 36.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 221,
+            "bytes": 4487577,
+            "keyframes": 217,
+            "deltas": 0,
+            "roomEgressKBs": 73
+          }
+        },
+        {
+          "room": "WLJ954",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "5c478e4c824aa692",
+              "msgs": 112,
+              "bytes": 2269906,
+              "keyframes": 110,
+              "deltas": 0,
+              "keyframeBytes": 2251742,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 36.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "191b9022220c1b0e",
+              "msgs": 112,
+              "bytes": 2269906,
+              "keyframes": 110,
+              "deltas": 0,
+              "keyframeBytes": 2251742,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 36.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 224,
+            "bytes": 4539812,
+            "keyframes": 220,
+            "deltas": 0,
+            "roomEgressKBs": 73.9
+          }
+        },
+        {
+          "room": "KFW103",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "d39fd5f2619e15c3",
+              "msgs": 113,
+              "bytes": 2295001,
+              "keyframes": 111,
+              "deltas": 0,
+              "keyframeBytes": 2276853,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 37.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "ddfd48537813bb62",
+              "msgs": 111,
+              "bytes": 2253831,
+              "keyframes": 109,
+              "deltas": 0,
+              "keyframeBytes": 2235683,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 36.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 224,
+            "bytes": 4548832,
+            "keyframes": 220,
+            "deltas": 0,
+            "roomEgressKBs": 74
+          }
+        },
+        {
+          "room": "NMR983",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "a62a138264b54ddf",
+              "msgs": 109,
+              "bytes": 2212582,
+              "keyframes": 107,
+              "deltas": 0,
+              "keyframeBytes": 2194450,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 36,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "c185d7d5082fbd1b",
+              "msgs": 108,
+              "bytes": 2192019,
+              "keyframes": 106,
+              "deltas": 0,
+              "keyframeBytes": 2173887,
+              "deltaBytes": 0,
+              "framesPerSec": 1.8,
+              "egressKBs": 35.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 217,
+            "bytes": 4404601,
+            "keyframes": 213,
+            "deltas": 0,
+            "roomEgressKBs": 71.7
+          }
+        },
+        {
+          "room": "HAN019",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "083a4faea372c0b3",
+              "msgs": 110,
+              "bytes": 111024,
+              "keyframes": 2,
+              "deltas": 106,
+              "keyframeBytes": 38116,
+              "deltaBytes": 53106,
+              "framesPerSec": 1.8,
+              "egressKBs": 1.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "291cd50a3dab50f7",
+              "msgs": 109,
+              "bytes": 110523,
+              "keyframes": 2,
+              "deltas": 105,
+              "keyframeBytes": 38116,
+              "deltaBytes": 52605,
+              "framesPerSec": 1.8,
+              "egressKBs": 1.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 219,
+            "bytes": 221547,
+            "keyframes": 4,
+            "deltas": 211,
+            "roomEgressKBs": 3.6
+          }
+        },
+        {
+          "room": "LAD748",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "408df103b23cad3e",
+              "msgs": 107,
+              "bytes": 2163439,
+              "keyframes": 105,
+              "deltas": 0,
+              "keyframeBytes": 2145268,
+              "deltaBytes": 0,
+              "framesPerSec": 1.7,
+              "egressKBs": 35.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "a1cf7a59bb5aeed3",
+              "msgs": 106,
+              "bytes": 2142990,
+              "keyframes": 104,
+              "deltas": 0,
+              "keyframeBytes": 2124819,
+              "deltaBytes": 0,
+              "framesPerSec": 1.7,
+              "egressKBs": 34.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 213,
+            "bytes": 4306429,
+            "keyframes": 209,
+            "deltas": 0,
+            "roomEgressKBs": 70.1
+          }
+        },
+        {
+          "room": "VDS855",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "c7365ad03a7c735b",
+              "msgs": 105,
+              "bytes": 2124113,
+              "keyframes": 103,
+              "deltas": 0,
+              "keyframeBytes": 2105966,
+              "deltaBytes": 0,
+              "framesPerSec": 1.7,
+              "egressKBs": 34.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "00cd2b06e74999d3",
+              "msgs": 105,
+              "bytes": 2124113,
+              "keyframes": 103,
+              "deltas": 0,
+              "keyframeBytes": 2105966,
+              "deltaBytes": 0,
+              "framesPerSec": 1.7,
+              "egressKBs": 34.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 210,
+            "bytes": 4248226,
+            "keyframes": 206,
+            "deltas": 0,
+            "roomEgressKBs": 69.1
+          }
+        },
+        {
+          "room": "KGL346",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "6bbb7cfabe8e871d",
+              "msgs": 104,
+              "bytes": 2104786,
+              "keyframes": 102,
+              "deltas": 0,
+              "keyframeBytes": 2086614,
+              "deltaBytes": 0,
+              "framesPerSec": 1.7,
+              "egressKBs": 34.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "71f426ae2c922c59",
+              "msgs": 103,
+              "bytes": 2084312,
+              "keyframes": 101,
+              "deltas": 0,
+              "keyframeBytes": 2066140,
+              "deltaBytes": 0,
+              "framesPerSec": 1.7,
+              "egressKBs": 33.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 207,
+            "bytes": 4189098,
+            "keyframes": 203,
+            "deltas": 0,
+            "roomEgressKBs": 68.2
+          }
+        },
+        {
+          "room": "CYI103",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "0a912ac1d6208879",
+              "msgs": 94,
+              "bytes": 1902117,
+              "keyframes": 92,
+              "deltas": 0,
+              "keyframeBytes": 1883984,
+              "deltaBytes": 0,
+              "framesPerSec": 1.5,
+              "egressKBs": 31,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "f72aa4e0646d388a",
+              "msgs": 94,
+              "bytes": 1902117,
+              "keyframes": 92,
+              "deltas": 0,
+              "keyframeBytes": 1883984,
+              "deltaBytes": 0,
+              "framesPerSec": 1.5,
+              "egressKBs": 31,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 188,
+            "bytes": 3804234,
+            "keyframes": 184,
+            "deltas": 0,
+            "roomEgressKBs": 61.9
+          }
+        }
+      ]
+    },
+    {
+      "wave": 3,
+      "rooms": 25,
+      "roomsLive": 25,
+      "roomsFailedSetup": [],
+      "durationS": 60,
+      "aggregate": {
+        "simTicksPerSecP50": 14.7,
+        "simTicksPerSecMin": 2.7,
+        "clients": 50,
+        "msgs": 26135,
+        "bytes": 335689754,
+        "keyframes": 16020,
+        "deltas": 10009,
+        "keyframeShare": 0.615,
+        "avgKeyframeBytes": 20557,
+        "avgDeltaBytes": 544,
+        "framesPerSecP50": 2.5,
+        "framesPerSecMin": 2,
+        "framesPerSecMax": 50,
+        "egressKBsPerClientAvg": 109.3,
+        "egressKBsPerRoomAvg": 218.5,
+        "gaps": 0,
+        "clientObservedEvictions": 47,
+        "decodeErrors": 0,
+        "gamesCompleted": 0,
+        "sampledRooms": 10,
+        "desyncRooms": 0,
+        "desyncCommonTicks": 8653,
+        "desyncMismatches": 0,
+        "byMode": {
+          "cooperative": {
+            "rooms": 20,
+            "keyframes": 15847,
+            "deltas": 0,
+            "avgKeyframeBytes": 20573,
+            "avgDeltaBytes": 0,
+            "egressKBsPerClientAvg": 132.9
+          },
+          "survival": {
+            "rooms": 5,
+            "keyframes": 173,
+            "deltas": 10009,
+            "avgKeyframeBytes": 19092,
+            "avgDeltaBytes": 544,
+            "egressKBsPerClientAvg": 14.6
+          }
+        }
+      },
+      "serverLogDelta": {
+        "counts": {
+          "game_start": 25,
+          "survival_initialized": 5,
+          "sim_initialized": 25,
+          "sim_started": 25,
+          "disconnect_grace_started": 25,
+          "host_migration": 24,
+          "sim_stopped": 25
+        },
+        "tickOverrunsTotal": 0,
+        "maxP95Ms": 0,
+        "evictionsByReason": {}
+      },
+      "roomReports": [
+        {
+          "room": "IMQ226",
+          "mode": "survival",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "c2ddaf34769fc6e7",
+              "msgs": 3003,
+              "bytes": 2594686,
+              "keyframes": 50,
+              "deltas": 2949,
+              "keyframeBytes": 955158,
+              "deltaBytes": 1618967,
+              "framesPerSec": 50,
+              "egressKBs": 42.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 50,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "c612d176d7912579",
+              "msgs": 3003,
+              "bytes": 2594686,
+              "keyframes": 50,
+              "deltas": 2949,
+              "keyframeBytes": 955158,
+              "deltaBytes": 1618967,
+              "framesPerSec": 50,
+              "egressKBs": 42.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 50,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 6006,
+            "bytes": 5189372,
+            "keyframes": 100,
+            "deltas": 5898,
+            "roomEgressKBs": 84.5
+          },
+          "desync": {
+            "commonTicks": 2999,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              2999,
+              2999
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "TJF235",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "cecaee18faca6582",
+              "msgs": 886,
+              "bytes": 18222290,
+              "keyframes": 884,
+              "deltas": 0,
+              "keyframeBytes": 18204142,
+              "deltaBytes": 0,
+              "framesPerSec": 14.7,
+              "egressKBs": 296.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "5e0a08e77e464637",
+              "msgs": 887,
+              "bytes": 18242902,
+              "keyframes": 885,
+              "deltas": 0,
+              "keyframeBytes": 18224754,
+              "deltaBytes": 0,
+              "framesPerSec": 14.7,
+              "egressKBs": 296.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1773,
+            "bytes": 36465192,
+            "keyframes": 1769,
+            "deltas": 0,
+            "roomEgressKBs": 593.5
+          },
+          "desync": {
+            "commonTicks": 884,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              884,
+              885
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "KSJ262",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "323ae8e84450588c",
+              "msgs": 388,
+              "bytes": 7945352,
+              "keyframes": 386,
+              "deltas": 0,
+              "keyframeBytes": 7927197,
+              "deltaBytes": 0,
+              "framesPerSec": 6.4,
+              "egressKBs": 129.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 6.4,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "2b03afda01dc3403",
+              "msgs": 880,
+              "bytes": 18208272,
+              "keyframes": 878,
+              "deltas": 0,
+              "keyframeBytes": 18190117,
+              "deltaBytes": 0,
+              "framesPerSec": 14.6,
+              "egressKBs": 296.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.6,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1268,
+            "bytes": 26153624,
+            "keyframes": 1264,
+            "deltas": 0,
+            "roomEgressKBs": 425.7
+          },
+          "desync": {
+            "commonTicks": 386,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              386,
+              878
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "VCF828",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "e1e0ac803a79b9bd",
+              "msgs": 888,
+              "bytes": 18244789,
+              "keyframes": 886,
+              "deltas": 0,
+              "keyframeBytes": 18226632,
+              "deltaBytes": 0,
+              "framesPerSec": 14.8,
+              "egressKBs": 296.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "7f0589abb9edc295",
+              "msgs": 891,
+              "bytes": 18306399,
+              "keyframes": 889,
+              "deltas": 0,
+              "keyframeBytes": 18288242,
+              "deltaBytes": 0,
+              "framesPerSec": 14.8,
+              "egressKBs": 297.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.8,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1779,
+            "bytes": 36551188,
+            "keyframes": 1775,
+            "deltas": 0,
+            "roomEgressKBs": 594.9
+          },
+          "desync": {
+            "commonTicks": 886,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              886,
+              889
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "SFK443",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "d183d5930ab85c1a",
+              "msgs": 886,
+              "bytes": 18220705,
+              "keyframes": 884,
+              "deltas": 0,
+              "keyframeBytes": 18202566,
+              "deltaBytes": 0,
+              "framesPerSec": 14.7,
+              "egressKBs": 296.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "bdd280b0aea10ca6",
+              "msgs": 886,
+              "bytes": 18220705,
+              "keyframes": 884,
+              "deltas": 0,
+              "keyframeBytes": 18202566,
+              "deltaBytes": 0,
+              "framesPerSec": 14.7,
+              "egressKBs": 296.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1772,
+            "bytes": 36441410,
+            "keyframes": 1768,
+            "deltas": 0,
+            "roomEgressKBs": 593.1
+          },
+          "desync": {
+            "commonTicks": 884,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              884,
+              884
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "MYU068",
+          "mode": "survival",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "0eb18ab51ff42063",
+              "msgs": 2999,
+              "bytes": 2591208,
+              "keyframes": 50,
+              "deltas": 2945,
+              "keyframeBytes": 954264,
+              "deltaBytes": 1616402,
+              "framesPerSec": 49.9,
+              "egressKBs": 42.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 49.9,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "982bce8f507ad394",
+              "msgs": 173,
+              "bytes": 161155,
+              "keyframes": 3,
+              "deltas": 168,
+              "keyframeBytes": 57117,
+              "deltaBytes": 84255,
+              "framesPerSec": 2.8,
+              "egressKBs": 2.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.8,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 3172,
+            "bytes": 2752363,
+            "keyframes": 53,
+            "deltas": 3113,
+            "roomEgressKBs": 44.8
+          },
+          "desync": {
+            "commonTicks": 171,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              2995,
+              171
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "GZG683",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "4ae33cb262028a2f",
+              "msgs": 886,
+              "bytes": 18218617,
+              "keyframes": 884,
+              "deltas": 0,
+              "keyframeBytes": 18200454,
+              "deltaBytes": 0,
+              "framesPerSec": 14.7,
+              "egressKBs": 296.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "da5c83750113e31e",
+              "msgs": 166,
+              "bytes": 3380838,
+              "keyframes": 164,
+              "deltas": 0,
+              "keyframeBytes": 3362675,
+              "deltaBytes": 0,
+              "framesPerSec": 2.7,
+              "egressKBs": 55,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 2.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1052,
+            "bytes": 21599455,
+            "keyframes": 1048,
+            "deltas": 0,
+            "roomEgressKBs": 351.5
+          },
+          "desync": {
+            "commonTicks": 164,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              884,
+              164
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "DWC755",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "9a8eef580ebfebfd",
+              "msgs": 538,
+              "bytes": 11039286,
+              "keyframes": 536,
+              "deltas": 0,
+              "keyframeBytes": 11021130,
+              "deltaBytes": 0,
+              "framesPerSec": 8.9,
+              "egressKBs": 179.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 8.9,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "30ee9ce2c1941eda",
+              "msgs": 877,
+              "bytes": 18026699,
+              "keyframes": 875,
+              "deltas": 0,
+              "keyframeBytes": 18008543,
+              "deltaBytes": 0,
+              "framesPerSec": 14.6,
+              "egressKBs": 293.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.6,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1415,
+            "bytes": 29065985,
+            "keyframes": 1411,
+            "deltas": 0,
+            "roomEgressKBs": 473.1
+          },
+          "desync": {
+            "commonTicks": 536,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              536,
+              875
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "QBZ112",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "59286dda73066dbd",
+              "msgs": 884,
+              "bytes": 18187191,
+              "keyframes": 882,
+              "deltas": 0,
+              "keyframeBytes": 18169044,
+              "deltaBytes": 0,
+              "framesPerSec": 14.7,
+              "egressKBs": 296,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.7,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "993329c2109f84aa",
+              "msgs": 874,
+              "bytes": 17981673,
+              "keyframes": 872,
+              "deltas": 0,
+              "keyframeBytes": 17963526,
+              "deltaBytes": 0,
+              "framesPerSec": 14.5,
+              "egressKBs": 292.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.5,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1758,
+            "bytes": 36168864,
+            "keyframes": 1754,
+            "deltas": 0,
+            "roomEgressKBs": 588.7
+          },
+          "desync": {
+            "commonTicks": 872,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              882,
+              872
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "PEH145",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "e9bff828f9aa045c",
+              "msgs": 878,
+              "bytes": 18032151,
+              "keyframes": 876,
+              "deltas": 0,
+              "keyframeBytes": 18013980,
+              "deltaBytes": 0,
+              "framesPerSec": 14.6,
+              "egressKBs": 293.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.6,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "82decc95a078f69d",
+              "msgs": 873,
+              "bytes": 17929383,
+              "keyframes": 871,
+              "deltas": 0,
+              "keyframeBytes": 17911212,
+              "deltaBytes": 0,
+              "framesPerSec": 14.5,
+              "egressKBs": 291.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.5,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1751,
+            "bytes": 35961534,
+            "keyframes": 1747,
+            "deltas": 0,
+            "roomEgressKBs": 585.3
+          },
+          "desync": {
+            "commonTicks": 871,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              876,
+              871
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "PQF157",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "61f3908356c654e3",
+              "msgs": 290,
+              "bytes": 260065,
+              "keyframes": 5,
+              "deltas": 283,
+              "keyframeBytes": 95265,
+              "deltaBytes": 145013,
+              "framesPerSec": 4.8,
+              "egressKBs": 4.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "8580efbf2b2d799b",
+              "msgs": 164,
+              "bytes": 156644,
+              "keyframes": 3,
+              "deltas": 159,
+              "keyframeBytes": 57129,
+              "deltaBytes": 79728,
+              "framesPerSec": 2.7,
+              "egressKBs": 2.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 454,
+            "bytes": 416709,
+            "keyframes": 8,
+            "deltas": 442,
+            "roomEgressKBs": 6.8
+          }
+        },
+        {
+          "room": "YFX166",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "8f21aabbc7433ab2",
+              "msgs": 162,
+              "bytes": 3305145,
+              "keyframes": 160,
+              "deltas": 0,
+              "keyframeBytes": 3287006,
+              "deltaBytes": 0,
+              "framesPerSec": 2.7,
+              "egressKBs": 53.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "49fe4f268df56d66",
+              "msgs": 155,
+              "bytes": 3160918,
+              "keyframes": 153,
+              "deltas": 0,
+              "keyframeBytes": 3142779,
+              "deltaBytes": 0,
+              "framesPerSec": 2.5,
+              "egressKBs": 51.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 317,
+            "bytes": 6466063,
+            "keyframes": 313,
+            "deltas": 0,
+            "roomEgressKBs": 105.2
+          }
+        },
+        {
+          "room": "RJW188",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "9fc0358e80e76eea",
+              "msgs": 144,
+              "bytes": 2929992,
+              "keyframes": 142,
+              "deltas": 0,
+              "keyframeBytes": 2911849,
+              "deltaBytes": 0,
+              "framesPerSec": 2.4,
+              "egressKBs": 47.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "9803f5c9037c46f7",
+              "msgs": 142,
+              "bytes": 2888968,
+              "keyframes": 140,
+              "deltas": 0,
+              "keyframeBytes": 2870825,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 286,
+            "bytes": 5818960,
+            "keyframes": 282,
+            "deltas": 0,
+            "roomEgressKBs": 94.7
+          }
+        },
+        {
+          "room": "QWP910",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "a42effc7a119ad22",
+              "msgs": 151,
+              "bytes": 3075243,
+              "keyframes": 149,
+              "deltas": 0,
+              "keyframeBytes": 3057092,
+              "deltaBytes": 0,
+              "framesPerSec": 2.5,
+              "egressKBs": 50.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "0c8003ceef0b9c59",
+              "msgs": 148,
+              "bytes": 3013480,
+              "keyframes": 146,
+              "deltas": 0,
+              "keyframeBytes": 2995329,
+              "deltaBytes": 0,
+              "framesPerSec": 2.4,
+              "egressKBs": 49,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 299,
+            "bytes": 6088723,
+            "keyframes": 295,
+            "deltas": 0,
+            "roomEgressKBs": 99.1
+          }
+        },
+        {
+          "room": "VKI839",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "61e916a38c727402",
+              "msgs": 142,
+              "bytes": 2886149,
+              "keyframes": 140,
+              "deltas": 0,
+              "keyframeBytes": 2868045,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "37bd6a7dbc1b8391",
+              "msgs": 140,
+              "bytes": 2845054,
+              "keyframes": 138,
+              "deltas": 0,
+              "keyframeBytes": 2826950,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 282,
+            "bytes": 5731203,
+            "keyframes": 278,
+            "deltas": 0,
+            "roomEgressKBs": 93.3
+          }
+        },
+        {
+          "room": "MJW450",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "865a99aa13d6972f",
+              "msgs": 148,
+              "bytes": 148668,
+              "keyframes": 3,
+              "deltas": 143,
+              "keyframeBytes": 57186,
+              "deltaBytes": 71680,
+              "framesPerSec": 2.4,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "eb15c3f96d30cf4d",
+              "msgs": 148,
+              "bytes": 148668,
+              "keyframes": 3,
+              "deltas": 143,
+              "keyframeBytes": 57186,
+              "deltaBytes": 71680,
+              "framesPerSec": 2.4,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 296,
+            "bytes": 297336,
+            "keyframes": 6,
+            "deltas": 286,
+            "roomEgressKBs": 4.8
+          }
+        },
+        {
+          "room": "VBE432",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "9e41016befa95eed",
+              "msgs": 141,
+              "bytes": 2858305,
+              "keyframes": 139,
+              "deltas": 0,
+              "keyframeBytes": 2840146,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "5a2577f1da4ff370",
+              "msgs": 140,
+              "bytes": 2837804,
+              "keyframes": 138,
+              "deltas": 0,
+              "keyframeBytes": 2819645,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 281,
+            "bytes": 5696109,
+            "keyframes": 277,
+            "deltas": 0,
+            "roomEgressKBs": 92.7
+          }
+        },
+        {
+          "room": "DWG064",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "2361572cd21baf86",
+              "msgs": 149,
+              "bytes": 3033625,
+              "keyframes": 147,
+              "deltas": 0,
+              "keyframeBytes": 3015506,
+              "deltaBytes": 0,
+              "framesPerSec": 2.4,
+              "egressKBs": 49.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "a0c4692437b3b838",
+              "msgs": 143,
+              "bytes": 2910065,
+              "keyframes": 141,
+              "deltas": 0,
+              "keyframeBytes": 2891946,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 292,
+            "bytes": 5943690,
+            "keyframes": 288,
+            "deltas": 0,
+            "roomEgressKBs": 96.7
+          }
+        },
+        {
+          "room": "ANW062",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "5519318c075a1715",
+              "msgs": 135,
+              "bytes": 2749619,
+              "keyframes": 133,
+              "deltas": 0,
+              "keyframeBytes": 2731476,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 44.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "2ba97387f07c0896",
+              "msgs": 141,
+              "bytes": 2872916,
+              "keyframes": 139,
+              "deltas": 0,
+              "keyframeBytes": 2854773,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 276,
+            "bytes": 5622535,
+            "keyframes": 272,
+            "deltas": 0,
+            "roomEgressKBs": 91.5
+          }
+        },
+        {
+          "room": "DDL138",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "33b9bbeac5232781",
+              "msgs": 132,
+              "bytes": 2682249,
+              "keyframes": 130,
+              "deltas": 0,
+              "keyframeBytes": 2664106,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 43.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "001144cbe0ca9ce2",
+              "msgs": 139,
+              "bytes": 2825968,
+              "keyframes": 137,
+              "deltas": 0,
+              "keyframeBytes": 2807825,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 271,
+            "bytes": 5508217,
+            "keyframes": 267,
+            "deltas": 0,
+            "roomEgressKBs": 89.6
+          }
+        },
+        {
+          "room": "UDG882",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "c4da4919263ad0bb",
+              "msgs": 140,
+              "bytes": 144652,
+              "keyframes": 3,
+              "deltas": 135,
+              "keyframeBytes": 57192,
+              "deltaBytes": 67656,
+              "framesPerSec": 2.3,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "164ace12ac302f60",
+              "msgs": 140,
+              "bytes": 144652,
+              "keyframes": 3,
+              "deltas": 135,
+              "keyframeBytes": 57192,
+              "deltaBytes": 67656,
+              "framesPerSec": 2.3,
+              "egressKBs": 2.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 280,
+            "bytes": 289304,
+            "keyframes": 6,
+            "deltas": 270,
+            "roomEgressKBs": 4.7
+          }
+        },
+        {
+          "room": "SLC456",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "3cda58e7595935e4",
+              "msgs": 133,
+              "bytes": 2701585,
+              "keyframes": 131,
+              "deltas": 0,
+              "keyframeBytes": 2683410,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 44,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "81a85d6990fb2ee0",
+              "msgs": 140,
+              "bytes": 2845535,
+              "keyframes": 138,
+              "deltas": 0,
+              "keyframeBytes": 2827360,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 46.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 273,
+            "bytes": 5547120,
+            "keyframes": 269,
+            "deltas": 0,
+            "roomEgressKBs": 90.3
+          }
+        },
+        {
+          "room": "KYW044",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "20080207d1b72f23",
+              "msgs": 130,
+              "bytes": 2643274,
+              "keyframes": 128,
+              "deltas": 0,
+              "keyframeBytes": 2625083,
+              "deltaBytes": 0,
+              "framesPerSec": 2.1,
+              "egressKBs": 43,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "5bb2457201e8de9c",
+              "msgs": 137,
+              "bytes": 2787380,
+              "keyframes": 135,
+              "deltas": 0,
+              "keyframeBytes": 2769189,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 45.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 267,
+            "bytes": 5430654,
+            "keyframes": 263,
+            "deltas": 0,
+            "roomEgressKBs": 88.4
+          }
+        },
+        {
+          "room": "VKY936",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "771063509e34617c",
+              "msgs": 137,
+              "bytes": 2785552,
+              "keyframes": 135,
+              "deltas": 0,
+              "keyframeBytes": 2767393,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 45.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "c62296d42f58047d",
+              "msgs": 136,
+              "bytes": 2764956,
+              "keyframes": 134,
+              "deltas": 0,
+              "keyframeBytes": 2746797,
+              "deltaBytes": 0,
+              "framesPerSec": 2.2,
+              "egressKBs": 45,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 273,
+            "bytes": 5550508,
+            "keyframes": 269,
+            "deltas": 0,
+            "roomEgressKBs": 90.3
+          }
+        },
+        {
+          "room": "IVM642",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "c559413fa0adf9a8",
+              "msgs": 121,
+              "bytes": 2466818,
+              "keyframes": 119,
+              "deltas": 0,
+              "keyframeBytes": 2448698,
+              "deltaBytes": 0,
+              "framesPerSec": 2,
+              "egressKBs": 40.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "3261226dd38e4837",
+              "msgs": 121,
+              "bytes": 2466818,
+              "keyframes": 119,
+              "deltas": 0,
+              "keyframeBytes": 2448698,
+              "deltaBytes": 0,
+              "framesPerSec": 2,
+              "egressKBs": 40.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 242,
+            "bytes": 4933636,
+            "keyframes": 238,
+            "deltas": 0,
+            "roomEgressKBs": 80.3
+          }
+        }
+      ]
+    },
+    {
+      "wave": 4,
+      "rooms": 25,
+      "roomsLive": 25,
+      "roomsFailedSetup": [],
+      "durationS": 60,
+      "aggregate": {
+        "simTicksPerSecP50": 14.9,
+        "simTicksPerSecMin": 3,
+        "clients": 50,
+        "msgs": 20807,
+        "bytes": 277461099,
+        "keyframes": 13233,
+        "deltas": 7470,
+        "keyframeShare": 0.639,
+        "avgKeyframeBytes": 20542,
+        "avgDeltaBytes": 630,
+        "framesPerSecP50": 2.8,
+        "framesPerSecMin": 2.3,
+        "framesPerSecMax": 51.9,
+        "egressKBsPerClientAvg": 90.3,
+        "egressKBsPerRoomAvg": 180.6,
+        "gaps": 0,
+        "clientObservedEvictions": 48,
+        "decodeErrors": 0,
+        "gamesCompleted": 0,
+        "sampledRooms": 10,
+        "desyncRooms": 0,
+        "desyncCommonTicks": 4721,
+        "desyncMismatches": 0,
+        "byMode": {
+          "cooperative": {
+            "rooms": 20,
+            "keyframes": 13103,
+            "deltas": 0,
+            "avgKeyframeBytes": 20556,
+            "avgDeltaBytes": 0,
+            "egressKBsPerClientAvg": 109.9
+          },
+          "survival": {
+            "rooms": 5,
+            "keyframes": 130,
+            "deltas": 7470,
+            "avgKeyframeBytes": 19097,
+            "avgDeltaBytes": 630,
+            "egressKBsPerClientAvg": 12
+          }
+        }
+      },
+      "serverLogDelta": {
+        "counts": {
+          "game_start": 25,
+          "survival_initialized": 5,
+          "sim_initialized": 25,
+          "sim_started": 25,
+          "disconnect_grace_started": 25,
+          "host_migration": 25,
+          "sim_stopped": 25
+        },
+        "tickOverrunsTotal": 0,
+        "maxP95Ms": 0,
+        "evictionsByReason": {}
+      },
+      "roomReports": [
+        {
+          "room": "CRZ512",
+          "mode": "survival",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "5267818a5055c009",
+              "msgs": 3120,
+              "bytes": 2695474,
+              "keyframes": 52,
+              "deltas": 3064,
+              "keyframeBytes": 992628,
+              "deltaBytes": 1682299,
+              "framesPerSec": 51.9,
+              "egressKBs": 43.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 51.9,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "03bd8bd554498f8e",
+              "msgs": 195,
+              "bytes": 190783,
+              "keyframes": 4,
+              "deltas": 189,
+              "keyframeBytes": 76177,
+              "deltaBytes": 94818,
+              "framesPerSec": 3.2,
+              "egressKBs": 3.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3.2,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 3315,
+            "bytes": 2886257,
+            "keyframes": 56,
+            "deltas": 3253,
+            "roomEgressKBs": 47
+          },
+          "desync": {
+            "commonTicks": 193,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              3116,
+              193
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "QZT442",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "d93c45aa1120e10c",
+              "msgs": 904,
+              "bytes": 18595219,
+              "keyframes": 902,
+              "deltas": 0,
+              "keyframeBytes": 18577087,
+              "deltaBytes": 0,
+              "framesPerSec": 15,
+              "egressKBs": 302.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "d5b3ac88e31ff9b0",
+              "msgs": 904,
+              "bytes": 18595219,
+              "keyframes": 902,
+              "deltas": 0,
+              "keyframeBytes": 18577087,
+              "deltaBytes": 0,
+              "framesPerSec": 15,
+              "egressKBs": 302.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1808,
+            "bytes": 37190438,
+            "keyframes": 1804,
+            "deltas": 0,
+            "roomEgressKBs": 605.3
+          },
+          "desync": {
+            "commonTicks": 902,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              902,
+              902
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "GPR358",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "fc8a13001ef55789",
+              "msgs": 190,
+              "bytes": 3877961,
+              "keyframes": 188,
+              "deltas": 0,
+              "keyframeBytes": 3859830,
+              "deltaBytes": 0,
+              "framesPerSec": 3.1,
+              "egressKBs": 63.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3.1,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "a3c1202203b041b8",
+              "msgs": 190,
+              "bytes": 3877961,
+              "keyframes": 188,
+              "deltas": 0,
+              "keyframeBytes": 3859830,
+              "deltaBytes": 0,
+              "framesPerSec": 3.1,
+              "egressKBs": 63.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3.1,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 380,
+            "bytes": 7755922,
+            "keyframes": 376,
+            "deltas": 0,
+            "roomEgressKBs": 126.2
+          },
+          "desync": {
+            "commonTicks": 188,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              188,
+              188
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "GKU733",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "2a1eab9d42a0b1cd",
+              "msgs": 190,
+              "bytes": 3869049,
+              "keyframes": 188,
+              "deltas": 0,
+              "keyframeBytes": 3850870,
+              "deltaBytes": 0,
+              "framesPerSec": 3.1,
+              "egressKBs": 63,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3.1,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "9fd52c8406e6a35a",
+              "msgs": 808,
+              "bytes": 16582749,
+              "keyframes": 806,
+              "deltas": 0,
+              "keyframeBytes": 16564570,
+              "deltaBytes": 0,
+              "framesPerSec": 13.4,
+              "egressKBs": 269.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 13.4,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 998,
+            "bytes": 20451798,
+            "keyframes": 994,
+            "deltas": 0,
+            "roomEgressKBs": 332.9
+          },
+          "desync": {
+            "commonTicks": 188,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              188,
+              806
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "NWE840",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "88a11651b9e0c01f",
+              "msgs": 903,
+              "bytes": 18592553,
+              "keyframes": 901,
+              "deltas": 0,
+              "keyframeBytes": 18574396,
+              "deltaBytes": 0,
+              "framesPerSec": 15,
+              "egressKBs": 302.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "f88cb7a643530c60",
+              "msgs": 904,
+              "bytes": 18613324,
+              "keyframes": 902,
+              "deltas": 0,
+              "keyframeBytes": 18595167,
+              "deltaBytes": 0,
+              "framesPerSec": 15,
+              "egressKBs": 302.9,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1807,
+            "bytes": 37205877,
+            "keyframes": 1803,
+            "deltas": 0,
+            "roomEgressKBs": 605.5
+          },
+          "desync": {
+            "commonTicks": 901,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              901,
+              902
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "EXX492",
+          "mode": "survival",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "7d5ddf21d36499a0",
+              "msgs": 3117,
+              "bytes": 3327961,
+              "keyframes": 52,
+              "deltas": 3061,
+              "keyframeBytes": 994336,
+              "deltaBytes": 2313077,
+              "framesPerSec": 51.9,
+              "egressKBs": 54.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 51.9,
+              "evicted": null,
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "a4b4c5939683af1c",
+              "msgs": 190,
+              "bytes": 223311,
+              "keyframes": 4,
+              "deltas": 184,
+              "keyframeBytes": 76285,
+              "deltaBytes": 127237,
+              "framesPerSec": 3.1,
+              "egressKBs": 3.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3.1,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 3307,
+            "bytes": 3551272,
+            "keyframes": 56,
+            "deltas": 3245,
+            "roomEgressKBs": 57.8
+          },
+          "desync": {
+            "commonTicks": 188,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              3113,
+              188
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "ENE077",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "a888bff7f4276428",
+              "msgs": 900,
+              "bytes": 18505618,
+              "keyframes": 898,
+              "deltas": 0,
+              "keyframeBytes": 18487447,
+              "deltaBytes": 0,
+              "framesPerSec": 15,
+              "egressKBs": 301.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 14.9,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "57264794c807f95b",
+              "msgs": 901,
+              "bytes": 18526111,
+              "keyframes": 899,
+              "deltas": 0,
+              "keyframeBytes": 18507940,
+              "deltaBytes": 0,
+              "framesPerSec": 15,
+              "egressKBs": 301.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1801,
+            "bytes": 37031729,
+            "keyframes": 1797,
+            "deltas": 0,
+            "roomEgressKBs": 602.7
+          },
+          "desync": {
+            "commonTicks": 898,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              898,
+              899
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "GBT443",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "31136b44b5395377",
+              "msgs": 186,
+              "bytes": 3793353,
+              "keyframes": 184,
+              "deltas": 0,
+              "keyframeBytes": 3775182,
+              "deltaBytes": 0,
+              "framesPerSec": 3.1,
+              "egressKBs": 61.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "89f95c74e1fa27e0",
+              "msgs": 185,
+              "bytes": 3772743,
+              "keyframes": 183,
+              "deltas": 0,
+              "keyframeBytes": 3754572,
+              "deltaBytes": 0,
+              "framesPerSec": 3,
+              "egressKBs": 61.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 371,
+            "bytes": 7566096,
+            "keyframes": 367,
+            "deltas": 0,
+            "roomEgressKBs": 123.1
+          },
+          "desync": {
+            "commonTicks": 183,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              184,
+              183
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "WQU776",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "884b158c31b8d1d3",
+              "msgs": 183,
+              "bytes": 3734533,
+              "keyframes": 181,
+              "deltas": 0,
+              "keyframeBytes": 3716418,
+              "deltaBytes": 0,
+              "framesPerSec": 3,
+              "egressKBs": 60.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "a9440484ec55b92b",
+              "msgs": 183,
+              "bytes": 3734533,
+              "keyframes": 181,
+              "deltas": 0,
+              "keyframeBytes": 3716418,
+              "deltaBytes": 0,
+              "framesPerSec": 3,
+              "egressKBs": 60.8,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 3,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 366,
+            "bytes": 7469066,
+            "keyframes": 362,
+            "deltas": 0,
+            "roomEgressKBs": 121.6
+          },
+          "desync": {
+            "commonTicks": 181,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              181,
+              181
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "WSZ439",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": true,
+          "clients": [
+            {
+              "playerId": "d89183c31606a6d3",
+              "msgs": 901,
+              "bytes": 18507306,
+              "keyframes": 899,
+              "deltas": 0,
+              "keyframeBytes": 18489151,
+              "deltaBytes": 0,
+              "framesPerSec": 15,
+              "egressKBs": 301.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "1f45505400501906",
+              "msgs": 901,
+              "bytes": 18507306,
+              "keyframes": 899,
+              "deltas": 0,
+              "keyframeBytes": 18489151,
+              "deltaBytes": 0,
+              "framesPerSec": 15,
+              "egressKBs": 301.2,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": 15,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 1802,
+            "bytes": 37014612,
+            "keyframes": 1798,
+            "deltas": 0,
+            "roomEgressKBs": 602.4
+          },
+          "desync": {
+            "commonTicks": 899,
+            "mismatches": 0,
+            "firstMismatchTick": null,
+            "ticksReconstructedPerClient": [
+              899,
+              899
+            ],
+            "desynced": false
+          }
+        },
+        {
+          "room": "NUZ157",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "bf14de349f9633c7",
+              "msgs": 181,
+              "bytes": 165251,
+              "keyframes": 3,
+              "deltas": 176,
+              "keyframeBytes": 57171,
+              "deltaBytes": 88279,
+              "framesPerSec": 3,
+              "egressKBs": 2.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "79c832e8b6e0f6f1",
+              "msgs": 181,
+              "bytes": 165251,
+              "keyframes": 3,
+              "deltas": 176,
+              "keyframeBytes": 57171,
+              "deltaBytes": 88279,
+              "framesPerSec": 3,
+              "egressKBs": 2.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 362,
+            "bytes": 330502,
+            "keyframes": 6,
+            "deltas": 352,
+            "roomEgressKBs": 5.4
+          }
+        },
+        {
+          "room": "XUC281",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "b17b8ee4fec3c46c",
+              "msgs": 178,
+              "bytes": 3623603,
+              "keyframes": 176,
+              "deltas": 0,
+              "keyframeBytes": 3605440,
+              "deltaBytes": 0,
+              "framesPerSec": 2.9,
+              "egressKBs": 59,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "b00a0121787e9098",
+              "msgs": 178,
+              "bytes": 3623603,
+              "keyframes": 176,
+              "deltas": 0,
+              "keyframeBytes": 3605440,
+              "deltaBytes": 0,
+              "framesPerSec": 2.9,
+              "egressKBs": 59,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 356,
+            "bytes": 7247206,
+            "keyframes": 352,
+            "deltas": 0,
+            "roomEgressKBs": 117.9
+          }
+        },
+        {
+          "room": "BTL315",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "9c6676831357ee52",
+              "msgs": 168,
+              "bytes": 3421048,
+              "keyframes": 166,
+              "deltas": 0,
+              "keyframeBytes": 3402876,
+              "deltaBytes": 0,
+              "framesPerSec": 2.8,
+              "egressKBs": 55.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "60d64dfca92c653a",
+              "msgs": 164,
+              "bytes": 3338841,
+              "keyframes": 162,
+              "deltas": 0,
+              "keyframeBytes": 3320669,
+              "deltaBytes": 0,
+              "framesPerSec": 2.7,
+              "egressKBs": 54.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 332,
+            "bytes": 6759889,
+            "keyframes": 328,
+            "deltas": 0,
+            "roomEgressKBs": 110
+          }
+        },
+        {
+          "room": "SKQ639",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "a958b1b52fc8bbdd",
+              "msgs": 169,
+              "bytes": 3438228,
+              "keyframes": 167,
+              "deltas": 0,
+              "keyframeBytes": 3420112,
+              "deltaBytes": 0,
+              "framesPerSec": 2.8,
+              "egressKBs": 56,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "df0588bc35827dfe",
+              "msgs": 167,
+              "bytes": 3397288,
+              "keyframes": 165,
+              "deltas": 0,
+              "keyframeBytes": 3379172,
+              "deltaBytes": 0,
+              "framesPerSec": 2.7,
+              "egressKBs": 55.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 336,
+            "bytes": 6835516,
+            "keyframes": 332,
+            "deltas": 0,
+            "roomEgressKBs": 111.2
+          }
+        },
+        {
+          "room": "LYP247",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "1a50648d04df21fa",
+              "msgs": 168,
+              "bytes": 3423463,
+              "keyframes": 166,
+              "deltas": 0,
+              "keyframeBytes": 3405340,
+              "deltaBytes": 0,
+              "framesPerSec": 2.8,
+              "egressKBs": 55.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "bc4f6456c5ea4f03",
+              "msgs": 171,
+              "bytes": 3484832,
+              "keyframes": 169,
+              "deltas": 0,
+              "keyframeBytes": 3466709,
+              "deltaBytes": 0,
+              "framesPerSec": 2.8,
+              "egressKBs": 56.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 339,
+            "bytes": 6908295,
+            "keyframes": 335,
+            "deltas": 0,
+            "roomEgressKBs": 112.4
+          }
+        },
+        {
+          "room": "ZNV232",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "95ff2a2b86ec8a8a",
+              "msgs": 162,
+              "bytes": 155770,
+              "keyframes": 3,
+              "deltas": 157,
+              "keyframeBytes": 57228,
+              "deltaBytes": 78722,
+              "framesPerSec": 2.7,
+              "egressKBs": 2.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "4ab2ac4fb3be991a",
+              "msgs": 161,
+              "bytes": 155267,
+              "keyframes": 3,
+              "deltas": 156,
+              "keyframeBytes": 57228,
+              "deltaBytes": 78219,
+              "framesPerSec": 2.6,
+              "egressKBs": 2.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 323,
+            "bytes": 311037,
+            "keyframes": 6,
+            "deltas": 313,
+            "roomEgressKBs": 5.1
+          }
+        },
+        {
+          "room": "LCY188",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "8e94f67cff3e88b7",
+              "msgs": 161,
+              "bytes": 3279785,
+              "keyframes": 159,
+              "deltas": 0,
+              "keyframeBytes": 3261622,
+              "deltaBytes": 0,
+              "framesPerSec": 2.6,
+              "egressKBs": 53.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "4640f848a9f1f8a9",
+              "msgs": 162,
+              "bytes": 3300364,
+              "keyframes": 160,
+              "deltas": 0,
+              "keyframeBytes": 3282201,
+              "deltaBytes": 0,
+              "framesPerSec": 2.7,
+              "egressKBs": 53.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 323,
+            "bytes": 6580149,
+            "keyframes": 319,
+            "deltas": 0,
+            "roomEgressKBs": 107.1
+          }
+        },
+        {
+          "room": "QPU743",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "ecda0f70866caf81",
+              "msgs": 163,
+              "bytes": 3319517,
+              "keyframes": 161,
+              "deltas": 0,
+              "keyframeBytes": 3301361,
+              "deltaBytes": 0,
+              "framesPerSec": 2.7,
+              "egressKBs": 54,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "54d5a3775a2bbba2",
+              "msgs": 162,
+              "bytes": 3299081,
+              "keyframes": 160,
+              "deltas": 0,
+              "keyframeBytes": 3280925,
+              "deltaBytes": 0,
+              "framesPerSec": 2.7,
+              "egressKBs": 53.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 325,
+            "bytes": 6618598,
+            "keyframes": 321,
+            "deltas": 0,
+            "roomEgressKBs": 107.7
+          }
+        },
+        {
+          "room": "LSP793",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "5b8c884a015020b2",
+              "msgs": 157,
+              "bytes": 3194045,
+              "keyframes": 155,
+              "deltas": 0,
+              "keyframeBytes": 3175880,
+              "deltaBytes": 0,
+              "framesPerSec": 2.6,
+              "egressKBs": 52,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "2ac7d007e13b17ae",
+              "msgs": 157,
+              "bytes": 3194045,
+              "keyframes": 155,
+              "deltas": 0,
+              "keyframeBytes": 3175880,
+              "deltaBytes": 0,
+              "framesPerSec": 2.6,
+              "egressKBs": 52,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 314,
+            "bytes": 6388090,
+            "keyframes": 310,
+            "deltas": 0,
+            "roomEgressKBs": 104
+          }
+        },
+        {
+          "room": "ALF939",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "089b8771dbf63cb9",
+              "msgs": 156,
+              "bytes": 3177477,
+              "keyframes": 154,
+              "deltas": 0,
+              "keyframeBytes": 3159386,
+              "deltaBytes": 0,
+              "framesPerSec": 2.6,
+              "egressKBs": 51.7,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "2f77f8c1bdc6b7a4",
+              "msgs": 155,
+              "bytes": 3156883,
+              "keyframes": 153,
+              "deltas": 0,
+              "keyframeBytes": 3138792,
+              "deltaBytes": 0,
+              "framesPerSec": 2.5,
+              "egressKBs": 51.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 311,
+            "bytes": 6334360,
+            "keyframes": 307,
+            "deltas": 0,
+            "roomEgressKBs": 103.1
+          }
+        },
+        {
+          "room": "VEH323",
+          "mode": "survival",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "70d328fecb315ca8",
+              "msgs": 159,
+              "bytes": 154213,
+              "keyframes": 3,
+              "deltas": 154,
+              "keyframeBytes": 57192,
+              "deltaBytes": 77213,
+              "framesPerSec": 2.6,
+              "egressKBs": 2.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "f78d135f333ce903",
+              "msgs": 158,
+              "bytes": 153710,
+              "keyframes": 3,
+              "deltas": 153,
+              "keyframeBytes": 57192,
+              "deltaBytes": 76710,
+              "framesPerSec": 2.6,
+              "egressKBs": 2.5,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 317,
+            "bytes": 307923,
+            "keyframes": 6,
+            "deltas": 307,
+            "roomEgressKBs": 5
+          }
+        },
+        {
+          "room": "KQT435",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "0fd0816854592450",
+              "msgs": 158,
+              "bytes": 3215980,
+              "keyframes": 156,
+              "deltas": 0,
+              "keyframeBytes": 3197864,
+              "deltaBytes": 0,
+              "framesPerSec": 2.6,
+              "egressKBs": 52.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "6837634f38724103",
+              "msgs": 158,
+              "bytes": 3215980,
+              "keyframes": 156,
+              "deltas": 0,
+              "keyframeBytes": 3197864,
+              "deltaBytes": 0,
+              "framesPerSec": 2.6,
+              "egressKBs": 52.3,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 316,
+            "bytes": 6431960,
+            "keyframes": 312,
+            "deltas": 0,
+            "roomEgressKBs": 104.7
+          }
+        },
+        {
+          "room": "TLB225",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "212b2884750620e5",
+              "msgs": 151,
+              "bytes": 3069360,
+              "keyframes": 149,
+              "deltas": 0,
+              "keyframeBytes": 3051211,
+              "deltaBytes": 0,
+              "framesPerSec": 2.5,
+              "egressKBs": 50,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "80772b94bb7dcf5c",
+              "msgs": 153,
+              "bytes": 3110613,
+              "keyframes": 151,
+              "deltas": 0,
+              "keyframeBytes": 3092464,
+              "deltaBytes": 0,
+              "framesPerSec": 2.5,
+              "egressKBs": 50.6,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 304,
+            "bytes": 6179973,
+            "keyframes": 300,
+            "deltas": 0,
+            "roomEgressKBs": 100.6
+          }
+        },
+        {
+          "room": "NPB641",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "f10ac982805e0e2c",
+              "msgs": 154,
+              "bytes": 3136795,
+              "keyframes": 152,
+              "deltas": 0,
+              "keyframeBytes": 3118639,
+              "deltaBytes": 0,
+              "framesPerSec": 2.5,
+              "egressKBs": 51.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "5f59c9dfb879ba7c",
+              "msgs": 154,
+              "bytes": 3136795,
+              "keyframes": 152,
+              "deltas": 0,
+              "keyframeBytes": 3118639,
+              "deltaBytes": 0,
+              "framesPerSec": 2.5,
+              "egressKBs": 51.1,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 308,
+            "bytes": 6273590,
+            "keyframes": 304,
+            "deltas": 0,
+            "roomEgressKBs": 102.1
+          }
+        },
+        {
+          "room": "PDL753",
+          "mode": "cooperative",
+          "error": null,
+          "sampled": false,
+          "clients": [
+            {
+              "playerId": "314c41bd3fa0103e",
+              "msgs": 143,
+              "bytes": 2915472,
+              "keyframes": 141,
+              "deltas": 0,
+              "keyframeBytes": 2897340,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            },
+            {
+              "playerId": "a9a40533a8fda795",
+              "msgs": 143,
+              "bytes": 2915472,
+              "keyframes": 141,
+              "deltas": 0,
+              "keyframeBytes": 2897340,
+              "deltaBytes": 0,
+              "framesPerSec": 2.3,
+              "egressKBs": 47.4,
+              "gaps": 0,
+              "deltasIgnoredAwaiting": 0,
+              "simTicksPerSec": null,
+              "evicted": {
+                "code": 1006,
+                "reason": ""
+              },
+              "decodeErrors": 0,
+              "gameCompleted": false
+            }
+          ],
+          "totals": {
+            "msgs": 286,
+            "bytes": 5830944,
+            "keyframes": 282,
+            "deltas": 0,
+            "roomEgressKBs": 94.9
+          }
+        }
+      ]
+    }
+  ],
+  "serverLogTotals": {
+    "counts": {
+      "game_start": 100,
+      "survival_initialized": 20,
+      "sim_initialized": 100,
+      "sim_started": 100,
+      "disconnect_grace_started": 100,
+      "host_migration": 98,
+      "sim_stopped": 100
+    },
+    "tickOverrunsTotal": 0,
+    "maxP95Ms": 0,
+    "evictionsByReason": {}
+  },
+  "serverLogSamples": {
+    "game_start": [
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043320622,
+        "roomCode": "PUY474",
+        "players": 2,
+        "gameMode": "survival"
+      },
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043320635,
+        "roomCode": "SSO133",
+        "players": 2,
+        "gameMode": "cooperative"
+      },
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043320701,
+        "roomCode": "XVJ571",
+        "players": 2,
+        "gameMode": "cooperative"
+      },
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043320703,
+        "roomCode": "UTP388",
+        "players": 2,
+        "gameMode": "cooperative"
+      },
+      {
+        "level": "info",
+        "event": "game_start",
+        "ts": 1781043320733,
+        "roomCode": "QTO889",
+        "players": 2,
+        "gameMode": "cooperative"
+      }
+    ],
+    "survival_initialized": [
+      {
+        "level": "info",
+        "event": "survival_initialized",
+        "ts": 1781043320625,
+        "roomCode": "PUY474",
+        "startFlock": 10,
+        "pool": 200,
+        "resumed": false,
+        "day": 1,
+        "flock": 10
+      },
+      {
+        "level": "info",
+        "event": "survival_initialized",
+        "ts": 1781043320736,
+        "roomCode": "SHH521",
+        "startFlock": 10,
+        "pool": 200,
+        "resumed": false,
+        "day": 1,
+        "flock": 10
+      },
+      {
+        "level": "info",
+        "event": "survival_initialized",
+        "ts": 1781043320919,
+        "roomCode": "ZIZ761",
+        "startFlock": 10,
+        "pool": 200,
+        "resumed": false,
+        "day": 1,
+        "flock": 10
+      },
+      {
+        "level": "info",
+        "event": "survival_initialized",
+        "ts": 1781043321481,
+        "roomCode": "PUA486",
+        "startFlock": 10,
+        "pool": 200,
+        "resumed": false,
+        "day": 1,
+        "flock": 10
+      },
+      {
+        "level": "info",
+        "event": "survival_initialized",
+        "ts": 1781043321957,
+        "roomCode": "VZP899",
+        "startFlock": 10,
+        "pool": 200,
+        "resumed": false,
+        "day": 1,
+        "flock": 10
+      }
+    ],
+    "sim_initialized": [
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043320625,
+        "roomCode": "PUY474",
+        "mode": "survival",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "newsheepdogland"
+      },
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043320636,
+        "roomCode": "SSO133",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      },
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043320702,
+        "roomCode": "XVJ571",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      },
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043320704,
+        "roomCode": "UTP388",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      },
+      {
+        "level": "info",
+        "event": "sim_initialized",
+        "ts": 1781043320733,
+        "roomCode": "QTO889",
+        "mode": "cooperative",
+        "players": 2,
+        "sheep": 200,
+        "sceneId": "field"
+      }
+    ],
+    "sim_started": [
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043320625,
+        "roomCode": "PUY474",
+        "tickRate": 60
+      },
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043320636,
+        "roomCode": "SSO133",
+        "tickRate": 60
+      },
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043320702,
+        "roomCode": "XVJ571",
+        "tickRate": 60
+      },
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043320704,
+        "roomCode": "UTP388",
+        "tickRate": 60
+      },
+      {
+        "level": "info",
+        "event": "sim_started",
+        "ts": 1781043320733,
+        "roomCode": "QTO889",
+        "tickRate": 60
+      }
+    ],
+    "disconnect_grace_started": [
+      {
+        "level": "info",
+        "event": "disconnect_grace_started",
+        "ts": 1781043386143,
+        "roomCode": "AVA118",
+        "playerId": "5ec05c0e49a85c6b",
+        "graceMs": 15000
+      },
+      {
+        "level": "info",
+        "event": "disconnect_grace_started",
+        "ts": 1781043386157,
+        "roomCode": "SAQ902",
+        "playerId": "cd043a25d056fa65",
+        "graceMs": 15000
+      },
+      {
+        "level": "info",
+        "event": "disconnect_grace_started",
+        "ts": 1781043386189,
+        "roomCode": "VZP899",
+        "playerId": "60104c950baafc43",
+        "graceMs": 15000
+      },
+      {
+        "level": "info",
+        "event": "disconnect_grace_started",
+        "ts": 1781043386213,
+        "roomCode": "YMC369",
+        "playerId": "d2859258a682a26b",
+        "graceMs": 15000
+      },
+      {
+        "level": "info",
+        "event": "disconnect_grace_started",
+        "ts": 1781043386234,
+        "roomCode": "VFQ470",
+        "playerId": "fce4ffe8e198f4d1",
+        "graceMs": 15000
+      }
+    ],
+    "host_migration": [
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043386156,
+        "roomCode": "SAQ902",
+        "oldHostId": "cd043a25d056fa65",
+        "newHostId": "4b9c5328f71946c7",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      },
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043386188,
+        "roomCode": "VZP899",
+        "oldHostId": "60104c950baafc43",
+        "newHostId": "0d91dc97a0965d1c",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      },
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043386212,
+        "roomCode": "YMC369",
+        "oldHostId": "d2859258a682a26b",
+        "newHostId": "7b9485611f07110f",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      },
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043386233,
+        "roomCode": "VFQ470",
+        "oldHostId": "fce4ffe8e198f4d1",
+        "newHostId": "218ecac3ba116b97",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      },
+      {
+        "level": "info",
+        "event": "host_migration",
+        "ts": 1781043386251,
+        "roomCode": "XWQ065",
+        "oldHostId": "7d079f53529f9783",
+        "newHostId": "563a22cd20b3a8eb",
+        "reclaimedByOriginal": true,
+        "remainingPlayers": 1
+      }
+    ],
+    "sim_stopped": [
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043386169,
+        "roomCode": "SAQ902"
+      },
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043386201,
+        "roomCode": "VZP899"
+      },
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043386222,
+        "roomCode": "YMC369"
+      },
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043386242,
+        "roomCode": "VFQ470"
+      },
+      {
+        "level": "info",
+        "event": "sim_stopped",
+        "ts": 1781043386258,
+        "roomCode": "XWQ065"
+      }
+    ]
+  }
+}
