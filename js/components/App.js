@@ -41,6 +41,8 @@ import { COUNTING_GAME_MODE } from '../../shared/countingModes.js';
 // title greens, the subtitle ambers) to the shared design-token palette. App.js
 // stays an element-factory .js; only the raw color literals move to tokens.
 import { color } from './ui/tokens';
+// P0-CRASH: crash beacon for the ErrorBoundary (fire-and-forget, never throws).
+import { reportCrash } from '../telemetry.js';
 
 // Initialize React UI with dynamic imports
 export async function initReactUI() {
@@ -146,6 +148,11 @@ export async function initReactUI() {
             componentDidCatch(error, errorInfo) {
                 console.error('[UI] React error boundary caught error:', error);
                 console.error('[UI] Error info:', errorInfo);
+                // P0-CRASH: beacon { message, stack, build, ua } to /api/event
+                // before the reload UI renders. reportCrash is defensive and
+                // fire-and-forget, but belt-and-suspenders here: the boundary
+                // must never throw while handling an error.
+                try { reportCrash(error, errorInfo); } catch { /* never block the reload UI */ }
             }
 
             render() {

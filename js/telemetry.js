@@ -58,3 +58,39 @@ export function emitEvent(name, props = {}) {
 
 /** Disable all subsequent emits (e.g. for tests, or after persistent failure). */
 export function disableTelemetry() { _disabled = true; }
+
+// P0-CRASH: cap the stack we ship; the worker stores at most 256 chars per
+// string prop today, but the client contract is ~4KB so a worker-side bump
+// needs no client change.
+const MAX_STACK_CHARS = 4096;
+
+/**
+ * P0-CRASH: crash beacon for the React ErrorBoundary. Sends a
+ * `client_error` event with { message, stack, build, ua } through the same
+ * fire-and-forget /api/event path as every other telemetry event (so it
+ * inherits the in-flight cap, the isTelemetryEnabled() gate, and silent
+ * failure). Must never throw — it runs inside componentDidCatch while the
+ * UI is already broken.
+ *
+ * @param {unknown} error - the error the boundary caught
+ * @param {{ componentStack?: string }} [info] - React errorInfo
+ * @returns {Promise<unknown|null>}
+ */
+export function reportCrash(error, info) {
+    try {
+        const message = String(
+            (error && typeof error === 'object' && 'message' in error && error.message) || error || 'unknown error'
+        ).slice(0, 256);
+        const rawStack = (error && typeof error === 'object' && 'stack' in error && error.stack) || '';
+        const componentStack = info?.componentStack || '';
+        const stack = `${rawStack}${rawStack && componentStack ? '\n' : ''}${componentStack}`
+            .slice(0, MAX_STACK_CHARS);
+        const build = (typeof __BUILD_ID__ !== 'undefined') ? String(__BUILD_ID__) : 'dev';
+        const ua = (typeof navigator !== 'undefined' && navigator.userAgent)
+            ? String(navigator.userAgent).slice(0, 256)
+            : '';
+        return emitEvent('client_error', { message, stack, build, ua });
+    } catch {
+        return Promise.resolve(null);
+    }
+}
