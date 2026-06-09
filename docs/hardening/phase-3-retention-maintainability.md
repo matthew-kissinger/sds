@@ -174,13 +174,21 @@ Evidence (2026-06-09):
 ## [P3-SOAK] Room-hop memory soak test
 
 - **Owner hint:** infra/qa agent
-- **Status:** pending
+- **Status:** done (2026-06-09)
 - **Deps:** P3-LISTENER-AUDIT
 - **Files:** new e2e under `tests/e2e/mp/`
 
 Acceptance:
 
-- [ ] When 50 scene/room swaps run in sequence, then JS heap shall not grow monotonically beyond a bound.
+- [x] When 50 scene/room swaps run in sequence, then JS heap shall not grow monotonically beyond a bound.
+
+Evidence (2026-06-09):
+
+- **Spec:** `tests/e2e/mp/room-hop-soak.spec.ts`, tagged `@local-only` (the deploy lane runs `--project=chromium --grep-invert='@local-only'`, and the chromium project additionally testIgnores `mp/`, so this never gates CI). Boots Solo Classic on field via the world-first entrance (the scene-swap-stability boot pattern), then alternates field <-> rolling-hills through `window.__sdsSwapTo` (the in-page swap API from `js/boot/debugProbes.js`, `?perfMode=1`), asserting `__sdsSwapProbe().scene` landed each hop. Every cycle: two `page.requestGC()` passes (CDP `HeapProfiler.collectGarbage`), 250ms settle, then `JSHeapUsedSize` via CDP `Performance.getMetrics`. Chromium-only (`test.skip` otherwise). Iterations env-tunable via `SOAK_CYCLES`, default 50.
+- **Bound:** late-window average (last 20% of cycles, 41-50) vs early-window average (10-30% band, cycles 6-15, post-warmup); fail when growth exceeds +25% of the early average AND a 6 MB absolute noise floor. Chosen from measured reality (below): 25% is ~6x the measured drift, the 6 MB floor is 5x; a real per-hop retained scene graph (the P3-LISTENER-AUDIT leak class) accumulates tens of MB over 35 cycles and clears both.
+- **Measured (2026-06-09, RTX 3070, dev server, post-1859530, two full 50-cycle runs):** post-boot heap 22.4 MB; run 1: early avg 29.6 MB, late avg 30.8 MB, growth +1.2 MB (+4.2%), 50 swaps in 33s (52.6s test total); run 2: early avg 29.7 MB, late avg 31.0 MB, growth +1.3 MB (+4.4%), 43.3s total. Per-scene heap oscillates ~3.5 MB (field ~31-32, rolling-hills ~27-29); each window averages an equal mix of both scenes. No monotonic growth: PASS with ~6x headroom to the bound.
+- **MP room-hop scoping note:** a literal multiplayer room create/leave loop runs the existing `tests/e2e/mp/` specs' `?testNoCanvas=1` path, which skips 3D world construction entirely, so it would not exercise the scene-teardown leak class this task guards (listeners, InstancedMesh GPU buffers, grass chunks). The scene-swap soak drives the exact disposeScene/rebuild path the listener audit fixed; recorded as satisfying the acceptance's intent.
+- **Validation:** `npm run lint` clean, `npm run typecheck` clean (tests/ is excluded from the CI typecheck scope; the spec additionally typechecks standalone via `npx tsc --noEmit --strict --skipLibCheck --module esnext --moduleResolution bundler --target es2022 tests/e2e/mp/room-hop-soak.spec.ts`), `npm test` 1,370 passed / 8 skipped, 0 failures. Browser, dev server (vite + wrangler), and CDP session all closed after each run; ports 3000/8787 verified clear.
 
 ---
 
@@ -249,10 +257,21 @@ Evidence (2026-06-09):
 
 ## Gate
 
-- [ ] `npm test` green
-- [ ] `npm run build` green
-- [ ] Players have a reason to return (achievements live)
-- [ ] main.js and the render layer are meaningfully lighter
-- [ ] No scene-swap leaks (soak test green)
+- [x] `npm test` green
+- [x] `npm run build` green
+- [x] Players have a reason to return (achievements live)
+- [x] main.js and the render layer are meaningfully lighter
+- [x] No scene-swap leaks (soak test green)
 
-Gate result: (record date, commit, and evidence here)
+Gate result: PASSED 2026-06-09. npm test 1370 passed / 8 skipped, lint and
+typecheck clean, build green. Achievements: 9 definitions, versioned
+persistence, toasts, panel, dog badges, 5 locales. main.js 3,525 to 3,362
+lines; konveyor adapters 594 to 357 lines with degradation telemetry;
+GameStateValidation split into 5 modules and BoundaryCollision rect force
+deduped, all sim-baselines byte-identical with a 600k-pair bit-exact fuzz
+on the boundary refactor. Listener audit fixed the LocalInputHandler leak
+and local-2P teardown; 50-cycle scene-swap soak measured +4.4% heap growth
+(bound 25%), two full runs green. FENCE items (GSV split, BoundaryCollision
+DRY) executed under the autonomous directive, flagged for Matt's post-hoc
+review. Commits: 2d34a2b, 1900338, 8f13d65, e607a93, 1859530, 7c7f958,
+plus the soak commit.
