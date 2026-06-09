@@ -81,48 +81,18 @@ async function waitForEntrance(page: Page) {
   });
 }
 
+function buttonSelector(query: ButtonQuery) {
+  if (query.aria) return `xpath=//button[@aria-label="${query.aria}"]`;
+  if (query.text) return `xpath=//button[normalize-space(.)="${query.text}"]`;
+  throw new Error('button query requires text or aria');
+}
+
 async function waitForVisibleButton(page: Page, query: ButtonQuery, timeout = 45_000) {
-  await page.waitForFunction(
-    ({ text, aria }) => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      return buttons.some((button) => {
-        const style = getComputedStyle(button);
-        const rect = button.getBoundingClientRect();
-        const visible = style.display !== 'none'
-          && style.visibility !== 'hidden'
-          && rect.width > 0
-          && rect.height > 0;
-        if (!visible) return false;
-        if (aria && button.getAttribute('aria-label') !== aria) return false;
-        if (text && button.textContent?.replace(/\s+/g, ' ').trim() !== text) return false;
-        return true;
-      });
-    },
-    query,
-    { timeout },
-  );
+  await page.locator(buttonSelector(query)).first().waitFor({ state: 'visible', timeout });
 }
 
 async function clickVisibleButton(page: Page, query: ButtonQuery, timeout = 45_000) {
-  await waitForVisibleButton(page, query, timeout);
-  const clicked = await page.evaluate(({ text, aria }) => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    for (const button of buttons) {
-      const style = getComputedStyle(button);
-      const bounds = button.getBoundingClientRect();
-      const visible = style.display !== 'none'
-        && style.visibility !== 'hidden'
-        && bounds.width > 0
-        && bounds.height > 0;
-      if (!visible) continue;
-      if (aria && button.getAttribute('aria-label') !== aria) continue;
-      if (text && button.textContent?.replace(/\s+/g, ' ').trim() !== text) continue;
-      button.click();
-      return true;
-    }
-    return false;
-  }, query);
-  if (!clicked) throw new Error(`button not found: ${JSON.stringify(query)}`);
+  await page.locator(buttonSelector(query)).first().click({ timeout });
 }
 
 async function ensureServiceWorkerController(page: Page) {
