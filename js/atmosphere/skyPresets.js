@@ -5,8 +5,8 @@ import * as THREE from 'three';
 /**
  * Atmosphere presets. Ported from Terror in the Jungle's
  * `ScenarioAtmospherePresets.ts`, but renamed to match the SkyDef enum
- * declared by the SDS scene schema (`shared/scenes/types.js`):
- *   'pastoral-noon' | 'dusk' | 'overcast' | 'dawn' | 'golden-hour'.
+ * declared by the SDS scene schema (`shared/scenes/types.js`), plus internal
+ * runtime-only presets used by the day/night controller.
  *
  * Each preset chooses sun angles + Hosek-Wilkie analytic-sky tunables
  * (turbidity, rayleigh, exposure, ground albedo), a fog density (linear
@@ -59,7 +59,7 @@ import * as THREE from 'three';
  */
 
 /** Preset key used by the SkyDef enum + runtime lookups. */
-/** @typedef {'pastoral-noon'|'dusk'|'overcast'|'dawn'|'golden-hour'} SkyPresetName */
+/** @typedef {'pastoral-noon'|'dusk'|'overcast'|'dawn'|'golden-hour'|'night'} SkyPresetName */
 
 const DEG = Math.PI / 180;
 
@@ -101,6 +101,21 @@ export const SKY_PRESETS = {
     ambientIntensity: 0.42,
     cloudCoverageDefault: 0.50,
     cloudScaleMetersPerFeature: 1200,
+  },
+  night: {
+    label: 'Night',
+    sunAzimuthRad: Math.PI * 1.05,
+    sunElevationRad: -18 * DEG,
+    turbidity: 2.0,
+    rayleigh: 0.85,
+    groundAlbedo: new THREE.Color(0x05080b),
+    exposure: 0.014,
+    fogDensity: 0.0022,
+    fogColor: new THREE.Color(0x060a12),
+    ambientColor: new THREE.Color(0x101728),
+    ambientIntensity: 0.14,
+    cloudCoverageDefault: 0.62,
+    cloudScaleMetersPerFeature: 1500,
   },
   // Diffuse grey overcast. Sun is up but heavily obscured.
   overcast: {

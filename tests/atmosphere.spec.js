@@ -28,6 +28,7 @@ import {
   getRequiredPresetNames,
   isKnownPreset,
 } from '../js/atmosphere/index.js';
+import { NIGHT_T } from '../shared/survival/dayClock.js';
 
 const REQUIRED = ['pastoral-noon', 'dusk', 'overcast', 'dawn', 'golden-hour'];
 
@@ -38,6 +39,14 @@ describe('skyPresets', () => {
       expect(isKnownPreset(name)).toBe(true);
     }
     expect(getRequiredPresetNames()).toEqual(REQUIRED);
+  });
+
+  it('keeps night as an internal preset outside the SceneDef enum list', () => {
+    expect(SKY_PRESETS.night).toBeDefined();
+    expect(isKnownPreset('night')).toBe(true);
+    expect(getRequiredPresetNames()).not.toContain('night');
+    expect(SKY_PRESETS.night.exposure).toBeLessThan(SKY_PRESETS.dusk.exposure);
+    expect(SKY_PRESETS.night.ambientIntensity).toBeLessThan(SKY_PRESETS.dusk.ambientIntensity);
   });
 
   it('rejects unknown preset names', () => {
@@ -320,6 +329,20 @@ describe('DayNightCycle', () => {
     expect(noon).toBeGreaterThan(midmorning);
   });
 
+  it('places the sun below the horizon at the survival night boundary', () => {
+    const cycle = new DayNightCycle();
+    const sample = cycle.sampleAt(NIGHT_T);
+    expect(sample.toPreset).toBe('night');
+    expect(sample.elevation).toBeLessThan(0);
+  });
+
+  it('eases the visual sun arc inside each keyframe segment', () => {
+    const cycle = new DayNightCycle();
+    const sample = cycle.sampleAt(0.7625);
+    expect(sample.mix).toBeGreaterThan(0);
+    expect(sample.mix).toBeLessThan(0.25);
+  });
+
   it('update advances t by dt/secondsPerDay only when running', () => {
     const cycle = new DayNightCycle({ secondsPerDay: 100, initialT: 0 });
     cycle.update(10);
@@ -495,6 +518,21 @@ describe('Atmosphere orchestrator', () => {
     expect(atmo.isDayNightRunning()).toBe(true);
     atmo.stopDayNightCycle();
     expect(atmo.isDayNightRunning()).toBe(false);
+    atmo.dispose();
+  });
+
+  it('applies a darker night atmosphere from the day/night controller', () => {
+    const scene = new THREE.Scene();
+    const atmo = new Atmosphere(scene, { initialPreset: 'pastoral-noon' });
+    const ambient = new THREE.AmbientLight(0xffffff, 1.0);
+    atmo.bindAmbientLight(ambient);
+    atmo.startDayNightCycle({ secondsPerDay: 100, initialT: NIGHT_T });
+    atmo.update(0);
+
+    expect(atmo.getCurrentPresetName()).toBe('night');
+    expect(atmo.sun.dirVec.y).toBeLessThan(0);
+    expect(ambient.intensity).toBeCloseTo(SKY_PRESETS.night.ambientIntensity, 5);
+    expect(atmo.fog.density).toBeCloseTo(SKY_PRESETS.night.fogDensity, 8);
     atmo.dispose();
   });
 

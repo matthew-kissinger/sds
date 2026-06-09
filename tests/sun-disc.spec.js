@@ -104,4 +104,22 @@ describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
       sun.dispose();
     }
   });
+
+  it('fades the disc out when the physical sun is below the horizon', () => {
+    const scene = new THREE.Scene();
+    const sun = new SunBillboard(scene);
+    try {
+      const camera = new THREE.PerspectiveCamera();
+      camera.position.set(0, 10, 0);
+      camera.lookAt(0, 10, -1);
+
+      sun.update(camera, new THREE.Vector3(0, -0.2, -1).normalize(), new THREE.Color(1, 0.95, 0.8));
+
+      const diag = sun.getDiagnostics();
+      expect(diag.elevation).toBeLessThan(0);
+      expect(diag.intensity).toBe(0);
+    } finally {
+      sun.dispose();
+    }
+  });
 });

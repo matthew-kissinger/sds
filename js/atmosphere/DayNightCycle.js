@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { SKY_PRESETS } from './skyPresets.js';
+import { NIGHT_T } from '../../shared/survival/dayClock.js';
 
 /**
  * Day/night controller. Drives time-of-day t in [0, 1) (0 = midnight,
@@ -15,15 +16,9 @@ import { SKY_PRESETS } from './skyPresets.js';
  * controller agnostic of the dome means tests can drive it without a
  * real renderer.
  *
- * Five keyframes are enough for a believable cycle without making the
- * interpolation logic complex:
- *   t=0.00 (midnight)  -> 'dusk'  (low warm light, will be tweaked later)
- *   t=0.25 (sunrise)   -> 'dawn'
- *   t=0.50 (noon)      -> 'pastoral-noon'
- *   t=0.75 (sunset)    -> 'golden-hour' followed by 'dusk'
- * The midnight slot reuses 'dusk' deliberately — there's no first-class
- * "night" preset in the SkyDef enum, so the cycle treats nighttime as
- * a darker dusk via low elevation rather than a separate preset.
+ * Night is an internal atmosphere preset. Scene defs still choose from the
+ * shared scene schema presets; the runtime day/night controller can blend into
+ * night without widening the serialized scene contract.
  */
 
 /**
@@ -40,7 +35,7 @@ const DEG = Math.PI / 180;
 const DEFAULT_KEYFRAMES = [
   // Midnight: sun well below horizon (eastern). The dome formula clamps
   // sun radiance for sub-horizon angles, which gives the cool dim look.
-  { t: 0.00, preset: 'dusk',          elevation: -22 * DEG, azimuth: 0.10 * Math.PI },
+  { t: 0.00, preset: 'night',         elevation: -22 * DEG, azimuth: 0.10 * Math.PI },
   // Pre-dawn: still dim but starting to lift.
   { t: 0.20, preset: 'dawn',          elevation: -2 * DEG,  azimuth: 0.10 * Math.PI },
   // Sunrise: dawn preset proper.
@@ -53,9 +48,10 @@ const DEFAULT_KEYFRAMES = [
   { t: 0.65, preset: 'golden-hour',   elevation: 30 * DEG,  azimuth: 0.62 * Math.PI },
   // Sunset.
   { t: 0.75, preset: 'golden-hour',   elevation: 8 * DEG,   azimuth: 0.85 * Math.PI },
-  // Dusk -> back toward midnight.
-  { t: 0.85, preset: 'dusk',          elevation: -2 * DEG,  azimuth: 1.05 * Math.PI },
-  { t: 1.00, preset: 'dusk',          elevation: -22 * DEG, azimuth: 1.10 * Math.PI },
+  // Night begins when the survival gate closes.
+  { t: NIGHT_T, preset: 'night',       elevation: -8 * DEG,  azimuth: 0.98 * Math.PI },
+  { t: 0.88, preset: 'night',          elevation: -16 * DEG, azimuth: 1.06 * Math.PI },
+  { t: 1.00, preset: 'night',          elevation: -22 * DEG, azimuth: 1.10 * Math.PI },
 ];
 
 export class DayNightCycle {
@@ -89,6 +85,23 @@ export class DayNightCycle {
   /** @param {number} t */
   setT(t) {
     this.t = wrap01(t);
+  }
+
+  /**
+   * Smoothly move toward an authoritative time-of-day sample using the shortest
+   * wrap-aware arc.
+   * @param {number} targetT
+   * @param {number} [alpha=1]
+   * @returns {number}
+   */
+  approachT(targetT, alpha = 1) {
+    const target = wrap01(targetT);
+    const k = clamp01(alpha);
+    let delta = target - this.t;
+    if (delta > 0.5) delta -= 1;
+    if (delta < -0.5) delta += 1;
+    this.t = wrap01(this.t + delta * k);
+    return this.t;
   }
 
   /** @returns {number} */
@@ -164,7 +177,7 @@ export class DayNightCycle {
     }
     const denom = bT - aT;
     const mix = denom <= 1e-6 ? 0 : (cur - aT) / denom;
-    const m = Math.max(0, Math.min(1, mix));
+    const m = smoothstep(clamp01(mix));
 
     return {
       t: tn,
@@ -183,6 +196,17 @@ function wrap01(t) {
   let v = t % 1;
   if (v < 0) v += 1;
   return v;
+}
+
+/** @param {number} t @returns {number} */
+function clamp01(t) {
+  if (!Number.isFinite(t)) return 0;
+  return Math.max(0, Math.min(1, t));
+}
+
+/** @param {number} t @returns {number} */
+function smoothstep(t) {
+  return t * t * (3 - 2 * t);
 }
 
 /** @param {number} a @param {number} b @param {number} m @returns {number} */

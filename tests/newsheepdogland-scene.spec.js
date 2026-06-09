@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { loadScene } from '../shared/scenes/index.js';
 import { NEWSHEEPDOGLAND_POINTS } from '../shared/scenes/newsheepdogland.coast.js';
 import { boundaryToBounds } from '../shared/index.js';
+import { NIGHT_T } from '../shared/survival/dayClock.js';
 
 function shoelaceArea(pts) {
     let a = 0;
@@ -82,6 +83,8 @@ describe('Newsheepdogland SceneDef (Cycle 64)', () => {
         expect(scene.dayNight.dayLoop).toBe(true);
         expect(scene.dayNight.initialT).toBeGreaterThan(0);
         expect(scene.dayNight.initialT).toBeLessThan(1);
+        expect(scene.dayNight.initialT).toBeLessThan(NIGHT_T);
+        expect(NIGHT_T).toBe(0.80);
     });
 
     it('offers the survival co-op room mode (Cycle 67 P4)', () => {

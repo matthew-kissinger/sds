@@ -459,6 +459,8 @@ function driveCoopSurvival(game, serverState) {
         : 0.05;
     game._coopSurvivalTs = now;
 
+    syncCoopSurvivalAtmosphere(game, surv, dt);
+
     // Wolves: lazily mount a WolfRenderer (loads the glTF once) and reconcile it
     // to the broadcast wolf array each frame. No local wolf AI in co-op.
     if (!game._coopWolfRenderer && !game._coopWolfRendererPending) {
@@ -504,4 +506,26 @@ function driveCoopSurvival(game, serverState) {
             wolves: serverState.wolves,
         });
     }
+}
+
+/**
+ * Keep co-op survival visuals close to the Worker clock without snapping the
+ * sun/sky when a broadcast frame arrives slightly late.
+ * @param {object} game
+ * @param {object} surv
+ * @param {number} dt
+ */
+export function syncCoopSurvivalAtmosphere(game, surv, dt) {
+    const targetT = Number(surv?.t);
+    const dn = game?.atmosphere?.dayNight;
+    if (!Number.isFinite(targetT) || !dn) return null;
+    const alpha = Math.min(1, Math.max(0.08, (Number.isFinite(dt) ? dt : 0.05) * 4));
+    if (typeof dn.approachT === 'function') {
+        return dn.approachT(targetT, alpha);
+    }
+    if (typeof dn.setT === 'function') {
+        dn.setT(targetT);
+        return dn.getT?.() ?? targetT;
+    }
+    return null;
 }
