@@ -103,9 +103,9 @@ async function waitForVisibleButton(page: Page, query: ButtonQuery, timeout = 45
   );
 }
 
-async function tapVisibleButton(page: Page, query: ButtonQuery, timeout = 45_000) {
+async function clickVisibleButton(page: Page, query: ButtonQuery, timeout = 45_000) {
   await waitForVisibleButton(page, query, timeout);
-  const rect = await page.evaluate(({ text, aria }) => {
+  const clicked = await page.evaluate(({ text, aria }) => {
     const buttons = Array.from(document.querySelectorAll('button'));
     for (const button of buttons) {
       const style = getComputedStyle(button);
@@ -117,19 +117,12 @@ async function tapVisibleButton(page: Page, query: ButtonQuery, timeout = 45_000
       if (!visible) continue;
       if (aria && button.getAttribute('aria-label') !== aria) continue;
       if (text && button.textContent?.replace(/\s+/g, ' ').trim() !== text) continue;
-      return {
-        x: Math.round(bounds.x),
-        y: Math.round(bounds.y),
-        width: Math.round(bounds.width),
-        height: Math.round(bounds.height),
-      };
+      button.click();
+      return true;
     }
-    return null;
+    return false;
   }, query);
-  if (!rect) throw new Error(`button not found: ${JSON.stringify(query)}`);
-  const x = rect.x + Math.round(rect.width / 2);
-  const y = rect.y + Math.round(rect.height / 2);
-  await page.touchscreen.tap(x, y).catch(() => page.mouse.click(x, y));
+  if (!clicked) throw new Error(`button not found: ${JSON.stringify(query)}`);
 }
 
 async function ensureServiceWorkerController(page: Page) {
@@ -340,7 +333,7 @@ test('Newsheepdogland first-session loop survives stale cache and stale scene st
     report.entranceScreenshot = await screenshot(page, testInfo, 'newsheepdogland-entrance');
     report.cacheProof = await verifyMutableCacheOverwrite(page);
 
-    await tapVisibleButton(page, { text: 'Play' }, 45_000);
+    await clickVisibleButton(page, { text: 'Play' }, 45_000);
     await page.locator('#canvas-container canvas').waitFor({ state: 'attached', timeout: 150_000 });
     const firstReady = await waitForState(page, {
       scene: 'newsheepdogland',
@@ -353,8 +346,8 @@ test('Newsheepdogland first-session loop survives stale cache and stale scene st
     await waitForGameplayVisible(page);
     const firstHud = await assertHudLayout(page, 'first session');
 
-    await tapVisibleButton(page, { aria: 'Pause game' }, 45_000);
-    await tapVisibleButton(page, { text: 'Main Menu' }, 45_000);
+    await clickVisibleButton(page, { aria: 'Pause game' }, 45_000);
+    await clickVisibleButton(page, { text: 'Main Menu' }, 45_000);
     await waitForEntrance(page);
     const returned = await waitForState(page, {
       scene: 'newsheepdogland',
@@ -365,7 +358,7 @@ test('Newsheepdogland first-session loop survives stale cache and stale scene st
       minimap: false,
     }, 90_000);
 
-    await tapVisibleButton(page, { text: 'Play' }, 45_000);
+    await clickVisibleButton(page, { text: 'Play' }, 45_000);
     const secondReady = await waitForState(page, {
       scene: 'newsheepdogland',
       active: true,
