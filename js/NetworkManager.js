@@ -9,6 +9,16 @@ import { encode as msgpackEncode, decode as msgpackDecode } from '@msgpack/msgpa
 import { getApiBase, getWsBase, isLocalRuntime } from './runtimeConfig.js';
 import { PROTOCOL_VERSION } from '../shared/protocol.js';
 
+// P2-DELTA: client-side cooldown between requestKeyframe sends after a
+// baseTick gap (docs/hardening/delta-protocol-design.md section 4). The DO
+// additionally caps unicast keyframes at 2/s per client.
+const KEYFRAME_REQUEST_COOLDOWN_MS = 500;
+
+// P2-DELTA: conditional blocks that ride every gameStateDelta with
+// snapshot-identical semantics (design section 3.3) - copied onto the
+// reconstructed snapshot only when present on the frame.
+const DELTA_CONDITIONAL_BLOCKS = ['competitive', 'timedMode', 'objective', 'survival', 'wolves'];
+
 export class NetworkManager {
     constructor() {
         this.ws = null;
@@ -45,6 +55,17 @@ export class NetworkManager {
         this.maxArrivalSamples = 20;
         this.jitterExpandThreshold = 30;
         this.jitterShrinkThreshold = 15;
+
+        // P2-DELTA: delta-frame reconstruction state (design section 7). The
+        // manager keeps the reconstructed full snapshot plus the tick it was
+        // applied at; a gameStateDelta applies only when its baseTick matches.
+        // All reconstruction lives here so every downstream consumer
+        // (handleMultiplayerGameState, interpolation, dog reconciliation)
+        // keeps receiving full snapshots, untouched.
+        this.lastAppliedTick = null; // tick of the last applied frame; null until a tick-stamped frame arrives (legacy DOs never send one)
+        this._deltaBase = null; // the reconstructed snapshot the next delta applies against
+        this._awaitingKeyframe = false; // true after a baseTick gap; deltas are dropped until a keyframe lands
+        this._lastKeyframeRequestAt = -Infinity; // performance.now() of the last requestKeyframe send
 
         // Input buffering
         this.inputBuffer = [];
@@ -116,6 +137,7 @@ export class NetworkManager {
         this.currentRoom = null;
         this.playerId = null;
         this.isHost = false;
+        this._resetDeltaState();
         this.stopPingMeasurement();
         this.notifyConnectionStateChange('disconnected');
     }
@@ -230,6 +252,9 @@ export class NetworkManager {
                 break;
             case 'gameStateUpdate':
                 this._handleGameStateUpdate(msg);
+                break;
+            case 'gameStateDelta':
+                this._handleGameStateDelta(msg);
                 break;
             case 'gameComplete':
                 if (msg.isCompetitive && msg.competitive) {
@@ -480,6 +505,10 @@ export class NetworkManager {
             token: this.token,
             playerName,
             dogType,
+            // P2-DELTA: quick-match sessions send the protocol version too, so
+            // the DO puts them in the delta-capable cohort (the worker forwards
+            // it on the quick-match path; without it they stay legacy).
+            protocolVersion: PROTOCOL_VERSION,
             gameMode,
         });
         this.currentRoom = data.room;
@@ -503,6 +532,7 @@ export class NetworkManager {
         this.playerId = null;
         this.isHost = false;
         this.pendingSession = null;
+        this._resetDeltaState();
     }
 
     startGame() {
@@ -567,12 +597,107 @@ export class NetworkManager {
         // Strip the `t` tag so the rest of the client sees the same shape the
         // Geckos backend sent before (a raw snapshot object).
         const { t: _t, ...state } = data;
+        // P2-DELTA: any full gameStateUpdate is a keyframe - replace the
+        // reconstructed snapshot wholesale and reset the drift anchor (drift
+        // resets to zero by construction). A pre-delta (v2) DO sends no
+        // `tick`, so lastAppliedTick stays null; such a DO never sends
+        // deltas, so the client plays normally on full snapshots alone.
+        this._deltaBase = state;
+        this.lastAppliedTick = state.tick ?? null;
+        this._awaitingKeyframe = false;
+        this._ingestSnapshot(state);
+    }
+
+    /**
+     * P2-DELTA: reconstruct a full snapshot from a changed-sheep delta frame
+     * (design section 7). Applies only when the delta's baseTick matches the
+     * tick of the last applied frame; on any gap the delta is discarded, a
+     * keyframe is requested (cooldown-limited), and further deltas are
+     * ignored until a full gameStateUpdate arrives.
+     */
+    _handleGameStateDelta(msg) {
+        if (
+            this._awaitingKeyframe ||
+            !this._deltaBase ||
+            this.lastAppliedTick === null ||
+            msg.baseTick !== this.lastAppliedTick
+        ) {
+            this._requestKeyframe();
+            return;
+        }
+
+        // Fresh sheep array per apply: unchanged entries share the previous
+        // record references (records are treated as immutable once received);
+        // a changed entry REPLACES the record wholesale at index `i` - key
+        // presence included, mirroring the server's Object.is record compare
+        // (a key absent on the new record is gone). In-place mutation would
+        // alias previousServerState / lastServerState and flatten
+        // interpolation.
+        const sheep = this._deltaBase.sheep.slice();
+        const changed = Array.isArray(msg.changed) ? msg.changed : [];
+        for (const c of changed) {
+            const { i, ...rec } = c;
+            sheep[i] = rec;
+        }
+
+        const state = {
+            v: msg.v,
+            tick: msg.tick,
+            timestamp: msg.timestamp,
+            sheepRetired: msg.sheepRetired,
+            totalSheep: msg.totalSheep,
+            gameCompleted: msg.gameCompleted,
+            isCompetitive: msg.isCompetitive,
+            isTimedMode: msg.isTimedMode,
+            sheep,
+            sheepdogs: msg.sheepdogs,
+        };
+        // Conditional blocks ride every delta with snapshot-identical
+        // semantics: present on the reconstruction iff present on the frame.
+        for (const k of DELTA_CONDITIONAL_BLOCKS) {
+            if (k in msg) state[k] = msg[k];
+        }
+
+        this._deltaBase = state;
+        this.lastAppliedTick = msg.tick;
+        this._ingestSnapshot(state);
+    }
+
+    /**
+     * Shared tail of the keyframe and delta paths: rotate the prediction
+     * states, feed the jitter estimator, notify downstream. Both frame kinds
+     * deliver a full snapshot here, so every consumer keeps today's shape.
+     */
+    _ingestSnapshot(state) {
         this.previousServerState = this.lastServerState;
         this.lastServerState = state;
         const now = performance.now();
         this.serverUpdateTimestamp = now;
         this.recordPacketArrival(now);
         this.notifyGameStateUpdate(state);
+    }
+
+    /**
+     * P2-DELTA: ask the DO for an on-demand keyframe after a baseTick gap.
+     * At most one send per KEYFRAME_REQUEST_COOLDOWN_MS regardless of how
+     * many deltas arrive while waiting.
+     */
+    _requestKeyframe() {
+        this._awaitingKeyframe = true;
+        const now = performance.now();
+        if (now - this._lastKeyframeRequestAt < KEYFRAME_REQUEST_COOLDOWN_MS) return;
+        this._lastKeyframeRequestAt = now;
+        this._send('requestKeyframe', {});
+    }
+
+    // P2-DELTA: drop reconstruction state when the room session ends. Stale
+    // state is never unsafe (a delta either matches its exact base tick or is
+    // discarded), but a fresh session should start from a clean keyframe.
+    _resetDeltaState() {
+        this.lastAppliedTick = null;
+        this._deltaBase = null;
+        this._awaitingKeyframe = false;
+        this._lastKeyframeRequestAt = -Infinity;
     }
 
     recordPacketArrival(now) {

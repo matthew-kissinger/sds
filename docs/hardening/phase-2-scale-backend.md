@@ -68,14 +68,29 @@ Evidence (2026-06-09, `tests/worker/delta-egress.spec.ts`, seeded 200 sheep / 4 
 ## [P2-DELTA-CLIENT] Client delta reconstruction [FENCE]
 
 - **Owner hint:** frontend/net agent
-- **Status:** pending
+- **Status:** done (2026-06-09, uncommitted on branch `agent/p2-delta-client`, worktree `sds-p2-delta-client`, based on the P2-DELTA-IMPL commit `d20d775`). All reconstruction lives in `js/NetworkManager.js` per design section 7; every downstream consumer keeps receiving full snapshots.
 - **Deps:** P2-DELTA-IMPL
-- **Files:** client NetworkManager, `js/main.js` reconciliation path
+- **Files:** `js/NetworkManager.js` (new `gameStateDelta` case in `_onWsMessage`, `_handleGameStateDelta` reconstruction, keyframe replace + `lastAppliedTick` reset in `_handleGameStateUpdate`, shared `_ingestSnapshot` tail, `_requestKeyframe` with 500 ms cooldown, `_resetDeltaState` on disconnect/leaveRoom, quick-match now sends `protocolVersion` - the IMPL deviation 6 follow-up). New `tests/delta-client-reconstruction.spec.ts`. One ratchet fixture: `tests/refactor-baseline/__fixtures__/bundle-sizes.json` mainKB 594 -> 595 (see evidence). `js/boot/initNetwork.js` and `js/main.js` verified untouched-by-design: `handleMultiplayerGameState`, interpolation, and the dog-reconciliation reads of `lastServerState.sheepdogs` consume the reconstructed full snapshots unchanged.
 
 Acceptance:
 
-- [ ] When the client receives a delta frame, then it shall reconstruct full sheep state identically to the pre-delta path.
-- [ ] When a keyframe arrives, then drift shall reset to zero.
+- [x] When the client receives a delta frame, then it shall reconstruct full sheep state identically to the pre-delta path. (Round-trip spec drives the real `GameSimulation` builder for 200 herding ticks and feeds its frames through msgpack + the real `_onWsMessage`; the reconstructed snapshot deep-equals the wire-delivered server snapshot at every tick. A changed record replaces the sheep record wholesale, key presence included - conditional-key gain-then-lose locked.)
+- [x] When a keyframe arrives, then drift shall reset to zero. (Any full `gameStateUpdate` replaces the reconstructed snapshot wholesale and resets `lastAppliedTick`; locked by the gap-recovery test, which drops a delta, observes the discard + single `requestKeyframe`, ignores deltas while awaiting, then converges deep-equal on the keyframe.)
+
+Design section 11 lines, all locked by `tests/delta-client-reconstruction.spec.ts`:
+
+- [x] Keyframe replaces wholesale + resets `lastAppliedTick`.
+- [x] Delta with `baseTick === lastAppliedTick` reconstructs deep-equal; downstream shape identical (same `_ingestSnapshot` tail as today's full-frame path: state rotation, `recordPacketArrival`, `notifyGameStateUpdate`).
+- [x] `baseTick` mismatch: discard, `requestKeyframe` at most once per 500 ms (fake-timer test: 1 send inside the window across a mismatch storm, 2nd at 501 ms), deltas ignored (even matching ones) until a keyframe lands.
+- [x] Legacy v2 / pre-tick DO: full snapshots (no `tick`, some without `v`) play through unchanged - rotation, interpolation, sheepdog reads all work; `lastAppliedTick` stays null; zero keyframe requests.
+- [x] `previousServerState` and `lastServerState` never alias the same `sheep` array after a delta apply (fresh array per apply; unchanged records share references, the previous snapshot's record is never mutated).
+
+Evidence (2026-06-09):
+
+- Reconstruction equivalence is proven against the wire, not hand-mirrored shapes: frames are msgpack-encoded exactly as `RoomDO.encodeMsg` does and delivered to the real `_onWsMessage`. One measured wire fact recorded: `@msgpack/msgpack` encodes `-0` as integer `0`, so wire-delivered values collapse `-0` to `0` identically on the keyframe and the delta path (the server's `Object.is` compare still ships the `0 <-> -0` flip, so no update is missed); the deep-equal target is therefore the encoded-decoded server snapshot, which is byte-for-byte what a v2 client receives today.
+- Bundle ratchet: the reconstruction code adds 1,328 minified bytes to `main-*.js` (608,211 B -> 609,539 B; 594 KB -> 595 KB rounded). Measured both ways in this worktree (baseline rebuilt with the NetworkManager change stashed). `bundle-sizes.json` mainKB bumped by the minimum, 594 -> 595. `threeKB` unchanged.
+- Validation: `npm run lint` clean, `npm run typecheck` clean, `npm test` 1285 passed / 8 skipped (the 1278 at P2-DELTA-IMPL + the 7 new client specs), `npm run build` green. `tests/sim-baseline/` byte-identical, zero regeneration (`git status` clean on `tests/sim-baseline/`). `js/NetworkManager.js` stays repo-canonical LF (`git ls-files --eol`: i/lf w/lf; the diff is +125 lines, zero deletions); new spec is LF like the worker delta specs.
+- Tree note: the implementing session's cwd (`sds`) was switched to `codex/newsheepdogland-mobile-proof` (which predates `d20d775`) mid-task by parallel agent activity, so the work was moved to its own worktree on the IMPL base, mirroring the `agent/p2-backpressure` pattern. The round-trip spec imports `getDeltaPathFrame` from the real `worker/src/GameSim.js`, so it requires the IMPL commit in any tree that runs it; it is green here and will be green on any merge that includes `d20d775`.
 
 ---
 
