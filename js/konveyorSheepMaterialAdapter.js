@@ -1,70 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-import { shouldApplyKonveyorRendererFlag } from './rendering/konveyorRuntimeMode.js';
+// [P3-KONVEYOR] Thin domain config; shared boilerplate lives in
+// js/world/createKonveyorAdaptedMaterial.js.
+import { createKonveyorMaterialAdapter } from './world/createKonveyorAdaptedMaterial.js';
 
-const FLAG_PARAM = 'konveyorSheep';
+const adapter = createKonveyorMaterialAdapter({
+    flagParam: 'konveyorSheep',
+    factoriesGlobal: '__sdsKonveyorSheepMaterialFactories',
+    summaryGlobal: '__sdsKonveyorSheepMaterialAdapter',
+    controlsUserDataKeys: ['konveyorSheepMaterialControls'],
+});
 
-function getWindowSearch() {
-    if (typeof window === 'undefined') return '';
-    return window.location?.search ?? '';
-}
-
-function getWindowFactories() {
-    if (typeof window === 'undefined') return null;
-    return window.__sdsKonveyorSheepMaterialFactories ?? null;
-}
-
-function exposeSummary(summary) {
-    if (typeof window !== 'undefined') {
-        window.__sdsKonveyorSheepMaterialAdapter = summary;
-    }
-}
-
-function defaultResult(kind, reason, createDefaultMaterial) {
-    const material = createDefaultMaterial();
-    const summary = {
-        kind,
-        applied: false,
-        reason,
-    };
-    exposeSummary(summary);
-    return { material, controls: null, summary };
-}
-
-export function shouldApplyKonveyorSheep(search = getWindowSearch()) {
-    return shouldApplyKonveyorRendererFlag(search, FLAG_PARAM);
-}
-
-export function createKonveyorSheepMaterial(kind, factoryName, {
-    createDefaultMaterial,
-    search = getWindowSearch(),
-    factories = getWindowFactories(),
-    context = {},
-} = {}) {
-    if (!shouldApplyKonveyorSheep(search)) {
-        return defaultResult(kind, 'flag-disabled', createDefaultMaterial);
-    }
-
-    const factory = factories?.[factoryName];
-    if (typeof factory !== 'function') {
-        return defaultResult(kind, 'missing-factories', createDefaultMaterial);
-    }
-
-    const result = factory(context);
-    const material = result?.material ?? result;
-    if (!material) {
-        return defaultResult(kind, 'invalid-factory-result', createDefaultMaterial);
-    }
-
-    const controls = result?.controls
-        ?? material.userData?.konveyorSheepMaterialControls
-        ?? null;
-    const summary = {
-        kind,
-        applied: true,
-        reason: null,
-        hasControls: !!controls,
-    };
-    exposeSummary(summary);
-    return { material, controls, summary };
-}
+export const shouldApplyKonveyorSheep = adapter.shouldApply;
+export const createKonveyorSheepMaterial = adapter.createMaterial;
