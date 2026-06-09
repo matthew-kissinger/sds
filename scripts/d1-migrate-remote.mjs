@@ -177,12 +177,20 @@ function main() {
   if (target === 'preview') assertPreviewSafety();
 
   const files = listMigrationFiles();
+  let diffAdded = null;
+  if (target === 'production' && bootstrapMode === 'diff') {
+    diffAdded = diffAddedFiles().filter((f) => files.includes(f));
+    if (diffAdded.length === 0) {
+      console.log('Production diff mode: no newly added migrations in this push. Skipping remote D1 check.');
+      return;
+    }
+  }
 
   if (!stateTableExists()) {
     // Bootstrap: the deploy that ships the state-table migration itself, or a
     // fresh preview database. Fall back to the legacy behavior for this run.
     const toApply =
-      bootstrapMode === 'full' ? files : diffAddedFiles().filter((f) => files.includes(f));
+      bootstrapMode === 'full' ? files : diffAdded;
     if (toApply.length === 0) {
       console.log('Bootstrap: state table absent and no new migrations in this push. Nothing to do.');
       return;
