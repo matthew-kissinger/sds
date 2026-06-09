@@ -63,7 +63,8 @@ async function waitForEntrance(page: Page) {
 
 function buttonSelector(query: ButtonQuery) {
   if (query.aria) return `xpath=//button[@aria-label="${query.aria}"]`;
-  if (query.text) return `xpath=//button[normalize-space(.)="${query.text}"]`;
+  if (query.text === 'Play') return 'xpath=//button[contains(normalize-space(.), "Play") and not(contains(normalize-space(.), "online"))]';
+  if (query.text) return `xpath=//button[contains(normalize-space(.), "${query.text}")]`;
   throw new Error('button query requires text or aria');
 }
 
