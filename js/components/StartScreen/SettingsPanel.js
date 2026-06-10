@@ -42,6 +42,7 @@ import {
 import { CameraMode } from '../../CameraController.js';
 import { NameField } from '../shared/NameField.js';
 import { startTutorial } from '../Tutorial/index.js';
+import { getPerformanceMonitor } from '../../GameBridge.js';
 
 const CAMERA_MODE_STORAGE_KEY = 'camera-mode';
 
@@ -178,6 +179,25 @@ function SettingRow({ label, description, children, isCompact }) {
             style: { display: 'flex', alignItems: 'center' }
         }, children)
     ]);
+}
+
+// Cycle 87 Phase 1: read-only renderer diagnostics. Raw values on purpose so
+// a real-device session can read what the boot actually decided (effective
+// renderer, fallback reason, hardware tier, quality step, device preflight)
+// without opening devtools. Only the label is localized.
+function rendererDiagnosticsText() {
+    const mode = typeof window !== 'undefined' ? window.__sdsRendererMode : null;
+    const quality = getPerformanceMonitor()?.qualityState ?? null;
+    const preflight = typeof window !== 'undefined'
+        ? (window.__sdsG?.productionWebGpu?.devicePreflight ?? null)
+        : null;
+    return [
+        mode?.effective ?? 'unknown',
+        mode?.fallbackReason ? `fallback: ${mode.fallbackReason}` : null,
+        quality?.deviceTier ? `tier: ${quality.deviceTier}` : null,
+        Number.isFinite(quality?.qualityIndex) ? `quality: ${quality.qualityIndex}` : null,
+        preflight ? `preflight: ${preflight.ok ? 'ok' : (preflight.reason ?? 'failed')}` : null,
+    ].filter(Boolean).join(', ');
 }
 
 // Key binding button component
@@ -622,6 +642,13 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
             onChange: (v) => handleSettingChange('experimentalWebGpu', v),
             color: '#5e9e6e'
         })),
+
+        createElement(SettingRow, {
+            key: 'renderer-diagnostics',
+            label: t('settings.rendererDiagnostics'),
+            description: rendererDiagnosticsText(),
+            isCompact
+        }),
 
         !isMobile && createElement(SettingRow, {
             key: 'shadows',

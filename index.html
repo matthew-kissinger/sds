@@ -356,20 +356,12 @@
                     return true;
                 }
             };
-            const readRecentWebGpuFallback = () => {
-                try {
-                    const raw = localStorage.getItem('sds-renderer-fallback');
-                    if (!raw) return null;
-                    const record = JSON.parse(raw);
-                    if (record?.reason !== 'webgpu-frame-budget') return null;
-                    if (Date.now() - Number(record.at ?? 0) > 24 * 60 * 60 * 1000) return null;
-                    return record.reason;
-                } catch {
-                    return null;
-                }
-            };
-            const recentFallbackReason = params.has('renderer') ? null : readRecentWebGpuFallback();
-            const requested = params.get('renderer') || (readExperimentalWebGpuPreference() && !recentFallbackReason ? 'webgpu' : 'webgl');
+            // Cycle 87 Phase 1: the renderer is never demoted on frame budget.
+            // Older builds wrote a 24h sticky 'sds-renderer-fallback' record that
+            // forced WebGL across all scenes; delete any stale record so devices
+            // branded by those builds boot per the normal capability check.
+            try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
+            const requested = params.get('renderer') || (readExperimentalWebGpuPreference() ? 'webgpu' : 'webgl');
             const diagnostic = params.get('diagnostic') === '1';
             const webgpuApiAvailable = !!navigator.gpu;
             const productionGate = params.get('konveyorProduction') === '1';
@@ -384,7 +376,7 @@
                 productionGate,
                 webgpuApiAvailable,
                 effective: webgpuDiagnostic ? 'webgpu-diagnostic' : (productionWebGpu ? 'webgpu-production' : 'webgl'),
-                fallbackReason: recentFallbackReason || (requested === 'webgpu' && !diagnostic && !productionWebGpu ? 'webgpu-unavailable' : null)
+                fallbackReason: requested === 'webgpu' && !diagnostic && !productionWebGpu ? 'webgpu-unavailable' : null
             };
             window.__sdsG = {
                 r: webgpuDiagnostic,

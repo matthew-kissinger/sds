@@ -7,12 +7,12 @@
  * deliver WebGPU, show a non-blocking "compatibility rendering" toast once
  * per session and emit a `renderer_fallback` telemetry event. Involuntary
  * means `window.__sdsRendererMode.fallbackReason` is set (index.html boot
- * shim, the main.js production-boot catch, or QualityGovernor's 24h
- * frame-budget record) or the QualityGovernor auto-fallback reload carried
+ * shim or the main.js production-boot catch) or the load carried an explicit
  * `?fallbackReason=` in the URL. Known reasons today: webgpu-unavailable,
  * webgpu-adapter-unavailable, webgpu-device-unavailable,
- * webgpu-device-request-failed, production-webgpu-boot-failed,
- * webgpu-frame-budget.
+ * webgpu-device-request-failed, production-webgpu-boot-failed. Frame-budget
+ * misses no longer demote the renderer (Cycle 87 Phase 1), so
+ * webgpu-frame-budget is a legacy reason that can only arrive via URL.
  *
  * A voluntary WebGL run stays silent: an explicit `?renderer=webgl` or the
  * experimentalWebGpu setting turned off produces no fallbackReason, so the
@@ -37,9 +37,9 @@ const NO_NOTICE = Object.freeze({ notify: false, reason: null });
  * @param {object} [input]
  * @param {{ effective?: string, fallbackReason?: string|null }|null} [input.rendererMode]
  *   the `window.__sdsRendererMode` record as resolved at boot.
- * @param {string|null} [input.urlFallbackReason] `?fallbackReason=` from the
- *   QualityGovernor auto-fallback reload (which also sets `?renderer=webgl`,
- *   zeroing rendererMode.fallbackReason on that load).
+ * @param {string|null} [input.urlFallbackReason] explicit `?fallbackReason=`
+ *   carried in the URL (paired with `?renderer=webgl`, which zeroes
+ *   rendererMode.fallbackReason on that load).
  * @param {boolean} [input.alreadyNoticed] sessionStorage guard already set.
  * @returns {{ notify: boolean, reason: string|null }}
  */

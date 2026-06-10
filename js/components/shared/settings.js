@@ -146,6 +146,10 @@ function applyRendererPreference(settings) {
 
     const url = new URL(window.location.href);
     if (wantsWebGpu) {
+        // Cycle 87 Phase 1: clear any legacy sticky fallback record so opting
+        // into WebGPU always takes effect on the reload (the boot shim also
+        // deletes stale records defensively).
+        try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
         url.searchParams.delete('renderer');
     } else {
         url.searchParams.set('renderer', 'webgl');

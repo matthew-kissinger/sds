@@ -17,8 +17,8 @@
  *
  * Decision: clean automatic reload rather than in-place re-bake. On
  * `webglcontextlost` we show a small overlay, then reload the page (URL
- * params preserved, same path the QualityGovernor auto-fallback uses) as
- * soon as the context restores - or after a short timeout if it never does.
+ * params preserved) as soon as the context restores - or after a short
+ * timeout if it never does.
  * In-place recovery would need a re-bake registry threaded through
  * TreePlacement's impostor cache for a once-per-GPU-reset event; not worth
  * the surface area.

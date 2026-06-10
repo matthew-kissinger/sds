@@ -163,6 +163,7 @@ export default {
         shadowsDesc: '動的な影を有効にする（デスクトップのみ）',
         experimentalWebGpu: 'WebGPUレンダラー',
         experimentalWebGpuDesc: '実験的機能です。利用可能な場合はWebGPUを使います。オフにするとWebGLで再読み込みします。',
+        rendererDiagnostics: 'レンダラーの状態',
         shadowQuality: '影の品質',
         low: '低',
         medium: '中',

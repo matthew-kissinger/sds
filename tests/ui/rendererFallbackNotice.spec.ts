@@ -74,8 +74,8 @@ describe('decideRendererFallbackNotice', () => {
             .toEqual({ notify: false, reason: null });
     });
 
-    it('picks up the QualityGovernor auto-fallback reload via ?fallbackReason=', () => {
-        // That reload sets ?renderer=webgl, so rendererMode carries no reason;
+    it('picks up an explicit ?fallbackReason= carried in the URL', () => {
+        // Such a load sets ?renderer=webgl, so rendererMode carries no reason;
         // the URL param is the involuntary signal.
         expect(decideRendererFallbackNotice({
             rendererMode: explicitWebglMode,

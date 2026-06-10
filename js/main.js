@@ -238,7 +238,6 @@ class SheepDogSimulation {
                 isMobile: this.sceneManager.isMobile,
                 tier: sceneTier,
                 adapterLimits: window.__sdsG?.productionWebGpu?.devicePreflight?.adapterLimits ?? null,
-                autoFallback: urlParams.get('qualityAutoFallback') === '1',
                 onQualityStateChange: (state) => this.applyQualityState(state),
             });
             this.performanceMonitor.setDeviceTier(this.qualityGovernor.deviceTier);

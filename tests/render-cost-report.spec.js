@@ -143,39 +143,55 @@ describe('WebGPU mobile render cost reporting', () => {
         expect(renderer.setPixelRatioCalls.at(-1)).toBeCloseTo(1);
     });
 
-    it('records fallback only after the floor still misses budget for repeated windows', () => {
+    it('never demotes the renderer at the floor: no sticky record, one floor telemetry event', () => {
+        // Cycle 87 Phase 1: frame-budget misses step quality only. The old
+        // mobile 24h 'sds-renderer-fallback' record is gone; what remains is a
+        // single webgpu_frame_budget_floor telemetry event per session.
         const renderer = { setPixelRatio() {} };
+        const emitted = [];
         try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
         const governor = new QualityGovernor({
             isMobile: true,
             tier: 'high',
             sampleWindowMs: 1,
             warmupMs: 0,
+            emitTelemetry: (name, props) => emitted.push({ name, props }),
         });
         const pushOverBudget = () => {
             governor.windowStartedAt = performance.now() - 2;
             governor.samples = [30, 31, 32, 33, 34];
-            return governor.sample({ frameTime: 34, renderer, rendererMode: 'webgpu-production', sceneId: 'field' });
+            return governor.sample({ frameTime: 34, renderer, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
         };
-        for (let i = 0; i < 2; i++) pushOverBudget();
-        expect(governor.getState().qualityIndex).toBe(1);
-        for (let i = 0; i < 2; i++) pushOverBudget();
-        expect(governor.getState().qualityIndex).toBe(2);
-        for (let i = 0; i < 2; i++) pushOverBudget();
+        for (let i = 0; i < 6; i++) pushOverBudget();
         expect(governor.getState().qualityIndex).toBe(3);
         expect(governor.getState().fallbackReason).toBeNull();
-        for (let i = 0; i < 3; i++) pushOverBudget();
-        expect(governor.getState().fallbackReason).toBe('webgpu-frame-budget');
+        expect(emitted.length).toBe(0);
+        for (let i = 0; i < 8; i++) pushOverBudget();
+        expect(governor.getState().fallbackReason).toBeNull();
+        const sticky = (() => {
+            try { return localStorage.getItem('sds-renderer-fallback'); } catch { return null; }
+        })();
+        expect(sticky).toBeNull();
+        expect(emitted.length).toBe(1);
+        expect(emitted[0].name).toBe('webgpu_frame_budget_floor');
+        expect(emitted[0].props).toMatchObject({
+            deviceTier: 'high',
+            isMobile: true,
+            sceneId: 'newsheepdogland',
+            qualityIndex: 3,
+        });
+        expect(emitted[0].props.frameP95).toBeGreaterThan(0);
     });
 
-    it('treats non-webgpu rendererMode as ineligible for the webgpu-frame-budget fallback', () => {
+    it('treats non-webgpu rendererMode as ineligible for the floor telemetry event', () => {
         const renderer = { setPixelRatio() {} };
-        try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
+        const emitted = [];
         const governor = new QualityGovernor({
             isMobile: true,
             tier: 'high',
             sampleWindowMs: 1,
             warmupMs: 0,
+            emitTelemetry: (name, props) => emitted.push({ name, props }),
         });
         const pushOverBudget = () => {
             governor.windowStartedAt = performance.now() - 2;
@@ -184,13 +200,14 @@ describe('WebGPU mobile render cost reporting', () => {
         };
         for (let i = 0; i < 12; i++) pushOverBudget();
         expect(governor.getState().fallbackReason).toBeNull();
+        expect(emitted.length).toBe(0);
     });
 });
 
 describe('Desktop WebGPU quality governance (Cycle 82)', () => {
     it('does not demote the desktop renderer or set a sticky fallback at the quality floor', () => {
         // The "WebGPU/WebGL split": desktop at the quality floor must stay
-        // WebGPU. Mobile WebGPU keeps the protective fallback covered above.
+        // WebGPU. Since Cycle 87 Phase 1 the same holds on mobile.
         const renderer = { setPixelRatio() {} };
         try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
         const governor = new QualityGovernor({
@@ -198,6 +215,7 @@ describe('Desktop WebGPU quality governance (Cycle 82)', () => {
             tier: 'high',
             sampleWindowMs: 1,
             warmupMs: 0,
+            emitTelemetry: () => {},
         });
         const pushOverBudget = () => {
             governor.windowStartedAt = performance.now() - 2;

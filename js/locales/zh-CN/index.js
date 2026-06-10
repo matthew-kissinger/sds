@@ -163,6 +163,7 @@ export default {
         shadowsDesc: '启用动态阴影（仅桌面端）',
         experimentalWebGpu: 'WebGPU 渲染器',
         experimentalWebGpuDesc: '实验性功能。可用时使用 WebGPU；关闭后将以 WebGL 重新加载。',
+        rendererDiagnostics: '渲染器状态',
         shadowQuality: '阴影质量',
         low: '低',
         medium: '中',

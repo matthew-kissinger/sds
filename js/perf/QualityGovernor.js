@@ -42,8 +42,8 @@ export class QualityGovernor {
         warmupMs = 6000,
         maxFrameTimeMs = 200,
         gapResetMs = 1500,
-        autoFallback = false,
         onQualityStateChange = null,
+        emitTelemetry = defaultEmitTelemetry,
     } = {}) {
         this.performanceMonitor = performanceMonitor;
         this.isMobile = isMobile;
@@ -53,13 +53,17 @@ export class QualityGovernor {
         this.gapResetMs = gapResetMs;
         this.warmupUntil = null;
         this.lastSampleAt = null;
-        this.autoFallback = autoFallback;
         this.onQualityStateChange = onQualityStateChange;
+        this.emitTelemetry = emitTelemetry;
         this.samples = [];
         this.missWindows = 0;
         this.recoverWindows = 0;
         this.qualityIndex = 0;
+        // Cycle 87 Phase 1: the renderer is never demoted on frame budget.
+        // fallbackReason stays null for the life of the session; the field
+        // survives only so the quality-state shape consumers read is stable.
         this.fallbackReason = null;
+        this._floorMissEmitted = false;
         this.basePixelRatio = isMobile ? 1 : Math.min(globalThis.devicePixelRatio ?? 1, 2);
         this.deviceTier = classifyDeviceTier({
             isMobile,
@@ -131,7 +135,7 @@ export class QualityGovernor {
                 this._applyQualityStep(renderer);
                 this.missWindows = 0;
             } else if (this.missWindows >= 3 && this.qualityIndex >= QUALITY_STEPS.length - 1) {
-                this._recordFallback(rendererMode);
+                this._recordFloorMiss(rendererMode, windowSummary);
             }
         } else {
             this.recoverWindows += 1;
@@ -178,29 +182,29 @@ export class QualityGovernor {
         renderer?.setPixelRatio?.(this.basePixelRatio * step.renderScale);
     }
 
-    _recordFallback(rendererMode) {
-        if (this.fallbackReason) return;
+    _recordFloorMiss(rendererMode, windowSummary) {
+        // Cycle 87 Phase 1: frame-budget misses NEVER demote the renderer.
+        // The lowest QUALITY_STEPS rung is the floor on every device; the old
+        // mobile-only 24h sticky 'sds-renderer-fallback' record branded a phone
+        // WebGL across all scenes after one bad session. What remains is
+        // observability: one telemetry event per session, so the dashboard
+        // still shows which devices sit over budget at the floor.
+        if (this._floorMissEmitted) return;
         if (!String(rendererMode ?? '').startsWith('webgpu')) return;
-        // Cycle 82/84: desktop never demotes the renderer on a frame-budget miss.
-        // The lowest QUALITY_STEPS rung is the floor. This is the ONLY writer of
-        // the 24h sticky 'sds-renderer-fallback' flag. Writing it from a transient
-        // desktop step-down un-ships the WebGPU flagship and flips the next load to
-        // WebGL for 24h (the "WebGPU/WebGL split"). Mobile WebGPU still gets this
-        // protective fallback after repeated misses at the floor.
-        if (!this.isMobile) return;
-        this.fallbackReason = 'webgpu-frame-budget';
-        const record = { reason: this.fallbackReason, at: Date.now() };
-        try {
-            localStorage.setItem('sds-renderer-fallback', JSON.stringify(record));
-        } catch {}
-        if (typeof window !== 'undefined' && window.__sdsRendererMode) {
-            window.__sdsRendererMode.fallbackReason = this.fallbackReason;
-        }
-        if (this.autoFallback && typeof window !== 'undefined') {
-            const url = new URL(window.location.href);
-            url.searchParams.set('renderer', 'webgl');
-            url.searchParams.set('fallbackReason', this.fallbackReason);
-            window.location.replace(url.href);
-        }
+        this._floorMissEmitted = true;
+        this.emitTelemetry('webgpu_frame_budget_floor', {
+            deviceTier: this.deviceTier,
+            isMobile: this.isMobile,
+            frameP95: Math.round(windowSummary?.frameP95 ?? 0),
+            frameP99: Math.round(windowSummary?.frameP99 ?? 0),
+            sceneId: windowSummary?.sceneId ?? '',
+            qualityIndex: this.qualityIndex,
+        });
     }
+}
+
+function defaultEmitTelemetry(name, props) {
+    import('../telemetry.js')
+        .then(({ emitEvent }) => emitEvent(name, props))
+        .catch(() => {});
 }

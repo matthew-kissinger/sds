@@ -163,6 +163,7 @@ export default {
         shadowsDesc: 'Ativar sombras dinâmicas (somente desktop)',
         experimentalWebGpu: 'Renderizador WebGPU',
         experimentalWebGpuDesc: 'Experimental. Usa WebGPU quando disponível; desative para recarregar com WebGL.',
+        rendererDiagnostics: 'Estado do renderizador',
         shadowQuality: 'Qualidade das Sombras',
         low: 'Baixa',
         medium: 'Média',
