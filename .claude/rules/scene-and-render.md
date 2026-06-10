@@ -24,6 +24,21 @@ The terrain mesh and every entity that "sits on the ground" must agree on the sa
 
 If a future system places geometry on the ground and uses raw `sample()` outside `±worldSize`, it will float above the flat skirt at the heightfield's clamped edge value. Aerial Classic camera hides this; Follow exposes it. Always `_groundY`.
 
+## Scene loading stages
+
+Every scene ships one of two declared loading shapes, codified per scene in [`tests/scene-loading-stages.spec.js`](../../tests/scene-loading-stages.spec.js) (the completeness guard fails any new scene that doesn't declare):
+
+- **All-cold**: everything builds before first-interactive. Valid for small scenes (Home Field, Rolling Hills, Open Country); the per-scene cold tree budget keeps it honest.
+- **Streamed**: a bounded cold corridor of LOD0 detail at first-interactive, plus **impostor-first coverage** - the first playable frame shows the whole island's tree silhouette as static kiln-atlas cross-billboards (`buildColdFoliageCoverage`), and post-Play waves UPGRADE zones from impostor to LOD0 (`armFoliageStreaming` retires each wave's impostor instances) rather than materializing trees into absence. Newsheepdogland is the reference.
+
+Rules that fall out of this (Cycle 88; decision record in `DECISIONS.md` 2026-06-10):
+
+- **The first frame must be complete at low fidelity.** A streamed scene may defer detail, never presence. A new scene that defers foliage declares `terrain.streamedZones` and gets cold impostor coverage for free; a bare-then-popping island is a regression, not a loading strategy.
+- **Cold scatter and wave scatter must agree.** The cold coverage scatters with the per-wave salts (`foliage-wave:<name>`) against the cumulative prior-tree list, byte-identical to what the streamer would scatter; the streamer reuses the cache. Never let the two paths drift.
+- **Streaming arms off the QualityGovernor warmup-complete signal**, bounded by `FALLBACK_START_DELAY_MS`. Don't reintroduce fixed start timers.
+- **Low tier keeps the impostor island forever** (sparse one-pass scatter, no LOD0 waves, no streamed grass) - coverage without the consolidated-mesh build cost.
+- **The impostor cold pass never gates first-interactive on the network**: sidecars are awaited (8s-bounded), albedo atlases bind whenever they land, failure degrades softly to the bare-island path.
+
 ## Atmosphere drives `scene.fog`
 
 The terrain shader uses Three.js standard fog chunks (`<fog_pars_vertex>`, `<fog_vertex>`, `<fog_pars_fragment>`, `<fog_fragment>`) and reads `scene.fog` directly. `Atmosphere` updates `scene.fog` per-frame so the fog color matches the sky's horizon at the current sun position.

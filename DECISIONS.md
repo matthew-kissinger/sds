@@ -1388,3 +1388,17 @@ Matt watched Newsheepdogland stream in after Play and asked whether the partial-
 - **Spiked 2026-06-10** (`tools/spike-impostor-cold-scatter.mjs`, `tools/probe-foliage-streaming-diag.mjs`): island-wide scatter costs ~278ms on the reference desktop (vs 59ms cold today) - too much for the Play click synchronously, trivially hidden inside the scene-load transition. Remaining unknown for Phase 1: the impostor-only consolidated mesh build cost on the production WebGPU path.
 - **Also in the draft:** signal-based streamer arming (governor warmup completion instead of START_DELAY_MS), and a per-scene loading-stage contract on SceneDef so all-cold vs streamed is an explicit budgeted decision per scene, not an accident of island size.
 - **Kept as-is:** the wave scheduler (idle slots with a 2s starvation bound, per-wave salted determinism, abort-on-teardown) and near-to-far ordering are sound.
+
+---
+
+## Cycle 88 - impostor-first scene loading shipped; the loading-stage contract is durable (2026-06-10)
+
+The Cycle 88 draft above shipped same-day, all five phases. The decisions that outlive the cycle:
+
+- **Streamed scenes are impostor-first.** The cold path scatters the WHOLE island (chunked, inside the scene-load transition, ~325ms reference desktop interleaved with the other build stages) and places static kiln-atlas cross-billboards for every streamed-zone tree (1,800 trees -> 8 InstancedMeshes, 6ms build). Waves UPGRADE zones impostor->LOD0 by reusing the cold scatter cache (byte-identical, wave scatter cost drops to 0) and retiring the zone's impostor instances via zero-scale matrices - no rebuild, no double representation.
+- **The impostor representation is deliberately dumb:** MeshBasicMaterial + one albedo-atlas tile per instance (azimuth-tile variety via 4-way batching), tinted by the existing setImpostorTint cross-billboard path, castShadow false, renderer-agnostic. The full kiln relighting shader + per-frame tile sync stays off this path: coverage wants silhouette, not relighting.
+- **Streamer arming is signal-based.** `QualityGovernor.onWarmupComplete` (one-shot) + a 10s fallback replaces the fixed 6.5s timer. Consequence accepted with evidence: on the entrance flow the governor is already warm, so streaming starts within an idle slot of scene-body-complete - measured qualityIndex 0 at completion.
+- **Low tier keeps the impostor island forever** (sparse one-pass scatter at horizon density, no LOD0 waves, no streamed grass). Supersedes the Cycle 87 1-wave cap.
+- **Every scene declares its loading shape** in `tests/scene-loading-stages.spec.js` (all-cold or streamed, with a cold tree budget); a new scene without a declaration fails the completeness guard. Durable rule: `.claude/rules/scene-and-render.md` "Scene loading stages".
+
+Evidence: `cycle88-validation/` (first-frame + steady-state screenshots, production probe JSONs), `docs/cycle-88-plan.md` per-phase status blocks.
