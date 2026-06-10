@@ -102,6 +102,14 @@ export default [
                         group: ['../js/*', '../js/**', '../../js/**'],
                         message: 'shared/ must not depend on js/ — js/ pulls in Three.js + DOM transitively. Move the dependency the other way.',
                     },
+                    {
+                        // Upkeep D (2026-06): the boundary is two-way. The
+                        // Worker imports shared/, never the reverse; a
+                        // shared/ -> worker/ import would couple the
+                        // deterministic kernel to DO/runtime types.
+                        group: ['../worker/*', '../worker/**', '../../worker/**'],
+                        message: 'shared/ must not depend on worker/ — the Worker imports shared/, never the reverse.',
+                    },
                 ],
             }],
             // `window` / `document` / etc. are excluded from the globals

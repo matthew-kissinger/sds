@@ -11,7 +11,7 @@ The boundary is enforced by import discipline, not by language tooling alone:
 - **No DOM, no window, no Three.js, no browser-only APIs in `shared/`.** Pure JS + `Vector2D.js`.
 - **No imports from `js/`** (the client renderer pulls Three.js transitively).
 - **No imports from `worker/`** beyond what `shared/` already exposes.
-- ESLint will enforce this once Stream B5 lands the `no-restricted-imports` rule scoped to `shared/**`.
+- ESLint enforces this: `eslint.config.js` scopes `no-restricted-imports` to `shared/**/*.js` (three.js and its sub-paths, `js/`, and since upkeep D also `worker/` are all import errors), and `no-undef` with a DOM-free globals map flags browser-only access. `npm run lint` runs it.
 
 ## Files in the deterministic core
 
