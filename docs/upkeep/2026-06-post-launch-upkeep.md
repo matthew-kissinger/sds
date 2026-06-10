@@ -128,6 +128,15 @@ Acceptance:
 
 ## Phase C - Major dependency upgrades (one at a time, full validation each)
 
+> **Status: DONE 2026-06-09 (3 shipped, 1 blocked-by-design).**
+>
+> | Major | Outcome |
+> |---|---|
+> | C1 vite 8 + plugin-react 6 + static-copy 4 | **NOT ATTEMPTED, recorded blocker.** Vite 8 replaces Rollup/esbuild with Rolldown/Oxc. Our build uses the object form of `output.manualChunks` (unsupported in 8; the replacement is Rolldown `codeSplitting`/advancedChunks, a config rewrite), a bespoke bundle-graph-walking preload plugin (`entranceModulePreloadPlugin` reads chunk `imports`/`dynamicImports`/`moduleIds`), and a per-chunk-family size ratchet that a chunking-engine swap would re-baseline wholesale. That is a deliberate migration cycle under Hard stop 3, not a mechanical rename. Revisit as its own cycle phase. |
+> | C2 typescript 6.0.3 (root + worker) | **SHIPPED** `c753e04`. Zero source changes; both typechecks clean; full suite + build + chromium smoke green. |
+> | C3 i18next 26.3.1 + react-i18next 17.0.8 | **SHIPPED** `e639a4e`. v26 removals and the v17 Trans change are outside our surface; full validation green, i18n chunk within budget. |
+> | C4 concurrently 10.0.3 | **SHIPPED** `291c5aa`. shell-quote override dropped (v10 pins 1.8.4 natively); dev-script flags verified. |
+
 Deferred majors from 2026-06-09 (`docs/cycle-86-plan.md` Post-release
 upkeep). Order matters; validate (lint + typecheck client/worker + full
 test + build + a Chromium smoke e2e) after EACH, commit each separately,
@@ -148,11 +157,15 @@ renderer-adjacent majors in this program.
 
 Acceptance:
 
-- [ ] When each upgrade commit lands, then lint, both typechecks,
+- [x] When each upgrade commit lands, then lint, both typechecks,
       `npm test`, and `npm run build` shall pass on it in isolation.
-- [ ] When the phase ends, then this doc shall list per-major: shipped
-      (version) or reverted (reason).
+      (Each of C2/C3/C4 validated before its own commit; chromium smoke
+      e2e additionally run on C2 and C3.)
+- [x] When the phase ends, then this doc shall list per-major: shipped
+      (version) or reverted (reason). (Table above; C1 is a recorded
+      blocker rather than a revert since the breakage was documentary.)
 - [ ] When the final push lands, then the Deploy run shall be green.
+      (Pending the wave-2 push.)
 
 ## Phase D - Import-discipline lint for shared/
 
@@ -265,6 +278,18 @@ Acceptance:
 
 ## Phase G - Code-quality audit + proposals (execute only zero-risk)
 
+> **Status: DONE 2026-06-09.** Audit doc:
+> [`code-quality-audit-2026-06.md`](code-quality-audit-2026-06.md)
+> (scripted orphan-file sweep + independent complexity/duplication agent;
+> the dead-code agent died at a spend limit, so the sweep was redone
+> inline with a full-corpus reference scan over 200 js/ modules).
+> Executed: 3 verified-dead files deleted (ProceduralMountains.js + its
+> shader pair, utils/Logger.js, 361 LOC total), proof in the audit doc.
+> HeightFogPatch.js is textually dead but is the deliberate Cycle 25-C
+> dormant foundation: left as proposal #2, not deleted. No suppression
+> leftovers found. main.js boot-seam and other refactors are
+> proposal-only per the rules.
+
 Multi-agent read-only audit producing `docs/upkeep/code-quality-audit-2026-06.md`:
 
 1. Dead-code sweep (unused exports/files; verify candidates against
@@ -286,12 +311,15 @@ lint-suppression leftovers. Everything else is proposal-only.
 
 Acceptance:
 
-- [ ] When the phase ends, then the audit doc shall exist with the
+- [x] When the phase ends, then the audit doc shall exist with the
       proposal table, and every executed cleanup shall name the proof
-      (test/build/grep) that it was dead.
-- [ ] When `npm test && npm run build` run at program end, both green,
+      (test/build/grep) that it was dead. (Per-file proof table in the
+      audit doc.)
+- [x] When `npm test && npm run build` run at program end, both green,
       bundle ratchet respected (deletions may SHRINK budgets: record
-      tightened numbers if a family drops more than 5 KiB).
+      tightened numbers if a family drops more than 5 KiB). (Green; no
+      family shrank since the deleted files were never in the bundle
+      graph.)
 
 ## Sequencing
 
