@@ -80,6 +80,26 @@ export default {
         }
     },
 
+    // 首次游玩教程（P1-TUTORIAL）：引导卡片与局内提示。
+    tutorial: {
+        offerTitle: '第一次放牧？',
+        offerBody: '在 Home Field 来一场 60 秒的引导教学。学会移动、冲刺、切换镜头，并把 3 只羊赶进羊圈。',
+        offerStart: '带我看看',
+        offerSkip: '不用了',
+        skip: '跳过教程',
+        herdProgress: '已入圈 {{penned}}/{{goal}}',
+        step: {
+            move: '用 WASD 或方向键移动你的牧羊犬。',
+            moveTouch: '拖动摇杆移动你的牧羊犬。',
+            sprint: '按住 Shift 冲刺。冲刺会消耗耐力。',
+            sprintTouch: '按住冲刺按钮获得短暂加速。冲刺会消耗耐力。',
+            camera: '按 C 切换镜头视角。',
+            cameraTouch: '点按顶部的镜头按钮切换视角。',
+            herd: '把 3 只羊从门赶进羊圈。保持在羊群后方；羊会躲着你跑。',
+            done: '3 只入圈。你已经掌握要领了。剩下的羊群交给你。'
+        }
+    },
+
     // Game modes
     modes: {
         title: '选择游戏模式',

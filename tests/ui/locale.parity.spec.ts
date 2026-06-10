@@ -82,21 +82,8 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'multiplayer.publicLobbies',
     'multiplayer.publicLobbiesDesc',
     'practice.hint',
-    // P1-TUTORIAL - first-run tutorial; English-only for now, translate later.
-    'tutorial.herdProgress',
-    'tutorial.offerBody',
-    'tutorial.offerSkip',
-    'tutorial.offerStart',
-    'tutorial.offerTitle',
-    'tutorial.skip',
-    'tutorial.step.camera',
-    'tutorial.step.cameraTouch',
-    'tutorial.step.done',
-    'tutorial.step.herd',
-    'tutorial.step.move',
-    'tutorial.step.moveTouch',
-    'tutorial.step.sprint',
-    'tutorial.step.sprintTouch',
+    // [P1-TUTORIAL] translated the full tutorial.* set in all locales (Cycle 86
+    // Phase 4); the tutorial.* allowlist block shrank to zero (ratchet).
     // [P1-SETTINGS-PANEL] translated the full settings.* set in all locales;
     // the old settings.* allowlist block shrank to zero (ratchet).
   ],
@@ -128,21 +115,8 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'multiplayer.publicLobbies',
     'multiplayer.publicLobbiesDesc',
     'practice.hint',
-    // P1-TUTORIAL - first-run tutorial; English-only for now, translate later.
-    'tutorial.herdProgress',
-    'tutorial.offerBody',
-    'tutorial.offerSkip',
-    'tutorial.offerStart',
-    'tutorial.offerTitle',
-    'tutorial.skip',
-    'tutorial.step.camera',
-    'tutorial.step.cameraTouch',
-    'tutorial.step.done',
-    'tutorial.step.herd',
-    'tutorial.step.move',
-    'tutorial.step.moveTouch',
-    'tutorial.step.sprint',
-    'tutorial.step.sprintTouch',
+    // [P1-TUTORIAL] translated the full tutorial.* set in all locales (Cycle 86
+    // Phase 4); the tutorial.* allowlist block shrank to zero (ratchet).
     // [P1-SETTINGS-PANEL] translated the full settings.* set in all locales;
     // the old settings.* allowlist block shrank to zero (ratchet).
   ],
@@ -174,21 +148,8 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'multiplayer.publicLobbies',
     'multiplayer.publicLobbiesDesc',
     'practice.hint',
-    // P1-TUTORIAL - first-run tutorial; English-only for now, translate later.
-    'tutorial.herdProgress',
-    'tutorial.offerBody',
-    'tutorial.offerSkip',
-    'tutorial.offerStart',
-    'tutorial.offerTitle',
-    'tutorial.skip',
-    'tutorial.step.camera',
-    'tutorial.step.cameraTouch',
-    'tutorial.step.done',
-    'tutorial.step.herd',
-    'tutorial.step.move',
-    'tutorial.step.moveTouch',
-    'tutorial.step.sprint',
-    'tutorial.step.sprintTouch',
+    // [P1-TUTORIAL] translated the full tutorial.* set in all locales (Cycle 86
+    // Phase 4); the tutorial.* allowlist block shrank to zero (ratchet).
     'sandbox.countUp',
     'sandbox.countUpDesc',
     'sandbox.countdown',
@@ -238,21 +199,8 @@ const ALLOWLIST: Record<string, readonly string[]> = {
     'multiplayer.publicLobbies',
     'multiplayer.publicLobbiesDesc',
     'practice.hint',
-    // P1-TUTORIAL - first-run tutorial; English-only for now, translate later.
-    'tutorial.herdProgress',
-    'tutorial.offerBody',
-    'tutorial.offerSkip',
-    'tutorial.offerStart',
-    'tutorial.offerTitle',
-    'tutorial.skip',
-    'tutorial.step.camera',
-    'tutorial.step.cameraTouch',
-    'tutorial.step.done',
-    'tutorial.step.herd',
-    'tutorial.step.move',
-    'tutorial.step.moveTouch',
-    'tutorial.step.sprint',
-    'tutorial.step.sprintTouch',
+    // [P1-TUTORIAL] translated the full tutorial.* set in all locales (Cycle 86
+    // Phase 4); the tutorial.* allowlist block shrank to zero (ratchet).
     // [P1-SETTINGS-PANEL] translated the full settings.* set in all locales;
     // the old settings.* allowlist block shrank to zero (ratchet).
   ],
