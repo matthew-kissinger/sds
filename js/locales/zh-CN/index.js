@@ -80,6 +80,11 @@ export default {
         }
     },
 
+    // Practice Paddock (Cycle 26 v2.1.0)
+    practice: {
+        hint: 'WASD 或方向键移动 · Shift 冲刺'
+    },
+
     // 首次游玩教程（P1-TUTORIAL）：引导卡片与局内提示。
     tutorial: {
         offerTitle: '第一次放牧？',
@@ -103,10 +108,16 @@ export default {
     // Game modes
     modes: {
         title: '选择游戏模式',
+        practice: '随心玩',
+        practiceDesc: '没有计时器。只有30只羊。慢慢来。',
         classic: '经典模式',
         classicDesc: '将200只羊赶入牧场',
         extreme: '极限模式',
-        extremeDesc: '将1000只羊赶入牧场 - 性能挑战！'
+        extremeDesc: '将1000只羊赶入牧场 - 性能挑战！',
+        insane: '疯狂模式',
+        insaneDesc: '将3000只羊赶入牧场 - 极限挑战！',
+        chaos: '混乱模式',
+        chaosDesc: '将5000只羊赶入牧场 - 彻底失控！'
     },
 
     // P1-MOBILE-WARN: 移动端开局前的性能提示。
@@ -333,6 +344,8 @@ export default {
     // Multiplayer
     multiplayer: {
         title: '多人模式',
+        publicLobbies: '公开大厅',
+        publicLobbiesDesc: '浏览公开对局',
         createRoom: '创建房间',
         createRoomDesc: '主持一个新游戏房间',
         joinRoom: '加入房间',
@@ -348,6 +361,8 @@ export default {
         competitiveDesc: '抢在对手之前收集最多的羊',
         timed: '限时赛（3分钟）',
         timedDesc: '在3分钟内尽可能多得分',
+        survival: '生存（合作）',
+        survivalDesc: '在黄昏前把羊群赶回家，然后一起撑过狼群之夜。羊群损失三分之一，这局就结束。',
         // P1-MOBILE-WARN: 移动端房主选择超过 1000 只羊时的提示。
         mobileHostHighSheep: '这台设备是移动端。超过 1,000 只羊的房间只允许桌面端玩家加入，所以你将无法加入自己创建的房间。',
         roomCode: '房间代码',
@@ -373,9 +388,16 @@ export default {
         title: '全球排行榜',
         soloClassic: '单人经典',
         soloExtreme: '单人极限',
+        soloInsane: '单人疯狂',
+        soloChaos: '单人混乱',
         timed: '限时赛（3分钟）',
         competitive: '竞技模式',
         cooperative: '合作模式',
+        // Cycle 59 (Counting Sheep): 按曲线划分的排行榜标签。
+        countingIncremental: '数羊（递增）',
+        countingExponential: '数羊（指数）',
+        // Cycle 66: Newsheepdogland 生存排行榜。
+        survival: '生存',
         updated: '更新于 {{time}}',
         loading: '加载排行榜...',
         noScores: '暂无记录。成为第一个！',
@@ -395,7 +417,12 @@ export default {
         time: '时间',
         score: '分数',
         timeRemaining: '剩余时间',
-        complete: '完成'
+        complete: '完成',
+        // Cycle 59 (Counting Sheep): HUD 轮次显示。
+        counting: {
+            round: '轮次',
+            bank: '存入得分并结束'
+        }
     },
 
     // Pause menu
@@ -407,7 +434,9 @@ export default {
         restart: '重新开始',
         mainMenu: '主菜单',
         fullscreen: '全屏',
-        exitFullscreen: '退出全屏'
+        exitFullscreen: '退出全屏',
+        // Cycle 59 (Counting Sheep): 暂停菜单中的存分按钮。
+        bankAndFinish: '存入得分并结束'
     },
 
     // Completion screen
@@ -431,6 +460,7 @@ export default {
         scoreSaved: '已保存到排行榜',
         scoreSaveFailed: '无法保存你的成绩',
         nextChallenge: '下一个挑战',
+        saveClip: '保存开发剪辑',
         stats: {
             time: '时间',
             yourScore: '你的分数',
@@ -451,6 +481,13 @@ export default {
             mpScore: '在 Sheep Dog Sim 多人对局中圈了 {{count}} 只羊。',
             cooperative: '在 Sheep Dog Sim 和队友一起赶了 {{count}} 只羊。',
             generic: '在 Sheep Dog Sim 玩了一局。'
+        },
+        // Cycle 59 (Counting Sheep): 存分后的结算摘要。
+        counting: {
+            title: '数羊成绩',
+            subtitle: '存分前你一共数了 {{count}} 只羊。',
+            counted: '已数',
+            round: '到达轮次'
         }
     },
 

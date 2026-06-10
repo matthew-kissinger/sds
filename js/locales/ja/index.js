@@ -80,6 +80,11 @@ export default {
         }
     },
 
+    // Practice Paddock (Cycle 26 v2.1.0)
+    practice: {
+        hint: 'WASDまたは矢印キーで移動 · Shiftでダッシュ'
+    },
+
     // 初回プレイのチュートリアル（P1-TUTORIAL）：案内カードとプレイ中のガイド。
     tutorial: {
         offerTitle: '牧羊は初めてですか？',
@@ -103,10 +108,16 @@ export default {
     // Game modes
     modes: {
         title: 'ゲームモードを選ぶ',
+        practice: 'のんびりプレイ',
+        practiceDesc: 'タイマーなし。羊は30匹だけ。自分のペースでどうぞ。',
         classic: 'クラシックモード',
         classicDesc: '200匹の羊すべてを牧場へ',
         extreme: 'エクストリームモード',
-        extremeDesc: '1000匹の羊を牧場へ - パフォーマンスチャレンジ！'
+        extremeDesc: '1000匹の羊を牧場へ - パフォーマンスチャレンジ！',
+        insane: 'インセインモード',
+        insaneDesc: '3000匹の羊を牧場へ - 過酷なチャレンジ！',
+        chaos: 'カオスモード',
+        chaosDesc: '5000匹の羊を牧場へ - まさに大混乱！'
     },
 
     // P1-MOBILE-WARN: モバイル端末向けのラウンド前パフォーマンス警告。
@@ -333,6 +344,8 @@ export default {
     // Multiplayer
     multiplayer: {
         title: 'マルチプレイヤー',
+        publicLobbies: '公開ロビー',
+        publicLobbiesDesc: '公開中のゲームを探す',
         createRoom: 'ルーム作成',
         createRoomDesc: '新しいゲームルームをホスト',
         joinRoom: 'ルームに参加',
@@ -348,6 +361,8 @@ export default {
         competitiveDesc: '相手より多くの羊を集めて競争',
         timed: 'タイムアタック（3分）',
         timedDesc: '3分間でできるだけ多くのポイントを獲得',
+        survival: 'サバイバル（協力）',
+        survivalDesc: '日暮れまでに群れを家へ連れ帰り、オオカミの夜をみんなで生き延びましょう。群れの3分の1を失うとランは終了します。',
         // P1-MOBILE-WARN: 1000匹超を選んだモバイルのホストへの注意書き。
         mobileHostHighSheep: 'この端末はモバイルです。羊が1,000匹を超えるルームに参加できるのはデスクトップのみのため、作成したルームに自分では参加できません。',
         roomCode: 'ルームコード',
@@ -373,9 +388,16 @@ export default {
         title: 'グローバルランキング',
         soloClassic: 'ソロクラシック',
         soloExtreme: 'ソロエクストリーム',
+        soloInsane: 'ソロインセイン',
+        soloChaos: 'ソロカオス',
         timed: 'タイムアタック',
         competitive: '対戦',
         cooperative: '協力',
+        // Cycle 59 (Counting Sheep): カーブ別のランキングタブ。
+        countingIncremental: '羊数え（加算式）',
+        countingExponential: '羊数え（指数式）',
+        // Cycle 66: Newsheepdoglandのサバイバルランキング。
+        survival: 'サバイバル',
         updated: '{{time}}に更新',
         loading: 'ランキングを読み込み中...',
         noScores: 'まだスコアがありません。最初の1人になろう！',
@@ -395,7 +417,12 @@ export default {
         time: '時間',
         score: 'スコア',
         timeRemaining: '残り時間',
-        complete: '完了'
+        complete: '完了',
+        // Cycle 59 (Counting Sheep): ラウンド表示のHUD。
+        counting: {
+            round: 'ラウンド',
+            bank: 'スコアを確定して終了'
+        }
     },
 
     // Pause menu
@@ -407,7 +434,9 @@ export default {
         restart: 'リスタート',
         mainMenu: 'メインメニュー',
         fullscreen: 'フルスクリーン',
-        exitFullscreen: 'フルスクリーン終了'
+        exitFullscreen: 'フルスクリーン終了',
+        // Cycle 59 (Counting Sheep): ポーズメニューのスコア確定。
+        bankAndFinish: 'スコアを確定して終了'
     },
 
     // Completion screen
@@ -431,6 +460,7 @@ export default {
         scoreSaved: 'リーダーボードに保存しました',
         scoreSaveFailed: 'スコアを保存できませんでした',
         nextChallenge: '次のチャレンジ',
+        saveClip: '開発用クリップを保存',
         stats: {
             time: '時間',
             yourScore: 'あなたのスコア',
@@ -451,6 +481,13 @@ export default {
             mpScore: 'Sheep Dog Simのマルチプレイで{{count}}匹の羊を柵に入れました。',
             cooperative: 'Sheep Dog Simでチームで{{count}}匹の羊を集めました。',
             generic: 'Sheep Dog Simで1ラウンド遊びました。'
+        },
+        // Cycle 59 (Counting Sheep): スコア確定時のサマリー。
+        counting: {
+            title: '数えた羊',
+            subtitle: 'スコア確定までに{{count}}匹数えました。',
+            counted: '数えた数',
+            round: '到達ラウンド'
         }
     },
 

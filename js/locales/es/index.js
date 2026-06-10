@@ -80,6 +80,11 @@ export default {
         }
     },
 
+    // Practice Paddock (Cycle 26 v2.1.0)
+    practice: {
+        hint: 'WASD o flechas para moverte · Shift para esprintar'
+    },
+
     // Tutorial de primera partida (P1-TUTORIAL): tarjeta de oferta + indicaciones durante la partida.
     tutorial: {
         offerTitle: '¿Primera vez pastoreando?',
@@ -103,10 +108,16 @@ export default {
     // Game modes
     modes: {
         title: 'Elige el Modo de Juego',
+        practice: 'Solo Juega',
+        practiceDesc: 'Sin temporizador. Solo 30 ovejas. Tómate tu tiempo.',
         classic: 'Modo Clásico',
         classicDesc: 'Pastorea las 200 ovejas al pasto',
         extreme: 'Modo Extremo',
-        extremeDesc: '¡Pastorea 1000 ovejas - desafío de rendimiento!'
+        extremeDesc: '¡Pastorea 1000 ovejas - desafío de rendimiento!',
+        insane: 'Modo Insano',
+        insaneDesc: '¡Pastorea 3000 ovejas - desafío extremo!',
+        chaos: 'Modo Caos',
+        chaosDesc: '¡Pastorea 5000 ovejas - locura absoluta!'
     },
 
     // P1-MOBILE-WARN: aviso de rendimiento previo a la partida en móviles.
@@ -333,6 +344,8 @@ export default {
     // Multiplayer
     multiplayer: {
         title: 'Multijugador',
+        publicLobbies: 'Salas Públicas',
+        publicLobbiesDesc: 'Explorar partidas abiertas',
         createRoom: 'Crear Sala',
         createRoomDesc: 'Ser anfitrión de una nueva sala',
         joinRoom: 'Unirse a Sala',
@@ -348,6 +361,8 @@ export default {
         competitiveDesc: 'Compite por recoger más ovejas que los oponentes',
         timed: 'Cronometrado (3 min)',
         timedDesc: 'Consigue tantos puntos como sea posible en 3 minutos',
+        survival: 'Supervivencia (cooperativo)',
+        survivalDesc: 'Lleven el rebaño a casa antes del anochecer y sobrevivan juntos a la noche de los lobos. Si pierden un tercio del rebaño, la partida termina.',
         // P1-MOBILE-WARN: aviso para un anfitrión móvil que elige más de 1000 ovejas.
         mobileHostHighSheep: 'Este dispositivo es móvil. Las salas con más de 1000 ovejas solo admiten jugadores de escritorio, así que no podrás unirte a la sala que crees.',
         roomCode: 'Código de Sala',
@@ -373,9 +388,16 @@ export default {
         title: 'Clasificación Global',
         soloClassic: 'Solo Clásico',
         soloExtreme: 'Solo Extremo',
+        soloInsane: 'Solo Insano',
+        soloChaos: 'Solo Caos',
         timed: 'Cronometrado (3 min)',
         competitive: 'Competitivo',
         cooperative: 'Cooperativo',
+        // Cycle 59 (Counting Sheep): pestañas por curva.
+        countingIncremental: 'Conteo Incremental',
+        countingExponential: 'Conteo Exponencial',
+        // Cycle 66: clasificación de supervivencia de Newsheepdogland.
+        survival: 'Supervivencia',
         updated: 'Actualizado {{time}}',
         loading: 'Cargando clasificaciones...',
         noScores: '¡Aún no hay puntuaciones. ¡Sé el primero!',
@@ -395,7 +417,12 @@ export default {
         time: 'Tiempo',
         score: 'Puntuación',
         timeRemaining: 'Tiempo Restante',
-        complete: 'completo'
+        complete: 'completo',
+        // Cycle 59 (Counting Sheep): indicador de rondas en el HUD.
+        counting: {
+            round: 'Ronda',
+            bank: 'Guardar y terminar'
+        }
     },
 
     // Pause menu
@@ -407,7 +434,9 @@ export default {
         restart: 'Reiniciar',
         mainMenu: 'Menú Principal',
         fullscreen: 'Pantalla Completa',
-        exitFullscreen: 'Salir de Pantalla Completa'
+        exitFullscreen: 'Salir de Pantalla Completa',
+        // Cycle 59 (Counting Sheep): opción de guardar en el menú de pausa.
+        bankAndFinish: 'Guardar y terminar'
     },
 
     // Completion screen
@@ -431,6 +460,7 @@ export default {
         scoreSaved: 'Guardado en la clasificación',
         scoreSaveFailed: 'No se pudo guardar tu puntuación',
         nextChallenge: 'Siguiente Desafío',
+        saveClip: 'Guardar clip de desarrollo',
         stats: {
             time: 'Tiempo',
             yourScore: 'Tu Puntuación',
@@ -451,6 +481,13 @@ export default {
             mpScore: 'Encerré {{count}} ovejas en una partida multijugador en Sheep Dog Sim.',
             cooperative: 'Llevamos {{count}} ovejas en equipo en Sheep Dog Sim.',
             generic: 'Terminé una partida de Sheep Dog Sim.'
+        },
+        // Cycle 59 (Counting Sheep): resumen al guardar la partida.
+        counting: {
+            title: 'Ovejas contadas',
+            subtitle: 'Contaste {{count}} antes de guardar la partida.',
+            counted: 'Contadas',
+            round: 'Ronda alcanzada'
         }
     },
 
