@@ -118,6 +118,24 @@ the cycle should ship ahead of this.
 - When `npm test` runs, then all suites shall pass with sim-baselines
   byte-identical.
 
+**Shipped 2026-06-09.** All three fixes plus a fourth from the Phase 1
+review: (1) full-room rehydration rejoin - a join re-proving a persisted
+identity (the router passes the JWT-verified `persistent_id`, never a
+client claim) reclaims its stale slot, exempt from room-full; new joiners
+still 409 (`worker/src/RoomDO.ts` join path). (2) `reclaimedByOriginal`
+computed before the host re-pin. (3) `/api/event` caps moved to raw-string
+truncation in `worker/src/eventProps.ts` (stack 4096, others 256,
+propsJson 8192, surrogate-safe, always-valid JSON). (4) Review F1: unicast
+keyframes (bind + requestKeyframe) now send the retained basis snapshot
+(`getBasisKeyframeState`), so a recovering client's next broadcast delta
+chains directly; plus F10 log msgType. Proof: 279/279 worker+delta specs
+(new `rejoin-rehydration.spec.ts` 8, `event-props-cap.spec.ts` 9, three F1
+regression tests in `delta-broadcast.spec.ts`), `npx tsc -p worker` clean,
+chaos harness extended and rerun quiet: **32/32 PASS**
+(`tools/loadtest/chaos-results-rejoinfix-2026-06-09.json` - C4 full
+rehydrated room accepts all 4 persisted-identity rejoins, capacity held,
+stranger still 409s, no phantoms, 0 desyncs, 0 decode errors).
+
 ## Phase 3 - Real-device mobile pass (PAIRED, ~2hr)
 
 **Depends on:** nothing (can run parallel to Phase 2).

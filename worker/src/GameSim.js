@@ -347,7 +347,15 @@ export class GameSimulation {
         // record "lastWire" cache with zero copying). Rebuilt wholesale on
         // every broadcast frame; null until the first delta-path frame.
         this._wireBasis = null;
-        
+        // Cycle 86 Phase 2 (review F1): the full snapshot the basis was taken
+        // from. Unicast keyframes (bind / requestKeyframe) must send THIS, not
+        // lastGameState - the sim ticks on its own interval, so lastGameState
+        // can be ahead of the basis, and a unicast built from it would leave
+        // the client's lastAppliedTick ahead of the next broadcast delta's
+        // baseTick (the client then discards valid deltas until the next
+        // cadence keyframe).
+        this._basisSnapshot = null;
+
         // Initialize simulation state
         this.initializeSimulation();
         
@@ -1495,6 +1503,18 @@ export class GameSimulation {
         return this.lastGameState;
     }
 
+    /**
+     * Cycle 86 Phase 2 (review F1): the snapshot to send as a UNICAST keyframe
+     * (keyframe-on-bind, requestKeyframe reply). Returns the snapshot the
+     * current delta basis was taken from, so the receiving client's
+     * lastAppliedTick matches the next broadcast delta's baseTick exactly.
+     * Falls back to lastGameState before the first broadcast frame (the first
+     * delta-path frame is a keyframe anyway, which resets the client).
+     */
+    getBasisKeyframeState() {
+        return this._basisSnapshot || this.lastGameState;
+    }
+
     // -----------------------------------------------------------------------
     // P2-DELTA: delta wire frames (docs/hardening/delta-protocol-design.md).
     // Pure transport: everything below serializes the output of
@@ -1506,9 +1526,10 @@ export class GameSimulation {
      * The frame the delta-capable (v >= DELTA_MIN_PROTOCOL_VERSION) cohort
      * should receive this broadcast interval. Called by the RoomDO broadcast
      * loop EVERY interval (even when the v3 cohort is empty) so the diff basis
-     * always tracks the previous broadcast frame - that is what lets a unicast
-     * keyframe at tick T be followed by the shared broadcast delta for the next
-     * tick with `baseTick === T` (design section 4 consistency note).
+     * always tracks the previous broadcast frame. Unicast keyframes send the
+     * retained basis snapshot (getBasisKeyframeState, review F1), so a client
+     * that keyframes at basis tick T applies the next broadcast delta with
+     * `baseTick === T` directly (design section 4 consistency note).
      *
      * Returns null before the first snapshot, otherwise:
      *   { kind: 'keyframe', state }  - send the full snapshot as gameStateUpdate
@@ -1546,8 +1567,10 @@ export class GameSimulation {
 
         const baseTick = basis ? basis.tick : null;
         // Advance the basis to this frame's quantized records (by reference -
-        // the snapshot builds fresh record objects every tick).
+        // the snapshot builds fresh record objects every tick), and retain the
+        // full snapshot for basis-aligned unicast keyframes (review F1).
         this._wireBasis = { tick: state.tick, sheep: state.sheep };
+        this._basisSnapshot = state;
 
         if (keyframe) return { kind: 'keyframe', state };
         return { kind: 'delta', frame: this._buildDeltaFrame(state, changed, baseTick) };

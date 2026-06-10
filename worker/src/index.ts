@@ -24,6 +24,16 @@ import {
 } from './d1';
 // Cycle 35 Phase 4: scene-id validation at the API boundary.
 import { getSceneById } from '../../shared/scenes/index.js';
+// Cycle 86 Phase 2: /api/event prop caps + always-valid-JSON encoding. Kept
+// in their own module: the Workers runtime treats every export of THIS entry
+// module as a handler, and an exported const number fails startup.
+import {
+  truncateRawString,
+  encodePropsJson,
+  EVENT_STRING_PROP_CAP,
+  EVENT_STACK_PROP_CAP,
+  EVENT_PROPS_JSON_CAP,
+} from './eventProps';
 
 export { RoomDO, LobbyDO };
 
@@ -781,15 +791,19 @@ export default {
         const name = String(body?.name ?? '').slice(0, 64);
         if (!name) return err('event name required', 400, cors);
         const propsRaw = body?.props && typeof body.props === 'object' ? body.props : {};
-        // Strip props to JSON-able primitives only; cap payload size.
+        // Strip props to JSON-able primitives only; cap each value on the
+        // RAW string (never the encoded JSON), with a wider cap for crash
+        // stacks (P0-CRASH sends ~4 KB) than for ordinary string props.
         const safeProps: Record<string, string | number | boolean> = {};
         for (const k of Object.keys(propsRaw).slice(0, 16)) {
           const v = propsRaw[k];
-          if (typeof v === 'string') safeProps[k] = v.slice(0, 256);
+          if (typeof v === 'string') {
+            safeProps[k] = truncateRawString(v, k === 'stack' ? EVENT_STACK_PROP_CAP : EVENT_STRING_PROP_CAP);
+          }
           else if (typeof v === 'number' && Number.isFinite(v)) safeProps[k] = v;
           else if (typeof v === 'boolean') safeProps[k] = v;
         }
-        const propsJson = JSON.stringify(safeProps).slice(0, 2048);
+        const propsJson = encodePropsJson(safeProps, EVENT_PROPS_JSON_CAP);
         // Optional auth — present token => recognized player.
         let pid: string | null = null;
         const auth = request.headers.get('authorization') || '';

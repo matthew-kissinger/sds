@@ -33,8 +33,11 @@
 //                     identity (hostPersistentId was re-pinned to the guest at
 //                     migration and persisted): the original host's startGame
 //                     is refused, the migrated host's passes.
-//   C4      coop x4   full room; documents the post-eviction phantom-player
-//                     lockout (4 stale entries persist -> rejoins refused)
+//   C4      coop x4   full room. Cycle 86 Fix 1: the rehydrated-full room
+//                     must accept all four persisted-identity rejoins (each
+//                     reclaims its stale slot; the old phantom-player 409
+//                     lockout) while a genuinely NEW identity still gets the
+//                     409 room-full.
 //   S0      survival  guest drop -> reconnect within grace; day-advanced
 //   S1      survival  guest drop past grace (no migration); day-advanced
 //   S2, S3  survival  day-advanced to >= day 2 (dawn checkpoint persisted)
@@ -807,29 +810,47 @@ async function main() {
     logCount('do_evicted_midgame') - doEvictedBefore === 10,
     { delta: logCount('do_evicted_midgame') - doEvictedBefore, samples: serverLog.samples.get('do_evicted_midgame') });
 
-  // C4 (4-player room): the 4 pre-eviction player entries persisted, so the
-  // room reports full and NOBODY can rejoin. Phantom-player lockout.
-  check('C: C4 full 4-player room is locked out post-eviction (all rejoins 409 room-full)',
-    rejoin.C4.joins.every((j) => j.status === 409),
+  // C4 (4-player room): pre-fix, the 4 persisted phantom entries made the
+  // rehydrated room report full and EVERY rejoin got 409 (phantom-player
+  // lockout, recorded in the P4-CHAOS evidence). Cycle 86 Fix 1: a join that
+  // re-proves a persisted identity is a RECONNECTION - it reclaims its stale
+  // slot and is exempt from the room-full check - so the full rehydrated
+  // room must now accept all four original identities back.
+  check('C: C4 full rehydrated room accepts all 4 persisted-identity rejoins (no 409; Cycle 86 fix)',
+    rejoin.C4.joins.every((j) => j.status === 200),
     rejoin.C4.joins);
-  const rejoinable = all.filter((r) => r.id !== 'C4');
+  check('C: C4 playerCount stays at capacity after the rejoins (slots reclaimed, not duplicated)',
+    rejoin.C4.roomState?.playerCount === 4 && rejoin.C4.roomState?.state === 'waiting',
+    rejoin.C4.roomState);
+  // Room-full semantics for genuinely NEW identities are unchanged: a fresh
+  // identity that was never in C4's players map still gets the 409.
+  const strangerC4 = await register(`c4new${Date.now() % 100000}`.slice(0, 20));
+  const strangerJoin = await postRaw(`/api/rooms/${rooms.C4.roomCode}/join`, {
+    token: strangerC4.token, playerName: strangerC4.name, dogType: 'jep', protocolVersion: 3,
+  });
+  check('C: C4 still refuses a genuinely NEW identity with 409 room-full',
+    strangerJoin.status === 409, { status: strangerJoin.status, body: strangerJoin.text.slice(0, 120) });
+  const rejoinable = all;
+  const twoPlayerRooms = all.filter((r) => r.id !== 'C4');
   check('C: every 2-player room accepted both identity rejoins (room rehydrated to waiting)',
-    rejoinable.every((r) => rejoin[r.id].joins.every((j) => j.status === 200) && rejoin[r.id].roomState?.state === 'waiting'),
-    Object.fromEntries(rejoinable.map((r) => [r.id, rejoin[r.id].roomState])));
-  // Phantom entries: pre-eviction sessions persist in the players map, so the
-  // rejoined room counts them (2 phantoms + 2 rejoined = 4 for the 2-player
-  // rooms; C3 and S1 each lost one player to grace_timeout pre-kill, so those
-  // carry 1 phantom + 2 rejoined = 3).
-  const expectedPhantomCounts = { C0: 4, C1: 4, C2: 4, C3: 3, S0: 4, S1: 3, S2: 4, S3: 4, S4: 4 };
-  const phantomCounts = Object.fromEntries(rejoinable.map((r) => [r.id, rejoin[r.id].roomState?.playerCount]));
-  check('C: phantom pre-eviction player entries persist in rejoined rooms (observed: count includes stale sessions)',
-    rejoinable.every((r) => rejoin[r.id].roomState?.playerCount === expectedPhantomCounts[r.id]),
-    { observed: phantomCounts, expected: expectedPhantomCounts });
+    twoPlayerRooms.every((r) => rejoin[r.id].joins.every((j) => j.status === 200) && rejoin[r.id].roomState?.state === 'waiting'),
+    Object.fromEntries(twoPlayerRooms.map((r) => [r.id, rejoin[r.id].roomState])));
+  // Cycle 86 Fix 1: a rejoin REPLACES its stale pre-eviction entry, so the
+  // rejoined room reports exactly its live player count - no phantom
+  // inflation. (Pre-fix observed counts: 4 = 2 phantoms + 2 rejoins for the
+  // 2-player rooms; 3 for C3/S1, which each lost one player to grace_timeout
+  // pre-kill. C3's evicted original host rejoins as a genuinely new player.)
+  const expectedCounts = { C0: 2, C1: 2, C2: 2, C3: 2, S0: 2, S1: 2, S2: 2, S3: 2, S4: 2 };
+  const observedCounts = Object.fromEntries(twoPlayerRooms.map((r) => [r.id, rejoin[r.id].roomState?.playerCount]));
+  check('C: stale pre-eviction entries are reclaimed on rejoin (playerCount == live players, no phantoms; Cycle 86 fix)',
+    twoPlayerRooms.every((r) => rejoin[r.id].roomState?.playerCount === expectedCounts[r.id]),
+    { observed: observedCounts, expected: expectedCounts });
 
-  // Connect sockets + restart games. The rejoined host holds a NEW sessionId
-  // and isHost:false on its player record, but the startGame gate is pinned
-  // to hostPersistentId - the pinned identity must pass it. For every room
-  // except C3 the pin is the original host; C3's host was evicted past grace
+  // Connect sockets + restart games. The rejoined host holds a NEW sessionId;
+  // under the Cycle 86 fix its reconnection RECLAIMED the host slot at REST
+  // join (isHost true on the join response, hostId re-pointed), and the
+  // startGame gate stays pinned to hostPersistentId. For every room except
+  // C3 the pin is the original host; C3's host was evicted past grace
   // pre-kill, so handlePlayerLeave re-pinned hostPersistentId to the guest
   // and PERSISTED it - post-restart the original host's startGame must be
   // refused and the migrated (guest) identity's must pass.
@@ -851,13 +872,16 @@ async function main() {
     await started;
     for (const c of r.postClients) c.startInputs(CFG.inputMs);
   }
-  // The REST rejoin handed every identity a fresh sessionId with isHost:false
-  // on its player record, yet the pinned identity's startGame succeeded in
-  // every room: the host gate follows hostPersistentId, not the session - and
+  // The REST rejoin hands every identity a fresh sessionId; under the Cycle
+  // 86 fix the PINNED identity's reconnection reclaims the host slot at join
+  // time (joins[0].isHost true everywhere except C3, whose pin migrated to
+  // the guest pre-kill: joins[0] is the demoted original host, joins[1] the
+  // migrated host). The startGame gate still follows hostPersistentId - and
   // C3 shows the pin itself migrates on eviction and survives the restart.
-  check('C: startGame host gate is identity-pinned across the restart (original host passes in 8 rooms; C3 pre-migration host refused, migrated host passes)',
-    rejoinable.every((r) => rejoin[r.id].joins[0].isHost === false &&
-      r.postClients.every((c) => (c.byType.gameStarted ?? 0) >= 1)) &&
+  check('C: startGame host gate is identity-pinned across the restart (pinned identity reclaims host at rejoin and passes; C3 pre-migration host refused, migrated host passes)',
+    rejoinable.every((r) => r.postClients.every((c) => (c.byType.gameStarted ?? 0) >= 1)) &&
+    rejoinable.filter((r) => r.id !== 'C3').every((r) => rejoin[r.id].joins[0].isHost === true) &&
+    rejoin.C3.joins[0].isHost === false && rejoin.C3.joins[1].isHost === true &&
     c3OriginalHostRefused === true,
     { c3OriginalHostRefused, joinsIsHost: Object.fromEntries(rejoinable.map((r) => [r.id, rejoin[r.id].joins.map((j) => j.isHost)])) });
 

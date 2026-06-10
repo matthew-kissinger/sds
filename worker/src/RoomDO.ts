@@ -570,7 +570,28 @@ export class RoomDO {
         );
       }
     }
-    if (this.players.size >= this.meta.maxPlayers) {
+    // Cycle 86 Phase 2: full-room rehydration rejoin. A join whose persistent
+    // identity is ALREADY in the persisted players map is a RECONNECTION by
+    // the same player (after a DO eviction the map rehydrates but the
+    // sessions do not), not a new join. body.persistentId is trustworthy
+    // here: the DO is only reachable through the Worker router, which derives
+    // it from a verified JWT - and that JWT is minted at /api/register only
+    // after the P-SEC-1 persistent_id + auth_secret proof. Matching it
+    // against the persisted entry therefore re-proves the same identity the
+    // WS upgrade's X-Auth-Persistent-Id check binds against. A reconnection
+    // reclaims its existing slot under the fresh sessionId (no duplicate
+    // entry, so the player count never exceeds maxPlayers) and is exempt
+    // from the room-full check; a genuinely NEW identity still gets the 409.
+    const claimedPid = (typeof body.persistentId === 'string' && body.persistentId.length > 0)
+      ? body.persistentId
+      : null;
+    let staleSessionId: string | null = null;
+    if (claimedPid) {
+      for (const [sid, p] of this.players) {
+        if (p.persistentId === claimedPid) { staleSessionId = sid; break; }
+      }
+    }
+    if (staleSessionId === null && this.players.size >= this.meta.maxPlayers) {
       return new Response(JSON.stringify({ error: 'Room is full' }), { status: 409 });
     }
     if (this.players.has(body.playerId)) {
@@ -587,20 +608,58 @@ export class RoomDO {
       );
     }
 
+    // Cycle 86 Phase 2: a reconnection REPLACES its stale session entry
+    // instead of adding a duplicate. joinedAt carries over so the
+    // host-migration oldest-player ordering is unchanged by the reconnect,
+    // and the host slot follows the pinned host identity (P-SEC-2; for rooms
+    // with no pin, the stale session that held hostId).
+    let reclaimsHost = false;
+    let joinedAt = Date.now();
+    if (staleSessionId !== null) {
+      const stale = this.players.get(staleSessionId)!;
+      joinedAt = stale.joinedAt ?? joinedAt;
+      reclaimsHost = this.meta.hostPersistentId
+        ? claimedPid === this.meta.hostPersistentId
+        : staleSessionId === this.meta.hostId;
+      // Drop every trace of the stale session.
+      const priorWs = this.sessions.get(staleSessionId);
+      if (priorWs) {
+        try { priorWs.close(1000, 'replaced'); } catch { /* already closed */ }
+        this.sessions.delete(staleSessionId);
+      }
+      const grace = this.graceTimeouts.get(staleSessionId);
+      if (grace) {
+        clearTimeout(grace.handle);
+        this.graceTimeouts.delete(staleSessionId);
+      }
+      this.players.delete(staleSessionId);
+      this.keyframeRequestWindows.delete(staleSessionId);
+      this.sendHealth.delete(staleSessionId);
+      log.info('rejoin_reclaimed_slot', {
+        roomCode: this.meta.roomCode,
+        staleSessionId,
+        playerId: body.playerId,
+        reclaimsHost,
+      });
+    }
+
     this.players.set(body.playerId, {
       id: body.playerId,
       name: body.playerName,
       dogType: DOG_TYPES.has(body.dogType) ? body.dogType : 'jep',
-      isHost: false,
+      isHost: reclaimsHost,
       isReady: true,
       persistentId: body.persistentId,
       displayName: body.displayName,
-      joinedAt: Date.now(),
+      joinedAt,
       // P2-DELTA: store the session's declared protocol version for the
       // broadcast cohort split. The survival gate above already used it;
       // before this it was checked but never stored.
       protocolVersion: coerceProtocolVersion(body.protocolVersion),
     });
+    // Re-point hostId at the reclaimed host session so getSerializableState
+    // reports a single live host. hostPersistentId is unchanged (same person).
+    if (reclaimsHost) this.meta.hostId = body.playerId;
 
     this.meta.lastActivity = Date.now();
     this.persist();
@@ -615,7 +674,7 @@ export class RoomDO {
       JSON.stringify({
         roomCode: this.meta.roomCode,
         playerId: body.playerId,
-        isHost: false,
+        isHost: reclaimsHost,
         room: this.getSerializableState(),
       }),
       { headers: { 'content-type': 'application/json' } },
@@ -837,8 +896,10 @@ export class RoomDO {
     // a full tick-stamped keyframe immediately so a v3 client can apply the
     // next broadcast delta without waiting out the keyframe cadence. Sent
     // regardless of cohort: a legacy client just sees one extra full frame.
+    // Basis-aligned (review F1): sends the snapshot the delta basis was taken
+    // from, not lastGameState, so the next broadcast delta's baseTick matches.
     if (this.meta?.state === 'in-game' && this.simulation) {
-      const state = this.simulation.getLatestGameState();
+      const state = this.simulation.getBasisKeyframeState();
       if (state) this.send(ws, 'gameStateUpdate', state);
     }
   }
@@ -933,7 +994,8 @@ export class RoomDO {
         // P-SEC-4 inbound rate limiter already ran before we got here.
         if (meta.state !== 'in-game' || !this.simulation) break;
         if (!this.allowKeyframeRequest(playerId)) break;
-        const state = this.simulation.getLatestGameState();
+        // Basis-aligned (review F1): see keyframe-on-bind.
+        const state = this.simulation.getBasisKeyframeState();
         const ws = this.sessions.get(playerId);
         if (state && ws) this.send(ws, 'gameStateUpdate', state);
         break;
@@ -1127,8 +1189,10 @@ export class RoomDO {
       const buffered = typeof rawBuffered === 'number' ? rawBuffered : 0;
       let sendFailed = false;
       if (buffered <= BACKPRESSURE_MAX_BUFFERED_BYTES) {
+        // Review F10: name the actual frame type in the failure log.
+        const sendsDelta = deltaPath?.kind === 'delta' && this.isDeltaCapable(pid);
         try {
-          if (deltaPath?.kind === 'delta' && this.isDeltaCapable(pid)) {
+          if (sendsDelta) {
             if (!deltaBuf) deltaBuf = encodeMsg('gameStateDelta', deltaPath.frame);
             ws.send(deltaBuf);
           } else {
@@ -1137,7 +1201,7 @@ export class RoomDO {
           }
         } catch (e) {
           sendFailed = true;
-          log.error('ws_broadcast_failed', { roomCode: this.meta?.roomCode, msgType: 'gameStateUpdate', playerId: pid, error: errStr(e) });
+          log.error('ws_broadcast_failed', { roomCode: this.meta?.roomCode, msgType: sendsDelta ? 'gameStateDelta' : 'gameStateUpdate', playerId: pid, error: errStr(e) });
         }
       }
       // P2-BACKPRESSURE: per-client consecutive-unhealthy-interval streak.
@@ -1290,6 +1354,12 @@ export class RoomDO {
         newHostId = oldest[0];
       }
       const newHost = this.players.get(newHostId)!;
+      // Cycle 86 Phase 2: compute the reclaim verdict BEFORE re-pinning
+      // hostPersistentId. The old code compared after the re-pin, so the
+      // field always logged true (the pin had just been set to the new
+      // host's identity).
+      const reclaimedByOriginal =
+        !!this.meta.hostPersistentId && newHost.persistentId === this.meta.hostPersistentId;
       // Clear the stale isHost flag on whoever previously held it, then set it
       // on the new host so getSerializableState() reports a single host.
       for (const p of this.players.values()) p.isHost = false;
@@ -1301,7 +1371,7 @@ export class RoomDO {
         roomCode: this.meta.roomCode,
         oldHostId: playerId,
         newHostId,
-        reclaimedByOriginal: newHost.persistentId === this.meta.hostPersistentId && !!this.meta.hostPersistentId,
+        reclaimedByOriginal,
         remainingPlayers: this.players.size,
       });
       this.broadcast('hostChanged', {

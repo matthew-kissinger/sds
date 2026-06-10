@@ -334,3 +334,71 @@ describe('P2-DELTA: protocolVersion storage + rehydration', () => {
     expect(room.isDeltaCapable('evil-sess')).toBe(false);
   });
 });
+
+describe('Cycle 86 review F1: unicast keyframes are basis-aligned', () => {
+  // The sim ticks on its own interval, so lastGameState can run AHEAD of the
+  // broadcast delta basis. A unicast keyframe built from lastGameState would
+  // leave the client's lastAppliedTick ahead of the next broadcast delta's
+  // baseTick; the client then discards valid deltas until the next cadence
+  // keyframe (the recovery-latency bug from the post-hoc fence review).
+  // Unicast paths must send the snapshot the basis was taken from.
+
+  it('requestKeyframe replies with the basis tick even when the sim has ticked past it, and the next broadcast delta chains onto it', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    const sockets = await startMixedGame(room);
+    // Broadcast frame at tick 1 -> basis tick 1.
+    room.simulation.tickCount = 1;
+    room.simulation.gameState.sheep[3].position.x += 0.5;
+    room.simulation.broadcastGameState();
+    broadcastOnce(room);
+
+    // The sim ticks again WITHOUT a broadcast interval: lastGameState tick 2,
+    // basis still tick 1 (the racing interleave from the review).
+    room.simulation.tickCount = 2;
+    room.simulation.gameState.sheep[9].position.x += 0.5;
+    room.simulation.broadcastGameState();
+
+    sockets.v3.sent.length = 0;
+    room.handleClientMessage('host-sess', { t: 'requestKeyframe' });
+    const reply = sockets.v3.framesOfType('gameStateUpdate');
+    expect(reply).toHaveLength(1);
+    expect(reply[0].tick).toBe(1); // basis tick, NOT lastGameState's 2
+
+    // The next broadcast interval's delta diffs basis tick 1 -> tick 2; a
+    // client that applied the unicast keyframe applies it directly.
+    broadcastOnce(room);
+    const deltas = sockets.v3.framesOfType('gameStateDelta');
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0].baseTick).toBe(reply[0].tick);
+    expect(deltas[0].tick).toBe(2);
+  });
+
+  it('keyframe-on-bind sends the basis tick under the same interleave', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    await startMixedGame(room);
+    room.simulation.tickCount = 1;
+    room.simulation.broadcastGameState();
+    broadcastOnce(room);
+    room.simulation.tickCount = 2;
+    room.simulation.broadcastGameState();
+
+    const rebound = new FakeSocket();
+    room.bindSocket('guest-v2', rebound);
+    const keyframes = rebound.framesOfType('gameStateUpdate');
+    expect(keyframes).toHaveLength(1);
+    expect(keyframes[0].tick).toBe(1); // basis-aligned
+  });
+
+  it('falls back to lastGameState when the sim has ticked but no broadcast frame exists yet', async () => {
+    const room: any = new RoomDO(makeFakeState(), makeFakeEnv());
+    await startMixedGame(room);
+    // Snapshot exists (tick 1) but no broadcast interval has run: basis null.
+    room.simulation.tickCount = 1;
+    room.simulation.broadcastGameState();
+    const rebound = new FakeSocket();
+    room.bindSocket('guest-v2', rebound);
+    const keyframes = rebound.framesOfType('gameStateUpdate');
+    expect(keyframes).toHaveLength(1);
+    expect(keyframes[0].tick).toBe(1);
+  });
+});
