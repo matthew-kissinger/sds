@@ -208,9 +208,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         }
 
         // Cycle 88 Phase 2: island-wide impostor cold coverage. Kicked off
-        // here (right after trees + rocks exist) so its chunked scatter and
-        // the atlas fetch interleave with the remaining await-bound stages;
-        // awaited at its own stage just before scene-body-complete so the
+        // here (right after trees + rocks exist): one synchronous scatter
+        // chunk behind the swap overlay (~0.3-0.5s reference; NO yields -
+        // see buildColdFoliageCoverage's doc for the SwiftShader starvation
+        // lesson), then a detached atlas-fetch + mesh-build continuation.
+        // Awaited at its own stage just before scene-body-complete so the
         // first playable frame shows the whole island at low fidelity. Soft
         // failure = today's bare-island cold path; never blocks on the
         // network (texture binds whenever it lands).

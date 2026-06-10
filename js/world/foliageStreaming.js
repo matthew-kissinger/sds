@@ -162,13 +162,19 @@ export function scatterWave(builder, sceneDef, wave, existingTrees) {
 
 /**
  * Cycle 88 Phase 2: island-wide impostor cold coverage. Runs INSIDE the
- * scene-load transition (Q1 decision): scatters every planned wave (one
- * chunk per wave with macrotask yields so the CPU interleaves with the
- * remaining await-bound build stages), caches the per-wave results for the
- * streamer to reuse (scatter once, build per wave), and places at most
- * tilesX-per-type static cross-billboard InstancedMeshes sourcing the
- * pre-baked kiln albedo atlas - so the first playable frame shows the whole
- * island's tree silhouette at low fidelity instead of a bare island.
+ * scene-load transition (Q1 decision): scatters every planned wave in ONE
+ * synchronous chunk (~0.3-0.5s reference desktop, hidden by the swap
+ * overlay), caches the per-wave results for the streamer to reuse (scatter
+ * once, build per wave), and places at most tilesX-per-type static
+ * cross-billboard InstancedMeshes sourcing the pre-baked kiln albedo atlas
+ * - so the first playable frame shows the whole island's tree silhouette
+ * at low fidelity instead of a bare island.
+ *
+ * Deliberately NO yields inside the scatter loop: on software-GL hosts
+ * (SwiftShader CI runners) frames take seconds, so a macrotask yield per
+ * wave starved a trivial ~0.5s of CPU into ~100s of wall clock and blew
+ * every load budget (Deploy runs 27281421931 + 27283224749). Blocking the
+ * choked thread for half a second behind the overlay is strictly better.
  *
  * Sparse mode (low tier, Phase 4 / Q3): one generateTrees pass at horizon
  * density over the whole streamed extent under its own salt - coverage
@@ -241,16 +247,15 @@ export async function buildColdFoliageCoverage(game, opts = {}) {
             const waves = planFoliageWaves(sceneDef);
             diag.plannedWaves = waves.length;
             const existing = [...(builder.treeInstances || [])];
+            const tScatter = performance.now();
             for (const wave of waves) {
                 if (signal?.aborted) { diag.aborted = true; return diag; }
-                const t0 = performance.now();
                 const streamed = scatterWave(builder, sceneDef, wave, existing);
-                diag.scatterMs += Math.round(performance.now() - t0);
                 cache.set(wave.name, streamed);
                 existing.push(...streamed);
                 diag.scatteredWaves += 1;
-                await yieldMacrotask();
             }
+            diag.scatterMs = Math.round(performance.now() - tScatter);
         }
         const flatAll = [...cache.values()].flat();
         diag.trees = flatAll.length;
