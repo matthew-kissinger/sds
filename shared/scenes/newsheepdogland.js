@@ -89,6 +89,19 @@ export const newsheepdogland = {
             farField: { minX: -10, maxX: 470, minZ: -1110, maxZ: -875 },
             horizon: { minX: -30, maxX: 500, minZ: -1125, maxZ: -865 },
         },
+        // Cycle 87 Phase 2: the rest of the island streams in AFTER
+        // first-interactive (js/world/foliageStreaming.js), one idle wave per
+        // zone, so the cold Play click keeps the bounded corridor above while
+        // the island fills back in within seconds. These are the pre-trim
+        // island rects the Cycle 85 first-session hardening removed from the
+        // cold path. Streamed candidates inside the cold rects are rejected,
+        // so the two scatters never double-place.
+        streamedZones: {
+            nearField: { minX: -700, maxX: 900, minZ: -1500, maxZ: 200 },
+            midField: { minX: -1100, maxX: 1300, minZ: -1500, maxZ: 900 },
+            farField: { minX: -1400, maxX: 1500, minZ: -1600, maxZ: 1500 },
+            horizon: { minX: -1700, maxX: 1700, minZ: -1700, maxZ: 1700 },
+        },
     },
 
     grass: {

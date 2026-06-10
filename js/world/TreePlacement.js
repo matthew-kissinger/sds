@@ -375,6 +375,176 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
 }
 
 /**
+ * Cycle 87 Phase 2: scene-level placement culls shared by the cold path and
+ * the streamed waves. Water cull (no trees in the surf on water-aware
+ * boundaries) + homestead-pen cull. Pure filter; same predicates the cold
+ * path has applied since Cycles 65/66.
+ *
+ * @param {object} builder TerrainBuilder instance.
+ * @param {Array} flatTrees TreeInstance[] from generateTrees.
+ * @returns {Array} filtered TreeInstance[]
+ */
+export function cullTreesForScene(builder, flatTrees) {
+    let out = flatTrees;
+    const boundaryKind = builder.sceneDef?.boundary?.kind;
+    if (boundaryKind === 'coastline' || boundaryKind === 'island') {
+        out = out.filter((t) => builder._groundY(t.x, t.z) >= 0.6);
+    }
+    const pen = builder.sceneDef?.pen;
+    if (pen?.center && pen.radius > 0) {
+        const m = 4;
+        const pMinX = pen.center.x - pen.radius - m, pMaxX = pen.center.x + pen.radius + m;
+        const pMinZ = pen.center.z - pen.radius - m, pMaxZ = pen.center.z + pen.radius + m;
+        out = out.filter((t) => !(t.x >= pMinX && t.x <= pMaxX && t.z >= pMinZ && t.z <= pMaxZ));
+    }
+    return out;
+}
+
+/**
+ * Cycle 87 Phase 2: convert flat TreeInstance[] into the per-type renderer
+ * instance lists (grounded Y via _groundY + per-model base offset). Shared by
+ * the cold path and the streamed waves.
+ *
+ * @param {object} builder TerrainBuilder instance.
+ * @param {Array} flatTrees TreeInstance[]
+ * @returns {{tree1: Array, tree2: Array}}
+ */
+export function toTreeInstancesByType(builder, flatTrees) {
+    const treeInstances = { tree1: [], tree2: [] };
+    for (const t of flatTrees) {
+        const treeY = builder._groundY(t.x, t.z);
+        const baseOffset = builder.models.trees[t.type]?.userData?.modelBaseYOffset ?? 0;
+        const placementY = treeY + baseOffset * t.scale;
+        treeInstances[t.type].push({
+            position: new THREE.Vector3(t.x, placementY, t.z),
+            rotation: new THREE.Euler(0, t.rotationY, 0),
+            scale: new THREE.Vector3(t.scale, t.scale, t.scale),
+            groundY: treeY,
+            scaleScalar: t.scale,
+            lod0BaseOffset: baseOffset,
+        });
+    }
+    return treeInstances;
+}
+
+/**
+ * Cycle 87 Phase 2: ADDITIVE tree-mesh build for streamed waves. Appends to
+ * `builder.trees` (and `builder._treeCullControllers` on the WebGPU path), so
+ * clearTrees/dispose tear streamed meshes down exactly like cold ones.
+ *
+ * Representation matches the cold path: LOD0-only consolidated compute-cull
+ * meshes on the flagship coastline WebGPU route (Cycle 81/82 validated this
+ * island-wide before the Cycle 85 build-time trim; render cost was never the
+ * blocker), and per-chunk plain InstancedMeshes on the WebGL fallback (no
+ * LOD chain; the fallback path favors simplicity over silhouette polish).
+ *
+ * @param {object} builder TerrainBuilder instance.
+ * @param {{tree1: Array, tree2: Array}} treeInstancesByType
+ * @param {{label?: string}} [opts]
+ * @returns {number} meshes created
+ */
+export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {}) {
+    const label = opts.label ?? 'streamed';
+    const dummy = new THREE.Object3D();
+    let meshCount = 0;
+
+    const cullModules = (builder.sceneDef?.boundary?.kind === 'coastline'
+        && shouldUseKonveyorProductionNativeInstancing())
+        ? (getKonveyorWebGpuModules() || null)
+        : null;
+    const useComputeCull = !!cullModules?.TSL;
+    if (useComputeCull && !builder._treeCullControllers) builder._treeCullControllers = [];
+    const chunkSize = builder.isMobile ? 320 : 192;
+
+    for (const [treeType, instances] of Object.entries(treeInstancesByType)) {
+        if (instances.length === 0 || !builder.models.trees[treeType]) continue;
+
+        const meshDefs = [];
+        builder.models.trees[treeType].traverse(child => {
+            if (!child.isMesh || !child.geometry) return;
+            meshDefs.push({
+                geometry: child.geometry,
+                material: child.material,
+                baseOffset: builder.models.trees[treeType]?.userData?.modelBaseYOffset ?? 0,
+            });
+        });
+
+        const writeMatrix = (inst, meshDef, write) => {
+            dummy.position.copy(inst.position);
+            if (Number.isFinite(inst.groundY)) {
+                const scaleScalar = Number.isFinite(inst.scaleScalar)
+                    ? inst.scaleScalar
+                    : (Number.isFinite(inst.scale?.y) ? inst.scale.y : 1);
+                dummy.position.y = inst.groundY + (meshDef.baseOffset ?? 0) * scaleScalar;
+            }
+            dummy.quaternion.setFromEuler(inst.rotation);
+            dummy.scale.copy(inst.scale);
+            dummy.updateMatrix();
+            write(dummy);
+        };
+
+        if (useComputeCull) {
+            for (const meshDef of meshDefs) {
+                const matrices = new Float32Array(instances.length * 16);
+                const offsets = new Float32Array(instances.length * 3);
+                instances.forEach((inst, i) => writeMatrix(inst, meshDef, (d) => {
+                    d.matrix.toArray(matrices, i * 16);
+                    offsets[i * 3] = d.position.x;
+                    offsets[i * 3 + 1] = d.position.y;
+                    offsets[i * 3 + 2] = d.position.z;
+                }));
+                const controller = createTreeComputeCull(cullModules, {
+                    geometry: meshDef.geometry,
+                    material: meshDef.material,
+                    matrices,
+                    offsets,
+                    count: instances.length,
+                    castShadow: !builder.isMobile,
+                });
+                const im = controller.mesh;
+                im.userData.sharedFromGlbCache = true;
+                im.userData.konveyorNativeInstancing = 'tree';
+                im.userData.konveyorNativeChunkKey = `consolidated-${label}`;
+                im.userData.konveyorTreeType = treeType;
+                builder.scene.add(im);
+                builder.trees.push(im);
+                builder._treeCullControllers.push(controller);
+                meshCount++;
+            }
+            continue;
+        }
+
+        const chunked = new Map();
+        for (const inst of instances) {
+            const key = `${Math.floor(inst.position.x / chunkSize)}:${Math.floor(inst.position.z / chunkSize)}`;
+            let chunk = chunked.get(key);
+            if (!chunk) { chunk = []; chunked.set(key, chunk); }
+            chunk.push(inst);
+        }
+        for (const chunkInstances of chunked.values()) {
+            for (const meshDef of meshDefs) {
+                const im = new THREE.InstancedMesh(meshDef.geometry, meshDef.material, chunkInstances.length);
+                im.userData.sharedFromGlbCache = true;
+                chunkInstances.forEach((inst, i) => writeMatrix(inst, meshDef, (d) => {
+                    im.setMatrixAt(i, d.matrix);
+                }));
+                im.instanceMatrix.needsUpdate = true;
+                im.computeBoundingBox?.();
+                im.computeBoundingSphere?.();
+                im.frustumCulled = true;
+                im.castShadow = !builder.isMobile;
+                im.receiveShadow = true;
+                builder.scene.add(im);
+                builder.trees.push(im);
+                meshCount++;
+            }
+        }
+    }
+
+    return meshCount;
+}
+
+/**
  * @param {object} builder TerrainBuilder instance.
  * @param {Array | null} [competitivePastures]
  * @returns {Promise<Array>} Array of InstancedMesh2 created.
@@ -416,50 +586,17 @@ export async function placeTrees(builder, competitivePastures = null) {
         });
     }
 
-    // Cycle 65: no trees in the water. The Poisson scatter fills woodsZones that
-    // can spill past the shoreline on water-aware scenes (coastline/island), and
-    // trees (unlike grass) had no waterline cull. Drop any tree whose grounded Y
-    // sits at/below the waterline, mirroring the grass SHORELINE_Y_MIN cull.
-    // Gated to water-aware boundaries so flat Field (Y~0, no water) keeps its trees.
-    const _boundaryKind = builder.sceneDef?.boundary?.kind;
-    if (_boundaryKind === 'coastline' || _boundaryKind === 'island') {
-        flatTrees = flatTrees.filter((t) => builder._groundY(t.x, t.z) >= 0.6);
-    }
-
-    // Cycle 66 P2/P3: no trees inside the homestead pen (the fenced objective).
-    // The Poisson scatter + woodsZones can drop trees in the pen footprint; cull
-    // any within the pen box plus a small margin so none poke through the fence.
-    const _pen = builder.sceneDef?.pen;
-    if (_pen?.center && _pen.radius > 0) {
-        const m = 4;
-        const pMinX = _pen.center.x - _pen.radius - m, pMaxX = _pen.center.x + _pen.radius + m;
-        const pMinZ = _pen.center.z - _pen.radius - m, pMaxZ = _pen.center.z + _pen.radius + m;
-        flatTrees = flatTrees.filter((t) => !(t.x >= pMinX && t.x <= pMaxX && t.z >= pMinZ && t.z <= pMaxZ));
-    }
+    // Cycle 65: no trees in the water; Cycle 66 P2/P3: no trees inside the
+    // homestead pen. Both culls extracted to cullTreesForScene (Cycle 87
+    // Phase 2) so streamed waves apply the identical predicates.
+    flatTrees = cullTreesForScene(builder, flatTrees);
 
     builder.treeInstances = flatTrees;
 
-    const treeInstances = {
-        tree1: [],
-        tree2: [],
-    };
-    for (const t of flatTrees) {
-        // Use _groundY (mirrors terrain falloff) instead of raw heightfield
-        // sample — trees in outer zones extend past the heightfield's
-        // worldSize and would otherwise float above the flat skirt.
-        const treeY = builder._groundY(t.x, t.z);
-        // Compensate for the GLB's origin offset.
-        const baseOffset = builder.models.trees[t.type]?.userData?.modelBaseYOffset ?? 0;
-        const placementY = treeY + baseOffset * t.scale;
-        treeInstances[t.type].push({
-            position: new THREE.Vector3(t.x, placementY, t.z),
-            rotation: new THREE.Euler(0, t.rotationY, 0),
-            scale: new THREE.Vector3(t.scale, t.scale, t.scale),
-            groundY: treeY,
-            scaleScalar: t.scale,
-            lod0BaseOffset: baseOffset,
-        });
-    }
+    // Grounded-Y conversion extracted to toTreeInstancesByType (Cycle 87
+    // Phase 2); uses _groundY (mirrors terrain falloff) instead of the raw
+    // heightfield sample, and compensates for the GLB's origin offset.
+    const treeInstances = toTreeInstancesByType(builder, flatTrees);
     builder.konveyorTreeGroundingSample = Object.entries(treeInstances)
         .flatMap(([type, instances]) => instances.slice(0, 6).map((inst) => ({
             type,

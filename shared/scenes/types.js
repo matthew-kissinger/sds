@@ -131,6 +131,16 @@
  * @property {Record<string, TerrainZone>} zones
  * @property {string} [heightmapUrl]
  * @property {number} [version]
+ * @property {Record<string, TerrainZone>} [streamedZones] Cycle 87 Phase 2 —
+ *   tree zones built AFTER first-interactive by js/world/foliageStreaming.js,
+ *   one idle-scheduled wave per named zone (same nearField/midField/farField/
+ *   horizon vocabulary as `zones`). The cold-path build reads only `zones`;
+ *   streamed candidates inside any cold `zones` rect are rejected so the two
+ *   sets never double-place. Render-only (the Worker ignores `terrain`); the
+ *   solo-sim obstacle bundle is refreshed at wave completion on the client.
+ *   Absent => no streaming (byte-identical for every existing scene).
+ *   Consumers: js/world/foliageStreaming.js, shared/TreePlacement.js (zones
+ *   override opts), tests/foliage-streaming.spec.js.
  */
 
 /**
@@ -179,6 +189,14 @@
  *   - Field: omit (default 252m falloff is correct for the rect scene).
  *   - Rolling Hills: 172 (= boundary.radius - 8).
  *   - Open Country: 372 (= boundary.radius - 8).
+ * @property {{grassRadius: number, clumpsPerChunk: {desktop: number, mobile: number}}} [streamed]
+ *   Cycle 87 Phase 3 — wider grass coverage built AFTER first-interactive by
+ *   js/world/foliageStreaming.js as the final streaming wave. The cold-path
+ *   build keeps `grassRadius`/`clumpsPerChunk` above; the streamed pass covers
+ *   the annulus out to `streamed.grassRadius` at `streamed.clumpsPerChunk`
+ *   density, skipping chunks the cold grid already built. Render-only; absent
+ *   => no streamed grass. Consumers: js/GrassSystem.js (buildStreamedGrass),
+ *   js/world/foliageStreaming.js, tests/newsheepdogland-scene.spec.js.
  */
 
 /**

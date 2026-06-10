@@ -166,6 +166,60 @@ describe('generateTrees — scene counts (sanity)', () => {
     });
 });
 
+describe('generateTrees — streamed-wave opts (Cycle 87 Phase 2)', () => {
+    // The streamed rect: the pre-trim nearField band, much larger than the
+    // cold corridor. Kept to one wave here so the spec stays fast.
+    const streamedRect = newsheepdogland.terrain.streamedZones.nearField;
+    const coldRects = Object.entries(newsheepdogland.terrain.zones)
+        .filter(([name]) => name !== 'playArea')
+        .map(([, rect]) => rect);
+    const streamedOpts = () => ({
+        zones: { nearField: streamedRect, playArea: newsheepdogland.terrain.zones.playArea },
+        excludeRects: coldRects,
+    });
+
+    it('defaults stay byte-identical when no streamed opts are passed', () => {
+        const a = generateTrees(newsheepdogland, mulberry32(newsheepdogland.terrain.seed));
+        const b = generateTrees(newsheepdogland, mulberry32(newsheepdogland.terrain.seed), {});
+        expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    });
+
+    it('streamed scatter is deterministic for the same salted seed', () => {
+        const a = generateTrees(newsheepdogland, mulberry32(777), streamedOpts());
+        const b = generateTrees(newsheepdogland, mulberry32(777), streamedOpts());
+        expect(a.length).toBeGreaterThan(0);
+        expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    });
+
+    it('excludeRects rejects every candidate inside the cold zone rects', () => {
+        const trees = generateTrees(newsheepdogland, mulberry32(777), streamedOpts());
+        for (const t of trees) {
+            for (const r of coldRects) {
+                const inside = t.x >= r.minX && t.x <= r.maxX && t.z >= r.minZ && t.z <= r.maxZ;
+                expect(inside).toBe(false);
+            }
+        }
+    });
+
+    it('existingTrees are respected by the canopy pass and never returned', () => {
+        const cold = generateTrees(newsheepdogland, mulberry32(newsheepdogland.terrain.seed));
+        const streamed = generateTrees(newsheepdogland, mulberry32(777), {
+            ...streamedOpts(),
+            existingTrees: cold,
+        });
+        const coldKeys = new Set(cold.map((t) => `${t.x},${t.z}`));
+        for (const t of streamed) {
+            expect(coldKeys.has(`${t.x},${t.z}`)).toBe(false);
+            for (const other of cold) {
+                const minDist = getTreeCanopyRadius(t) + getTreeCanopyRadius(other)
+                    + TREE_CANOPY_SPACING_PADDING;
+                const d = Math.hypot(t.x - other.x, t.z - other.z);
+                expect(d).toBeGreaterThanOrEqual(minDist - 1e-9);
+            }
+        }
+    });
+});
+
 describe('generateTrees — woods zones (Phase 3)', () => {
     it('woodsZones bias produces denser placement inside the zone', () => {
         const baseScene = {

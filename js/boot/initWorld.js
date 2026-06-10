@@ -636,6 +636,15 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             setTimeout(() => { game._wolfPack?.init?.(); }, 1000);
         }
 
+        // Cycle 87 Phase 2: stream the deferred foliage zones in after
+        // first-interactive (lazy import keeps the streamer out of the cold
+        // path; inert when the scene declares no terrain.streamedZones).
+        if (game.currentScene?.terrain?.streamedZones) {
+            import('../world/foliageStreaming.js')
+                .then(({ armFoliageStreaming }) => armFoliageStreaming(game))
+                .catch((err) => console.warn('[FOLIAGE] streamer load failed:', err));
+        }
+
         // Cycle 45 Phase 1: per-stage load breakdown. The dev console summary
         // (sorted heaviest-first) is the human-readable artifact; the returned
         // `stages` rides the scene_swapped telemetry payload via swapScene.

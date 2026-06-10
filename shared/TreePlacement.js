@@ -74,10 +74,15 @@ export function getTreeCanopyRadius(tree) {
  * candidate generators, but scene zones are nested; this pass enforces the
  * final visual footprint across all candidates.
  *
+ * Cycle 87 Phase 2: `preAccepted` seeds the spacing check with trees that
+ * already exist (the cold-path build) so a streamed wave keeps canopy spacing
+ * against them. Pre-accepted trees are checked against but never returned.
+ *
  * @param {TreeInstance[]} trees
+ * @param {TreeInstance[]} [preAccepted]
  * @returns {TreeInstance[]}
  */
-function filterCanopyOverlaps(trees) {
+function filterCanopyOverlaps(trees, preAccepted = []) {
     const candidates = trees
         .map((tree, index) => ({ tree, index }))
         .sort((a, b) => b.tree.scale - a.tree.scale || a.index - b.index);
@@ -87,13 +92,24 @@ function filterCanopyOverlaps(trees) {
     for (const { tree } of candidates) {
         const radius = getTreeCanopyRadius(tree);
         let valid = true;
-        for (const other of accepted) {
+        for (const other of preAccepted) {
             const dx = tree.x - other.x;
             const dz = tree.z - other.z;
             const minDist = radius + getTreeCanopyRadius(other) + TREE_CANOPY_SPACING_PADDING;
             if (dx * dx + dz * dz < minDist * minDist) {
                 valid = false;
                 break;
+            }
+        }
+        if (valid) {
+            for (const other of accepted) {
+                const dx = tree.x - other.x;
+                const dz = tree.z - other.z;
+                const minDist = radius + getTreeCanopyRadius(other) + TREE_CANOPY_SPACING_PADDING;
+                if (dx * dx + dz * dz < minDist * minDist) {
+                    valid = false;
+                    break;
+                }
             }
         }
         if (valid) accepted.push(tree);
@@ -159,11 +175,25 @@ function getBiome(x, z) {
  *        Extra pastures (competitive mode) whose bbox + 15m buffer rejects trees.
  * @param {Array<{x:number,z:number,radius:number}>} [opts.rockPositions]
  *        Pre-placed rocks; trees within `rock.radius + 4m` are skipped.
+ * @param {Record<string, {minX:number,maxX:number,minZ:number,maxZ:number}>} [opts.zones]
+ *        Cycle 87 Phase 2 — zone-rect override (streamed waves scatter over
+ *        `terrain.streamedZones` subsets). Default: `scene.terrain.zones`.
+ * @param {Array<{minX:number,maxX:number,minZ:number,maxZ:number}>} [opts.excludeRects]
+ *        Candidates inside any rect are rejected (streamed waves exclude the
+ *        cold-path zone rects so the two scatters never double-place).
+ * @param {TreeInstance[]} [opts.existingTrees]
+ *        Already-placed trees the canopy-overlap pass must respect (checked
+ *        against, never returned).
  * @returns {TreeInstance[]}
  */
 export function generateTrees(scene, rng, opts = {}) {
-    const { competitivePastures = null, rockPositions = null } = opts;
-    const zones = scene?.terrain?.zones;
+    const {
+        competitivePastures = null,
+        rockPositions = null,
+        excludeRects = null,
+        existingTrees = null,
+    } = opts;
+    const zones = opts.zones ?? scene?.terrain?.zones;
     if (!zones) return [];
 
     const islandBoundary = scene?.boundary?.kind === 'island' ? scene.boundary : null;
@@ -231,6 +261,12 @@ export function generateTrees(scene, rng, opts = {}) {
 
         const isValidPoint = (x, z) => {
             if (x < zone.minX || x > zone.maxX || z < zone.minZ || z > zone.maxZ) return false;
+
+            if (excludeRects) {
+                for (const r of excludeRects) {
+                    if (x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ) return false;
+                }
+            }
 
             if (islandBoundary) {
                 const dx = x - islandBoundary.center.x;
@@ -380,7 +416,7 @@ export function generateTrees(scene, rng, opts = {}) {
         }
     }
 
-    return filterCanopyOverlaps(out);
+    return filterCanopyOverlaps(out, existingTrees ?? []);
 }
 
 /**
