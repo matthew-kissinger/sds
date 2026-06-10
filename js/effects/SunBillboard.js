@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
-import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js';
+import { createWebGpuEffectMaterial } from './webgpuEffectMaterialAdapter.js';
 
 /**
  * Cycle 39 (scorched-earth): the sun billboard is *just* the disc. A small
@@ -16,7 +16,7 @@ import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js
 
 const SUN_DISTANCE = 3000;
 const SUN_QUAD_SIZE = 360;
-const KONVEYOR_SUN_QUAD_SIZE = 720;
+const WEBGPU_SUN_QUAD_SIZE = 720;
 const SUN_CORE_RADIUS = 0.065;
 const SUN_CORE_FEATHER = 0.13;
 
@@ -78,21 +78,21 @@ export class SunBillboard {
         const distance = options.distance ?? SUN_DISTANCE;
         this.distance = distance;
 
-        const materialResult = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
+        const materialResult = createWebGpuEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
             createDefaultMaterial: makeSunBillboardMaterial,
             search: options.search,
-            factories: options.konveyorEffectFactories
+            factories: options.webgpuEffectFactories
         });
-        const size = options.size ?? (materialResult.summary?.applied ? KONVEYOR_SUN_QUAD_SIZE : SUN_QUAD_SIZE);
+        const size = options.size ?? (materialResult.summary?.applied ? WEBGPU_SUN_QUAD_SIZE : SUN_QUAD_SIZE);
         this.size = size;
         const geometry = new THREE.PlaneGeometry(size, size);
 
         this.material = materialResult.material;
         this.materialControls = materialResult.controls;
-        this.konveyorMaterialSummary = materialResult.summary;
+        this.webgpuMaterialSummary = materialResult.summary;
         this.mesh = new THREE.Mesh(geometry, this.material);
         this.mesh.name = 'SunBillboard';
-        this.mesh.renderOrder = this.konveyorMaterialSummary?.applied ? 999 : 5;
+        this.mesh.renderOrder = this.webgpuMaterialSummary?.applied ? 999 : 5;
         this.mesh.frustumCulled = false;
 
         scene.add(this.mesh);
@@ -144,10 +144,10 @@ export class SunBillboard {
 
     getDiagnostics() {
         const dir = this._sunDir.toArray().map((value) => Number(value.toFixed(4)));
-        const coreRadius = this.material?.userData?.konveyorSunBillboardShape?.coreRadius
+        const coreRadius = this.material?.userData?.webgpuSunBillboardShape?.coreRadius
             ?? this.material?.uniforms?.uCoreRadius?.value
             ?? null;
-        const coreFeather = this.material?.userData?.konveyorSunBillboardShape?.coreFeather
+        const coreFeather = this.material?.userData?.webgpuSunBillboardShape?.coreFeather
             ?? this.material?.uniforms?.uCoreFeather?.value
             ?? null;
         const angularDiameter = (radius) => Number((2 * Math.atan((this.size * radius * 0.5) / this.distance) * 180 / Math.PI).toFixed(3));
@@ -162,7 +162,7 @@ export class SunBillboard {
                 angularCoreDiameterDeg: Number.isFinite(coreRadius) ? angularDiameter(coreRadius) : null,
             },
             materialName: this.material?.name ?? null,
-            applied: this.konveyorMaterialSummary?.applied ?? false,
+            applied: this.webgpuMaterialSummary?.applied ?? false,
             physicalDirection: dir,
             visualDirection: dir,
             sunColor: this._lastSunColor.toArray().map((value) => Number(value.toFixed(4))),

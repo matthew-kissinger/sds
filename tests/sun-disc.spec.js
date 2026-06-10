@@ -3,12 +3,12 @@
 /**
  * Cycle 39 Phase A — renderer-path divergence sentinel for the sun billboard.
  *
- * The disc shader (WebGL fragment) and the konveyor node material (WebGPU
+ * The disc shader (WebGL fragment) and the webgpu node material (WebGPU
  * TSL graph) must agree on the same contract:
  *   - No halo math (halo / haloColor / haloFalloff / alphaHaloMix all gone).
  *   - One core color uniform, one intensity uniform, one radial smoothstep.
  *   - AdditiveBlending in both paths (bloom is the painter; the disc is HDR-bright).
- *   - userData.konveyorSunBillboardOwnership.owns === 'disc-body-only'.
+ *   - userData.webgpuSunBillboardOwnership.owns === 'disc-body-only'.
  *
  * If a future change reintroduces a halo term on either path, this test fails.
  */
@@ -20,16 +20,16 @@ import {
   TSL,
 } from 'three/webgpu';
 
-import { createKonveyorSunBillboardNodeMaterial } from '../js/effects/konveyorSunNodeMaterial.js';
+import { createWebGpuSunBillboardNodeMaterial } from '../js/effects/webgpuSunNodeMaterial.js';
 import { SunBillboard } from '../js/effects/SunBillboard.js';
 
 describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
-  it('konveyor node material declares disc-body-only ownership and has no halo uniforms', () => {
-    const material = createKonveyorSunBillboardNodeMaterial(
+  it('webgpu node material declares disc-body-only ownership and has no halo uniforms', () => {
+    const material = createWebGpuSunBillboardNodeMaterial(
       { MeshBasicNodeMaterial, AdditiveBlending, Color: THREE.Color, TSL },
       {}
     );
-    expect(material.name).toBe('konveyor-node-sun-billboard');
+    expect(material.name).toBe('webgpu-node-sun-billboard');
     expect(material.blending).toBe(AdditiveBlending);
     expect(material.depthWrite).toBe(false);
     expect(material.transparent).toBe(true);
@@ -37,27 +37,27 @@ describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
     expect(material.colorNode).toBeTruthy();
     expect(material.opacityNode).toBeTruthy();
 
-    const ownership = material.userData.konveyorSunBillboardOwnership;
+    const ownership = material.userData.webgpuSunBillboardOwnership;
     expect(ownership).toMatchObject({
       owns: 'disc-body-only',
       skyOwns: 'painted-sun-body-aureole-and-horizon-glow',
     });
-    expect(material.userData.konveyorSunBillboardShape).toMatchObject({
+    expect(material.userData.webgpuSunBillboardShape).toMatchObject({
       coreRadius: 0.065,
       coreFeather: 0.13,
     });
     // No halo bookkeeping anywhere in userData.
-    expect(material.userData.konveyorHaloColorUniform).toBeUndefined();
-    expect(Object.keys(material.userData)).not.toContain('konveyorHaloColorUniform');
+    expect(material.userData.webgpuHaloColorUniform).toBeUndefined();
+    expect(Object.keys(material.userData)).not.toContain('webgpuHaloColorUniform');
 
     // Only core + intensity uniforms remain.
-    expect(material.userData.konveyorIntensityUniform).toBeTruthy();
-    expect(material.userData.konveyorCoreColorUniform).toBeTruthy();
+    expect(material.userData.webgpuIntensityUniform).toBeTruthy();
+    expect(material.userData.webgpuCoreColorUniform).toBeTruthy();
   });
 
   it('WebGL fallback shader has only core uniforms (no halo uniform)', () => {
     const scene = new THREE.Scene();
-    const sun = new SunBillboard(scene); // no konveyor flag → default ShaderMaterial path
+    const sun = new SunBillboard(scene); // no webgpu flag → default ShaderMaterial path
     try {
       const uniforms = sun.material.uniforms;
       expect(uniforms).toBeTruthy();
@@ -69,7 +69,7 @@ describe('cycle-39 sun disc — renderer-path divergence sentinel', () => {
       expect(uniforms.uCoreFeather.value).toBe(0.13);
       // Halo uniform must not exist.
       expect(uniforms.uHaloColor).toBeUndefined();
-      // Same blending mode as the konveyor path.
+      // Same blending mode as the webgpu path.
       expect(sun.material.blending).toBe(THREE.AdditiveBlending);
       // The fragment source must not reference halo terms.
       expect(sun.material.fragmentShader).not.toMatch(/halo|Halo/);

@@ -17,7 +17,7 @@
  * linear, write gl_FragColor raw to avoid tonemap double-apply.
  */
 import * as THREE from 'three';
-import { createKonveyorWaterMaterial } from './konveyorWaterMaterialAdapter.js';
+import { createWebGpuWaterMaterial } from './webgpuWaterMaterialAdapter.js';
 
 export const WATER_PALETTE_RGB = Object.freeze({
     shallow: [0x6f, 0xd7, 0xd2],
@@ -257,7 +257,7 @@ export function createAnimeWaterMaterial({
     heightfield = null,
     waterY = -0.05,
     search,
-    konveyorWaterFactories,
+    webgpuWaterFactories,
 }) {
     const shoreline = getBoundaryUniforms(boundary);
     const heightTex = heightfield ? makeHeightTexture(heightfield) : null;
@@ -308,10 +308,10 @@ export function createAnimeWaterMaterial({
         }
         return material;
     };
-    const materialResult = createKonveyorWaterMaterial('anime-water', 'createAnimeWaterMaterial', {
+    const materialResult = createWebGpuWaterMaterial('anime-water', 'createAnimeWaterMaterial', {
         createDefaultMaterial,
         search,
-        factories: konveyorWaterFactories,
+        factories: webgpuWaterFactories,
         context: {
             shoreline: {
                 center: shoreline.center.clone(),
@@ -342,14 +342,14 @@ export function createAnimeWaterMaterial({
     const material = materialResult.material;
     material.userData = material.userData ?? {};
     material.userData.heightTexture = heightTex;
-    material.userData.konveyorWaterMaterialControls = materialResult.controls;
-    material.userData.konveyorWaterMaterialSummary = materialResult.summary;
+    material.userData.webgpuWaterMaterialControls = materialResult.controls;
+    material.userData.webgpuWaterMaterialSummary = materialResult.summary;
     return material;
 }
 
-export function createAnimeWater({ boundary, heightfield = null, size = 4000, y = -0.05, segments = 64, search, konveyorWaterFactories }) {
-    const material = createAnimeWaterMaterial({ boundary, heightfield, waterY: y, search, konveyorWaterFactories });
-    const waterControls = material.userData?.konveyorWaterMaterialControls ?? null;
+export function createAnimeWater({ boundary, heightfield = null, size = 4000, y = -0.05, segments = 64, search, webgpuWaterFactories }) {
+    const material = createAnimeWaterMaterial({ boundary, heightfield, waterY: y, search, webgpuWaterFactories });
+    const waterControls = material.userData?.webgpuWaterMaterialControls ?? null;
     const baseSparkleStrength = material.uniforms?.uSparkleStrength?.value ?? 0.7;
     let qualitySparkleScale = 1;
 
@@ -364,7 +364,7 @@ export function createAnimeWater({ boundary, heightfield = null, size = 4000, y 
     return {
         mesh,
         material,
-        konveyorWaterMaterialSummary: material.userData?.konveyorWaterMaterialSummary ?? null,
+        webgpuWaterMaterialSummary: material.userData?.webgpuWaterMaterialSummary ?? null,
         get qualitySparkleScale() {
             return qualitySparkleScale;
         },

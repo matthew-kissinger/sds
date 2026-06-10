@@ -230,7 +230,7 @@ function makeTargetUrl(args, config) {
     url.searchParams.set('perfPose', config.pose);
     url.searchParams.set('perfSystem', config.system);
     if (args.nativeTreeImpostors === '1' || args.nativeTreeImpostors === true) {
-        url.searchParams.set('konveyorNativeTreeImpostors', '1');
+        url.searchParams.set('webgpuNativeTreeImpostors', '1');
     }
     return url.href;
 }

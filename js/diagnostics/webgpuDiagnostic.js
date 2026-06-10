@@ -12,8 +12,8 @@ import {
 import { isKnownPreset } from '../atmosphere/skyPresets.js';
 import { Atmosphere } from '../atmosphere/Atmosphere.js';
 import {
-    createKonveyorAtmosphereMaterial,
-} from '../atmosphere/konveyorAtmosphereMaterialAdapter.js';
+    createWebGpuAtmosphereMaterial,
+} from '../atmosphere/webgpuAtmosphereMaterialAdapter.js';
 import { DEFAULT_SCENE_ID, getSceneById } from '../../shared/scenes/index.js';
 import { createRuntimeGlbMaterialReplacementProof } from './webgpuGlbMaterialProof.js';
 import {
@@ -21,8 +21,8 @@ import {
     createRuntimeGlbPreview,
 } from './webgpuRuntimeGlbPreview.js';
 import {
-    createKonveyorEffectMaterial,
-} from '../effects/konveyorEffectMaterialAdapter.js';
+    createWebGpuEffectMaterial,
+} from '../effects/webgpuEffectMaterialAdapter.js';
 import { CorralZapEffectPool } from '../effects/CorralZapEffect.js';
 import { PortalEffect } from '../effects/PortalEffect.js';
 import { SunBillboard } from '../effects/SunBillboard.js';
@@ -31,10 +31,10 @@ import { createAnimeWater } from '../water/AnimeWater.js';
 import { GrassSystem } from '../GrassSystem.js';
 import { OptimizedSheepSystem } from '../OptimizedSheep.js';
 import {
-    createKonveyorNodeMaterialFactoryGlobals,
-    createKonveyorNodeMaterialFactorySuite,
-    summarizeKonveyorNodeMaterialFactorySuite,
-} from '../konveyorNodeMaterialFactorySuite.js';
+    createWebGpuNodeMaterialFactoryGlobals,
+    createWebGpuNodeMaterialFactorySuite,
+    summarizeWebGpuNodeMaterialFactorySuite,
+} from '../webgpuNodeMaterialFactorySuite.js';
 import { geometryTriangleCount } from '../utils/TriangleCount.js';
 import { Heightfield } from '../../shared/terrain/Heightfield.js';
 import {
@@ -173,7 +173,7 @@ async function loadWebGpuThree() {
 
 export function resolveDiagnosticScene(search = '') {
     const params = new URLSearchParams(search || '');
-    const requestedSceneId = params.get('konveyorScene') || params.get('scene');
+    const requestedSceneId = params.get('webgpuScene') || params.get('scene');
 
     if (!requestedSceneId) {
         return {
@@ -205,7 +205,7 @@ export function resolveDiagnosticSkyPreset(search = '', defaultPresetName = DEFA
     const fallbackPresetName = isKnownPreset(defaultPresetName)
         ? defaultPresetName
         : DEFAULT_SKY_FOG_SAMPLE_PRESET;
-    const requestedPresetName = params.get('konveyorSkyPreset') || fallbackPresetName;
+    const requestedPresetName = params.get('webgpuSkyPreset') || fallbackPresetName;
 
     if (isKnownPreset(requestedPresetName)) {
         return {
@@ -272,15 +272,15 @@ export function createProductionAtmosphereAdapterDiagnosticProof({
         sky: null,
         cloud: null,
     };
-    const search = '?renderer=webgpu&konveyorAtmosphere=1';
+    const search = '?renderer=webgpu&webgpuAtmosphere=1';
     const atmosphere = new Atmosphere(scene, {
         initialPreset: skyFog.presetName,
         sceneFog: sceneBinding?.fog ?? null,
         skyFactory: (context) => {
-            const result = createKonveyorAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
+            const result = createWebGpuAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
                 createDefaultMaterial: () => createFallbackNodeMaterial(
                     webGpuModules,
-                    'konveyor-production-atmosphere-sky-fallback',
+                    'webgpu-production-atmosphere-sky-fallback',
                     { side: webGpuModules.BackSide }
                 ),
                 search,
@@ -291,10 +291,10 @@ export function createProductionAtmosphereAdapterDiagnosticProof({
             return result;
         },
         cloudFactory: (context) => {
-            const result = createKonveyorAtmosphereMaterial('cloud-layer', 'createCloudLayerMaterial', {
+            const result = createWebGpuAtmosphereMaterial('cloud-layer', 'createCloudLayerMaterial', {
                 createDefaultMaterial: () => createFallbackNodeMaterial(
                     webGpuModules,
-                    'konveyor-production-atmosphere-cloud-fallback',
+                    'webgpu-production-atmosphere-cloud-fallback',
                     { side: webGpuModules.DoubleSide, transparent: true }
                 ),
                 search,
@@ -360,7 +360,7 @@ export function createProductionAtmosphereAdapterDiagnosticProof({
 }
 
 function createDiagnosticHeightfieldFromTexture(texture) {
-    const meta = texture.userData?.konveyorHeightfield ?? {};
+    const meta = texture.userData?.webgpuHeightfield ?? {};
     const data = texture.image?.data;
     const heightfield = new Heightfield({
         data,
@@ -393,8 +393,8 @@ export function createProductionWaterAdapterDiagnosticProof({
         size: 2.0,
         y: -1.19,
         segments: 4,
-        search: '?renderer=webgpu&konveyorWater=1',
-        konveyorWaterFactories: waterFactories,
+        search: '?renderer=webgpu&webgpuWater=1',
+        webgpuWaterFactories: waterFactories,
     });
 
     water.mesh.position.z = 0.11;
@@ -403,20 +403,20 @@ export function createProductionWaterAdapterDiagnosticProof({
     scene.add(water.mesh);
     water.update(1.25);
 
-    const summary = water.konveyorWaterMaterialSummary ?? water.material.userData?.konveyorWaterMaterialSummary ?? null;
+    const summary = water.webgpuWaterMaterialSummary ?? water.material.userData?.webgpuWaterMaterialSummary ?? null;
     const productionHeightTexture = water.material.userData?.heightTexture ?? null;
     const checks = {
         factoryApplied: summary?.applied === true,
-        nodeMaterial: water.material?.name === 'konveyor-node-anime-water'
+        nodeMaterial: water.material?.name === 'webgpu-node-anime-water'
             && water.material?.isNodeMaterial === true,
         meshPresent: scene.children.includes(water.mesh),
         meshIsWaterPlane: water.mesh?.isMesh === true
             && water.mesh?.geometry?.type === 'PlaneGeometry',
         productionHeightTexture: productionHeightTexture?.isDataTexture === true,
-        sourceHeightfieldMatchesTexture: heightfield.width === heightTexture.userData.konveyorHeightfield.size[0]
-            && heightfield.height === heightTexture.userData.konveyorHeightfield.size[1]
-            && heightfield.worldSize === heightTexture.userData.konveyorHeightfield.worldSize
-            && heightfield.peakHeight === heightTexture.userData.konveyorHeightfield.peakHeight,
+        sourceHeightfieldMatchesTexture: heightfield.width === heightTexture.userData.webgpuHeightfield.size[0]
+            && heightfield.height === heightTexture.userData.webgpuHeightfield.size[1]
+            && heightfield.worldSize === heightTexture.userData.webgpuHeightfield.worldSize
+            && heightfield.peakHeight === heightTexture.userData.webgpuHeightfield.peakHeight,
         updateCallable: typeof water.update === 'function',
         disposeCallable: typeof water.dispose === 'function',
     };
@@ -470,8 +470,8 @@ export function createProductionTerrainAdapterDiagnosticProof({
         ?? getSceneById(DEFAULT_SCENE_ID);
     const heightfield = createDiagnosticHeightfieldFromTexture(heightTexture);
     const builder = new TerrainBuilder(scene, true, sourceScene, {
-        search: '?renderer=webgpu&konveyorTerrain=1',
-        konveyorTerrainFactories: terrainFactories,
+        search: '?renderer=webgpu&webgpuTerrain=1',
+        webgpuTerrainFactories: terrainFactories,
     });
     builder.setHeightfield(heightfield);
     const terrain = builder.createTerrain();
@@ -486,20 +486,20 @@ export function createProductionTerrainAdapterDiagnosticProof({
         builder.terrainSkirtMesh.renderOrder = 0;
     }
 
-    const summary = builder.konveyorTerrainMaterialSummary ?? terrain.material.userData?.konveyorTerrainMaterialSummary ?? null;
+    const summary = builder.webgpuTerrainMaterialSummary ?? terrain.material.userData?.webgpuTerrainMaterialSummary ?? null;
     const productionHeightTexture = terrain.material.userData?.heightTexture ?? null;
     const checks = {
         factoryApplied: summary?.applied === true,
-        nodeMaterial: terrain.material?.name === 'konveyor-node-terrain-heightfield'
+        nodeMaterial: terrain.material?.name === 'webgpu-node-terrain-heightfield'
             && terrain.material?.isNodeMaterial === true,
         sceneContainsTerrain: scene.children.includes(terrain),
         meshIsTerrainPlane: terrain?.isMesh === true
             && terrain?.geometry?.type === 'PlaneGeometry',
         productionHeightTexture: productionHeightTexture?.isDataTexture === true,
-        sourceHeightfieldMatchesTexture: heightfield.width === heightTexture.userData.konveyorHeightfield.size[0]
-            && heightfield.height === heightTexture.userData.konveyorHeightfield.size[1]
-            && heightfield.worldSize === heightTexture.userData.konveyorHeightfield.worldSize
-            && heightfield.peakHeight === heightTexture.userData.konveyorHeightfield.peakHeight,
+        sourceHeightfieldMatchesTexture: heightfield.width === heightTexture.userData.webgpuHeightfield.size[0]
+            && heightfield.height === heightTexture.userData.webgpuHeightfield.size[1]
+            && heightfield.worldSize === heightTexture.userData.webgpuHeightfield.worldSize
+            && heightfield.peakHeight === heightTexture.userData.webgpuHeightfield.peakHeight,
         meshGridBound: heightfield.displacedHeights?.length === terrain.geometry.attributes.position.count,
         disposeCallable: typeof builder.dispose === 'function',
     };
@@ -557,8 +557,8 @@ export function createProductionGrassAdapterDiagnosticProof({
     const heightfield = createDiagnosticHeightfieldFromTexture(heightTexture);
     heightfield.bakeMeshGrid({ segments: 256, size: 3200 });
     const grass = new GrassSystem(scene, false, sourceScene?.grass ?? null, heightfield, sourceScene?.boundary ?? null, {
-        search: '?renderer=webgpu&konveyorGrass=1',
-        konveyorGrassFactories: grassFactories,
+        search: '?renderer=webgpu&webgpuGrass=1',
+        webgpuGrassFactories: grassFactories,
     });
 
     grass.noiseTexture = grass.createNoiseTexture();
@@ -588,15 +588,15 @@ export function createProductionGrassAdapterDiagnosticProof({
         scene.add(meadowMesh);
     }
 
-    const bladeSummary = grass.konveyorGrassBladeMaterialSummary ?? grass.grassMaterial?.userData?.konveyorGrassBladeMaterialSummary ?? null;
-    const meadowSummary = grass.konveyorMeadowQuadMaterialSummary ?? null;
+    const bladeSummary = grass.webgpuGrassBladeMaterialSummary ?? grass.grassMaterial?.userData?.webgpuGrassBladeMaterialSummary ?? null;
+    const meadowSummary = grass.webgpuMeadowQuadMaterialSummary ?? null;
     const bladeData = grass.clumpGeometry?.attributes?.bladeData ?? null;
     const checks = {
         bladeFactoryApplied: bladeSummary?.applied === true,
         meadowFactoryApplied: meadowSummary?.applied === true,
-        bladeNodeMaterial: grass.grassMaterial?.name === 'konveyor-node-grass-blade'
+        bladeNodeMaterial: grass.grassMaterial?.name === 'webgpu-node-grass-blade'
             && grass.grassMaterial?.isNodeMaterial === true,
-        meadowNodeMaterial: meadowMaterial?.name === 'konveyor-node-meadow-quad'
+        meadowNodeMaterial: meadowMaterial?.name === 'webgpu-node-meadow-quad'
             && meadowMaterial?.isNodeMaterial === true,
         clumpGeometryBound: grass.clumpGeometry?.type === 'BufferGeometry'
             && grass.clumpGeometry?.attributes?.position?.count === grass.config.bladesPerClump * 4
@@ -605,10 +605,10 @@ export function createProductionGrassAdapterDiagnosticProof({
             && bladeChunk.mesh.count > 0
             && bladeChunk.mesh.count <= 12
             && scene.children.includes(bladeChunk.mesh),
-        sourceHeightfieldMatchesTexture: heightfield.width === heightTexture.userData.konveyorHeightfield.size[0]
-            && heightfield.height === heightTexture.userData.konveyorHeightfield.size[1]
-            && heightfield.worldSize === heightTexture.userData.konveyorHeightfield.worldSize
-            && heightfield.peakHeight === heightTexture.userData.konveyorHeightfield.peakHeight,
+        sourceHeightfieldMatchesTexture: heightfield.width === heightTexture.userData.webgpuHeightfield.size[0]
+            && heightfield.height === heightTexture.userData.webgpuHeightfield.size[1]
+            && heightfield.worldSize === heightTexture.userData.webgpuHeightfield.worldSize
+            && heightfield.peakHeight === heightTexture.userData.webgpuHeightfield.peakHeight,
         meshGridBound: heightfield.displacedHeights?.length === 66049,
         disposeCallable: typeof grass.dispose === 'function',
     };
@@ -689,8 +689,8 @@ export function createProductionSheepAdapterDiagnosticProof({
         spreadRadius: 1.2,
         defaultCount: 3,
     }, false, {
-        search: '?renderer=webgpu&konveyorSheep=1',
-        konveyorSheepFactories: sheepFactories,
+        search: '?renderer=webgpu&webgpuSheep=1',
+        webgpuSheepFactories: sheepFactories,
     });
 
     if (sheep.instancedMesh) {
@@ -700,11 +700,11 @@ export function createProductionSheepAdapterDiagnosticProof({
         sheep.instancedMesh.renderOrder = 4;
     }
 
-    const summary = sheep.konveyorSheepMaterialSummary ?? sheep.material?.userData?.konveyorSheepMaterialSummary ?? null;
+    const summary = sheep.webgpuSheepMaterialSummary ?? sheep.material?.userData?.webgpuSheepMaterialSummary ?? null;
     const attributes = Object.keys(sheep.mergedGeometry?.attributes ?? {});
     const checks = {
         factoryApplied: summary?.applied === true,
-        nodeMaterial: sheep.material?.name === 'konveyor-node-sheep-wool'
+        nodeMaterial: sheep.material?.name === 'webgpu-node-sheep-wool'
             && sheep.material?.isNodeMaterial === true,
         instancedMeshPresent: sheep.instancedMesh?.isInstancedMesh === true
             && sheep.instancedMesh.count === 3
@@ -760,9 +760,9 @@ export function createProductionTreeRockAdapterDiagnosticProof({
     const treeGroups = runtimeGlbPreview?.productionInstancingPreview?.groups ?? [];
     const rockGroups = runtimeGlbPreview?.diagnosticRockInstancingPreview?.groups ?? [];
     const expectedMaterialNames = {
-        treeBranches: 'konveyor-node-branches',
-        treeLeaves: 'konveyor-node-leaves',
-        rock: 'konveyor-node-rock-rim',
+        treeBranches: 'webgpu-node-branches',
+        treeLeaves: 'webgpu-node-leaves',
+        rock: 'webgpu-node-rock-rim',
     };
     const treeMaterialNames = [...new Set(treeGroups.map((group) => group.materialName).filter(Boolean))].sort();
     const rockMaterialNames = [...new Set(rockGroups.map((group) => group.materialName).filter(Boolean))].sort();
@@ -847,12 +847,12 @@ export function createProductionEffectAdapterDiagnosticProof({
     skyFog,
     effectFactories,
 }) {
-    const search = '?renderer=webgpu&konveyorEffects=1';
+    const search = '?renderer=webgpu&webgpuEffects=1';
     const sun = new SunBillboard(scene, {
         distance: 2.2,
         size: 0.42,
         search,
-        konveyorEffectFactories: effectFactories,
+        webgpuEffectFactories: effectFactories,
     });
     sun.update(
         camera,
@@ -861,7 +861,7 @@ export function createProductionEffectAdapterDiagnosticProof({
     );
     const portal = new PortalEffect(scene, { x: -0.45, z: 0.18 }, -1.02, {
         search,
-        konveyorEffectFactories: effectFactories,
+        webgpuEffectFactories: effectFactories,
     });
     portal.setIntensity(1);
     portal.pulse();
@@ -869,7 +869,7 @@ export function createProductionEffectAdapterDiagnosticProof({
 
     const zapPool = new CorralZapEffectPool(scene, {
         search,
-        konveyorEffectFactories: effectFactories,
+        webgpuEffectFactories: effectFactories,
     });
     zapPool.fire({ x: 0.62, y: -1.0, z: 0.18 });
     zapPool.fireSpark({ x: 0.92, y: 0.45, z: 0.12 });
@@ -877,20 +877,20 @@ export function createProductionEffectAdapterDiagnosticProof({
     const firstZap = zapPool.effects[0] ?? null;
 
     const summaries = {
-        sun: sun.konveyorMaterialSummary,
-        portalRing: portal.konveyorRingMaterialSummary,
-        portalPad: portal.konveyorPadMaterialSummary,
-        portalParticles: portal.konveyorParticleMaterialSummary,
-        corralZapBolt: firstZap?.konveyorBoltMaterialSummary ?? null,
-        corralZapParticles: firstZap?.konveyorParticleMaterialSummary ?? null,
+        sun: sun.webgpuMaterialSummary,
+        portalRing: portal.webgpuRingMaterialSummary,
+        portalPad: portal.webgpuPadMaterialSummary,
+        portalParticles: portal.webgpuParticleMaterialSummary,
+        corralZapBolt: firstZap?.webgpuBoltMaterialSummary ?? null,
+        corralZapParticles: firstZap?.webgpuParticleMaterialSummary ?? null,
     };
     const materialNames = {
-        sun: 'konveyor-node-sun-billboard',
-        portalRing: 'konveyor-node-portal-ring',
-        portalPad: 'konveyor-node-portal-pad',
-        portalParticles: 'konveyor-node-portal-particles',
-        corralZapBolt: 'konveyor-node-corral-zap-bolt',
-        corralZapParticles: 'konveyor-node-corral-zap-particles',
+        sun: 'webgpu-node-sun-billboard',
+        portalRing: 'webgpu-node-portal-ring',
+        portalPad: 'webgpu-node-portal-pad',
+        portalParticles: 'webgpu-node-portal-particles',
+        corralZapBolt: 'webgpu-node-corral-zap-bolt',
+        corralZapParticles: 'webgpu-node-corral-zap-particles',
     };
     const checks = {
         sunFactoryApplied: summaries.sun?.applied === true,
@@ -1199,7 +1199,7 @@ async function createDiagnosticHeightTexture({
     texture.wrapT = ClampToEdgeWrapping;
     texture.generateMipmaps = false;
     texture.needsUpdate = true;
-    texture.userData.konveyorHeightfield = {
+    texture.userData.webgpuHeightfield = {
         sceneId: manifest.scene ?? DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.sceneId,
         source: DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE.binUrl,
         format: 'RedFormat/FloatType',
@@ -1422,7 +1422,7 @@ export async function bootWebGpuDiagnostic() {
         NoColorSpace,
         TSL,
     };
-    const nodeMaterialFactories = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+    const nodeMaterialFactories = createWebGpuNodeMaterialFactorySuite(webGpuModules, {
         skyFog,
         treeRock: {
             treeLeaf,
@@ -1440,11 +1440,11 @@ export async function bootWebGpuDiagnostic() {
             fogColor: skyFog.fogColor,
         },
     });
-    state.factorySuite = summarizeKonveyorNodeMaterialFactorySuite(nodeMaterialFactories);
-    const factoryGlobals = createKonveyorNodeMaterialFactoryGlobals(nodeMaterialFactories);
+    state.factorySuite = summarizeWebGpuNodeMaterialFactorySuite(nodeMaterialFactories);
+    const factoryGlobals = createWebGpuNodeMaterialFactoryGlobals(nodeMaterialFactories);
     Object.assign(window, factoryGlobals);
     state.factoryGlobals = {
-        source: 'window.__sdsKonveyor*MaterialFactories',
+        source: 'window.__sdsWebGpu*MaterialFactories',
         keys: Object.keys(factoryGlobals).sort(),
         installed: Object.keys(factoryGlobals).every((key) => window[key] === factoryGlobals[key]),
     };
@@ -1547,12 +1547,12 @@ export async function bootWebGpuDiagnostic() {
     skyFogBackdrop.renderOrder = -10;
     scene.add(skyFogBackdrop);
 
-    const sunMaterialResult = createKonveyorEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
+    const sunMaterialResult = createWebGpuEffectMaterial('sun-billboard', 'createSunBillboardMaterial', {
         createDefaultMaterial: () => {
             const result = effectFactories.createSunBillboardMaterial();
             return result.material ?? result;
         },
-        search: '?renderer=webgpu&konveyorEffects=1',
+        search: '?renderer=webgpu&webgpuEffects=1',
         factories: effectFactories,
     });
     const sun = new Mesh(new PlaneGeometry(1.45, 1.45), sunMaterialResult.material);
@@ -1623,12 +1623,12 @@ export async function bootWebGpuDiagnostic() {
         return fail(`runtime GLB rendered clone proof failed: ${state.runtimeGlbPreview.error}`);
     }
 
-    const portalMaterialResult = createKonveyorEffectMaterial('portal-ring', 'createPortalRingMaterial', {
+    const portalMaterialResult = createWebGpuEffectMaterial('portal-ring', 'createPortalRingMaterial', {
         createDefaultMaterial: () => {
             const result = effectFactories.createPortalRingMaterial();
             return result.material ?? result;
         },
-        search: '?renderer=webgpu&konveyorEffects=1',
+        search: '?renderer=webgpu&webgpuEffects=1',
         factories: effectFactories,
     });
     const portal = new Mesh(new RingGeometry(0.62, 0.86, 80, 1), portalMaterialResult.material);
@@ -1664,8 +1664,8 @@ export async function bootWebGpuDiagnostic() {
         NearestFilter,
         ClampToEdgeWrapping,
     });
-    animeWater.heightfieldTexture = waterHeightTexture.userData.konveyorHeightfield;
-    syncDiagnosticHeightfieldState(terrainHeightfield, waterHeightTexture.userData.konveyorHeightfield);
+    animeWater.heightfieldTexture = waterHeightTexture.userData.webgpuHeightfield;
+    syncDiagnosticHeightfieldState(terrainHeightfield, waterHeightTexture.userData.webgpuHeightfield);
     const productionWaterProof = createProductionWaterAdapterDiagnosticProof({
         scene,
         sceneBinding,
@@ -1738,8 +1738,8 @@ export async function bootWebGpuDiagnostic() {
 
     const sheepGroup = new Group();
     const sheepWoolMaterial = sheepFactories.createSheepMaterial(sheepWool);
-    const sheepFaceMaterial = sheepFactories.createSheepPartMaterial('konveyor-node-sheep-face', sheepWool.faceColor);
-    const sheepHoofMaterial = sheepFactories.createSheepPartMaterial('konveyor-node-sheep-hoof', sheepWool.hoofColor);
+    const sheepFaceMaterial = sheepFactories.createSheepPartMaterial('webgpu-node-sheep-face', sheepWool.faceColor);
+    const sheepHoofMaterial = sheepFactories.createSheepPartMaterial('webgpu-node-sheep-hoof', sheepWool.hoofColor);
     const sheepBody = new Mesh(new SphereGeometry(0.36, 18, 12), sheepWoolMaterial);
     sheepBody.scale.set(1.2, 0.82, 1.35);
     sheepBody.position.set(0, 0.22, 0);
@@ -1783,12 +1783,12 @@ export async function bootWebGpuDiagnostic() {
     kilnImpostorMesh.position.set(-1.05, -1.16, 0.27);
     kilnImpostorMesh.rotation.set(0, 0.1, 0);
     scene.add(kilnImpostorMesh);
-    const kilnControls = kilnImpostorMesh.material?.userData?.konveyorImpostorMaterialControls ?? null;
+    const kilnControls = kilnImpostorMesh.material?.userData?.webgpuImpostorMaterialControls ?? null;
     const kilnOrbitReport = createImpostorOrbitLabReport({ sidecar: kilnAssets.sidecar });
     state.kilnImpostorOrbitLab = {
         treeType: DIAGNOSTIC_KILN_IMPOSTOR_SOURCE.treeType,
         materialName: kilnImpostorMesh.material?.name ?? null,
-        materialSelectionMode: kilnImpostorMesh.material?.userData?.konveyorImpostorTileSelection ?? null,
+        materialSelectionMode: kilnImpostorMesh.material?.userData?.webgpuImpostorTileSelection ?? null,
         controlsAvailable: typeof kilnControls?.setTileBlend === 'function',
         appliedSamples: [],
         report: kilnOrbitReport,

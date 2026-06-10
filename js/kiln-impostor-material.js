@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
-import { createKonveyorImpostorMaterial } from './konveyorImpostorMaterialAdapter.js';
+import { createWebGpuImpostorMaterial } from './webgpuImpostorMaterialAdapter.js';
 
 /**
  * Cycle 20 Phase 2 — Kiln impostor material (replaces octahedral-impostor-material.js).
@@ -501,7 +501,7 @@ export function createKilnImpostorMaterial({
   depthAtlas,
   sidecar,
   search,
-  konveyorImpostorFactories,
+  webgpuImpostorFactories,
   tileSelectionMode,
 } = {}) {
   const layoutTilesX = sidecar.tilesX ?? TILES_X;
@@ -619,10 +619,10 @@ export function createKilnImpostorMaterial({
     // gets and read noticeably darker / less saturated.
     toneMapped: true,
   });
-  const materialResult = createKonveyorImpostorMaterial('kiln-impostor', 'createKilnImpostorMaterial', {
+  const materialResult = createWebGpuImpostorMaterial('kiln-impostor', 'createKilnImpostorMaterial', {
     createDefaultMaterial,
     search,
-    factories: konveyorImpostorFactories,
+    factories: webgpuImpostorFactories,
     context: {
       albedoAtlas,
       normalAtlas,
@@ -638,7 +638,7 @@ export function createKilnImpostorMaterial({
         axis: sidecar.axis ?? null,
         version: sidecar.version ?? 1,
         // Cycle 50 Phase 2: manifest identity stamped on the sidecar. Surfaced
-        // for the konveyor summary / inspector only — not a shader-math input.
+        // for the webgpu summary / inspector only — not a shader-math input.
         objectId: sidecar.objectId ?? null,
         variant: sidecar.variant ?? null,
         layoutId: sidecar.layoutId ?? null,
@@ -696,8 +696,8 @@ export function createKilnImpostorMaterial({
     variant: sidecar.variant ?? null,
     layoutId: sidecar.layoutId ?? null,
   };
-  material.userData.konveyorImpostorMaterialControls = materialResult.controls;
-  material.userData.konveyorImpostorMaterialSummary = materialResult.summary;
+  material.userData.webgpuImpostorMaterialControls = materialResult.controls;
+  material.userData.webgpuImpostorMaterialSummary = materialResult.summary;
   return material;
 }
 

@@ -2,6 +2,10 @@
 
 Durable rules for scene definitions, atmosphere, terrain, grass, foliage LOD, and the heightfield contract. No cycle-specific content.
 
+## Naming: files name WHAT, not WHEN
+
+Live code names describe domain and role, never the plan or campaign that produced them. No plan codenames, cycle numbers, or task ids in `js/` or `tests/` file names, exported symbols, window globals, URL params, dataset keys, or instance properties. Exported symbols match their file's vocabulary (`webgpuBoot` exports `createProductionWebGpuGameOptions`, not a codename). The "konveyor" retirement (Cycle 87) is the precedent: a plan codename became load-bearing across ~36 render-path files and cost a full mechanical migration to remove. `docs/archive/`, `cycleN-validation/`, CHANGELOG/DECISIONS history, and cycle-pinned `tools/` probes are immutable records and keep their historical names.
+
 ## Scene-as-data contract
 
 Scenes are JS modules under [`shared/scenes/`](../../shared/scenes/) typed by JSDoc against [`shared/scenes/types.js`](../../shared/scenes/types.js). The Worker sim and the client renderer both consume the same `SceneDef`.

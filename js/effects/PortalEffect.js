@@ -21,7 +21,7 @@
  * events to it.
  */
 import * as THREE from 'three';
-import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js';
+import { createWebGpuEffectMaterial } from './webgpuEffectMaterialAdapter.js';
 
 const PARTICLE_COUNT = 96;
 const COLUMN_HEIGHT = 22;     // matches sheep ascent height in OptimizedSheep
@@ -105,14 +105,14 @@ export class PortalEffect {
 
         // Ring at ground level — flat torus-like band
         const ringGeo = new THREE.RingGeometry(RING_RADIUS_INNER, RING_RADIUS_OUTER, 64, 1);
-        const ringMaterialResult = createKonveyorEffectMaterial('portal-ring', 'createPortalRingMaterial', {
+        const ringMaterialResult = createWebGpuEffectMaterial('portal-ring', 'createPortalRingMaterial', {
             createDefaultMaterial: makeRingMaterial,
             search: options.search,
-            factories: options.konveyorEffectFactories
+            factories: options.webgpuEffectFactories
         });
         this.ringMaterial = ringMaterialResult.material;
         this.ringMaterialControls = ringMaterialResult.controls;
-        this.konveyorRingMaterialSummary = ringMaterialResult.summary;
+        this.webgpuRingMaterialSummary = ringMaterialResult.summary;
         this.ring = new THREE.Mesh(ringGeo, this.ringMaterial);
         this.ring.rotation.x = -Math.PI / 2;
         this.ring.position.set(center.x, groundY + 0.06, center.z);
@@ -121,7 +121,7 @@ export class PortalEffect {
 
         // Soft glowing disc at the base — a fainter inner pad
         const padGeo = new THREE.CircleGeometry(RING_RADIUS_INNER * 0.95, 48);
-        const padMaterialResult = createKonveyorEffectMaterial('portal-pad', 'createPortalPadMaterial', {
+        const padMaterialResult = createWebGpuEffectMaterial('portal-pad', 'createPortalPadMaterial', {
             createDefaultMaterial: () => new THREE.MeshBasicMaterial({
                 color: 0x6cf2ff,
                 transparent: true,
@@ -130,7 +130,7 @@ export class PortalEffect {
                 blending: THREE.AdditiveBlending,
             }),
             search: options.search,
-            factories: options.konveyorEffectFactories,
+            factories: options.webgpuEffectFactories,
             context: {
                 color: new THREE.Color(0x6cf2ff),
                 opacity: 0.18,
@@ -141,7 +141,7 @@ export class PortalEffect {
         });
         const padMat = padMaterialResult.material;
         this.padMaterialControls = padMaterialResult.controls;
-        this.konveyorPadMaterialSummary = padMaterialResult.summary;
+        this.webgpuPadMaterialSummary = padMaterialResult.summary;
         this.pad = new THREE.Mesh(padGeo, padMat);
         this.pad.rotation.x = -Math.PI / 2;
         this.pad.position.set(center.x, groundY + 0.04, center.z);
@@ -153,7 +153,7 @@ export class PortalEffect {
         this._partMaxLife = new Float32Array(PARTICLE_COUNT);
         const partGeo = new THREE.BufferGeometry();
         partGeo.setAttribute('position', new THREE.BufferAttribute(this._partPositions, 3));
-        const particleMaterialResult = createKonveyorEffectMaterial('portal-particles', 'createPortalParticleMaterial', {
+        const particleMaterialResult = createWebGpuEffectMaterial('portal-particles', 'createPortalParticleMaterial', {
             createDefaultMaterial: () => new THREE.PointsMaterial({
                 color: 0xb8e8ff,
                 size: 0.5,
@@ -164,7 +164,7 @@ export class PortalEffect {
                 blending: THREE.AdditiveBlending,
             }),
             search: options.search,
-            factories: options.konveyorEffectFactories,
+            factories: options.webgpuEffectFactories,
             context: {
                 color: new THREE.Color(0xb8e8ff),
                 size: 0.5,
@@ -180,7 +180,7 @@ export class PortalEffect {
         });
         const partMat = particleMaterialResult.material;
         this.particleMaterialControls = particleMaterialResult.controls;
-        this.konveyorParticleMaterialSummary = particleMaterialResult.summary;
+        this.webgpuParticleMaterialSummary = particleMaterialResult.summary;
         this.particles = new THREE.Points(partGeo, partMat);
         this.particles.frustumCulled = false;
         scene.add(this.particles);

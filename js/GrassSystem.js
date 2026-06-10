@@ -4,11 +4,11 @@ import * as THREE from 'three';
 import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { TIER_PRESETS } from './HardwareTier.js';
-import { createKonveyorGrassMaterial } from './world/konveyorGrassMaterialAdapter.js';
+import { createWebGpuGrassMaterial } from './world/webgpuGrassMaterialAdapter.js';
 import { mulberry32 } from '../shared/Random.js';
 import { getCoastlineField, sampleSignedDistance } from '../shared/CoastlineField.js';
 import { createGrassComputeCull } from './world/grassComputeCull.js';
-import { getKonveyorWebGpuModules } from './world/konveyorWebGpuModules.js';
+import { getWebGpuModules } from './world/webgpuModules.js';
 
 // Preload guard for the grass shader fetch below
 let grassShadersLoaded = false;
@@ -82,7 +82,7 @@ export class GrassSystem {
      * @param {import('../shared/scenes/types.js').GrassDef} [sceneGrass] Optional scene-sourced grass config; when present, its `clumpsPerChunk` wins over the default.
      * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} [heightfield] Optional heightfield; when present, clumps sit on the displaced terrain instead of y=0.
      * @param {import('../shared/scenes/types.js').BoundaryDef | null} [boundary] Optional scene boundary; for `kind:'island'` scenes, grass past `radius+falloff` is culled so clumps don't extend over the water.
-     * @param {{ tier?: 'low'|'med'|'high', search?: string, konveyorGrassFactories?: Object }} [opts] Cycle 23 Phase D1 — hardware tier overrides isMobile-binary defaults.
+     * @param {{ tier?: 'low'|'med'|'high', search?: string, webgpuGrassFactories?: Object }} [opts] Cycle 23 Phase D1 — hardware tier overrides isMobile-binary defaults.
      */
     constructor(scene, isMobile = false, sceneGrass = null, heightfield = null, boundary = null, opts = {}) {
         this.scene = scene;
@@ -117,11 +117,11 @@ export class GrassSystem {
         // Cycle 64: grid centre (origin unless a scene moves its grass onto an
         // off-origin play area, e.g. Newsheepdogland's foot).
         this._grassCenter = sceneGrass?.grassCenter ?? { x: 0, z: 0 };
-        this.konveyorGrassSearch = opts.search;
-        this.konveyorGrassFactories = opts.konveyorGrassFactories;
-        this.konveyorMeadowQuadMaterialSummary = null;
-        this.konveyorGrassBladeMaterialSummary = null;
-        this.konveyorGrassBladeMaterialControls = null;
+        this.webgpuGrassSearch = opts.search;
+        this.webgpuGrassFactories = opts.webgpuGrassFactories;
+        this.webgpuMeadowQuadMaterialSummary = null;
+        this.webgpuGrassBladeMaterialSummary = null;
+        this.webgpuGrassBladeMaterialControls = null;
         this.random = createVisualGoldenRandom() ?? Math.random;
         // Cycle 23 Phase D1: tier overrides the isMobile binary. 'low' inherits
         // mobile-style defaults; 'med' / 'high' get desktop defaults with
@@ -623,10 +623,10 @@ export class GrassSystem {
             depthWrite: true,
             depthTest: true
         });
-        const materialResult = createKonveyorGrassMaterial('grass-blade', 'createGrassBladeMaterial', {
+        const materialResult = createWebGpuGrassMaterial('grass-blade', 'createGrassBladeMaterial', {
             createDefaultMaterial,
-            search: this.konveyorGrassSearch,
-            factories: this.konveyorGrassFactories,
+            search: this.webgpuGrassSearch,
+            factories: this.webgpuGrassFactories,
             context: {
                 computeCull, // Cycle 81 Path 1: consolidated compute-cull instance remap (null = per-chunk path)
                 isMobile: this.isMobile,
@@ -692,11 +692,11 @@ export class GrassSystem {
         });
         const material = materialResult.material;
         material.userData = material.userData ?? {};
-        material.userData.konveyorGrassBladeMaterialControls =
-            materialResult.controls ?? material.userData.konveyorGrassBladeMaterialControls ?? null;
-        material.userData.konveyorGrassBladeMaterialSummary = materialResult.summary;
-        this.konveyorGrassBladeMaterialSummary = materialResult.summary;
-        this.konveyorGrassBladeMaterialControls = material.userData.konveyorGrassBladeMaterialControls;
+        material.userData.webgpuGrassBladeMaterialControls =
+            materialResult.controls ?? material.userData.webgpuGrassBladeMaterialControls ?? null;
+        material.userData.webgpuGrassBladeMaterialSummary = materialResult.summary;
+        this.webgpuGrassBladeMaterialSummary = materialResult.summary;
+        this.webgpuGrassBladeMaterialControls = material.userData.webgpuGrassBladeMaterialControls;
         return material;
     }
 
@@ -1195,13 +1195,13 @@ export class GrassSystem {
     /**
      * Cycle 84: the flagship coastline renders its whole grass field as one
      * compute-culled InstancedMesh on the WebGPU path. Gated to that path:
-     * coastline + the konveyor (WebGPU) blade material applied + the three.webgpu
+     * coastline + the webgpu (WebGPU) blade material applied + the three.webgpu
      * namespace available. WebGL keeps the per-chunk path byte-identical.
      */
     _shouldComputeCullGrass() {
         return this._isCoastline
-            && this.konveyorGrassBladeMaterialSummary?.applied === true
-            && !!getKonveyorWebGpuModules()?.TSL;
+            && this.webgpuGrassBladeMaterialSummary?.applied === true
+            && !!getWebGpuModules()?.TSL;
     }
 
     /**
@@ -1213,7 +1213,7 @@ export class GrassSystem {
      * path on any failure.
      */
     _buildConsolidatedComputeCullGrass() {
-        const webGpuModules = getKonveyorWebGpuModules();
+        const webGpuModules = getWebGpuModules();
         const { offsets, transforms, count } = this._gatherComputeCullClumps();
         if (count === 0) {
             console.warn('[GRASS] compute-cull gathered 0 clumps; per-chunk fallback');
@@ -1229,7 +1229,7 @@ export class GrassSystem {
                 cullRadius: Math.max(4, this.config.chunkSize * 0.15),
                 // Rebuild the blade material with the compute-cull remap nodes
                 // (pixel-identical) and point the live controls at it. The throwaway
-                // material created during init (to detect konveyor support) is disposed.
+                // material created during init (to detect webgpu support) is disposed.
                 buildMaterial: (nodes) => {
                     const prev = this.grassMaterial;
                     const m = this.createGrassMaterial(nodes);
@@ -1422,12 +1422,12 @@ export class GrassSystem {
         const count = offsets.length / 3;
         if (count === 0) return { built: false, reason: 'no-clumps-gathered' };
         try {
-            const webGpuModules = getKonveyorWebGpuModules();
+            const webGpuModules = getWebGpuModules();
             // createGrassMaterial repoints the instance-level controls/summary
             // at the newest material; snapshot the primary's and restore after
             // so per-frame updates keep driving BOTH (see the fan-outs below).
-            const primaryControls = this.konveyorGrassBladeMaterialControls;
-            const primarySummary = this.konveyorGrassBladeMaterialSummary;
+            const primaryControls = this.webgpuGrassBladeMaterialControls;
+            const primarySummary = this.webgpuGrassBladeMaterialSummary;
             let streamedMaterial = null;
             const controller = createGrassComputeCull(webGpuModules, {
                 clumpGeometry: this.clumpGeometry,
@@ -1440,10 +1440,10 @@ export class GrassSystem {
                     return streamedMaterial;
                 },
             });
-            this._streamedBladeControls = streamedMaterial?.userData?.konveyorGrassBladeMaterialControls ?? null;
+            this._streamedBladeControls = streamedMaterial?.userData?.webgpuGrassBladeMaterialControls ?? null;
             this._streamedMaterial = streamedMaterial;
-            this.konveyorGrassBladeMaterialControls = primaryControls;
-            this.konveyorGrassBladeMaterialSummary = primarySummary;
+            this.webgpuGrassBladeMaterialControls = primaryControls;
+            this.webgpuGrassBladeMaterialSummary = primarySummary;
             this._streamedCullController = controller;
             this.scene.add(controller.mesh);
             this.stats.totalClumps = (this.stats.totalClumps ?? 0) + count;
@@ -1501,11 +1501,11 @@ export class GrassSystem {
 
         if (validPositions.length === 0) return null;
 
-        const usesKonveyorBladeMaterial = this.konveyorGrassBladeMaterialSummary?.applied === true;
-        const chunkGeometry = usesKonveyorBladeMaterial
+        const usesWebGpuBladeMaterial = this.webgpuGrassBladeMaterialSummary?.applied === true;
+        const chunkGeometry = usesWebGpuBladeMaterial
             ? this.clumpGeometry.clone()
             : this.clumpGeometry;
-        const instanceWorldOffsets = usesKonveyorBladeMaterial
+        const instanceWorldOffsets = usesWebGpuBladeMaterial
             ? new Float32Array(validPositions.length * 3)
             : null;
 
@@ -1740,10 +1740,10 @@ export class GrassSystem {
             };
             return mat;
         };
-        const materialResult = createKonveyorGrassMaterial('meadow-quad', 'createMeadowQuadMaterial', {
+        const materialResult = createWebGpuGrassMaterial('meadow-quad', 'createMeadowQuadMaterial', {
             createDefaultMaterial,
-            search: this.konveyorGrassSearch,
-            factories: this.konveyorGrassFactories,
+            search: this.webgpuGrassSearch,
+            factories: this.webgpuGrassFactories,
             context: {
                 baseColor,
                 midColor,
@@ -1753,7 +1753,7 @@ export class GrassSystem {
                 noiseOctaves: [1, 2],
             },
         });
-        this.konveyorMeadowQuadMaterialSummary = materialResult.summary;
+        this.webgpuMeadowQuadMaterialSummary = materialResult.summary;
         return materialResult.material;
     }
 
@@ -1918,8 +1918,8 @@ export class GrassSystem {
         }
 
         // Update uniforms
-        if (this.konveyorGrassBladeMaterialControls?.updateInteractors) {
-            this.konveyorGrassBladeMaterialControls.updateInteractors({
+        if (this.webgpuGrassBladeMaterialControls?.updateInteractors) {
+            this.webgpuGrassBladeMaterialControls.updateInteractors({
                 positions: this.interactorPositions,
                 data: this.interactorData,
                 facings: this.interactorFacings,
@@ -2002,8 +2002,8 @@ export class GrassSystem {
         }
 
         // Update time uniform
-        if (this.konveyorGrassBladeMaterialControls?.update) {
-            this.konveyorGrassBladeMaterialControls.update({
+        if (this.webgpuGrassBladeMaterialControls?.update) {
+            this.webgpuGrassBladeMaterialControls.update({
                 time: this.time,
                 deltaTime,
                 camera,
@@ -2190,8 +2190,8 @@ export class GrassSystem {
      * Set wind parameters
      */
     setWind(strength, direction) {
-        if (this.konveyorGrassBladeMaterialControls?.setWind) {
-            this.konveyorGrassBladeMaterialControls.setWind({ strength, direction, material: this.grassMaterial });
+        if (this.webgpuGrassBladeMaterialControls?.setWind) {
+            this.webgpuGrassBladeMaterialControls.setWind({ strength, direction, material: this.grassMaterial });
             this._streamedBladeControls?.setWind?.({ strength, direction, material: this._streamedMaterial });
         } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.windStrength.value = strength;
@@ -2210,8 +2210,8 @@ export class GrassSystem {
      */
     setSunDirection(sunDir) {
         if (!sunDir || !this.grassMaterial) return;
-        if (this.konveyorGrassBladeMaterialControls?.setSunDirection) {
-            this.konveyorGrassBladeMaterialControls.setSunDirection({ sunDir, material: this.grassMaterial });
+        if (this.webgpuGrassBladeMaterialControls?.setSunDirection) {
+            this.webgpuGrassBladeMaterialControls.setSunDirection({ sunDir, material: this.grassMaterial });
             this._streamedBladeControls?.setSunDirection?.({ sunDir, material: this._streamedMaterial });
             return;
         }
@@ -2221,8 +2221,8 @@ export class GrassSystem {
     }
 
     setInteractionShadowStrength(strength) {
-        if (this.konveyorGrassBladeMaterialControls?.setInteractionShadowStrength) {
-            this.konveyorGrassBladeMaterialControls.setInteractionShadowStrength({
+        if (this.webgpuGrassBladeMaterialControls?.setInteractionShadowStrength) {
+            this.webgpuGrassBladeMaterialControls.setInteractionShadowStrength({
                 strength,
                 material: this.grassMaterial,
             });
@@ -2281,7 +2281,7 @@ export class GrassSystem {
         }
 
         if (this.grassMaterial) {
-            this.konveyorGrassBladeMaterialControls?.dispose?.();
+            this.webgpuGrassBladeMaterialControls?.dispose?.();
             this.grassMaterial.dispose();
         }
 

@@ -20,8 +20,8 @@
 import * as THREE from 'three';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 import { generateRockPlacementPlan } from './rockPlacementPlan.js';
-import { createKonveyorRockPlacementRng } from './konveyorRockPlacementAdapter.js';
-import { shouldUseKonveyorProductionNativeInstancing } from '../rendering/konveyorRuntimeMode.js';
+import { createWebGpuRockPlacementRng } from './webgpuRockPlacementAdapter.js';
+import { shouldUseWebGpuProductionNativeInstancing } from '../rendering/webgpuRuntimeMode.js';
 
 function createNativeRockInstancedMeshes(builder, rockInstances, placementPlan) {
     const instancedMeshes = [];
@@ -37,7 +37,7 @@ function createNativeRockInstancedMeshes(builder, rockInstances, placementPlan) 
 
             const instancedMesh = new THREE.InstancedMesh(child.geometry, child.material, instances.length);
             instancedMesh.userData.sharedFromGlbCache = true;
-            instancedMesh.userData.konveyorNativeInstancing = 'rock';
+            instancedMesh.userData.webgpuNativeInstancing = 'rock';
 
             instances.forEach((inst, i) => {
                 dummy.position.set(inst.position.x, inst.position.y, inst.position.z);
@@ -77,7 +77,7 @@ function createNativeRockInstancedMeshes(builder, rockInstances, placementPlan) 
             : instancedMeshes.length > 0
                 && groups.every(group => group.isInstancedMesh && !group.isInstancedMesh2 && group.vertexCount > 0),
         source: 'THREE.InstancedMesh',
-        route: 'konveyor-production-scene-body',
+        route: 'webgpu-production-scene-body',
         culling: 'instanced-bounds',
         productionReference: 'RockPlacement InstancedMesh2.addInstances',
         rockInstances: placementPlan.totalRocks,
@@ -86,7 +86,7 @@ function createNativeRockInstancedMeshes(builder, rockInstances, placementPlan) 
         frustumCulled: groups.length === 0 || groups.every(group => group.frustumCulled),
         groups,
     };
-    builder.konveyorNativeRockInstancingSummary = summary;
+    builder.webgpuNativeRockInstancingSummary = summary;
     builder.rocks = instancedMeshes;
     builder.environmentDetails = instancedMeshes;
     console.log(`[BUILD] Total rocks created: ${placementPlan.totalRocks} using native WebGPU instancing`);
@@ -107,12 +107,12 @@ export async function placeEnvironmentDetails(builder) {
         Object.entries(builder.models.rocks)
             .map(([rockType, model]) => [rockType, model?.userData?.modelBaseYOffset ?? 0])
     );
-    const placementRng = createKonveyorRockPlacementRng({
-        search: builder.konveyorRockPlacementSearch,
+    const placementRng = createWebGpuRockPlacementRng({
+        search: builder.webgpuRockPlacementSearch,
         sceneDef: builder.sceneDef,
         defaultRng: Math.random,
     });
-    builder.konveyorRockPlacementSummary = placementRng.summary;
+    builder.webgpuRockPlacementSummary = placementRng.summary;
     const placementPlan = generateRockPlacementPlan({
         zones: builder.zones,
         sceneDef: builder.sceneDef,
@@ -123,12 +123,12 @@ export async function placeEnvironmentDetails(builder) {
     });
     const rockInstances = placementPlan.rockInstances;
     builder.rockPositions = placementPlan.rockPositions;
-    builder.konveyorRockPlacementPlan = placementPlan;
+    builder.webgpuRockPlacementPlan = placementPlan;
 
-    if (shouldUseKonveyorProductionNativeInstancing()) {
+    if (shouldUseWebGpuProductionNativeInstancing()) {
         return createNativeRockInstancedMeshes(builder, rockInstances, placementPlan);
     }
-    builder.konveyorNativeRockInstancingSummary = { applied: false, reason: 'flag-disabled' };
+    builder.webgpuNativeRockInstancingSummary = { applied: false, reason: 'flag-disabled' };
 
     // Create instanced meshes for each rock type. Cycle 19 follow-up:
     // migrated from THREE.InstancedMesh → InstancedMesh2 so we get

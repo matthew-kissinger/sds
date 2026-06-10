@@ -35,6 +35,7 @@ BUILD_TARGET=itchio npm run build   # itch.io variant
 - **No comments unless the WHY is non-obvious.** Don't explain WHAT — well-named identifiers do that. Don't reference current task or callers; that belongs in the PR description.
 - **No fallbacks or validation for impossible scenarios.** Trust internal code and framework guarantees. Validate only at system boundaries (user input, external APIs).
 - **No backwards-compatibility shims for unshipped code.** When changing a contract, change all consumers in the same change. Don't leave `// removed` comments.
+- **Files name WHAT, not WHEN.** Domain + role in live names (`webgpuBoot.js`, `terrainNodeMaterial`); never plan codenames, cycle numbers, or task ids in `js/`/`tests/` file names, exports, window globals, URL params, or dataset keys. Precedent: the Cycle 87 "konveyor" retirement.
 
 ## Critical contracts
 

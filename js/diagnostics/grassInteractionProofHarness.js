@@ -75,7 +75,7 @@ export function installGrassInteractionProofHarness(game) {
             return {
                 count: grass.interactorCount,
                 sample: grass.getInteractorSample?.(8) ?? [],
-                contract: grass.grassMaterial?.userData?.konveyorGrassBladeInteractors ?? null,
+                contract: grass.grassMaterial?.userData?.webgpuGrassBladeInteractors ?? null,
             };
         },
         setActorVisibility(state = {}) {

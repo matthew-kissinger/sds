@@ -242,7 +242,7 @@ describe('HosekWilkieSky', () => {
         disc: {
           angularCoreDiameterDeg: 0.646,
         },
-        materialName: 'konveyor-node-sun-billboard',
+        materialName: 'webgpu-node-sun-billboard',
         applied: true,
       },
     });
@@ -267,7 +267,7 @@ describe('HosekWilkieSky', () => {
       disc: {
         angularCoreDiameterDeg: 0.646,
       },
-      materialName: 'konveyor-node-sun-billboard',
+      materialName: 'webgpu-node-sun-billboard',
       applied: true,
     });
     expect(frame.sky.materialMode).toBe('webgpu-node');
@@ -422,7 +422,7 @@ describe('Atmosphere orchestrator', () => {
         size: 390,
         distance: 3000,
         intensity: 1.3,
-        materialName: 'konveyor-node-sun-billboard',
+        materialName: 'webgpu-node-sun-billboard',
         applied: true,
         visualDirection: [0.1, 0.9, 0.2],
       }),

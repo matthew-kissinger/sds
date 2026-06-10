@@ -47,8 +47,8 @@ import {
     rebuildEnvironment as runRebuildEnvironment,
     regenerateGrass as runRegenerateGrass
 } from './world/sandbox.js';
-import { createKonveyorTerrainMaterial } from './world/konveyorTerrainMaterialAdapter.js';
-import { shouldApplyKonveyorRendererFlag } from './rendering/konveyorRuntimeMode.js';
+import { createWebGpuTerrainMaterial } from './world/webgpuTerrainMaterialAdapter.js';
+import { shouldApplyWebGpuRendererFlag } from './rendering/webgpuRuntimeMode.js';
 
 // Dog (animal) rig GLBs, keyed by dogType. Only `jep` — the pre-game default
 // dog buildSceneBody constructs synchronously — is loaded eagerly in
@@ -65,7 +65,7 @@ const ANIMAL_MODEL_PATHS = {
     george_washington: 'assets/models/George_Washington.glb',
 };
 
-function createKonveyorTerrainHeightTexture(heightfield) {
+function createWebGpuTerrainHeightTexture(heightfield) {
     const texture = new THREE.DataTexture(
         heightfield.getRawArray(),
         heightfield.width,
@@ -164,20 +164,20 @@ export class TerrainBuilder {
      * @param {THREE.Scene} scene
      * @param {boolean} [isMobile=false]
      * @param {import('../shared/scenes/types.js').SceneDef} [sceneDef]
-     * @param {{ search?: string, konveyorTerrainFactories?: object, konveyorMaterialFactories?: object }} [options]
+     * @param {{ search?: string, webgpuTerrainFactories?: object, webgpuMaterialFactories?: object }} [options]
      */
     constructor(scene, isMobile = false, sceneDef = null, options = {}) {
         this.scene = scene;
         this.isMobile = isMobile;
         this.sceneDef = sceneDef;
-        this.konveyorTerrainSearch = options.search;
-        this.konveyorTerrainFactories = options.konveyorTerrainFactories;
-        this.konveyorTerrainMaterialSummary = null;
-        this.konveyorMaterialSearch = options.search;
-        this.konveyorMaterialFactories = options.konveyorMaterialFactories;
-        this.konveyorTreeRockMaterialSummary = null;
-        this.konveyorRockPlacementSearch = options.search;
-        this.konveyorRockPlacementSummary = null;
+        this.webgpuTerrainSearch = options.search;
+        this.webgpuTerrainFactories = options.webgpuTerrainFactories;
+        this.webgpuTerrainMaterialSummary = null;
+        this.webgpuMaterialSearch = options.search;
+        this.webgpuMaterialFactories = options.webgpuMaterialFactories;
+        this.webgpuTreeRockMaterialSummary = null;
+        this.webgpuRockPlacementSearch = options.search;
+        this.webgpuRockPlacementSummary = null;
         this.grassMaterial = null;
         this.grassInstanceCount = 0;
         this.grassInstancedMesh = null;
@@ -680,7 +680,7 @@ export class TerrainBuilder {
         this._setupTreeWind();
         // Cycle 14 Phase 4: patch rock materials with fresnel rim-light.
         this._setupRockShader();
-        await this._applyKonveyorTreeRockMaterials();
+        await this._applyWebGpuTreeRockMaterials();
 
         // Report loading results
         const loadedAnimals = Object.keys(this.models.animals).filter(k => !k.endsWith('_animations'));
@@ -765,42 +765,42 @@ export class TerrainBuilder {
             .then(() => undefined);
     }
 
-    _getKonveyorMaterialSearch() {
-        if (this.konveyorMaterialSearch !== undefined) return this.konveyorMaterialSearch;
+    _getWebGpuMaterialSearch() {
+        if (this.webgpuMaterialSearch !== undefined) return this.webgpuMaterialSearch;
         if (typeof window === 'undefined') return '';
         return window.location?.search ?? '';
     }
 
-    _getKonveyorMaterialFactories() {
-        if (this.konveyorMaterialFactories !== undefined) return this.konveyorMaterialFactories;
+    _getWebGpuMaterialFactories() {
+        if (this.webgpuMaterialFactories !== undefined) return this.webgpuMaterialFactories;
         if (typeof window === 'undefined') return null;
-        return window.__sdsKonveyorMaterialFactories ?? null;
+        return window.__sdsWebGpuMaterialFactories ?? null;
     }
 
-    _setKonveyorTreeRockMaterialSummary(summary) {
-        this.konveyorTreeRockMaterialSummary = summary;
+    _setWebGpuTreeRockMaterialSummary(summary) {
+        this.webgpuTreeRockMaterialSummary = summary;
         if (typeof window !== 'undefined') {
-            window.__sdsKonveyorMaterialAdapter = summary;
+            window.__sdsWebGpuMaterialAdapter = summary;
         }
-        return this.konveyorTreeRockMaterialSummary;
+        return this.webgpuTreeRockMaterialSummary;
     }
 
-    async _applyKonveyorTreeRockMaterials() {
-        const search = this._getKonveyorMaterialSearch();
-        if (!shouldApplyKonveyorRendererFlag(search, 'konveyorMaterials')) {
-            return this._setKonveyorTreeRockMaterialSummary({ applied: false, reason: 'flag-disabled' });
+    async _applyWebGpuTreeRockMaterials() {
+        const search = this._getWebGpuMaterialSearch();
+        if (!shouldApplyWebGpuRendererFlag(search, 'webgpuMaterials')) {
+            return this._setWebGpuTreeRockMaterialSummary({ applied: false, reason: 'flag-disabled' });
         }
 
-        const factories = this._getKonveyorMaterialFactories();
+        const factories = this._getWebGpuMaterialFactories();
         const hasFactories = typeof factories?.createTreeBranchMaterial === 'function'
             && typeof factories?.createTreeLeafMaterial === 'function'
             && typeof factories?.createRockMaterial === 'function';
         if (!hasFactories) {
-            return this._setKonveyorTreeRockMaterialSummary({ applied: false, reason: 'missing-factories' });
+            return this._setWebGpuTreeRockMaterialSummary({ applied: false, reason: 'missing-factories' });
         }
 
-        const { maybeApplyKonveyorTreeRockMaterials } = await import('./world/konveyorMaterialAdapter.js');
-        return this._setKonveyorTreeRockMaterialSummary(maybeApplyKonveyorTreeRockMaterials(this, {
+        const { maybeApplyWebGpuTreeRockMaterials } = await import('./world/webgpuMaterialAdapter.js');
+        return this._setWebGpuTreeRockMaterialSummary(maybeApplyWebGpuTreeRockMaterials(this, {
             search,
             factories,
         }));
@@ -868,7 +868,7 @@ export class TerrainBuilder {
         const terrainSkirtTriangles = useMobileTerrainSkirt ? 3072 : 0;
         const terrainSegments = this.isMobile && terrainTier !== 'high' ? 256 : 384;
         const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
-        this.konveyorTerrainGeometryBudget = {
+        this.webgpuTerrainGeometryBudget = {
             tier: terrainTier,
             isMobile: this.isMobile,
             size: terrainSize,
@@ -1020,17 +1020,17 @@ export class TerrainBuilder {
             polygonOffsetFactor: 1,
             polygonOffsetUnits: 1
         });
-        const terrainMaterialResult = createKonveyorTerrainMaterial('terrain-ground', 'createTerrainMaterial', {
+        const terrainMaterialResult = createWebGpuTerrainMaterial('terrain-ground', 'createTerrainMaterial', {
             createDefaultMaterial,
-            search: this.konveyorTerrainSearch,
-            factories: this.konveyorTerrainFactories,
+            search: this.webgpuTerrainSearch,
+            factories: this.webgpuTerrainFactories,
             context: {
                 size: terrainSize,
                 segments: terrainSegments,
                 isMobile: this.isMobile,
                 hasHeightfield: !!this.heightfield,
                 createHeightTexture: this.heightfield
-                    ? () => createKonveyorTerrainHeightTexture(this.heightfield)
+                    ? () => createWebGpuTerrainHeightTexture(this.heightfield)
                     : null,
                 heightfield: this.heightfield ? {
                     width: this.heightfield.width,
@@ -1064,10 +1064,10 @@ export class TerrainBuilder {
         });
         const terrainMaterial = terrainMaterialResult.material;
         terrainMaterial.userData = terrainMaterial.userData ?? {};
-        terrainMaterial.userData.konveyorTerrainMaterialControls =
-            terrainMaterialResult.controls ?? terrainMaterial.userData.konveyorTerrainMaterialControls ?? null;
-        terrainMaterial.userData.konveyorTerrainMaterialSummary = terrainMaterialResult.summary;
-        this.konveyorTerrainMaterialSummary = terrainMaterialResult.summary;
+        terrainMaterial.userData.webgpuTerrainMaterialControls =
+            terrainMaterialResult.controls ?? terrainMaterial.userData.webgpuTerrainMaterialControls ?? null;
+        terrainMaterial.userData.webgpuTerrainMaterialSummary = terrainMaterialResult.summary;
+        this.webgpuTerrainMaterialSummary = terrainMaterialResult.summary;
 
         const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
         terrain.rotation.x = -Math.PI / 2;
@@ -1075,7 +1075,7 @@ export class TerrainBuilder {
         terrain.receiveShadow = true;
         if (useMobileTerrainSkirt) {
             const skirtGeometry = createTerrainSkirtGeometry(terrainSkirtSize, terrainSize, this.heightfield);
-            this.konveyorTerrainGeometryBudget.skirtTriangles = skirtGeometry.userData.terrainSkirtTriangles;
+            this.webgpuTerrainGeometryBudget.skirtTriangles = skirtGeometry.userData.terrainSkirtTriangles;
             const skirt = new THREE.Mesh(skirtGeometry, terrainMaterial);
             skirt.rotation.x = -Math.PI / 2;
             skirt.position.y = -0.01;
@@ -1218,14 +1218,14 @@ export class TerrainBuilder {
         } else if (this._occluder) {
             this._occluder.uOccluderStrength.value = 0.0;
         }
-        this._syncKonveyorTreeNodeControls(camera);
+        this._syncWebGpuTreeNodeControls(camera);
     }
 
-    _syncKonveyorTreeNodeControls(camera = null) {
+    _syncWebGpuTreeNodeControls(camera = null) {
         if (!Array.isArray(this.trees) || this.trees.length === 0) return;
-        const impostorSyncCount = this._konveyorTreeImpostorSync?.(this.trees, camera) ?? 0;
-        if (this.konveyorNativeTreeInstancingSummary?.impostor) {
-            this.konveyorNativeTreeInstancingSummary.impostor.syncedMeshes = impostorSyncCount;
+        const impostorSyncCount = this._webgpuTreeImpostorSync?.(this.trees, camera) ?? 0;
+        if (this.webgpuNativeTreeInstancingSummary?.impostor) {
+            this.webgpuNativeTreeInstancingSummary.impostor.syncedMeshes = impostorSyncCount;
         }
         const wind = this._treeWind;
         const occluder = this._occluder;
@@ -1238,7 +1238,7 @@ export class TerrainBuilder {
             occluderPeak: occluder?.uOccluderPeak?.value,
         };
         const updateMaterial = (material) => {
-            const controls = material?.userData?.konveyorTreeNodeMaterialControls;
+            const controls = material?.userData?.webgpuTreeNodeMaterialControls;
             if (!controls) return;
             controls.setWind?.({
                 strength: state.windStrength,
@@ -1485,7 +1485,7 @@ export class TerrainBuilder {
     }
 
     applyQualityState(state = {}) {
-        this.konveyorQualityState = { ...state };
+        this.webgpuQualityState = { ...state };
         this.grassSystem?.applyQualityState?.(state);
         const treeLodBias = Number.isFinite(state.treeLodBias)
             ? THREE.MathUtils.clamp(state.treeLodBias, 0, 0.75)
@@ -1609,7 +1609,7 @@ export class TerrainBuilder {
             // disposed (cleared explicitly below).
             if (tree.userData?.sharedFromGlbCache) return;
             if (tree.geometry) tree.geometry.dispose();
-            if (tree.userData?.konveyorSharedMaterialFromImpostorCache) return;
+            if (tree.userData?.webgpuSharedMaterialFromImpostorCache) return;
             if (tree.material) {
                 if (Array.isArray(tree.material)) {
                     tree.material.forEach(mat => {
@@ -1822,12 +1822,12 @@ export class TerrainBuilder {
             this.terrainMesh.geometry?.dispose();
             if (this.terrainMesh.material) {
                 if (Array.isArray(this.terrainMesh.material)) this.terrainMesh.material.forEach(m => {
-                    m?.userData?.konveyorTerrainMaterialControls?.dispose?.();
+                    m?.userData?.webgpuTerrainMaterialControls?.dispose?.();
                     m?.dispose?.();
                     if (m) disposedTerrainMaterials.add(m);
                 });
                 else {
-                    this.terrainMesh.material.userData?.konveyorTerrainMaterialControls?.dispose?.();
+                    this.terrainMesh.material.userData?.webgpuTerrainMaterialControls?.dispose?.();
                     this.terrainMesh.material.dispose();
                     disposedTerrainMaterials.add(this.terrainMesh.material);
                 }

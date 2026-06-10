@@ -43,7 +43,7 @@ import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProdu
 import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockPlacementPlan.js';
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
 import { SKY_PRESETS, getRequiredPresetNames } from '../js/atmosphere/skyPresets.js';
-import { createKonveyorNodeMaterialFactorySuite } from '../js/konveyorNodeMaterialFactorySuite.js';
+import { createWebGpuNodeMaterialFactorySuite } from '../js/webgpuNodeMaterialFactorySuite.js';
 import { shouldRunSceneManagerWebGpuProof } from '../js/diagnostics/sceneManagerWebGpuProof.js';
 
 function createGlbBuffer(gltf) {
@@ -101,7 +101,7 @@ describe('webgpu diagnostic sky fog state', () => {
 
   it('resolves every shipped preset for the WebGPU diagnostic sky matrix', () => {
     for (const presetName of getRequiredPresetNames()) {
-      const resolved = resolveDiagnosticSkyPreset(`?renderer=webgpu&diagnostic=1&konveyorSkyPreset=${presetName}`);
+      const resolved = resolveDiagnosticSkyPreset(`?renderer=webgpu&diagnostic=1&webgpuSkyPreset=${presetName}`);
       const state = createSkyFogDiagnosticState({ presetName: resolved.presetName });
 
       expect(resolved).toEqual({
@@ -116,7 +116,7 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('falls back to dusk for unknown diagnostic sky presets', () => {
-    const resolved = resolveDiagnosticSkyPreset('?renderer=webgpu&diagnostic=1&konveyorSkyPreset=not-a-sky');
+    const resolved = resolveDiagnosticSkyPreset('?renderer=webgpu&diagnostic=1&webgpuSkyPreset=not-a-sky');
     const state = createSkyFogDiagnosticState({ presetName: resolved.presetName });
 
     expect(resolved).toEqual({
@@ -128,8 +128,8 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('binds diagnostic sky fog to shipped scene definitions when requested', () => {
-    const scene = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=open-country');
-    const resolved = resolveDiagnosticSkyPreset('?renderer=webgpu&diagnostic=1&konveyorScene=open-country', scene.skyPresetName);
+    const scene = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=open-country');
+    const resolved = resolveDiagnosticSkyPreset('?renderer=webgpu&diagnostic=1&webgpuScene=open-country', scene.skyPresetName);
     const state = createSceneBoundSkyFogDiagnosticState({
       ...scene,
       skyPresetName: resolved.presetName,
@@ -155,14 +155,14 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('keeps the SceneManager WebGPU renderer proof behind an explicit diagnostic flag', () => {
-    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgpu&diagnostic=1&konveyorSceneManagerProof=1')).toBe(true);
+    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgpu&diagnostic=1&webgpuSceneManagerProof=1')).toBe(true);
     expect(shouldRunSceneManagerWebGpuProof('?renderer=webgpu&diagnostic=1')).toBe(false);
-    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgpu&konveyorSceneManagerProof=1')).toBe(false);
-    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgl&diagnostic=1&konveyorSceneManagerProof=1')).toBe(false);
+    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgpu&webgpuSceneManagerProof=1')).toBe(false);
+    expect(shouldRunSceneManagerWebGpuProof('?renderer=webgl&diagnostic=1&webgpuSceneManagerProof=1')).toBe(false);
   });
 
   it('routes production Atmosphere constructors through WebGPU node factories in the diagnostic proof', () => {
-    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=field');
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=field');
     const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
     const webGpuModules = {
       MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
@@ -174,7 +174,7 @@ describe('webgpu diagnostic sky fog state', () => {
       Vector3: THREE.Vector3,
       TSL: WEBGPU.TSL,
     };
-    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, { skyFog });
+    const suite = createWebGpuNodeMaterialFactorySuite(webGpuModules, { skyFog });
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(0, 0.2, 3);
@@ -189,8 +189,8 @@ describe('webgpu diagnostic sky fog state', () => {
 
     try {
       expect(proof.ok).toBe(true);
-      expect(proof.sky.materialName).toBe('konveyor-node-sky-dome');
-      expect(proof.cloud.materialName).toBe('konveyor-node-cloud-layer');
+      expect(proof.sky.materialName).toBe('webgpu-node-sky-dome');
+      expect(proof.cloud.materialName).toBe('webgpu-node-cloud-layer');
       expect(proof.sky.summary).toMatchObject({ kind: 'sky-dome', applied: true });
       expect(proof.cloud.summary).toMatchObject({ kind: 'cloud-layer', applied: true });
       expect(proof.fog).toMatchObject({ kind: 'Fog', near: 350, far: 900 });
@@ -203,9 +203,9 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('routes production effect constructors through WebGPU node factories in the diagnostic proof', () => {
-    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=open-country');
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=open-country');
     const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
-    const suite = createKonveyorNodeMaterialFactorySuite(WEBGPU, { skyFog });
+    const suite = createWebGpuNodeMaterialFactorySuite(WEBGPU, { skyFog });
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(0, 0.2, 3);
@@ -219,13 +219,13 @@ describe('webgpu diagnostic sky fog state', () => {
 
     try {
       expect(proof.ok).toBe(true);
-      expect(proof.sun.materialName).toBe('konveyor-node-sun-billboard');
+      expect(proof.sun.materialName).toBe('webgpu-node-sun-billboard');
       expect(proof.sun.summary).toMatchObject({ kind: 'sun-billboard', applied: true, hasControls: true });
-      expect(proof.portal.ring.materialName).toBe('konveyor-node-portal-ring');
-      expect(proof.portal.pad.materialName).toBe('konveyor-node-portal-pad');
-      expect(proof.portal.particles.materialName).toBe('konveyor-node-portal-particles');
-      expect(proof.corralZap.bolt.materialName).toBe('konveyor-node-corral-zap-bolt');
-      expect(proof.corralZap.particles.materialName).toBe('konveyor-node-corral-zap-particles');
+      expect(proof.portal.ring.materialName).toBe('webgpu-node-portal-ring');
+      expect(proof.portal.pad.materialName).toBe('webgpu-node-portal-pad');
+      expect(proof.portal.particles.materialName).toBe('webgpu-node-portal-particles');
+      expect(proof.corralZap.bolt.materialName).toBe('webgpu-node-corral-zap-bolt');
+      expect(proof.corralZap.particles.materialName).toBe('webgpu-node-corral-zap-particles');
       expect(proof.corralZap.poolSize).toBe(8);
       expect(proof.corralZap.activeEffects).toBeGreaterThan(0);
       expect(Object.values(proof.checks).every(Boolean)).toBe(true);
@@ -235,7 +235,7 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('routes production AnimeWater construction through WebGPU node factories in the diagnostic proof', () => {
-    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=rolling-hills');
     const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
     const webGpuModules = {
       MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
@@ -246,7 +246,7 @@ describe('webgpu diagnostic sky fog state', () => {
       DoubleSide: WEBGPU.DoubleSide,
       TSL: WEBGPU.TSL,
     };
-    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+    const suite = createWebGpuNodeMaterialFactorySuite(webGpuModules, {
       skyFog,
       water: {
         fogColor: skyFog.fogColor,
@@ -260,7 +260,7 @@ describe('webgpu diagnostic sky fog state', () => {
       THREE.RedFormat,
       THREE.FloatType
     );
-    heightTexture.userData.konveyorHeightfield = {
+    heightTexture.userData.webgpuHeightfield = {
       sceneId: 'rolling-hills',
       source: '/terrain/rolling-hills.bin',
       format: 'RedFormat/FloatType',
@@ -280,7 +280,7 @@ describe('webgpu diagnostic sky fog state', () => {
 
     try {
       expect(proof.ok).toBe(true);
-      expect(proof.materialName).toBe('konveyor-node-anime-water');
+      expect(proof.materialName).toBe('webgpu-node-anime-water');
       expect(proof.isNodeMaterial).toBe(true);
       expect(proof.summary).toMatchObject({ kind: 'anime-water', applied: true });
       expect(proof.heightfield).toMatchObject({
@@ -301,7 +301,7 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('routes production TerrainBuilder terrain construction through WebGPU node factories in the diagnostic proof', () => {
-    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=rolling-hills');
     const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
     const webGpuModules = {
       MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
@@ -312,7 +312,7 @@ describe('webgpu diagnostic sky fog state', () => {
       DoubleSide: WEBGPU.DoubleSide,
       TSL: WEBGPU.TSL,
     };
-    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+    const suite = createWebGpuNodeMaterialFactorySuite(webGpuModules, {
       skyFog,
       terrain: {
         fogColor: skyFog.fogColor,
@@ -325,7 +325,7 @@ describe('webgpu diagnostic sky fog state', () => {
       THREE.RedFormat,
       THREE.FloatType
     );
-    heightTexture.userData.konveyorHeightfield = {
+    heightTexture.userData.webgpuHeightfield = {
       sceneId: 'rolling-hills',
       source: '/terrain/rolling-hills.bin',
       format: 'RedFormat/FloatType',
@@ -345,7 +345,7 @@ describe('webgpu diagnostic sky fog state', () => {
 
     try {
       expect(proof.ok).toBe(true);
-      expect(proof.materialName).toBe('konveyor-node-terrain-heightfield');
+      expect(proof.materialName).toBe('webgpu-node-terrain-heightfield');
       expect(proof.isNodeMaterial).toBe(true);
       expect(proof.summary).toMatchObject({ kind: 'terrain-ground', applied: true });
       expect(proof.mesh).toMatchObject({
@@ -375,7 +375,7 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('routes production GrassSystem material and chunk construction through WebGPU node factories in the diagnostic proof', () => {
-    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=rolling-hills');
     const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
     const webGpuModules = {
       MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
@@ -386,7 +386,7 @@ describe('webgpu diagnostic sky fog state', () => {
       DoubleSide: WEBGPU.DoubleSide,
       TSL: WEBGPU.TSL,
     };
-    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+    const suite = createWebGpuNodeMaterialFactorySuite(webGpuModules, {
       skyFog,
       grass: {
         fogNear: skyFog.fogNear,
@@ -400,7 +400,7 @@ describe('webgpu diagnostic sky fog state', () => {
       THREE.RedFormat,
       THREE.FloatType
     );
-    heightTexture.userData.konveyorHeightfield = {
+    heightTexture.userData.webgpuHeightfield = {
       sceneId: 'rolling-hills',
       source: '/terrain/rolling-hills.bin',
       format: 'RedFormat/FloatType',
@@ -424,10 +424,10 @@ describe('webgpu diagnostic sky fog state', () => {
 
     try {
       expect(proof.ok).toBe(true);
-      expect(proof.blade.materialName).toBe('konveyor-node-grass-blade');
+      expect(proof.blade.materialName).toBe('webgpu-node-grass-blade');
       expect(proof.blade.isNodeMaterial).toBe(true);
       expect(proof.blade.summary).toMatchObject({ kind: 'grass-blade', applied: true });
-      expect(proof.meadow.materialName).toBe('konveyor-node-meadow-quad');
+      expect(proof.meadow.materialName).toBe('webgpu-node-meadow-quad');
       expect(proof.meadow.isNodeMaterial).toBe(true);
       expect(proof.meadow.summary).toMatchObject({ kind: 'meadow-quad', applied: true });
       expect(proof.geometry).toMatchObject({
@@ -460,7 +460,7 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('routes production OptimizedSheep construction through WebGPU node factories in the diagnostic proof', () => {
-    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=rolling-hills');
     const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
     const webGpuModules = {
       MeshBasicNodeMaterial: WEBGPU.MeshBasicNodeMaterial,
@@ -471,7 +471,7 @@ describe('webgpu diagnostic sky fog state', () => {
       DoubleSide: WEBGPU.DoubleSide,
       TSL: WEBGPU.TSL,
     };
-    const suite = createKonveyorNodeMaterialFactorySuite(webGpuModules, {
+    const suite = createWebGpuNodeMaterialFactorySuite(webGpuModules, {
       skyFog,
       sheep: {
         fogColor: skyFog.fogColor,
@@ -488,7 +488,7 @@ describe('webgpu diagnostic sky fog state', () => {
 
     try {
       expect(proof.ok).toBe(true);
-      expect(proof.materialName).toBe('konveyor-node-sheep-wool');
+      expect(proof.materialName).toBe('webgpu-node-sheep-wool');
       expect(proof.isNodeMaterial).toBe(true);
       expect(proof.summary).toMatchObject({ kind: 'sheep-wool', applied: true });
       expect(proof.mesh).toMatchObject({
@@ -513,7 +513,7 @@ describe('webgpu diagnostic sky fog state', () => {
   });
 
   it('falls back to the default scene for unknown diagnostic scene bindings', () => {
-    const scene = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=missing');
+    const scene = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=missing');
 
     expect(scene).toMatchObject({
       active: true,
@@ -776,7 +776,7 @@ describe('webgpu runtime glb material proof', () => {
     );
 
     expect(proof.replacement.missingTargets).toEqual([]);
-    expect(proof.afterMaterialNames).toEqual(['konveyor-node-branches', 'konveyor-node-leaves']);
+    expect(proof.afterMaterialNames).toEqual(['webgpu-node-branches', 'webgpu-node-leaves']);
     expect(proof.nodeMaterialCount).toBe(2);
   });
 
@@ -787,7 +787,7 @@ describe('webgpu runtime glb material proof', () => {
     );
 
     expect(proof.beforeMaterialNames).toEqual(['(runtime-default)']);
-    expect(proof.afterMaterialNames).toEqual(['konveyor-node-rock-rim']);
+    expect(proof.afterMaterialNames).toEqual(['webgpu-node-rock-rim']);
     expect(proof.nodeMaterialCount).toBe(1);
   });
 
@@ -876,7 +876,7 @@ describe('webgpu runtime glb material proof', () => {
   });
 
   it('summarizes shipped tree/rock GLB replacement and native instancing as a production adapter proof', () => {
-    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&konveyorScene=rolling-hills');
+    const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=rolling-hills');
     const rendered = RUNTIME_GLB_RENDER_PREVIEW_ASSETS.map((asset) => ({
       ...asset,
       replacement: asset.role === 'tree'
@@ -915,8 +915,8 @@ describe('webgpu runtime glb material proof', () => {
         source: 'THREE.InstancedMesh',
         instancedMesh2Status: 'not imported in WebGPU diagnostic',
         groups: [
-          { materialName: 'konveyor-node-branches' },
-          { materialName: 'konveyor-node-leaves' },
+          { materialName: 'webgpu-node-branches' },
+          { materialName: 'webgpu-node-leaves' },
         ],
       },
       diagnosticRockInstancingPreview: {
@@ -924,7 +924,7 @@ describe('webgpu runtime glb material proof', () => {
         source: 'THREE.InstancedMesh',
         instancedMesh2Status: 'not imported in WebGPU diagnostic',
         groups: [
-          { materialName: 'konveyor-node-rock-rim' },
+          { materialName: 'webgpu-node-rock-rim' },
         ],
       },
     };
@@ -944,8 +944,8 @@ describe('webgpu runtime glb material proof', () => {
       rockReplacedMaterials: 3,
     });
     expect(proof.materialNames).toEqual({
-      trees: ['konveyor-node-branches', 'konveyor-node-leaves'],
-      rocks: ['konveyor-node-rock-rim'],
+      trees: ['webgpu-node-branches', 'webgpu-node-leaves'],
+      rocks: ['webgpu-node-rock-rim'],
     });
     expect(Object.values(proof.checks).every(Boolean)).toBe(true);
   });

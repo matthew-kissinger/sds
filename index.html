@@ -364,7 +364,6 @@
             const requested = params.get('renderer') || (readExperimentalWebGpuPreference() ? 'webgpu' : 'webgl');
             const diagnostic = params.get('diagnostic') === '1';
             const webgpuApiAvailable = !!navigator.gpu;
-            const productionGate = params.get('konveyorProduction') === '1';
             const productionWebGpu = requested === 'webgpu' &&
                 !diagnostic &&
                 webgpuApiAvailable;
@@ -373,7 +372,6 @@
                 requested,
                 diagnostic,
                 productionWebGpu,
-                productionGate,
                 webgpuApiAvailable,
                 effective: webgpuDiagnostic ? 'webgpu-diagnostic' : (productionWebGpu ? 'webgpu-production' : 'webgl'),
                 fallbackReason: requested === 'webgpu' && !diagnostic && !productionWebGpu ? 'webgpu-unavailable' : null

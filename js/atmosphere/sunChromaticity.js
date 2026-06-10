@@ -18,7 +18,7 @@
  *    Hosek-Wilkie output without being byte-identical; the tests in
  *    `tests/sun-chromaticity.spec.js` pin the agreement contract.
  *  - `mieAureolePhaseHG(cosTheta, g)` — Henyey-Greenstein phase
- *    function. The CPU mirror of the GPU-side HG in the konveyor sky
+ *    function. The CPU mirror of the GPU-side HG in the webgpu sky
  *    node material and the WebGL Hosek-Wilkie sky shader; used in
  *    Cycle 39 Phase B for the Mie aureole.
  */

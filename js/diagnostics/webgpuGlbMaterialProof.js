@@ -82,12 +82,12 @@ export function createGlbMaterialReplacementProof(asset, gltf) {
     const beforeMaterialNames = materialNames(primitiveMeshes);
     const replacement = asset.role === 'tree'
         ? replaceTreeMaterialsByName(root, {
-            branches: () => replacementMaterial('konveyor-node-branches'),
-            leaves: () => replacementMaterial('konveyor-node-leaves'),
+            branches: () => replacementMaterial('webgpu-node-branches'),
+            leaves: () => replacementMaterial('webgpu-node-leaves'),
         })
         : replaceRockMaterialsByTraversal(
             root,
-            () => replacementMaterial('konveyor-node-rock-rim')
+            () => replacementMaterial('webgpu-node-rock-rim')
         );
     const afterMaterialNames = materialNames(primitiveMeshes);
     const nodeMaterialCount = primitiveMeshes.filter((mesh) => mesh.material?.isNodeMaterial).length;

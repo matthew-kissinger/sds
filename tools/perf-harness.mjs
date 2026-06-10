@@ -229,7 +229,7 @@ async function navigateAndWait(page, cfg) {
     if (cfg.cameraPose) url.searchParams.set('perfPose', cfg.cameraPose);
     if (cfg.systemIsolation) url.searchParams.set('perfSystem', cfg.systemIsolation);
     if (NATIVE_TREE_IMPOSTORS) {
-        url.searchParams.set('konveyorNativeTreeImpostors', String(NATIVE_TREE_IMPOSTORS));
+        url.searchParams.set('webgpuNativeTreeImpostors', String(NATIVE_TREE_IMPOSTORS));
     }
     if (REQUESTED_SUN !== null) {
         url.searchParams.set('sun', String(REQUESTED_SUN));

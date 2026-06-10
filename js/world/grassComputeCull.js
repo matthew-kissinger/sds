@@ -6,7 +6,7 @@
 // InstancedMesh: a TSL renderer.compute() pass frustum-tests every clump and stream-
 // compacts the survivors' indices into a visibleIdx buffer, and a single
 // drawIndexedIndirect (whose instanceCount the compute pass writes) draws only those.
-// The konveyor blade material reads per-instance data through the compaction remap and
+// The webgpu blade material reads per-instance data through the compaction remap and
 // folds the clump transform (T*R*S, byte-identical to the per-chunk instanceMatrix)
 // into positionNode, so the look is pixel-identical to the per-chunk path while
 // collapsing ~740 InstancedMeshes to 1.

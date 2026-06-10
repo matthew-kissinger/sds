@@ -51,7 +51,7 @@
     "probe:webgpu": "node tools/probe-webgpu-runtime.mjs",
     "probe:webgpu-impostor-lab": "node tools/webgpu-impostor-lab-proof.mjs",
     "probe:tree-placement": "node tools/tree-placement-diagnostics.mjs",
-    "konveyor:renderer-telemetry": "node tools/konveyor-renderer-telemetry-summary.mjs --remote",
+    "webgpu:renderer-telemetry": "node tools/webgpu-renderer-telemetry-summary.mjs --remote",
     "native:preflight": "node tools/native-preflight.mjs",
     "native:check": "npm run build:native && npm run native:preflight",
     "desktop:install": "npm --prefix native/desktop-electron install",

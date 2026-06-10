@@ -10,7 +10,7 @@ import { FieldConfig } from './FieldConfig.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
-import { createKonveyorSheepMaterial } from './konveyorSheepMaterialAdapter.js';
+import { createWebGpuSheepMaterial } from './webgpuSheepMaterialAdapter.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
 import {
     createSheepCollisionScratch,
@@ -104,10 +104,10 @@ export class OptimizedSheepSystem {
         this.audioManager = null;
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
         this.heightfield = opts.heightfield ?? null;
-        this.konveyorSheepSearch = opts.search;
-        this.konveyorSheepFactories = opts.konveyorSheepFactories;
-        this.konveyorSheepMaterialSummary = null;
-        this.konveyorSheepMaterialControls = null;
+        this.webgpuSheepSearch = opts.search;
+        this.webgpuSheepFactories = opts.webgpuSheepFactories;
+        this.webgpuSheepMaterialSummary = null;
+        this.webgpuSheepMaterialControls = null;
         this.animationUpdateRate = 1;
         this._animationUpdateFrame = 0;
 
@@ -334,10 +334,10 @@ export class OptimizedSheepSystem {
             vertexColors: true,
             fog: false // We handle fog manually in shader (synced to scene.fog)
         });
-        const materialResult = createKonveyorSheepMaterial('sheep-wool', 'createSheepMaterial', {
+        const materialResult = createWebGpuSheepMaterial('sheep-wool', 'createSheepMaterial', {
             createDefaultMaterial,
-            search: this.konveyorSheepSearch,
-            factories: this.konveyorSheepFactories,
+            search: this.webgpuSheepSearch,
+            factories: this.webgpuSheepFactories,
             context: {
                 sheepCount: this.maxCapacity,
                 vertexShader,
@@ -377,11 +377,11 @@ export class OptimizedSheepSystem {
         });
         this.material = materialResult.material;
         this.material.userData = this.material.userData ?? {};
-        this.material.userData.konveyorSheepMaterialControls =
-            materialResult.controls ?? this.material.userData.konveyorSheepMaterialControls ?? null;
-        this.material.userData.konveyorSheepMaterialSummary = materialResult.summary;
-        this.konveyorSheepMaterialSummary = materialResult.summary;
-        this.konveyorSheepMaterialControls = this.material.userData.konveyorSheepMaterialControls;
+        this.material.userData.webgpuSheepMaterialControls =
+            materialResult.controls ?? this.material.userData.webgpuSheepMaterialControls ?? null;
+        this.material.userData.webgpuSheepMaterialSummary = materialResult.summary;
+        this.webgpuSheepMaterialSummary = materialResult.summary;
+        this.webgpuSheepMaterialControls = this.material.userData.webgpuSheepMaterialControls;
     }
     
     /**
@@ -622,8 +622,8 @@ export class OptimizedSheepSystem {
         let dogCorrections = 0;
 
         const sceneFog = this.scene && this.scene.fog;
-        if (this.konveyorSheepMaterialControls?.update) {
-            this.konveyorSheepMaterialControls.update({
+        if (this.webgpuSheepMaterialControls?.update) {
+            this.webgpuSheepMaterialControls.update({
                 deltaTime,
                 sceneFog,
                 material: this.material,
@@ -1381,7 +1381,7 @@ export class OptimizedSheepSystem {
             this.mergedGeometry = null;
         }
         if (this.material) {
-            this.konveyorSheepMaterialControls?.dispose?.();
+            this.webgpuSheepMaterialControls?.dispose?.();
             if (Array.isArray(this.material)) {
                 this.material.forEach(m => m?.dispose?.());
             } else {

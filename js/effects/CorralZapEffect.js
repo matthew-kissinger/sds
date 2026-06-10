@@ -10,7 +10,7 @@
  * size is small (~8) — corral entry is rare enough that we never run out.
  */
 import * as THREE from 'three';
-import { createKonveyorEffectMaterial } from './konveyorEffectMaterialAdapter.js';
+import { createWebGpuEffectMaterial } from './webgpuEffectMaterialAdapter.js';
 
 const POOL_SIZE = 8;
 // Lengths bumped from the v1 (1.5s / 0.25s) — playtest 2026-04-25 said the
@@ -31,7 +31,7 @@ class _Effect {
         const positions = new Float32Array(BOLT_SEGMENTS * 2 * 3);  // each segment is 2 verts x 3 axes
         boltGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-        const boltMaterialResult = createKonveyorEffectMaterial('corral-zap-bolt', 'createCorralZapBoltMaterial', {
+        const boltMaterialResult = createWebGpuEffectMaterial('corral-zap-bolt', 'createCorralZapBoltMaterial', {
             createDefaultMaterial: () => new THREE.LineBasicMaterial({
                 color: 0xeaffff,
                 transparent: true,
@@ -40,7 +40,7 @@ class _Effect {
                 depthWrite: false,
             }),
             search: options.search,
-            factories: options.konveyorEffectFactories,
+            factories: options.webgpuEffectFactories,
             context: {
                 color: new THREE.Color(0xeaffff),
                 opacity: 0,
@@ -53,7 +53,7 @@ class _Effect {
         });
         const boltMat = boltMaterialResult.material;
         this.boltMaterialControls = boltMaterialResult.controls;
-        this.konveyorBoltMaterialSummary = boltMaterialResult.summary;
+        this.webgpuBoltMaterialSummary = boltMaterialResult.summary;
         this.bolt = new THREE.LineSegments(boltGeo, boltMat);
         this.bolt.frustumCulled = false;
         scene.add(this.bolt);
@@ -63,7 +63,7 @@ class _Effect {
         this._partPositions = new Float32Array(PARTICLE_COUNT * 3);
         this._partVelocities = new Float32Array(PARTICLE_COUNT * 3);
         partGeo.setAttribute('position', new THREE.BufferAttribute(this._partPositions, 3));
-        const particleMaterialResult = createKonveyorEffectMaterial('corral-zap-particles', 'createCorralZapParticleMaterial', {
+        const particleMaterialResult = createWebGpuEffectMaterial('corral-zap-particles', 'createCorralZapParticleMaterial', {
             createDefaultMaterial: () => new THREE.PointsMaterial({
                 color: 0xc8efff,
                 size: 0.6,
@@ -73,7 +73,7 @@ class _Effect {
                 sizeAttenuation: true,
             }),
             search: options.search,
-            factories: options.konveyorEffectFactories,
+            factories: options.webgpuEffectFactories,
             context: {
                 color: new THREE.Color(0xc8efff),
                 size: 0.6,
@@ -87,7 +87,7 @@ class _Effect {
         });
         const partMat = particleMaterialResult.material;
         this.particleMaterialControls = particleMaterialResult.controls;
-        this.konveyorParticleMaterialSummary = particleMaterialResult.summary;
+        this.webgpuParticleMaterialSummary = particleMaterialResult.summary;
         this.particles = new THREE.Points(partGeo, partMat);
         this.particles.frustumCulled = false;
         scene.add(this.particles);

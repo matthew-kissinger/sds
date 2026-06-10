@@ -145,7 +145,7 @@ float rayleighPhase( float cosTheta ) {
 // Preetham pipeline below this drives the Mie scattering term — which is
 // exactly the bright Mie aureole around the sun and the warm horizon glow
 // (same function, evaluated at different cosTheta along the horizon). The
-// konveyor WebGPU sky in js/atmosphere/konveyorSkyNodeMaterial.js mirrors
+// webgpu WebGPU sky in js/atmosphere/webgpuSkyNodeMaterial.js mirrors
 // this for parity; mieAureolePhaseHG in js/atmosphere/sunChromaticity.js
 // is the CPU-side helper for any consumer that needs the same value off
 // the GPU.

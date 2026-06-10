@@ -128,7 +128,7 @@ export const TIER_PRESETS = {
         // walks into flat color carpets that read as a lighter-green
         // checkerboard against the instanced grass. A static center-distance
         // flat LOD can't work inside the play area; off until a camera-relative
-        // version exists. The material factory stays for the konveyor catalog.
+        // version exists. The material factory stays for the webgpu catalog.
         meadowQuadEnabled:   false,
         // Cycle 25 Phase B: drop LOD1 on med + high desktop. The mid-band
         // mesh's silhouette mismatch with LOD0 is what

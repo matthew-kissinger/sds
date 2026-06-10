@@ -242,7 +242,7 @@ export function setImpostorTint(builder, sunColor, sunDirWorld = null, ambientCo
 
     for (const mat of builder._impostorMaterials) {
         if (mat.userData?.isKilnImpostor) {
-            const controls = mat.userData?.konveyorImpostorMaterialControls;
+            const controls = mat.userData?.webgpuImpostorMaterialControls;
             if (controls?.setTint) {
                 controls.setTint({
                     sunColor,
@@ -328,10 +328,10 @@ function buildLiveImpostorProbe(material) {
             uSubsurfaceLift: material.uniforms.uSubsurfaceLift?.value ?? null,
         };
     }
-    const controls = material.userData?.konveyorImpostorMaterialControls;
+    const controls = material.userData?.webgpuImpostorMaterialControls;
     return {
         materialMode: material.isNodeMaterial ? 'node-material' : 'factory-material',
         hasSetTintControl: typeof controls?.setTint === 'function',
-        summary: material.userData?.konveyorImpostorMaterialSummary ?? null,
+        summary: material.userData?.webgpuImpostorMaterialSummary ?? null,
     };
 }

@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createSceneFogHorizonProof } from '../js/diagnostics/konveyorSceneFogHorizonProof.js';
+import { createSceneFogHorizonProof } from '../js/diagnostics/webgpuSceneFogHorizonProof.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');

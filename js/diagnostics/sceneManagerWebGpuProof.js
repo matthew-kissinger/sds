@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 
 import { Atmosphere } from '../atmosphere/Atmosphere.js';
-import { createKonveyorAtmosphereMaterial } from '../atmosphere/konveyorAtmosphereMaterialAdapter.js';
+import { createWebGpuAtmosphereMaterial } from '../atmosphere/webgpuAtmosphereMaterialAdapter.js';
 import { CorralZapEffectPool } from '../effects/CorralZapEffect.js';
 import { PortalEffect } from '../effects/PortalEffect.js';
 import { SunBillboard } from '../effects/SunBillboard.js';
@@ -34,7 +34,7 @@ export function shouldRunSceneManagerWebGpuProof(search = '') {
     const params = new URLSearchParams(search || '');
     return params.get('renderer') === 'webgpu'
         && params.get('diagnostic') === '1'
-        && params.get('konveyorSceneManagerProof') === '1';
+        && params.get('webgpuSceneManagerProof') === '1';
 }
 
 export async function createSceneManagerWebGpuRendererProof(webGpuModules, {
@@ -66,7 +66,7 @@ export async function createSceneManagerWebGpuRendererProof(webGpuModules, {
         impostorFactories,
     }, { useGlobalFactories });
     const canvas = document.createElement('canvas');
-    canvas.dataset.konveyorSceneManagerWebgpuProof = '1';
+    canvas.dataset.webgpuSceneManagerWebgpuProof = '1';
     canvas.style.cssText = [
         'position:fixed',
         'right:12px',
@@ -102,7 +102,7 @@ export async function createSceneManagerWebGpuRendererProof(webGpuModules, {
         new THREE.BoxGeometry(14, 14, 14),
         new THREE.MeshBasicMaterial({ color: 0x33d1ff })
     );
-    marker.name = 'konveyor-scene-manager-webgpu-marker';
+    marker.name = 'webgpu-scene-manager-webgpu-marker';
     marker.position.set(0, 7, 0);
     sceneManager.scene.add(marker);
     sceneManager.camera.position.set(0, 0.2, 3);
@@ -265,14 +265,14 @@ export async function createSceneManagerWebGpuRendererProof(webGpuModules, {
 
 function resolveSceneManagerFactorySupply(explicitFactories, { useGlobalFactories }) {
     const globalFactories = typeof window === 'undefined' ? {} : {
-        atmosphereFactories: window.__sdsKonveyorAtmosphereMaterialFactories,
-        effectFactories: window.__sdsKonveyorEffectMaterialFactories,
-        treeRockFactories: window.__sdsKonveyorMaterialFactories,
-        terrainFactories: window.__sdsKonveyorTerrainMaterialFactories,
-        waterFactories: window.__sdsKonveyorWaterMaterialFactories,
-        grassFactories: window.__sdsKonveyorGrassMaterialFactories,
-        sheepFactories: window.__sdsKonveyorSheepMaterialFactories,
-        impostorFactories: window.__sdsKonveyorImpostorMaterialFactories,
+        atmosphereFactories: window.__sdsWebGpuAtmosphereMaterialFactories,
+        effectFactories: window.__sdsWebGpuEffectMaterialFactories,
+        treeRockFactories: window.__sdsWebGpuMaterialFactories,
+        terrainFactories: window.__sdsWebGpuTerrainMaterialFactories,
+        waterFactories: window.__sdsWebGpuWaterMaterialFactories,
+        grassFactories: window.__sdsWebGpuGrassMaterialFactories,
+        sheepFactories: window.__sdsWebGpuSheepMaterialFactories,
+        impostorFactories: window.__sdsWebGpuImpostorMaterialFactories,
     };
     const source = useGlobalFactories ? 'window-global' : 'argument';
     const supply = {
@@ -320,12 +320,12 @@ async function createProductionKilnImpostorSceneManagerIsland({
         normalAtlas: assets.normalAtlas,
         depthAtlas: assets.depthAtlas,
         sidecar: assets.sidecar,
-        search: '?renderer=webgpu&konveyorImpostors=1',
-        konveyorImpostorFactories: impostorFactories,
+        search: '?renderer=webgpu&webgpuImpostors=1',
+        webgpuImpostorFactories: impostorFactories,
     });
     const geometry = createKilnImpostorGeometry(assets.sidecar);
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.name = 'konveyor-scene-manager-kiln-impostor';
+    mesh.name = 'webgpu-scene-manager-kiln-impostor';
     mesh.position.set(-0.62, -1.02, 0.48);
     mesh.rotation.set(0, 0.12, 0);
     mesh.scale.setScalar(0.16);
@@ -333,11 +333,11 @@ async function createProductionKilnImpostorSceneManagerIsland({
     mesh.renderOrder = 7;
     sceneManager.scene.add(mesh);
 
-    const summary = material.userData?.konveyorImpostorMaterialSummary ?? null;
+    const summary = material.userData?.webgpuImpostorMaterialSummary ?? null;
     const sidecar = assets.sidecar;
     const checks = {
         factoryApplied: summary?.applied === true,
-        nodeMaterial: material.name === 'konveyor-node-kiln-impostor'
+        nodeMaterial: material.name === 'webgpu-node-kiln-impostor'
             && material.isNodeMaterial === true,
         kilnTagged: material.userData?.isKilnImpostor === true
             && material.userData?.sidecar === sidecar,
@@ -506,8 +506,8 @@ function createProductionGrassSceneManagerIsland({
         heightfield,
         sourceScene?.boundary ?? null,
         {
-            search: '?renderer=webgpu&konveyorGrass=1',
-            konveyorGrassFactories: grassFactories,
+            search: '?renderer=webgpu&webgpuGrass=1',
+            webgpuGrassFactories: grassFactories,
         }
     );
 
@@ -535,17 +535,17 @@ function createProductionGrassSceneManagerIsland({
     meadowMesh.renderOrder = 2;
     sceneManager.scene.add(meadowMesh);
 
-    const bladeSummary = grass.konveyorGrassBladeMaterialSummary
-        ?? grass.grassMaterial?.userData?.konveyorGrassBladeMaterialSummary
+    const bladeSummary = grass.webgpuGrassBladeMaterialSummary
+        ?? grass.grassMaterial?.userData?.webgpuGrassBladeMaterialSummary
         ?? null;
-    const meadowSummary = grass.konveyorMeadowQuadMaterialSummary ?? null;
+    const meadowSummary = grass.webgpuMeadowQuadMaterialSummary ?? null;
     const bladeData = grass.clumpGeometry?.attributes?.bladeData ?? null;
     const checks = {
         bladeFactoryApplied: bladeSummary?.applied === true,
         meadowFactoryApplied: meadowSummary?.applied === true,
-        bladeNodeMaterial: grass.grassMaterial?.name === 'konveyor-node-grass-blade'
+        bladeNodeMaterial: grass.grassMaterial?.name === 'webgpu-node-grass-blade'
             && grass.grassMaterial?.isNodeMaterial === true,
-        meadowNodeMaterial: meadowMaterial?.name === 'konveyor-node-meadow-quad'
+        meadowNodeMaterial: meadowMaterial?.name === 'webgpu-node-meadow-quad'
             && meadowMaterial?.isNodeMaterial === true,
         sceneContainsBladeChunk: bladeChunk?.mesh?.isInstancedMesh === true
             && bladeChunk.mesh.count > 0
@@ -616,8 +616,8 @@ function createProductionSheepSceneManagerIsland({
         spreadRadius: 1.2,
         defaultCount: 3,
     }, false, {
-        search: '?renderer=webgpu&konveyorSheep=1',
-        konveyorSheepFactories: sheepFactories,
+        search: '?renderer=webgpu&webgpuSheep=1',
+        webgpuSheepFactories: sheepFactories,
     });
 
     if (sheep.instancedMesh) {
@@ -627,13 +627,13 @@ function createProductionSheepSceneManagerIsland({
         sheep.instancedMesh.renderOrder = 6;
     }
 
-    const summary = sheep.konveyorSheepMaterialSummary
-        ?? sheep.material?.userData?.konveyorSheepMaterialSummary
+    const summary = sheep.webgpuSheepMaterialSummary
+        ?? sheep.material?.userData?.webgpuSheepMaterialSummary
         ?? null;
     const attributes = Object.keys(sheep.mergedGeometry?.attributes ?? {});
     const checks = {
         factoryApplied: summary?.applied === true,
-        nodeMaterial: sheep.material?.name === 'konveyor-node-sheep-wool'
+        nodeMaterial: sheep.material?.name === 'webgpu-node-sheep-wool'
             && sheep.material?.isNodeMaterial === true,
         instancedMeshPresent: sheep.instancedMesh?.isInstancedMesh === true
             && sheep.instancedMesh.count === 3
@@ -690,8 +690,8 @@ function createProductionTerrainSceneManagerIsland({
     const sourceScene = resolveHeightTextureScene(heightTexture);
     const heightfield = createHeightfieldFromTexture(heightTexture);
     const builder = new TerrainBuilder(sceneManager.scene, true, sourceScene, {
-        search: '?renderer=webgpu&konveyorTerrain=1',
-        konveyorTerrainFactories: terrainFactories,
+        search: '?renderer=webgpu&webgpuTerrain=1',
+        webgpuTerrainFactories: terrainFactories,
     });
     builder.setHeightfield(heightfield);
     const terrain = builder.createTerrain();
@@ -706,13 +706,13 @@ function createProductionTerrainSceneManagerIsland({
         builder.terrainSkirtMesh.renderOrder = 0;
     }
 
-    const summary = builder.konveyorTerrainMaterialSummary
-        ?? terrain.material.userData?.konveyorTerrainMaterialSummary
+    const summary = builder.webgpuTerrainMaterialSummary
+        ?? terrain.material.userData?.webgpuTerrainMaterialSummary
         ?? null;
     const productionHeightTexture = terrain.material.userData?.heightTexture ?? null;
     const checks = {
         factoryApplied: summary?.applied === true,
-        nodeMaterial: terrain.material?.name === 'konveyor-node-terrain-heightfield'
+        nodeMaterial: terrain.material?.name === 'webgpu-node-terrain-heightfield'
             && terrain.material?.isNodeMaterial === true,
         sceneContainsTerrain: sceneManager.scene.children.includes(terrain),
         meshIsTerrainPlane: terrain?.isMesh === true
@@ -772,8 +772,8 @@ function createProductionWaterSceneManagerIsland({
         size: 2.0,
         y: -1.19,
         segments: 4,
-        search: '?renderer=webgpu&konveyorWater=1',
-        konveyorWaterFactories: waterFactories,
+        search: '?renderer=webgpu&webgpuWater=1',
+        webgpuWaterFactories: waterFactories,
     });
 
     water.mesh.position.z = 0.11;
@@ -783,13 +783,13 @@ function createProductionWaterSceneManagerIsland({
     sceneManager.setWater({ mesh: water.mesh, water });
     water.update(1.25);
 
-    const summary = water.konveyorWaterMaterialSummary
-        ?? water.material.userData?.konveyorWaterMaterialSummary
+    const summary = water.webgpuWaterMaterialSummary
+        ?? water.material.userData?.webgpuWaterMaterialSummary
         ?? null;
     const productionHeightTexture = water.material.userData?.heightTexture ?? null;
     const checks = {
         factoryApplied: summary?.applied === true,
-        nodeMaterial: water.material?.name === 'konveyor-node-anime-water'
+        nodeMaterial: water.material?.name === 'webgpu-node-anime-water'
             && water.material?.isNodeMaterial === true,
         sceneContainsWater: sceneManager.scene.children.includes(water.mesh),
         sceneManagerWaterBound: sceneManager.waterBundle?.water === water
@@ -843,16 +843,16 @@ function createProductionSunBillboardSceneManagerIsland({
     const sun = new SunBillboard(sceneManager.scene, {
         distance: 320,
         size: 28,
-        search: '?renderer=webgpu&konveyorEffects=1',
-        konveyorEffectFactories: effectFactories,
+        search: '?renderer=webgpu&webgpuEffects=1',
+        webgpuEffectFactories: effectFactories,
     });
     const sunDirection = new THREE.Vector3(...(skyFog.sunDirection ?? [0, 1, 0]));
     const sunColor = new THREE.Color(...(skyFog.sunColor ?? [1, 0.92, 0.72]));
     sun.update(sceneManager.camera, sunDirection, sunColor);
 
     const checks = {
-        factoryApplied: sun.konveyorMaterialSummary?.applied === true,
-        nodeMaterial: sun.material?.name === 'konveyor-node-sun-billboard'
+        factoryApplied: sun.webgpuMaterialSummary?.applied === true,
+        nodeMaterial: sun.material?.name === 'webgpu-node-sun-billboard'
             && sun.material?.isNodeMaterial === true,
         controlsConnected: !!sun.materialControls?.update,
         sceneContainsSun: sceneManager.scene.children.includes(sun.mesh),
@@ -869,7 +869,7 @@ function createProductionSunBillboardSceneManagerIsland({
             source: 'scene-manager-production-sun-billboard-webgpu-node-island',
             materialName: sun.material?.name ?? null,
             isNodeMaterial: sun.material?.isNodeMaterial === true,
-            summary: sun.konveyorMaterialSummary ?? null,
+            summary: sun.webgpuMaterialSummary ?? null,
             hasControls: !!sun.materialControls?.update,
             position: {
                 x: Number(sun.mesh.position.x.toFixed(2)),
@@ -888,10 +888,10 @@ function createProductionEffectSceneManagerIsland({
 }) {
     if (!effectFactories) return null;
 
-    const search = '?renderer=webgpu&konveyorEffects=1';
+    const search = '?renderer=webgpu&webgpuEffects=1';
     const portal = new PortalEffect(sceneManager.scene, { x: -1.32, z: 0.18 }, -0.95, {
         search,
-        konveyorEffectFactories: effectFactories,
+        webgpuEffectFactories: effectFactories,
     });
     portal.ring.scale.setScalar(0.12);
     portal.pad.scale.setScalar(0.12);
@@ -906,7 +906,7 @@ function createProductionEffectSceneManagerIsland({
 
     const zapPool = new CorralZapEffectPool(sceneManager.scene, {
         search,
-        konveyorEffectFactories: effectFactories,
+        webgpuEffectFactories: effectFactories,
     });
     zapPool.fire({ x: 0.95, y: -0.96, z: 0.2 });
     zapPool.fireSpark({ x: 1.16, y: -0.48, z: 0.14 });
@@ -921,11 +921,11 @@ function createProductionEffectSceneManagerIsland({
     }
 
     const summaries = {
-        portalRing: portal.konveyorRingMaterialSummary ?? null,
-        portalPad: portal.konveyorPadMaterialSummary ?? null,
-        portalParticles: portal.konveyorParticleMaterialSummary ?? null,
-        corralZapBolt: firstZap?.konveyorBoltMaterialSummary ?? null,
-        corralZapParticles: firstZap?.konveyorParticleMaterialSummary ?? null,
+        portalRing: portal.webgpuRingMaterialSummary ?? null,
+        portalPad: portal.webgpuPadMaterialSummary ?? null,
+        portalParticles: portal.webgpuParticleMaterialSummary ?? null,
+        corralZapBolt: firstZap?.webgpuBoltMaterialSummary ?? null,
+        corralZapParticles: firstZap?.webgpuParticleMaterialSummary ?? null,
     };
     const checks = {
         portalRingFactoryApplied: summaries.portalRing?.applied === true,
@@ -933,15 +933,15 @@ function createProductionEffectSceneManagerIsland({
         portalParticleFactoryApplied: summaries.portalParticles?.applied === true,
         zapBoltFactoryApplied: summaries.corralZapBolt?.applied === true,
         zapParticleFactoryApplied: summaries.corralZapParticles?.applied === true,
-        portalRingNodeMaterial: portal.ringMaterial?.name === 'konveyor-node-portal-ring'
+        portalRingNodeMaterial: portal.ringMaterial?.name === 'webgpu-node-portal-ring'
             && portal.ringMaterial?.isNodeMaterial === true,
-        portalPadNodeMaterial: portal.pad?.material?.name === 'konveyor-node-portal-pad'
+        portalPadNodeMaterial: portal.pad?.material?.name === 'webgpu-node-portal-pad'
             && portal.pad?.material?.isNodeMaterial === true,
-        portalParticleNodeMaterial: portal.particles?.material?.name === 'konveyor-node-portal-particles'
+        portalParticleNodeMaterial: portal.particles?.material?.name === 'webgpu-node-portal-particles'
             && portal.particles?.material?.isNodeMaterial === true,
-        zapBoltNodeMaterial: firstZap?.bolt?.material?.name === 'konveyor-node-corral-zap-bolt'
+        zapBoltNodeMaterial: firstZap?.bolt?.material?.name === 'webgpu-node-corral-zap-bolt'
             && firstZap?.bolt?.material?.isNodeMaterial === true,
-        zapParticleNodeMaterial: firstZap?.particles?.material?.name === 'konveyor-node-corral-zap-particles'
+        zapParticleNodeMaterial: firstZap?.particles?.material?.name === 'webgpu-node-corral-zap-particles'
             && firstZap?.particles?.material?.isNodeMaterial === true,
         sceneContainsPortal: sceneManager.scene.children.includes(portal.ring)
             && sceneManager.scene.children.includes(portal.pad)
@@ -1036,10 +1036,10 @@ async function createProductionTreeRockSceneManagerIsland({
         rockAssetsCovered: rockAssets.length === 3
             && rockAssets.every((asset) => asset.replacement?.strategy === 'asset-class-traversal')
             && rockAssets.every((asset) => asset.replacement?.replacedMaterials > 0),
-        treeNodeMaterialsBound: treeMaterialNames.includes('konveyor-node-branches')
-            && treeMaterialNames.includes('konveyor-node-leaves'),
+        treeNodeMaterialsBound: treeMaterialNames.includes('webgpu-node-branches')
+            && treeMaterialNames.includes('webgpu-node-leaves'),
         rockNodeMaterialBound: rockMaterialNames.length === 1
-            && rockMaterialNames[0] === 'konveyor-node-rock-rim',
+            && rockMaterialNames[0] === 'webgpu-node-rock-rim',
         replacementCounts: preview.adapter?.treeReplacedMaterials === 8
             && preview.adapter?.rockReplacedMaterials === 3,
         productionTreePlacementPreview: preview.productionPlacementPreview?.ok === true
@@ -1100,15 +1100,15 @@ function createProductionAtmosphereSceneManagerIsland({
         sky: null,
         cloud: null,
     };
-    const search = '?renderer=webgpu&konveyorAtmosphere=1';
+    const search = '?renderer=webgpu&webgpuAtmosphere=1';
     const atmosphere = new Atmosphere(sceneManager.scene, {
         initialPreset: skyFog.presetName,
         sceneFog: sceneBinding?.fog ?? null,
         skyFactory: (context) => {
-            const result = createKonveyorAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
+            const result = createWebGpuAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
                 createDefaultMaterial: () => createFallbackNodeMaterial(
                     webGpuModules,
-                    'konveyor-scene-manager-atmosphere-sky-fallback',
+                    'webgpu-scene-manager-atmosphere-sky-fallback',
                     { side: webGpuModules.BackSide }
                 ),
                 search,
@@ -1119,10 +1119,10 @@ function createProductionAtmosphereSceneManagerIsland({
             return result;
         },
         cloudFactory: (context) => {
-            const result = createKonveyorAtmosphereMaterial('cloud-layer', 'createCloudLayerMaterial', {
+            const result = createWebGpuAtmosphereMaterial('cloud-layer', 'createCloudLayerMaterial', {
                 createDefaultMaterial: () => createFallbackNodeMaterial(
                     webGpuModules,
-                    'konveyor-scene-manager-atmosphere-cloud-fallback',
+                    'webgpu-scene-manager-atmosphere-cloud-fallback',
                     { side: webGpuModules.DoubleSide, transparent: true }
                 ),
                 search,
@@ -1207,12 +1207,12 @@ function createFallbackNodeMaterial(webGpuModules, name, { side = null, transpar
 }
 
 function resolveHeightTextureScene(texture) {
-    const sceneId = texture?.userData?.konveyorHeightfield?.sceneId ?? DEFAULT_SCENE_ID;
+    const sceneId = texture?.userData?.webgpuHeightfield?.sceneId ?? DEFAULT_SCENE_ID;
     return getSceneById(sceneId) ?? getSceneById(DEFAULT_SCENE_ID);
 }
 
 function createHeightfieldFromTexture(texture) {
-    const meta = texture.userData?.konveyorHeightfield ?? {};
+    const meta = texture.userData?.webgpuHeightfield ?? {};
     const data = texture.image?.data;
     const heightfield = new Heightfield({
         data,
@@ -1228,7 +1228,7 @@ function createHeightfieldFromTexture(texture) {
 }
 
 function heightfieldMatchesTexture(heightfield, texture) {
-    const meta = texture.userData?.konveyorHeightfield ?? {};
+    const meta = texture.userData?.webgpuHeightfield ?? {};
     return heightfield.width === meta.size?.[0]
         && heightfield.height === meta.size?.[1]
         && heightfield.worldSize === meta.worldSize

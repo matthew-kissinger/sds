@@ -5,12 +5,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { listScenes, loadScene } from '../shared/scenes/index.js';
-import { createKonveyorRockPlacementRng } from '../js/world/konveyorRockPlacementAdapter.js';
+import { createWebGpuRockPlacementRng } from '../js/world/webgpuRockPlacementAdapter.js';
 import { generateRockPlacementPlan } from '../js/world/rockPlacementPlan.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const SEARCH = '?renderer=webgpu&konveyorRocks=1';
+const SEARCH = '?renderer=webgpu&webgpuRocks=1';
 
 function parseArgs(argv) {
     const args = {
@@ -40,7 +40,7 @@ function round(value) {
 
 function createPlan(sceneDef) {
     const farmHouseArea = sceneDef?.farmHouse?.exclusionArea ?? null;
-    const { rng, summary } = createKonveyorRockPlacementRng({
+    const { rng, summary } = createWebGpuRockPlacementRng({
         search: SEARCH,
         sceneDef,
     });
@@ -96,7 +96,7 @@ async function run() {
 
     const manifest = {
         capturedAt: new Date().toISOString(),
-        contract: 'konveyor-rock-placement-flag-proof',
+        contract: 'webgpu-rock-placement-flag-proof',
         search: SEARCH,
         ok: scenes.every((scene) => scene.ok),
         scenes,

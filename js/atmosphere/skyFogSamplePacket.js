@@ -7,8 +7,8 @@ import { SKY_PRESETS, isKnownPreset } from './skyPresets.js';
 
 export const DEFAULT_SKY_FOG_SAMPLE_PRESET = 'dusk';
 export const ATMOSPHERE_FRAME_CONTRACT = 'AtmosphereFrame.v1';
-const DEFAULT_KONVEYOR_SUN_BILLBOARD_SIZE = 620;
-const DEFAULT_KONVEYOR_SUN_BILLBOARD_INTENSITY = 1.58;
+const DEFAULT_WEBGPU_SUN_BILLBOARD_SIZE = 620;
+const DEFAULT_WEBGPU_SUN_BILLBOARD_INTENSITY = 1.58;
 
 function colorArray(color) {
   return color.toArray().map((value) => Number(value.toFixed(4)));
@@ -61,9 +61,9 @@ export function sampleSkyFogPacketFromSky({
   const physicalDirection = normalizedVectorArray(sunPhysicalDirection ?? sunDirection, sunDirection);
   const visualDirection = normalizedVectorArray(sunVisualDirection ?? physicalDirection, physicalDirection);
   const billboard = {
-    size: finiteNumber(sunBillboard?.size, DEFAULT_KONVEYOR_SUN_BILLBOARD_SIZE),
+    size: finiteNumber(sunBillboard?.size, DEFAULT_WEBGPU_SUN_BILLBOARD_SIZE),
     distance: finiteNumber(sunBillboard?.distance, 3000),
-    intensity: finiteNumber(sunBillboard?.intensity, DEFAULT_KONVEYOR_SUN_BILLBOARD_INTENSITY),
+    intensity: finiteNumber(sunBillboard?.intensity, DEFAULT_WEBGPU_SUN_BILLBOARD_INTENSITY),
     disc: sunBillboard?.disc ?? null,
     materialName: sunBillboard?.materialName ?? null,
     applied: sunBillboard?.applied ?? null,

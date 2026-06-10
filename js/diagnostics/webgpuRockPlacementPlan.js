@@ -8,8 +8,8 @@ import {
     ROCK_Z_SCALE,
 } from '../world/rockPlacementPlan.js';
 import {
-    KONVEYOR_ROCK_PLACEMENT_SEED_OFFSET,
-} from '../world/konveyorRockPlacementAdapter.js';
+    WEBGPU_ROCK_PLACEMENT_SEED_OFFSET,
+} from '../world/webgpuRockPlacementAdapter.js';
 
 export const DIAGNOSTIC_ROCK_PLACEMENT_SCENE_ID = 'field';
 const DIAGNOSTIC_ROCK_PLACEMENT_MAX_ROCKS = 6;
@@ -26,7 +26,7 @@ function isInRect(point, rect, buffer = 0) {
 }
 
 function generateDiagnosticRocks(sceneDef, seed) {
-    const rng = mulberry32(seed + KONVEYOR_ROCK_PLACEMENT_SEED_OFFSET);
+    const rng = mulberry32(seed + WEBGPU_ROCK_PLACEMENT_SEED_OFFSET);
     const zones = sceneDef?.terrain?.zones;
     const farmHouseArea = sceneDef?.farmHouse?.exclusionArea ?? null;
 

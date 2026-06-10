@@ -97,7 +97,7 @@ const worstSampleBatch = Math.max(...presets.map((preset) => preset.sampleBatch.
 
 const profile = {
   capturedAt: new Date().toISOString(),
-  contract: 'konveyor-sky-lut-profile',
+  contract: 'webgpu-sky-lut-profile',
   source: 'HosekWilkieSky.renderless-cpu-lut',
   lutShape: {
     entries: presets[0]?.lutEntries ?? null,

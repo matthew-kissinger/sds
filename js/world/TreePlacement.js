@@ -26,18 +26,18 @@ import { mulberry32 } from '../../shared/Random.js';
 import { loadKilnImpostor } from '../kiln-impostor-material.js';
 import { getSceneManager } from '../GameBridge.js';
 import { createTreeComputeCull } from './treeComputeCull.js';
-import { getKonveyorWebGpuModules } from './konveyorWebGpuModules.js';
+import { getWebGpuModules } from './webgpuModules.js';
 import { TIER_PRESETS } from '../HardwareTier.js';
-import { shouldUseKonveyorProductionNativeInstancing } from '../rendering/konveyorRuntimeMode.js';
+import { shouldUseWebGpuProductionNativeInstancing } from '../rendering/webgpuRuntimeMode.js';
 import { resolveImpostorBase } from './objectImpostorManifest.js';
 
 const HYBRID_TREE_LOD1_SWITCH_DISTANCE = 56;
 const HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE = 144;
 let treeImpostorRuntimePromise = null;
 
-export function resolveKonveyorNativeTreeImpostorRoute(search = (typeof window === 'undefined' ? '' : window.location.search)) {
+export function resolveWebGpuNativeTreeImpostorRoute(search = (typeof window === 'undefined' ? '' : window.location.search)) {
     const params = new URLSearchParams(search);
-    const mode = params.get('konveyorNativeTreeImpostors');
+    const mode = params.get('webgpuNativeTreeImpostors');
     const useOctahedral = mode === '1' || mode === 'octahedral';
     const useLatLonRollback = mode === 'latlon';
     const active = useOctahedral || useLatLonRollback;
@@ -55,7 +55,7 @@ export function resolveKonveyorNativeTreeImpostorRoute(search = (typeof window =
             : useLatLonRollback ? 'latlon-hemi-rollback' : null,
         sidecarLayout: active ? (useOctahedral ? 'octahedral' : 'latlon-hemi-y') : null,
         sidecarVersion: active ? (useOctahedral ? 2 : 1) : null,
-        rollbackQuery: '?renderer=webgpu&konveyorNativeTreeImpostors=latlon',
+        rollbackQuery: '?renderer=webgpu&webgpuNativeTreeImpostors=latlon',
     };
 }
 
@@ -80,14 +80,14 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     const hwTier = getSceneManager()?.getTier?.() ?? (builder.isMobile ? 'low' : 'med');
     const totalTrees = Object.values(treeInstances).reduce((s, a) => s + a.length, 0);
     const useMobileNativeLod1 = hwTier === 'low';
-    const impostorRoute = resolveKonveyorNativeTreeImpostorRoute();
+    const impostorRoute = resolveWebGpuNativeTreeImpostorRoute();
     const useProductionNativeImpostor = impostorRoute.active;
     const _tRuntime = useProductionNativeImpostor ? performance.now() : 0;
     const treeImpostorRuntime = useProductionNativeImpostor ? await loadTreeImpostorRuntime() : null;
     if (useProductionNativeImpostor) {
         builder._sdsImpostorMs = (builder._sdsImpostorMs ?? 0) + (performance.now() - _tRuntime);
     }
-    builder._konveyorTreeImpostorSync = treeImpostorRuntime?.syncKonveyorTreeImpostorMeshes ?? null;
+    builder._webgpuTreeImpostorSync = treeImpostorRuntime?.syncWebGpuTreeImpostorMeshes ?? null;
     const chunkSize = useProductionNativeImpostor ? 160 : (builder.isMobile ? 320 : 192);
 
     // Cycle 84: on the flagship coastline WebGPU path consolidate the per-chunk
@@ -95,7 +95,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     // (data-compaction storage instanceMatrix + indirect draw). Null on WebGL
     // and non-coastline paths -> per-chunk fan-out.
     const treeCullModules = (builder.sceneDef?.boundary?.kind === 'coastline' && !useProductionNativeImpostor)
-        ? (getKonveyorWebGpuModules() || null)
+        ? (getWebGpuModules() || null)
         : null;
     if (treeCullModules?.TSL) {
         builder._treeCullControllers = []; // fresh per build; prior controllers disposed by clearTrees
@@ -207,9 +207,9 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
                 // clearTrees removes it from the scene; the controller owns the cloned
                 // geometry disposal and the material is shared -> skip both in clearTrees.
                 im.userData.sharedFromGlbCache = true;
-                im.userData.konveyorNativeInstancing = 'tree';
-                im.userData.konveyorNativeChunkKey = 'consolidated';
-                im.userData.konveyorTreeType = treeType;
+                im.userData.webgpuNativeInstancing = 'tree';
+                im.userData.webgpuNativeChunkKey = 'consolidated';
+                im.userData.webgpuTreeType = treeType;
                 builder.scene.add(im);
                 instancedMeshes.push(im);
                 builder._treeCullControllers.push(controller);
@@ -246,34 +246,34 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
             const chunkCenter = computeChunkCenter(chunkInstances);
             for (const meshDef of meshDefs) {
                 const impostorRuntime = meshDef.sourceLod === 'impostor'
-                    ? treeImpostorRuntime.createKonveyorTreeImpostorGeometry(meshDef.geometry, chunkInstances, meshDef.sidecar)
+                    ? treeImpostorRuntime.createWebGpuTreeImpostorGeometry(meshDef.geometry, chunkInstances, meshDef.sidecar)
                     : null;
                 const geometry = impostorRuntime?.geometry ?? meshDef.geometry;
                 const im = new THREE.InstancedMesh(geometry, meshDef.material, chunkInstances.length);
                 im.userData.sharedFromGlbCache = meshDef.sourceLod !== 'impostor';
-                im.userData.konveyorSharedMaterialFromImpostorCache = meshDef.sourceLod === 'impostor';
-                im.userData.konveyorRuntimeGeometry = meshDef.sourceLod === 'impostor';
-                im.userData.konveyorNativeInstancing = 'tree';
-                im.userData.konveyorNativeChunkKey = chunkKey;
+                im.userData.webgpuSharedMaterialFromImpostorCache = meshDef.sourceLod === 'impostor';
+                im.userData.webgpuRuntimeGeometry = meshDef.sourceLod === 'impostor';
+                im.userData.webgpuNativeInstancing = 'tree';
+                im.userData.webgpuNativeChunkKey = chunkKey;
 
                 if (meshDef.hybridRole) {
-                    treeImpostorRuntime.installKonveyorTreeHybridRuntime(im, {
+                    treeImpostorRuntime.installWebGpuTreeHybridRuntime(im, {
                         role: meshDef.hybridRole,
                         chunkCenter,
                         nearDistance: HYBRID_TREE_LOD1_SWITCH_DISTANCE,
                         switchDistance: HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE,
                     });
-                    treeImpostorRuntime.syncKonveyorTreeHybridVisibility(im, getSceneManager()?.getCamera?.());
+                    treeImpostorRuntime.syncWebGpuTreeHybridVisibility(im, getSceneManager()?.getCamera?.());
                 }
 
                 if (impostorRuntime) {
-                    treeImpostorRuntime.installKonveyorTreeImpostorRuntime(im, {
+                    treeImpostorRuntime.installWebGpuTreeImpostorRuntime(im, {
                         ...impostorRuntime,
                         sidecar: meshDef.sidecar,
                         treeType,
                         chunkKey,
                     });
-                    treeImpostorRuntime.syncKonveyorTreeImpostorMesh(im, getSceneManager()?.getCamera?.());
+                    treeImpostorRuntime.syncWebGpuTreeImpostorMesh(im, getSceneManager()?.getCamera?.());
                 } else {
                     chunkInstances.forEach((inst, i) => {
                         dummy.position.copy(inst.position);
@@ -309,11 +309,11 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
                     sourceLod: meshDef.sourceLod,
                     hybridRole: meshDef.hybridRole ?? null,
                     baseOffset: meshDef.baseOffset ?? null,
-                    tileSelection: im.userData.konveyorNativeTreeImpostor?.selection ?? null,
-                    sidecarVersion: im.userData.konveyorNativeTreeImpostor?.version ?? null,
-                    sidecarLayout: im.userData.konveyorNativeTreeImpostor?.layout ?? null,
-                    billboardProjection: im.userData.konveyorNativeTreeImpostor?.billboardProjection ?? null,
-                    terrainGroundedPivots: im.userData.konveyorNativeTreeImpostor?.terrainGroundedPivots ?? null,
+                    tileSelection: im.userData.webgpuNativeTreeImpostor?.selection ?? null,
+                    sidecarVersion: im.userData.webgpuNativeTreeImpostor?.version ?? null,
+                    sidecarLayout: im.userData.webgpuNativeTreeImpostor?.layout ?? null,
+                    billboardProjection: im.userData.webgpuNativeTreeImpostor?.billboardProjection ?? null,
+                    terrainGroundedPivots: im.userData.webgpuNativeTreeImpostor?.terrainGroundedPivots ?? null,
                     vertexCount: meshDef.geometry.attributes?.position?.count ?? 0,
                 });
             }
@@ -341,7 +341,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
             && nativeGroupsOk
             && impostorGroupsOk,
         source: 'THREE.InstancedMesh',
-        route: 'konveyor-production-scene-body',
+        route: 'webgpu-production-scene-body',
         lod: useProductionNativeImpostor ? impostorRoute.lod : (useMobileNativeLod1 ? 'low-tier-lod1-native' : 'lod0-only'),
         culling: 'chunked-instanced-bounds',
         chunkSize,
@@ -368,7 +368,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
         frustumCulled: groups.every(group => group.frustumCulled),
         groups,
     };
-    builder.konveyorNativeTreeInstancingSummary = summary;
+    builder.webgpuNativeTreeInstancingSummary = summary;
     builder.trees = instancedMeshes;
     console.log(`[TERRAIN] Total trees: ${totalTrees} (native WebGPU InstancedMesh route)`);
     return instancedMeshes;
@@ -449,8 +449,8 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {})
     let meshCount = 0;
 
     const cullModules = (builder.sceneDef?.boundary?.kind === 'coastline'
-        && shouldUseKonveyorProductionNativeInstancing())
-        ? (getKonveyorWebGpuModules() || null)
+        && shouldUseWebGpuProductionNativeInstancing())
+        ? (getWebGpuModules() || null)
         : null;
     const useComputeCull = !!cullModules?.TSL;
     if (useComputeCull && !builder._treeCullControllers) builder._treeCullControllers = [];
@@ -503,9 +503,9 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {})
                 });
                 const im = controller.mesh;
                 im.userData.sharedFromGlbCache = true;
-                im.userData.konveyorNativeInstancing = 'tree';
-                im.userData.konveyorNativeChunkKey = `consolidated-${label}`;
-                im.userData.konveyorTreeType = treeType;
+                im.userData.webgpuNativeInstancing = 'tree';
+                im.userData.webgpuNativeChunkKey = `consolidated-${label}`;
+                im.userData.webgpuTreeType = treeType;
                 builder.scene.add(im);
                 builder.trees.push(im);
                 builder._treeCullControllers.push(controller);
@@ -597,7 +597,7 @@ export async function placeTrees(builder, competitivePastures = null) {
     // Phase 2); uses _groundY (mirrors terrain falloff) instead of the raw
     // heightfield sample, and compensates for the GLB's origin offset.
     const treeInstances = toTreeInstancesByType(builder, flatTrees);
-    builder.konveyorTreeGroundingSample = Object.entries(treeInstances)
+    builder.webgpuTreeGroundingSample = Object.entries(treeInstances)
         .flatMap(([type, instances]) => instances.slice(0, 6).map((inst) => ({
             type,
             x: +inst.position.x.toFixed(3),
@@ -632,10 +632,10 @@ export async function placeTrees(builder, competitivePastures = null) {
         probe.trees.byType = {};
     }
 
-    if (shouldUseKonveyorProductionNativeInstancing()) {
+    if (shouldUseWebGpuProductionNativeInstancing()) {
         return createNativeTreeInstancedMeshes(builder, treeInstances);
     }
-    builder.konveyorNativeTreeInstancingSummary = { applied: false, reason: 'flag-disabled' };
+    builder.webgpuNativeTreeInstancingSummary = { applied: false, reason: 'flag-disabled' };
 
     // Cache baked cross-billboard impostors per tree type. Survives dispose()
     // like the models cache. Cycle 11 Phase 1 A8 finding: re-baking on each

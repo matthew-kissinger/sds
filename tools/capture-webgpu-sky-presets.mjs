@@ -34,7 +34,7 @@ function buildDiagnosticUrl(baseUrl, presetName) {
   const url = new URL(baseUrl);
   url.searchParams.set('renderer', 'webgpu');
   url.searchParams.set('diagnostic', '1');
-  url.searchParams.set('konveyorSkyPreset', presetName);
+  url.searchParams.set('webgpuSkyPreset', presetName);
   return url.href;
 }
 

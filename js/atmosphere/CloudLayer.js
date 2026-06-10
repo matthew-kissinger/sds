@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
 import { cloudFragmentShader, cloudVertexShader } from './cloudShader.glsl.js';
-import { createKonveyorAtmosphereMaterial } from './konveyorAtmosphereMaterialAdapter.js';
+import { createWebGpuAtmosphereMaterial } from './webgpuAtmosphereMaterialAdapter.js';
 
 /**
  * High-altitude cloud layer rendered as a single horizontal plane with a
@@ -71,20 +71,20 @@ export class CloudLayer {
       ? options.factory({
           uniforms: this.uniforms,
         })
-      : createKonveyorAtmosphereMaterial('cloud-layer', 'createCloudLayerMaterial', {
+      : createWebGpuAtmosphereMaterial('cloud-layer', 'createCloudLayerMaterial', {
           createDefaultMaterial,
           search: options.search,
-          factories: options.konveyorAtmosphereFactories,
+          factories: options.webgpuAtmosphereFactories,
           context: { uniforms: this.uniforms },
         });
     this.material = materialResult?.material ?? materialResult ?? createDefaultMaterial();
     this.materialControls = materialResult?.controls ?? null;
-    this.konveyorMaterialSummary = materialResult?.summary ?? null;
+    this.webgpuMaterialSummary = materialResult?.summary ?? null;
     if (this.materialControls) {
-      this.material.userData.konveyorCloudLayerMaterialControls = this.materialControls;
+      this.material.userData.webgpuCloudLayerMaterialControls = this.materialControls;
     }
-    if (this.konveyorMaterialSummary) {
-      this.material.userData.konveyorCloudLayerMaterialSummary = this.konveyorMaterialSummary;
+    if (this.webgpuMaterialSummary) {
+      this.material.userData.webgpuCloudLayerMaterialSummary = this.webgpuMaterialSummary;
     }
 
     this.geometry = new THREE.PlaneGeometry(PLANE_LENGTH, PLANE_WIDTH, 1, 1);

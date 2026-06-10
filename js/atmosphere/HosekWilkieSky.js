@@ -6,7 +6,7 @@ import {
   hosekWilkieVertexShader,
 } from './skyShader.glsl.js';
 import { sunDirectionFromPreset } from './skyPresets.js';
-import { createKonveyorAtmosphereMaterial } from './konveyorAtmosphereMaterialAdapter.js';
+import { createWebGpuAtmosphereMaterial } from './webgpuAtmosphereMaterialAdapter.js';
 
 /**
  * Analytic sky-dome backend ported from Terror in the Jungle's
@@ -122,18 +122,18 @@ export class HosekWilkieSky {
         ? options.factory({
             uniforms: this.uniforms,
           })
-        : createKonveyorAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
+        : createWebGpuAtmosphereMaterial('sky-dome', 'createSkyDomeMaterial', {
             createDefaultMaterial,
             search: options.search,
-            factories: options.konveyorAtmosphereFactories,
+            factories: options.webgpuAtmosphereFactories,
             context: { uniforms: this.uniforms },
           });
       this.material = materialResult?.material ?? materialResult ?? createDefaultMaterial();
       this.materialControls = materialResult?.controls
-        ?? this.material?.userData?.konveyorSkyMaterialControls
+        ?? this.material?.userData?.webgpuSkyMaterialControls
         ?? null;
       if (this.materialControls) {
-        this.material.userData.konveyorSkyMaterialControls = this.materialControls;
+        this.material.userData.webgpuSkyMaterialControls = this.materialControls;
       }
 
       this.geometry = new THREE.SphereGeometry(
@@ -175,7 +175,7 @@ export class HosekWilkieSky {
     }
 
     this.lutDirty = true;
-    this.syncKonveyorMaterial();
+    this.syncWebGpuMaterial();
   }
 
   /**
@@ -214,7 +214,7 @@ export class HosekWilkieSky {
         this.uniforms.uCloudTimeSeconds.value = this.cloudTimeSeconds;
       }
     }
-    this.syncKonveyorMaterial();
+    this.syncWebGpuMaterial();
   }
 
   /** @param {number} value */
@@ -223,7 +223,7 @@ export class HosekWilkieSky {
     if (this.material) {
       this.uniforms.uCloudCoverage.value = this.cloudCoverage;
     }
-    this.syncKonveyorMaterial();
+    this.syncWebGpuMaterial();
   }
 
   /** @param {number} metersPerFeature */
@@ -235,7 +235,7 @@ export class HosekWilkieSky {
     if (this.material) {
       this.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
     }
-    this.syncKonveyorMaterial();
+    this.syncWebGpuMaterial();
   }
 
   resetCloudFeatureScale() {
@@ -243,7 +243,7 @@ export class HosekWilkieSky {
     if (this.material) {
       this.uniforms.uCloudNoiseScale.value = this.cloudNoiseScale;
     }
-    this.syncKonveyorMaterial();
+    this.syncWebGpuMaterial();
   }
 
   /** @returns {number} */
@@ -281,7 +281,7 @@ export class HosekWilkieSky {
       this.groundAlbedo.copy(t.groundAlbedo);
     }
     this.lutDirty = true;
-    this.syncKonveyorMaterial();
+    this.syncWebGpuMaterial();
   }
 
   /**
@@ -608,7 +608,7 @@ export class HosekWilkieSky {
   }
 
   /** @private */
-  syncKonveyorMaterial() {
+  syncWebGpuMaterial() {
     if (!this.materialControls?.update) return;
     this.ensureLUT();
     this.scratchFogColor.copy(this.horizonColor).multiplyScalar(0.82);

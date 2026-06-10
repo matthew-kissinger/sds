@@ -88,14 +88,14 @@ function replacementMaterial(name) {
 function applyReplacement(asset, root) {
   if (asset.role === 'tree') {
     return replaceTreeMaterialsByName(root, {
-      branches: () => replacementMaterial('konveyor-node-branches'),
-      leaves: () => replacementMaterial('konveyor-node-leaves'),
+      branches: () => replacementMaterial('webgpu-node-branches'),
+      leaves: () => replacementMaterial('webgpu-node-leaves'),
     });
   }
 
   return replaceRockMaterialsByTraversal(
     root,
-    () => replacementMaterial('konveyor-node-rock-rim')
+    () => replacementMaterial('webgpu-node-rock-rim')
   );
 }
 
@@ -145,6 +145,6 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error('[KONVEYOR-MATERIAL-REPLACEMENT-PROOF] fatal:', err);
+  console.error('[WEBGPU-MATERIAL-REPLACEMENT-PROOF] fatal:', err);
   process.exit(1);
 });

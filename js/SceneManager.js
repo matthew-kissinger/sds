@@ -176,7 +176,7 @@ export class SceneManager {
         // Cycle 72 P3: the WebGPU renderer (three.webgpu) cannot bind lights
         // created from the WebGL `three` instance this module imports - they log
         // "THREE.LightsNode.setupNodeLights: Light node not found" every frame and
-        // contribute nothing to shading. The konveyor production boot installs its
+        // contribute nothing to shading. The webgpu production boot installs its
         // own webgpu-three lighting bridge for standard materials, and the node
         // materials are self-lit from atmosphere uniforms, so these WebGL-three
         // lights are pure warning spam on WebGPU. Create the ambient light (so

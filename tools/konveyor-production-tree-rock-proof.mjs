@@ -13,9 +13,9 @@ const DEFAULT_MANIFEST = 'cycle36-validation/runtime/scene-sky-screenshots/manif
 const DEFAULT_OUT = 'cycle36-validation/runtime/production-tree-rock-adapter-proof.json';
 
 const EXPECTED_MATERIALS = Object.freeze({
-  treeBranches: 'konveyor-node-branches',
-  treeLeaves: 'konveyor-node-leaves',
-  rock: 'konveyor-node-rock-rim',
+  treeBranches: 'webgpu-node-branches',
+  treeLeaves: 'webgpu-node-leaves',
+  rock: 'webgpu-node-rock-rim',
 });
 
 function parseArgs(argv) {
@@ -105,7 +105,7 @@ async function run() {
 
   const result = {
     capturedAt: new Date().toISOString(),
-    source: 'Konveyor production tree/rock material adapter proof',
+    source: 'WebGpu production tree/rock material adapter proof',
     manifest: args.manifest,
     crossSceneChecks,
     scenes,

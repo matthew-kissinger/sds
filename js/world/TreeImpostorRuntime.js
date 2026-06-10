@@ -139,7 +139,7 @@ function writeBillboardMatrix(mesh, index, origin, cameraPosition, directionObj,
     mesh.setMatrixAt(index, scratchMatrix);
 }
 
-export function createKonveyorTreeImpostorGeometry(sourceGeometry, instances, sidecar = {}) {
+export function createWebGpuTreeImpostorGeometry(sourceGeometry, instances, sidecar = {}) {
     const geometry = sourceGeometry.clone();
     const count = instances.length;
     const attributes = {
@@ -167,7 +167,7 @@ export function createKonveyorTreeImpostorGeometry(sourceGeometry, instances, si
     };
 }
 
-export function installKonveyorTreeImpostorRuntime(mesh, {
+export function installWebGpuTreeImpostorRuntime(mesh, {
     attributes,
     states,
     sidecar = {},
@@ -175,7 +175,7 @@ export function installKonveyorTreeImpostorRuntime(mesh, {
     chunkKey = '0:0',
 } = {}) {
     const layout = getSidecarLayout(sidecar);
-    mesh.userData.konveyorNativeTreeImpostor = {
+    mesh.userData.webgpuNativeTreeImpostor = {
         source: layout === 'octahedral' ? 'kiln-v2-octahedral-sidecar' : 'kiln-latlon-hemi-sidecar',
         treeType,
         chunkKey,
@@ -189,35 +189,35 @@ export function installKonveyorTreeImpostorRuntime(mesh, {
         count: states?.length ?? 0,
         syncCount: 0,
     };
-    mesh.userData.konveyorTreeImpostorRuntime = {
+    mesh.userData.webgpuTreeImpostorRuntime = {
         attributes,
         states,
         sidecar,
         layout,
     };
-    return mesh.userData.konveyorNativeTreeImpostor;
+    return mesh.userData.webgpuNativeTreeImpostor;
 }
 
-export function installKonveyorTreeHybridRuntime(mesh, {
+export function installWebGpuTreeHybridRuntime(mesh, {
     role,
     chunkCenter,
     nearDistance = null,
     switchDistance = 200,
 } = {}) {
     if (!role || !chunkCenter) return null;
-    mesh.userData.konveyorNativeTreeHybrid = {
+    mesh.userData.webgpuNativeTreeHybrid = {
         role,
         chunkCenter: chunkCenter.clone ? chunkCenter.clone() : new THREE.Vector3(chunkCenter.x ?? 0, chunkCenter.y ?? 0, chunkCenter.z ?? 0),
         nearDistance: nearDistance ?? switchDistance,
         switchDistance,
     };
     mesh.visible = role === 'near-lod0';
-    mesh.userData.konveyorNativeTreeHybrid.visible = mesh.visible;
-    return mesh.userData.konveyorNativeTreeHybrid;
+    mesh.userData.webgpuNativeTreeHybrid.visible = mesh.visible;
+    return mesh.userData.webgpuNativeTreeHybrid;
 }
 
-export function syncKonveyorTreeHybridVisibility(mesh, camera) {
-    const hybrid = mesh?.userData?.konveyorNativeTreeHybrid;
+export function syncWebGpuTreeHybridVisibility(mesh, camera) {
+    const hybrid = mesh?.userData?.webgpuNativeTreeHybrid;
     if (!hybrid || !camera?.position) return false;
 
     scratchHybridCamera.copy(camera.position);
@@ -234,8 +234,8 @@ export function syncKonveyorTreeHybridVisibility(mesh, camera) {
     return true;
 }
 
-export function syncKonveyorTreeImpostorMesh(mesh, camera) {
-    const runtime = mesh?.userData?.konveyorTreeImpostorRuntime;
+export function syncWebGpuTreeImpostorMesh(mesh, camera) {
+    const runtime = mesh?.userData?.webgpuTreeImpostorRuntime;
     if (!runtime || !camera?.position) return false;
 
     const { attributes, states, sidecar } = runtime;
@@ -258,7 +258,7 @@ export function syncKonveyorTreeImpostorMesh(mesh, camera) {
         attr.needsUpdate = true;
     }
     mesh.instanceMatrix.needsUpdate = true;
-    const summary = mesh.userData.konveyorNativeTreeImpostor;
+    const summary = mesh.userData.webgpuNativeTreeImpostor;
     if (summary) {
         summary.syncCount += 1;
         summary.lastCamera = [
@@ -274,12 +274,12 @@ export function syncKonveyorTreeImpostorMesh(mesh, camera) {
     return true;
 }
 
-export function syncKonveyorTreeImpostorMeshes(trees, camera) {
+export function syncWebGpuTreeImpostorMeshes(trees, camera) {
     if (!Array.isArray(trees) || trees.length === 0) return 0;
     let synced = 0;
     for (const tree of trees) {
-        syncKonveyorTreeHybridVisibility(tree, camera);
-        if (syncKonveyorTreeImpostorMesh(tree, camera)) synced += 1;
+        syncWebGpuTreeHybridVisibility(tree, camera);
+        if (syncWebGpuTreeImpostorMesh(tree, camera)) synced += 1;
     }
     return synced;
 }

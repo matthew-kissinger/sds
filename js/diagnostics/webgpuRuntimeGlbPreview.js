@@ -3,11 +3,11 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { applyKonveyorTreeRockMaterials } from '../world/konveyorMaterialAdapter.js';
+import { applyWebGpuTreeRockMaterials } from '../world/webgpuMaterialAdapter.js';
 import {
-    createKonveyorNativeRockInstancingPreview,
-    createKonveyorNativeTreeInstancingPreview,
-} from '../world/konveyorNativeInstancingAdapter.js';
+    createWebGpuNativeRockInstancingPreview,
+    createWebGpuNativeTreeInstancingPreview,
+} from '../world/webgpuNativeInstancingAdapter.js';
 
 const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/v1/decoders/';
 
@@ -195,7 +195,7 @@ function placeCloneOnGround(clone, display, { Box3, Vector3 }) {
 }
 
 function createProductionInstancingPreview({ scene, rootsByAsset, plan, extents, three }) {
-    return createKonveyorNativeTreeInstancingPreview({
+    return createWebGpuNativeTreeInstancingPreview({
         scene,
         rootsByAsset,
         plan,
@@ -222,7 +222,7 @@ async function createDiagnosticRockPlacementPreview({ scene, rootsByAsset, three
     }
 
     const extents = createPlacementExtents(plan.samples);
-    const instancing = createKonveyorNativeRockInstancingPreview({
+    const instancing = createWebGpuNativeRockInstancingPreview({
         scene,
         rootsByAsset,
         plan,
@@ -339,7 +339,7 @@ export async function createRuntimeGlbPreview({
             else if (asset.group === 'rock-lod0') rocks[asset.key] = root;
         }
 
-        adapter = applyKonveyorTreeRockMaterials({
+        adapter = applyWebGpuTreeRockMaterials({
             trees,
             treesLod1,
             rocks,

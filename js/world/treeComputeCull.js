@@ -73,7 +73,7 @@ export function createTreeComputeCull(webGpuModules, opts) {
     mesh.count = count;
     mesh.castShadow = castShadow;
     mesh.receiveShadow = receiveShadow;
-    mesh.userData.konveyorTreeComputeCull = true;
+    mesh.userData.webgpuTreeComputeCull = true;
 
     const frustum = new Frustum();
     const projView = new Matrix4();

@@ -9,7 +9,7 @@ import { loadManifest, enabledImpostorTargets } from '../tools/bake-tree-imposto
  * Cycle 50 Phase 4 — generalized from a hardcoded ['tree1','tree2'] list to the
  * object manifest's octahedral targets, and extended to assert the Cycle 50
  * identity fields. Runtime octahedral stays lab-gated (behind
- * ?konveyorNativeTreeImpostors=octahedral); latlon-hemi-y is the production
+ * ?webgpuNativeTreeImpostors=octahedral); latlon-hemi-y is the production
  * default. This pins the v2 octahedral sidecar contract so the lab atlas can't
  * drift silently.
  */

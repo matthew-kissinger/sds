@@ -1150,8 +1150,8 @@ class SheepDogSimulation {
         this.registerSystemTriangleCounts();
 
         if (window.__sdsG?.productionWebGpu?.enabled) {
-            const productionWebGpu = await import('./rendering/konveyorProductionWebGpuBoot.js');
-            await productionWebGpu.recordKonveyorProductionWebGpuBoot(this, window.__sdsG.productionWebGpu);
+            const productionWebGpu = await import('./rendering/productionWebGpuBoot.js');
+            await productionWebGpu.recordProductionWebGpuBoot(this, window.__sdsG.productionWebGpu);
         }
 
         // 5b. Cycle 74 P1: prewarm the heavy WebGPU pipeline compile off the
@@ -1550,7 +1550,7 @@ class SheepDogSimulation {
         const atmosphereFrame = this.atmosphere?.getFrame?.({ sunBillboard: this._sunBillboard }) ?? null;
         const treeImpostorRuntimeSamples = Array.isArray(this.terrainBuilder?.trees)
             ? this.terrainBuilder.trees
-                .map((tree) => tree?.userData?.konveyorNativeTreeImpostor)
+                .map((tree) => tree?.userData?.webgpuNativeTreeImpostor)
                 .filter(Boolean)
                 .slice(0, 12)
             : [];
@@ -1566,23 +1566,23 @@ class SheepDogSimulation {
                 sunColor: atmosphereFrame.sunColor,
                 sunBillboard: atmosphereFrame.sunBillboard,
             } : null,
-            terrain: this.terrainBuilder?.konveyorTerrainGeometryBudget ?? null,
+            terrain: this.terrainBuilder?.webgpuTerrainGeometryBudget ?? null,
             trees: {
-                native: this.terrainBuilder?.konveyorNativeTreeInstancingSummary ?? null,
-                impostorRuntime: this.terrainBuilder?.konveyorNativeTreeInstancingSummary?.impostor ?? null,
+                native: this.terrainBuilder?.webgpuNativeTreeInstancingSummary ?? null,
+                impostorRuntime: this.terrainBuilder?.webgpuNativeTreeInstancingSummary?.impostor ?? null,
                 impostorRuntimeSamples: treeImpostorRuntimeSamples,
-                lodBias: this.terrainBuilder?.konveyorQualityState?.treeLodBias ?? 0,
-                materialSummary: this.terrainBuilder?.konveyorTreeRockMaterialSummary ?? null,
-                groundingSample: this.terrainBuilder?.konveyorTreeGroundingSample ?? [],
+                lodBias: this.terrainBuilder?.webgpuQualityState?.treeLodBias ?? 0,
+                materialSummary: this.terrainBuilder?.webgpuTreeRockMaterialSummary ?? null,
+                groundingSample: this.terrainBuilder?.webgpuTreeGroundingSample ?? [],
             },
             water: {
                 present: !!this._animeWater?.mesh,
-                worldSpaceHeightfield: waterMaterial?.userData?.konveyorWaterWorldSpaceHeightfield === true,
-                sunCameraGlint: waterMaterial?.userData?.konveyorWaterSunCameraGlint === true,
-                glintMode: waterMaterial?.userData?.konveyorWaterGlintMode ?? null,
-                glintGain: waterMaterial?.userData?.konveyorWaterGlintGain ?? null,
-                sunColorSource: waterMaterial?.userData?.konveyorWaterSunColorSource ?? null,
-                sunColor: waterMaterial?.userData?.konveyorWaterNodeUniforms?.sunColor?.value?.toArray?.()
+                worldSpaceHeightfield: waterMaterial?.userData?.webgpuWaterWorldSpaceHeightfield === true,
+                sunCameraGlint: waterMaterial?.userData?.webgpuWaterSunCameraGlint === true,
+                glintMode: waterMaterial?.userData?.webgpuWaterGlintMode ?? null,
+                glintGain: waterMaterial?.userData?.webgpuWaterGlintGain ?? null,
+                sunColorSource: waterMaterial?.userData?.webgpuWaterSunColorSource ?? null,
+                sunColor: waterMaterial?.userData?.webgpuWaterNodeUniforms?.sunColor?.value?.toArray?.()
                     ?? waterMaterial?.uniforms?.uSunColor?.value?.toArray?.()
                     ?? null,
                 sparkleScale: this._animeWater?.qualitySparkleScale ?? 1,
@@ -1594,15 +1594,15 @@ class SheepDogSimulation {
                 interactorSample: grass?.getInteractorSample?.(8) ?? [],
                 qualityDistanceScale: grass?.qualityDistanceScale ?? 1,
                 qualityDensityScale: grass?.qualityDensityScale ?? 1,
-                materialSummary: grass?.konveyorGrassBladeMaterialSummary ?? null,
-                interactorContract: grass?.grassMaterial?.userData?.konveyorGrassBladeInteractors ?? null,
+                materialSummary: grass?.webgpuGrassBladeMaterialSummary ?? null,
+                interactorContract: grass?.grassMaterial?.userData?.webgpuGrassBladeInteractors ?? null,
             },
             sheep: {
                 count: sheepSystem?.sheepCount ?? 0,
                 animationRate: sheepSystem?.animationUpdateRate ?? 1,
-                materialSummary: sheepSystem?.konveyorSheepMaterialSummary ?? null,
-                animationContract: sheepSystem?.material?.userData?.konveyorSheepAnimation ?? null,
-                woolContract: sheepSystem?.material?.userData?.konveyorSheepWool ?? null,
+                materialSummary: sheepSystem?.webgpuSheepMaterialSummary ?? null,
+                animationContract: sheepSystem?.material?.userData?.webgpuSheepAnimation ?? null,
+                woolContract: sheepSystem?.material?.userData?.webgpuSheepWool ?? null,
             },
             dog: {
                 present: !!this.sheepdog?.mesh,
@@ -1719,10 +1719,10 @@ class SheepDogSimulation {
             }
             const treeGroups = treesArr
                 ? groupCache.trees
-                : (systemVisible('trees') ? (tb.konveyorNativeTreeInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
+                : (systemVisible('trees') ? (tb.webgpuNativeTreeInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
             const rockGroups = rocksArr
                 ? groupCache.rocks
-                : (systemVisible('rocks') ? (tb.konveyorNativeRockInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
+                : (systemVisible('rocks') ? (tb.webgpuNativeRockInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
             // `structures` counted above during the flatten pass.
             const grassChunks = systemVisible('grass') ? (gs.chunksVisible ?? 0) : 0;
             const water = this._animeWater?.mesh?.visible === false ? 0 : (this._animeWater?.mesh ? 1 : 0);
@@ -1739,10 +1739,10 @@ class SheepDogSimulation {
             const counts = this._perfVisibleCounts;
             counts.Terrain = terrain;
             counts.Trees = systemVisible('trees')
-                ? (tb.treeInstances?.length ?? tb.konveyorNativeTreeInstancingSummary?.treeInstances ?? 0)
+                ? (tb.treeInstances?.length ?? tb.webgpuNativeTreeInstancingSummary?.treeInstances ?? 0)
                 : 0;
             counts.Rocks = systemVisible('rocks')
-                ? (tb.konveyorRockPlacementPlan?.totalRocks ?? tb.konveyorNativeRockInstancingSummary?.rockInstances ?? 0)
+                ? (tb.webgpuRockPlacementPlan?.totalRocks ?? tb.webgpuNativeRockInstancingSummary?.rockInstances ?? 0)
                 : 0;
             counts.Mountains = systemVisible('mountains') && groupCache.mountains >= 0 ? groupCache.mountains : 0;
             counts.Grass = systemVisible('grass') ? (gs.visibleClumps ?? gs.totalClumps ?? 0) : 0;
@@ -3274,19 +3274,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     let rendererOptions = {};
     let recordProductionWebGpuBoot = async () => {};
     if (window.__sdsG?.productionWebGpu) {
-        const productionWebGpu = await import('./rendering/konveyorProductionWebGpuBoot.js');
+        const productionWebGpu = await import('./rendering/productionWebGpuBoot.js');
         try {
-            const preflight = await productionWebGpu.preflightKonveyorProductionWebGpuDevice(
+            const preflight = await productionWebGpu.preflightProductionWebGpuDevice(
                 window.__sdsG.productionWebGpu,
             );
             if (!preflight.ok) {
                 throw new Error(preflight.reason || 'webgpu-device-unavailable');
             }
-            rendererOptions = await productionWebGpu.createKonveyorProductionWebGpuGameOptions(
+            rendererOptions = await productionWebGpu.createProductionWebGpuGameOptions(
                 urlParams,
                 window.__sdsG.productionWebGpu,
             );
-            recordProductionWebGpuBoot = (gameInstance) => productionWebGpu.recordKonveyorProductionWebGpuBoot(
+            recordProductionWebGpuBoot = (gameInstance) => productionWebGpu.recordProductionWebGpuBoot(
                 gameInstance,
                 window.__sdsG.productionWebGpu,
             );
