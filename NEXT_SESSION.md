@@ -1,97 +1,77 @@
-# Next Session - Cycle 87 shipped; device validation day
+# Next Session - Cycles 85/86/87 closed; Cycle 88 drafted, awaiting review
 
 > **Updated:** 2026-06-10
-> **For:** Cycle 87 (`docs/cycle-87-plan.md`, all 7 phases shipped 2026-06-10;
-> Cycles 85 and 86 remain open on Matt's two items).
-> **Pickup priority:** Real-device pass on the connected S24+ (validates
-> Cycle 87 Phase 1 renderer policy AND closes Cycle 85 Phase 3), then
-> Matt posts or defers `docs/launch/`, then `/cycle-close` for 85 + 86 + 87.
+> **For:** Cycle 88 (`docs/cycle-88-plan.md`, DRAFT - needs Matt's review,
+> then `/cycle-start`).
+> **Pickup priority:** (1) S24+ device pass (the one carryover that closed
+> three cycles open - checklist below), (2) Matt posts or defers
+> `docs/launch/`, (3) review the Cycle 88 draft and `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: this file -> [`docs/cycle-87-plan.md`](docs/cycle-87-plan.md)
-(per-phase status blocks, all shipped) ->
-[`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) and
-[`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) (both open on Matt items only).
+Read in order: this file -> [`docs/cycle-88-plan.md`](docs/cycle-88-plan.md)
+(draft: impostor-first scene loading, spike numbers inline) ->
+[`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycles 85/86/87 close entries, all
+2026-06-10).
 
 ## Where It Stands
 
-**Cycle 87 shipped end-to-end on 2026-06-10** (commits `7df916a`, `7ed8be0`,
-`06ae9ac`, `c983761`, `26224e7`, `82615a8`, `ac32488`, fixes `1a8b1d5` +
-`d9d785c`):
+**Cycles 85, 86, and 87 closed 2026-06-10** per Matt's "close all cycles"
+(plans archived to `docs/archive/cycles/`; full entries in BACKLOG):
 
-- **Renderer trust (P1):** frame-budget renderer demotion deleted; the
-  sticky `sds-renderer-fallback` record is removed on boot and on the
-  settings toggle; `webgpu_frame_budget_floor` telemetry replaces it;
-  read-only renderer diagnostics row in Settings under the WebGPU toggle.
-- **NSL foliage streaming (P2-P4):** post-Play idle-scheduled waves restore
-  the pre-trim island (live probe: +1,728 trees, +138,575 grass clumps,
-  qualityIndex 0); cold-path bounds unchanged; tier-gated (low: 1 wave, no
-  grass); diag on `window.__sdsFoliageStreaming`.
-- **Overlay system (P5-P6):** z-band registry (`js/ui/zIndex.js`), shared
-  top rail + toast hub with gameplay suppression, HUD CSS-var reserves,
-  safe-area sweep, 44px touch targets; `overlay-collision.spec.ts` proves
-  no intersections at 390x844.
-- **Konveyor retired (P7):** zero `konveyor` matches in live code/tests;
-  goldens and sim-baselines pass without regeneration; naming rule codified
-  (files name WHAT, not WHEN) in `.claude/rules/scene-and-render.md` +
-  `AGENTS.md`; DECISIONS.md entry.
+- **85** shipped v2.2.12 (entrance readiness); **86** shipped v2.3.0 LIVE
+  (launch release, 5/7 phases); **87** shipped 7/7 same-day (renderer
+  never-demote + Settings diagnostics row, NSL post-Play foliage streaming,
+  overlay z-band/rail/toast-hub system, konveyor retirement).
+- Last Deploy run `27276034272` green; 1496 vitest specs green; goldens and
+  sim-baselines byte-identical throughout.
 
-Known wart: commit `ac32488` accidentally swept in Matt's untracked
-`tools/trailer/` WIP; `1a8b1d5` untracked it again (files live on in that
-one commit's history). `tools/trailer/output/` is now gitignored.
+**Cycle 88 is drafted, not started:** impostor-first scene loading (first
+frame complete at low fidelity; waves upgrade to LOD0 instead of
+materializing; signal-based arming; per-scene loading-stage contract).
+Spiked: island-wide scatter ~278ms reference desktop (hideable in the
+scene-load transition); Phase 1 measures the production-path impostor
+build cost (`tools/probe-foliage-streaming-diag.mjs` ready). Decision
+recorded in DECISIONS.md.
 
-## Tomorrow's Device Run (the pickup)
+## Carryover (closed-as-open, recorded in BACKLOG)
 
-On the S24+ (USB debugging enabled, ADB via hub if needed):
-
-1. Load sheepdogsim.com, open Settings: the "Renderer status" row should
-   read `webgpu-production` (WebGL only if `navigator.gpu` is absent).
-2. Play Newsheepdogland 2-3 minutes: renderer stays WebGPU, foliage
-   streams in past the homestead, overlays do not overlap the touch
-   controls or tutorial.
-3. Check D1 for `webgpu_frame_budget_floor` events afterwards (expected
-   telemetry, not a failure signal).
-
-This run is the Cycle 85 Phase 3 evidence and the Cycle 87 P1 acceptance.
-
-## Open Carryover
-
-- Matt: post or defer the launch drafts in `docs/launch/` (Cycle 86 P6).
-- `/cycle-close` ritual for 85, 86, and 87 once the device pass lands.
-- **Scene-loading sequencing (Matt's 2026-06-10 ask): spiked and drafted.**
-  Recommendation: impostor-first first frame (island-wide kiln-impostor
-  coverage on the cold path, waves upgrade to LOD0 instead of
-  materializing), signal-based streamer arming, per-scene loading-stage
-  contract. Spike measured island-wide scatter at ~278ms reference
-  desktop (hideable in the scene-load transition); production-path
-  impostor build cost is the one open measurement. Draft plan:
-  [`docs/cycle-88-plan.md`](docs/cycle-88-plan.md); decision recorded in
-  DECISIONS.md. Starts only after 85/86/87 close.
-- BACKLOG candidates from 87: coastline-aware meadow quads (P4 stretch,
-  not taken); `?konveyorNativeTreeImpostors` read alias removal after one
-  release.
-- Earlier carryover unchanged: vite 8 / Rolldown migration cycle, main.js
-  boot-seam extraction, HeightFogPatch activate-or-delete, Q4 staging
-  provisioning, worker log re-tail during live MP traffic.
+- **S24+ device pass** - one phone session settles the Cycle 85 blocker,
+  Cycle 86 P3, and Cycle 87's last criterion:
+  1. Load sheepdogsim.com, open Settings: renderer status row reads
+     `webgpu-production`.
+  2. Play Newsheepdogland 2-3 minutes: WebGPU holds, foliage streams past
+     the homestead, no overlay overlaps the touch controls.
+  3. Check D1 afterwards for `webgpu_frame_budget_floor` events (expected
+     telemetry, not failure).
+- **Launch posting** from `docs/launch/` (drafts ready, Matt's voice).
+- Q4 staging provisioning (optional, three operator steps).
+- Coastline-aware meadow quads (Cycle 87 P4 stretch, not taken).
+- Earlier standing items: vite 8 / Rolldown migration cycle, main.js
+  boot-seam extraction, HeightFogPatch activate-or-delete, worker log
+  re-tail during live MP traffic.
+- Note: Matt's `tools/trailer/` WIP exists in one pushed commit's history
+  (`ac32488`); untracked on disk, output dir gitignored. History rewrite is
+  Matt's call only.
 
 ## Working Contract
 
 - No `shared/` deterministic-core edits; sim-baselines stay byte-identical.
 - Matt publishes every player-facing artifact.
-- Don't close Cycle 85 without the real-device pass.
 - Agent-launched Vite/Playwright sets `SDS_SUPPRESS_BROWSER_OPEN=1`;
   close every probe page/listener after use.
 - CI e2e runs with `--grep-invert='@local-only'`; hardware-dependent
-  assertions (real-GPU quality reads) carry the `@local-only` tag.
+  assertions (real-GPU quality reads, full streaming completion) carry the
+  `@local-only` tag.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Just-shipped cycle (statuses inline) | [`docs/cycle-87-plan.md`](docs/cycle-87-plan.md) |
-| Open prior cycles (Matt items) | [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md), [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) |
+| Active cycle plan (DRAFT) | [`docs/cycle-88-plan.md`](docs/cycle-88-plan.md) |
+| Closed cycles | [`docs/BACKLOG.md`](docs/BACKLOG.md) + [`docs/archive/cycles/`](docs/archive/cycles/) |
 | Launch drafts (Matt to post) | [`docs/launch/`](docs/launch/) |
+| Loading-architecture decision | `DECISIONS.md` (2026-06-10 entries) |
 | Streaming diag | `window.__sdsFoliageStreaming` (browser console) |
 | Renderer diagnostics | Settings panel, under the WebGPU toggle |
 | Release log | [`CHANGELOG.md`](CHANGELOG.md) |

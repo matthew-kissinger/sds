@@ -4,6 +4,34 @@
 
 ## Recently Completed
 
+### Cycle 87 - `island-restore-renderer-trust-overlay-system` (closed 2026-06-10)
+
+Plan archived at [`docs/archive/cycles/cycle-87-plan.md`](archive/cycles/cycle-87-plan.md). Drafted and shipped same-day from Matt's post-launch findings (bare Newsheepdogland, phones branded WebGL, overlapping overlays, codename debt). **SHIPPED: 7/7 phases** - direct-to-main commits `7df916a`, `7ed8be0`, `06ae9ac`, `c983761`, `26224e7`, `82615a8`, `ac32488`, fixes `1a8b1d5`/`d9d785c`/`5a184da`. Final Deploy run `27276034272` green.
+
+- **Renderer trust (P1).** Frame-budget renderer demotion deleted; the 24h sticky `sds-renderer-fallback` record is purged on boot and on the settings WebGPU toggle; `webgpu_frame_budget_floor` telemetry (once per session at the quality floor) preserves observability; Settings gains a read-only renderer diagnostics row. Decision recorded in DECISIONS.md (supersedes the Cycle 84 frame-budget-fallback language).
+- **NSL foliage streaming (P2-P4).** Post-Play idle-scheduled waves over new optional `terrain.streamedZones` / `grass.streamed` scene-def fields (fence cheap case) restore the pre-trim island: live probe +1,728 trees / +138,575 grass clumps at qualityIndex 0; cold-path bounds unchanged; tier-gated (low: 1 wave, no grass); deterministic per-wave salted scatter; abort rides `game._sceneAbort`.
+- **Overlay system (P5-P6).** `js/ui/zIndex.js` band registry (source-scan test bans numeric z literals in swept dirs), shared top rail + toast hub (gameplay suppression, max-visible caps), HUD CSS-var reserves, safe-area sweep, 44px touch targets; `overlay-collision.spec.ts` proves no intersections at 390x844.
+- **Konveyor retired (P7).** Zero `konveyor` matches in live code/tests; goldens + sim-baselines pass without regeneration; naming rule (files name WHAT, not WHEN) codified in `.claude/rules/scene-and-render.md` + AGENTS.md.
+- **Validation gates:** 1496 vitest specs green, build clean (bundle bumps recorded: main 606 / other 545 KiB), lint green, sim-baselines byte-identical. The foliage e2e is split CI-safe: CI proves arming + first wave; full completion + quality reads are `@local-only` (CI runners render on SwiftShader at ~90s per wave).
+- **Carryover:** the on-device half of the P1 acceptance (S24+ boots `webgpu-production`, plays NSL on WebGPU) - same device pass as the Cycle 85/86 carryover below. Coastline-aware meadow quads (P4 stretch, not taken). `?webgpuNativeTreeImpostors` is the live param; no alias retired this cycle (the old konveyor param was deleted outright).
+- **Notes:** `ac32488` accidentally committed Matt's untracked `tools/trailer/` WIP; `1a8b1d5` untracked it (files persist in that one commit's history). Matt's same-day loading-architecture feedback was spiked and drafted as `docs/cycle-88-plan.md` (impostor-first first frame).
+
+### Cycle 86 - `v2.3.0-launch` (closed 2026-06-10)
+
+Plan archived at [`docs/archive/cycles/cycle-86-plan.md`](archive/cycles/cycle-86-plan.md). **SHIPPED: 5/7 phases; v2.3.0 is LIVE** (tag on `ceb45b7`, 2026-06-09) - the hardening program became a player-visible release with the CHANGELOG telling the story. Closed per Matt's "close all cycles" with two items as carryover.
+
+- **Review debt cleared (P1).** Fence reviews walked via adversarial proxy dossiers (`docs/hardening/review-dossiers-2026-06-09.md`); F1 unicast-keyframe basis race found and fixed; sign-off boxes checked in-session.
+- **Worker fixes (P2).** Rehydration rejoin, `/api/event` caps, basis-aligned keyframes; chaos suite 32/32.
+- **Tutorial translations (P4), the v2.3.0 cut (P5), telemetry baseline (P7;** `client_error` at zero).
+- **Carryover:** P3 real-device mobile pass (absorbed from Cycle 85, now also the Cycle 87 P1 on-device check - one S24+ session covers all three), P6 launch posting from `docs/launch/` (drafts ready, Matt's voice), Q4 staging provisioning (optional, three operator steps).
+
+### Cycle 85 - `newsheepdogland-entrance-readiness` (closed 2026-06-10)
+
+Plan archived at [`docs/archive/cycles/cycle-85-plan.md`](archive/cycles/cycle-85-plan.md). **SHIPPED: v2.2.12 live 2026-06-09** (commit `2ace6f0`, Deploy run `27226644818` green) - entrance Play hardening (no dropped clicks while the engine boots), survival teardown on menu return, SW ownership of mutable un-hashed assets, bounded default NSL build cost (the cold-path trims that Cycle 87's streaming later compensated), parallel day-loop boot wiring with lazy wolf renderer.
+
+- **Live proof:** new bundle served, Worker healthy, NSL default entrance, stale mutable cache overwritten, repeat Play -> pause -> menu -> Play clean.
+- **Carryover:** the real mobile device pass (the plan's recorded remaining blocker) - closed-as-open per Matt, lands with the combined S24+ session above.
+
 ### Cycle 84 - `mobile-webgpu-primary-hotfix` (closed 2026-06-09)
 
 Plan archived at [`docs/archive/cycles/cycle-84-plan.md`](archive/cycles/cycle-84-plan.md). Hotfix from Matt's browser report: first Play click on mobile refreshed into WebGL, and the second click spawned the dog in the water. **SHIPPED: WebGPU-capable mobile browsers now stay on WebGPU for Newsheepdogland, and the homestead spawn sits on terrain instead of the water/skirt edge.** Release tag `v2.2.5` points at `8df0acc`; Deploy run `27209758357` green.

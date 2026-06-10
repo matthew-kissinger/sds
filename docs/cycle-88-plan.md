@@ -1,6 +1,6 @@
 # Cycle 88 - impostor-first scene loading (DRAFT, pending Matt's review)
 
-> Drafted 2026-06-10 from Matt's loading-architecture feedback after watching Newsheepdogland stream in post-Play. Cycles 85/86/87 must close first (Matt's device pass + launch posting, then the `/cycle-close` ritual for all three). This draft is informed by a same-day spike; numbers below are measured, not guessed. Decision record: DECISIONS.md "Scene loading: partial-load-then-stream is right; the first frame must be complete at low fidelity".
+> Drafted 2026-06-10 from Matt's loading-architecture feedback after watching Newsheepdogland stream in post-Play; Cycles 85/86/87 closed the same day (see `docs/BACKLOG.md`). Run `/cycle-start` once Matt has reviewed this draft. Informed by a same-day spike; numbers below are measured, not guessed. Decision record: DECISIONS.md "Scene loading: partial-load-then-stream is right; the first frame must be complete at low fidelity". Standing carryover that rides alongside this cycle, not in it: the S24+ device pass (Cycle 85/86/87 carryover) and the `docs/launch/` posting.
 
 ## Goal
 
@@ -97,7 +97,7 @@ Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 ; Phase 5 last (codifies what shipped)
 - Don't re-widen the cold LOD0 zones or grass radius; coverage comes from impostors, not from giving back the Cycle 85 stall fix.
 - Don't make camera-relative per-frame LOD decisions; impostor vs LOD0 stays a static per-zone decision (durable far-tree rule).
 - Don't decompose GrassSystem or OptimizedSheep; grass streaming is untouched this cycle.
-- Don't start this cycle before 85/86/87 close.
+- Don't start phases before Matt reviews this draft (`/cycle-start` is the gate).
 
 ## Success criteria (cycle close)
 
