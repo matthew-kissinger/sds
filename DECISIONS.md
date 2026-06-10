@@ -1367,3 +1367,24 @@ The WebGPU render path was built across many cycles under the plan codename "kon
 - **Naming rule codified** (.claude/rules/scene-and-render.md): live code names describe WHAT (domain + role), never WHEN (plan codenames, cycle numbers, task ids). Applies to file names, exports, globals, params, dataset keys, instance properties.
 - **Proof of zero behavior change:** the refactor-baseline scatter/terrain goldens and sim-baselines passed without regeneration; seed/size constant VALUES are untouched (only renamed); a production WebGPU boot probe reports all 11 gates true post-rename; the bundle ratchet held (the renamed chunks stay in the same name-prefix family).
 - **Clean breaks, accepted:** `?konveyorProduction=1` deleted (write-only, no readers). `?konveyorNativeTreeImpostors` renamed to `?webgpuNativeTreeImpostors` with NO alias - the zero-grep acceptance outweighed keeping a codename literal for a debug-only param. Historical cycle-pinned tools/ probes and docs/archive keep their names; probes that reference the old window globals or params are accepted-broken (the ~8 that import live modules were content-updated and still run). The npm script is now `webgpu:renderer-telemetry`.
+
+---
+
+## Cycle 87 - the frame-budget renderer demotion is gone; WebGL is for hard failures only (2026-06-10)
+
+Supersedes the Cycle 84 line "the existing frame-budget fallback still protects mobile WebGPU after repeated misses at the floor." That protection branded Matt's S24+ (a fully WebGPU-capable phone) WebGL for 24 hours via a sticky `sds-renderer-fallback` localStorage record that the settings toggle could not clear, across all scenes, with no surfaced reason.
+
+- **Decision: never demote the renderer on frame budget.** The QualityGovernor's four-rung quality ladder is the only response to sustained budget misses. `_recordFallback` and the autoFallback reload are deleted; the boot shim and the settings WebGPU toggle both purge any legacy sticky record in the wild. `fallbackReason` now only ever carries hard failures (no `navigator.gpu`, device-creation failure, context loss).
+- **Observability preserved:** the first time a mobile session logs 3 consecutive over-budget windows at the quality floor, the client emits `webgpu_frame_budget_floor` telemetry (deviceTier, frameP95/P99, sceneId, qualityIndex) once per session. If floor-miss telemetry ever shows a device class that genuinely cannot hold WebGPU at the lowest rung, that argues for a capability gate at boot, not a mid-session demotion.
+- **Diagnosability:** Settings shows a read-only renderer status row (effective renderer, fallback reason, tier, quality index, preflight) so "why am I on WebGL" is answerable on-device.
+
+---
+
+## Scene loading: partial-load-then-stream is right; the first frame must be complete at low fidelity (2026-06-10)
+
+Matt watched Newsheepdogland stream in after Play and asked whether the partial-load architecture is ill-conceived. Verdict: the two-phase shape (fast cold path, post-interactive streaming) is the correct architecture and stays; what reads as wrong is that the first playable frame shows ABSENCE (a bare island beyond the homestead corridor) rather than low fidelity, and that streaming starts on a fixed 6.5s timer.
+
+- **Direction (Cycle 88 draft, `docs/cycle-88-plan.md`): impostor-first first frame.** The cold path gains island-wide tree COVERAGE as kiln impostors (pre-baked build-time atlases, 3 quads per tree); streamed waves then UPGRADE zones to LOD0 instead of materializing trees from nothing. An upgrade is nearly invisible; an appearance is jarring.
+- **Spiked 2026-06-10** (`tools/spike-impostor-cold-scatter.mjs`, `tools/probe-foliage-streaming-diag.mjs`): island-wide scatter costs ~278ms on the reference desktop (vs 59ms cold today) - too much for the Play click synchronously, trivially hidden inside the scene-load transition. Remaining unknown for Phase 1: the impostor-only consolidated mesh build cost on the production WebGPU path.
+- **Also in the draft:** signal-based streamer arming (governor warmup completion instead of START_DELAY_MS), and a per-scene loading-stage contract on SceneDef so all-cold vs streamed is an explicit budgeted decision per scene, not an accident of island size.
+- **Kept as-is:** the wave scheduler (idle slots with a 2s starvation bound, per-wave salted determinism, abort-on-teardown) and near-to-far ordering are sound.

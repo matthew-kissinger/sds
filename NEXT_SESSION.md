@@ -59,13 +59,15 @@ This run is the Cycle 85 Phase 3 evidence and the Cycle 87 P1 acceptance.
 
 - Matt: post or defer the launch drafts in `docs/launch/` (Cycle 86 P6).
 - `/cycle-close` ritual for 85, 86, and 87 once the device pass lands.
-- **Scene-loading sequencing review (Matt's 2026-06-10 ask):** evaluate
-  impostor-first cold path (first frame complete at low fidelity, waves
-  upgrade instead of materialize), arming the streamer at scene-body
-  completion instead of the fixed 6.5s delay, and a per-scene loading
-  contract on SceneDef. Recommendation delivered in-session; spike the
-  impostor cold-bake cost in `tools/` before any plan (per the
-  spike-risky-primitives preference). Candidate Cycle 88.
+- **Scene-loading sequencing (Matt's 2026-06-10 ask): spiked and drafted.**
+  Recommendation: impostor-first first frame (island-wide kiln-impostor
+  coverage on the cold path, waves upgrade to LOD0 instead of
+  materializing), signal-based streamer arming, per-scene loading-stage
+  contract. Spike measured island-wide scatter at ~278ms reference
+  desktop (hideable in the scene-load transition); production-path
+  impostor build cost is the one open measurement. Draft plan:
+  [`docs/cycle-88-plan.md`](docs/cycle-88-plan.md); decision recorded in
+  DECISIONS.md. Starts only after 85/86/87 close.
 - BACKLOG candidates from 87: coastline-aware meadow quads (P4 stretch,
   not taken); `?konveyorNativeTreeImpostors` read alias removal after one
   release.

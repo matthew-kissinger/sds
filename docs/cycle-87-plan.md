@@ -184,14 +184,14 @@ Phase 1 (today) ; Phase 2 -> Phase 3 -> Phase 4 ; Phase 5 -> Phase 6 ; Phase 7 l
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, the production build shall be clean.
-- [ ] When the close commit lands on `main`, the sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Newsheepdogland is played on desktop, trees and grass shall visibly extend beyond the homestead corridor within 30 seconds of Play.
-- [ ] When a WebGPU-capable phone loads the site, it shall boot `webgpu-production` with no frame-budget renderer demotion possible.
-- [ ] When the entrance shows multiple notices at 390x844, none shall overlap.
-- [ ] When `rg -i konveyor js/ tests/` runs, it shall return zero matches.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover. *(All 7 shipped 2026-06-10; deferred: P4 coastline meadow quads stretch.)*
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass. *(1496 passed / 11 skipped, 2026-06-10.)*
+- [x] When `npm run build` runs at cycle close, the production build shall be clean. *(Clean; bundle bumps recorded in `bundle-sizes.json`.)*
+- [x] When the close commit lands on `main`, the sheepdogsim.com deploy shall succeed via GH Actions. *(Run 27268212058 success on `5a184da` after the e2e CI-safety split.)*
+- [x] When Newsheepdogland is played on desktop, trees and grass shall visibly extend beyond the homestead corridor within 30 seconds of Play. *(Live probe: +1,728 trees, +138,575 clumps; @local-only e2e green.)*
+- [ ] When a WebGPU-capable phone loads the site, it shall boot `webgpu-production` with no frame-budget renderer demotion possible. *(Code shipped; awaiting the S24+ device pass for the on-device half.)*
+- [x] When the entrance shows multiple notices at 390x844, none shall overlap. *(`overlay-collision.spec.ts` green; manual device check tomorrow is confirmatory.)*
+- [x] When `rg -i konveyor js/ tests/` runs, it shall return zero matches. *(Verified post-`ac32488`.)*
 
 ## References
 
