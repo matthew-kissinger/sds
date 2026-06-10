@@ -4,10 +4,28 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.3.0] - 2026-06-09
+
+The release where the hardening program becomes player-visible: the game
+teaches you to herd, remembers what you have done, finishes its settings,
+loads in under a second, and runs multiplayer on a load-tested delta
+protocol.
 
 ### Added
 
+- First-run tutorial: a guided sixty seconds on Home Field (move, sprint,
+  swap the camera, pen three sheep). Skippable, offered once, localized in
+  English, Spanish, Japanese, Portuguese, and Chinese.
+- Nine achievements (first pen, each island's classic round, Solo Chaos,
+  one and five nights survived, a competitive win, all five dogs), with
+  dog badges on the menu.
+- Settings completion: full key rebinding, gamepad support with rebinding,
+  colorblind mode, and a language selector.
+- Share and invite surfaces: lobby invite URLs that drop a friend straight
+  into the room, plus score sharing.
+- Crash reporting (client errors beacon with full stack traces), WebGL
+  context-loss recovery, and a service-worker update toast so an open tab
+  is offered new versions instead of staying stale.
 - Windows Electron distributor path with installer, portable, and unpacked
   artifacts, app identity, generated Windows icons, logs/crash paths, and
   signing-ready local build posture.
@@ -16,18 +34,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   unlock, storage, gamepad API, Worker health, authenticated WebSocket, and
   sheep startup motion checks.
 
+### Changed
+
+- Multiplayer wire protocol v3: the server sends only the sheep whose wire
+  record changed, with a full keyframe every second and per-client
+  soft-degrade for older clients. Late-round bandwidth drops to 43% of the
+  old full-snapshot cost; never worse than the old cost by construction.
+- Clients that stop keeping up (256 KB socket backlog for ~4 s) are evicted
+  through the normal grace and host-migration path instead of stalling the
+  room.
+- First load: the entrance is visible in 0.9 s at 20 Mbps, down from 8.8 s
+  (resource hints let the UI front-run the world download).
+- Worker logging is structured JSON with tick-health monitoring, and D1
+  migration state is self-managed by the deploy pipeline.
+
 ### Fixed
 
+- A room that came back full after a server eviction locked out the very
+  players whose seats were persisted in it; a rejoin that re-proves a
+  persisted identity now reclaims its seat (genuinely new joiners still get
+  the room-full refusal).
+- Crash stacks posted to the event endpoint were truncated to 256
+  characters (and could be cut into invalid JSON); the stack cap is now
+  4,096 with always-valid storage.
+- Recovering multiplayer clients (reconnect or dropped frame) received a
+  keyframe that could not chain into the next delta, stalling state updates
+  for up to a second; unicast keyframes are now basis-aligned.
+- Host-migration logs always claimed the original host reclaimed the room.
 - Startup flock visuals now move from the first playable moments in both WebGL
   and WebGPU instead of reading as a half-frozen first frame.
 - Native Electron resize now keeps viewport, canvas, and camera aspect aligned
   to the resized window.
+- Listener leaks across scene swaps (verified by a 50-swap heap soak).
+
+### Validation
+
+- Full vitest suite green, production build clean, worker typecheck clean,
+  sim-baseline fixtures byte-identical throughout.
+- 100-room concurrent load test: 0 desyncs across 208,000 server ticks.
+- DO-eviction chaos harness: 32/32 checks including the full-room rejoin
+  contract (`tools/loadtest/chaos-results-rejoinfix-2026-06-09.json`).
+- Post-hoc fence reviews of the delta protocol, sim tie-break, and shared/
+  refactors recorded in `docs/hardening/review-dossiers-2026-06-09.md`.
 
 ### Notes
 
 - Steam/store release remains a separate prep cycle: signing policy,
   install/uninstall QA, depot dry-run, metadata, screenshots/capsules,
   controller/cloud-save policy, and release-channel decisions are still open.
+- Real-device mobile validation is tracked in Cycle 86 Phase 3 and blocked
+  only on hardware access; Chromium mobile emulation passes.
 
 ## [2.2.12] - 2026-06-09
 
