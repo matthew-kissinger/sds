@@ -57,6 +57,15 @@ npm override to 1.8.4; stray wrangler processes killed (the
 `../sds-p2-backpressure` worktree husk may now delete cleanly; one
 `worker/` subdir was still busy at last attempt).
 
+## Autonomous queue
+
+[`docs/upkeep/2026-06-post-launch-upkeep.md`](docs/upkeep/2026-06-post-launch-upkeep.md)
+is scaffolded and pre-authorized: review-debt tests (A), localization
+completion (B), major dep upgrades one at a time (C), shared/ import
+lint (D), housekeeping (E), repo-doc truth-up (F), code-quality audit +
+zero-risk cleanups (G). Ground rules in the doc are binding; it must not
+touch Cycle 86 Phases 3/6.
+
 ## Open Carryover
 
 - Phase 3 hardware (planned 2026-06-10): Matt's phone on live, or hub
