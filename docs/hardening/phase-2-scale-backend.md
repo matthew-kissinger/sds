@@ -40,6 +40,11 @@ Acceptance:
     remains owed before this box is checked; the per-client soft-degrade
     design means the change is safe to roll back by simply not bumping
     the client PROTOCOL_VERSION.
+  - 2026-06-09 Cycle 86 Phase 1: post-hoc adversarial review complete,
+    verdict accept-with-flags; dossier at
+    [`review-dossiers-2026-06-09.md`](review-dossiers-2026-06-09.md).
+    The one medium finding (F1 unicast-keyframe basis race) is fixed in
+    Cycle 86 Phase 2. Box stays open for Matt's own flag/accept pass.
 
 ---
 

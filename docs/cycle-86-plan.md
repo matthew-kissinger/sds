@@ -144,6 +144,21 @@ run emulated. Matt drives his actual phone; Claude preps the checklist.
 - If the real-device pass fails on a first-session blocker, then Phase 6
   shall not start until the blocker is fixed and re-proven.
 
+**Status 2026-06-09: BLOCKED on hardware access (not failed).** Probed
+during the autonomous cycle run: hub (192.168.1.218) unreachable, phone
+(192.168.1.133) and tablet (192.168.1.230) refuse SSH on 8022 and ADB on
+5555, no BrowserStack credentials in `~/.config/mk-agent/env` (Browserbase
+is cloud Chromium, not real devices). Every route to real hardware needs
+Matt: phone in hand on live sheepdogsim.com, or power the hub for tablet
+ADB, or provision BrowserStack creds for Codex's iOS spec. Cycle 85 stays
+open per the handoff contract. Checklist for the phone session, ready to
+run: (1) fresh profile or cleared site data; (2) first Play lands on
+Newsheepdogland WebGPU (`?debug=1` overlay or remote devtools confirms no
+`renderer=webgl`, no `fallbackReason`); (3) tutorial offer shows; (4) dog
+spawns on land; (5) pause, Main Menu, second Play works; (6) no
+stale-cache behavior after the v2.3.0 deploy (SW update toast or fresh
+bundle hash).
+
 ## Phase 4 - Tutorial translations (autonomous, ~2hr)
 
 **Depends on:** nothing (parallel-safe).

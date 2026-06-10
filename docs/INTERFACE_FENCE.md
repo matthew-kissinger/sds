@@ -35,7 +35,11 @@ This file lists **which files are frozen**. The rule files explain **why**.
 - **[`shared/MovementPhysics.js`](../shared/MovementPhysics.js)**
 - **[`shared/BoundaryCollision.js`](../shared/BoundaryCollision.js)**
 - **[`shared/FlockingAlgorithms.js`](../shared/FlockingAlgorithms.js)**
-- **[`shared/GameStateValidation.js`](../shared/GameStateValidation.js)**
+- **[`shared/GameStateValidation.js`](../shared/GameStateValidation.js)** *(since 2d34a2b a compatibility shim re-exporting the four modules below; all five carry the same fence)*
+- **[`shared/SpawnLogic.js`](../shared/SpawnLogic.js)** *(P3-GSV-SPLIT, 2026-06-09)* — seeded sheep spawn generation, competitive balanced spawns.
+- **[`shared/GameProgress.js`](../shared/GameProgress.js)** *(P3-GSV-SPLIT)* — game progress, state reset, herding effectiveness.
+- **[`shared/CompetitiveLayout.js`](../shared/CompetitiveLayout.js)** *(P3-GSV-SPLIT)* — competitive gate layout + player assignment.
+- **[`shared/CompetitiveMode.js`](../shared/CompetitiveMode.js)** *(P3-GSV-SPLIT)* — competitive retirements + completion; carries the P0-DETBUG sorted winner tie-break.
 - **[`shared/Vector2D.js`](../shared/Vector2D.js)**
 - **[`shared/ObjectiveLogic.js`](../shared/ObjectiveLogic.js)** — `getRequiredSheep` formula (per-mode count scaling).
 - **[`shared/objective.js`](../shared/objective.js)** *(Cycle 34 Phase 2)* — multi-stage objective state machine (`createObjective` / `refreshObjective` / `tickObjective` / `isCorralOpen`). Worker + client run byte-identical transitions; the `js/gamestate/objective.js` file is now a thin re-export shim and stays in sync only by depending on this module.

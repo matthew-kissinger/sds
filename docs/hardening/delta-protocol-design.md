@@ -494,16 +494,24 @@ Docs to update (P2-DELTA-DOC, after ship):
 
 ## 11. Acceptance lines for the implementing tasks
 
+> Boxes checked 2026-06-09 (Cycle 86 Phase 1) per the post-hoc adversarial
+> review ([`review-dossiers-2026-06-09.md`](review-dossiers-2026-06-09.md));
+> each was verified against tests and code at review. The egress-gate line
+> stays open: it holds from ~65% round progress, not at round start (see
+> Deviations). The section 4 unicast consistency note was found wrong at
+> review (dossier F1) and fixed in Cycle 86 Phase 2 with basis-aligned
+> unicast keyframes.
+
 P2-DELTA-IMPL (server):
 
-- [ ] When the DO broadcasts at a tick where `tick % 60 !== 0`, then v3 clients
+- [x] When the DO broadcasts at a tick where `tick % 60 !== 0`, then v3 clients
       shall receive a `gameStateDelta` containing exactly the sheep whose
       quantized wire record changed since the previous broadcast frame, keyed
       by array index.
-- [ ] When `tick % 60 === 0`, when a game starts, when a socket binds mid-game,
+- [x] When `tick % 60 === 0`, when a game starts, when a socket binds mid-game,
       and when a client sends `requestKeyframe`, then the DO shall send a full
       `gameStateUpdate` keyframe stamped with `tick`.
-- [ ] While a session joined with `protocolVersion < 3` (or absent) is
+- [x] While a session joined with `protocolVersion < 3` (or absent) is
       connected, the DO shall send it full `gameStateUpdate` frames every
       broadcast interval, byte-compatible with the v2 protocol except the
       additive `tick` field (version-tag / soft-degrade acceptance per the
@@ -512,35 +520,39 @@ P2-DELTA-IMPL (server):
       sim-seconds with scripted herding input, then summed delta-path bytes
       shall be <= 50% of summed full-snapshot bytes (baseline 20,826 B/frame,
       ~1.30 MB/s per client).
-- [ ] If the changed-sheep count exceeds 85% of the flock, then the DO shall
+- [x] If the changed-sheep count exceeds 85% of the flock, then the DO shall
       send a keyframe instead of a delta.
-- [ ] If a client sends more than 2 `requestKeyframe` messages per second, then
+- [x] If a client sends more than 2 `requestKeyframe` messages per second, then
       the DO shall drop the excess requests.
-- [ ] When `npm test` runs, then `tests/sim-baseline/` fixtures shall pass
+- [x] When `npm test` runs, then `tests/sim-baseline/` fixtures shall pass
       byte-identical with zero regeneration (transport-only change).
-- [ ] When `PROTOCOL_VERSION` reads 3, then `SURVIVAL_MIN_PROTOCOL_VERSION`
+- [x] When `PROTOCOL_VERSION` reads 3, then `SURVIVAL_MIN_PROTOCOL_VERSION`
       shall remain 2 and a v3 client shall join a survival room successfully.
 
 P2-DELTA-CLIENT:
 
-- [ ] When a keyframe (any full `gameStateUpdate`) arrives, then the client
+- [x] When a keyframe (any full `gameStateUpdate`) arrives, then the client
       shall replace its reconstructed snapshot wholesale and reset
       `lastAppliedTick` (drift resets to zero).
-- [ ] When a `gameStateDelta` with `baseTick === lastAppliedTick` arrives, then
+- [x] When a `gameStateDelta` with `baseTick === lastAppliedTick` arrives, then
       the client shall reconstruct a full snapshot deep-equal to the server's
       snapshot at that tick (round-trip unit test), and downstream consumers
       (`handleMultiplayerGameState`, interpolation, dog reconciliation) shall
       receive the identical shape they receive today.
-- [ ] If a `gameStateDelta` arrives with `baseTick !== lastAppliedTick`, then
+- [x] If a `gameStateDelta` arrives with `baseTick !== lastAppliedTick`, then
       the client shall discard it, send `requestKeyframe` at most once per
       500 ms, and ignore further deltas until a keyframe arrives.
-- [ ] While connected to a pre-delta (v2) DO, the client shall play normally on
+- [x] While connected to a pre-delta (v2) DO, the client shall play normally on
       full snapshots and never require a delta frame (in-flight migration
       acceptance per the four-point rule).
-- [ ] When `previousServerState` and `lastServerState` are compared after a
+- [x] When `previousServerState` and `lastServerState` are compared after a
       delta apply, then they shall not alias the same `sheep` array.
 
 ## 12. Open items for sign-off
+
+> 2026-06-09 (Cycle 86 Phase 1): all four were accepted by the acting
+> reviewer during the autonomous run and re-verified at post-hoc review
+> (dossier). They remain listed for Matt's own pass.
 
 1. Confirm per-client soft-degrade over refuse (section 5 recommendation).
 2. Confirm N = 60 (section 4).

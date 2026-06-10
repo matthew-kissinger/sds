@@ -26,10 +26,10 @@
    full-room rehydration 409 lockout until the 60s idle alarm;
    host_migration.reclaimedByOriginal always logs true
    ([phase-4 P4-CHAOS](phase-4-polish-launch.md)).
-5. Nothing was pushed to origin. The work sits on local main (checked
-   out in the sds-p2-backpressure worktree at completion time because a
-   Codex agent held the primary checkout). Push triggers the production
-   deploy pipeline; that stays Matt's call.
+5. ~~Nothing was pushed to origin.~~ Resolved 2026-06-09: Matt authorized
+   the ship ("did you commit push and deploy"); merge `ccc0d7b` pushed,
+   Deploy run 27242005458 all green (Test, E2E, Migrate 0010, Worker,
+   Pages), live bundle verified carrying the delta client.
 
 This directory is the single source of truth for the hardening program. It is a
 multi-cycle body of work and sits alongside (not inside) the numbered cycle
