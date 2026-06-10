@@ -898,9 +898,11 @@ export class RoomDO {
     // regardless of cohort: a legacy client just sees one extra full frame.
     // Basis-aligned (review F1): sends the snapshot the delta basis was taken
     // from, not lastGameState, so the next broadcast delta's baseTick matches.
+    // Skipped while the socket is saturated (upkeep A4, review F6): see
+    // unicastSendAllowed.
     if (this.meta?.state === 'in-game' && this.simulation) {
       const state = this.simulation.getBasisKeyframeState();
-      if (state) this.send(ws, 'gameStateUpdate', state);
+      if (state && this.unicastSendAllowed(ws)) this.send(ws, 'gameStateUpdate', state);
     }
   }
 
@@ -994,10 +996,11 @@ export class RoomDO {
         // P-SEC-4 inbound rate limiter already ran before we got here.
         if (meta.state !== 'in-game' || !this.simulation) break;
         if (!this.allowKeyframeRequest(playerId)) break;
-        // Basis-aligned (review F1): see keyframe-on-bind.
+        // Basis-aligned (review F1): see keyframe-on-bind. Skipped while the
+        // socket is saturated (upkeep A4, review F6): see unicastSendAllowed.
         const state = this.simulation.getBasisKeyframeState();
         const ws = this.sessions.get(playerId);
-        if (state && ws) this.send(ws, 'gameStateUpdate', state);
+        if (state && ws && this.unicastSendAllowed(ws)) this.send(ws, 'gameStateUpdate', state);
         break;
       }
       case '__testAdvanceSurvival':
@@ -1244,6 +1247,22 @@ export class RoomDO {
     try { ws.close(1013, 'backpressure'); } catch { /* already closed */ }
     if (this.sessions.get(playerId) === ws) this.sessions.delete(playerId);
     this.handlePlayerDisconnect(playerId);
+  }
+
+  // P2-BACKPRESSURE (upkeep A4, review F6): the unicast keyframe paths (bind,
+  // requestKeyframe) honor the same standing-backlog skip as the broadcast
+  // loop. Piling a full keyframe onto a saturated socket only grows DO-held
+  // memory; skipping is safe because a v3 client re-requests (or picks up the
+  // next cadence keyframe) and a legacy client gets the next healthy broadcast
+  // interval's full frame. No queue, no retry, no per-skip log (the broadcast
+  // skip path logs nothing per-skip either; sustained saturation is surfaced
+  // by the eviction path). Same defensive bufferedAmount read as
+  // broadcastGameFrame: a runtime that doesn't expose it reports 0 and the
+  // guard is inert.
+  private unicastSendAllowed(ws: WebSocket): boolean {
+    const rawBuffered = (ws as unknown as { bufferedAmount?: unknown }).bufferedAmount;
+    const buffered = typeof rawBuffered === 'number' ? rawBuffered : 0;
+    return buffered <= BACKPRESSURE_MAX_BUFFERED_BYTES;
   }
 
   // P2-DELTA: a session receives the keyframe/delta cadence iff it declared a
