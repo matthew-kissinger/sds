@@ -98,7 +98,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.1",
     "browserstack-node-sdk": "^1.55.3",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",
     "eslint": "^10.3.0",
     "jsdom": "^29.1.1",
@@ -130,7 +130,6 @@
     "@tootallnate/once": "^3.0.0",
     "protobufjs": "^7.5.8",
     "qs": "6.15.2",
-    "shell-quote": "1.8.4",
     "tmp": "0.2.7",
     "uuid": "^11.1.1"
   }
