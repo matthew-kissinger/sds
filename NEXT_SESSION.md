@@ -1,91 +1,90 @@
-# Next Session - Cycle 86 v2.3.0 Launch (Cycle 85 open on one item)
+# Next Session - Cycle 86 nearly done; Matt-only items remain
 
 > **Updated:** 2026-06-09
-> **For:** Cycle 86 (`docs/cycle-86-plan.md`, scaffolded, not started).
-> Cycle 85 stays open on exactly one acceptance item (real mobile proof),
-> absorbed as Cycle 86 Phase 3.
-> **Pickup priority:** Run Cycle 86 Phase 1 (paired): walk the hardening
-> fence reviews with Matt. Phase 3 (real-device mobile pass) closes
-> Cycle 85.
+> **For:** Cycle 86 (`docs/cycle-86-plan.md`, executed autonomously
+> through Phases 1, 2, 4, 5, 7; Cycle 85 still open on the real mobile
+> proof, absorbed as Cycle 86 Phase 3).
+> **Pickup priority:** The three Matt-only items: (1) real-device mobile
+> pass on his phone (Phase 3, closes Cycle 85), (2) post or defer the
+> launch drafts in `docs/launch/` (Phase 6), (3) the two "Matt has signed
+> off" boxes in `docs/hardening/` (dossiers ready).
 
 ## Cold-Start Orientation
 
 Read in order: this file -> [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md)
--> [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) (still open) ->
-[`AGENTS.md`](AGENTS.md) -> [`CLAUDE.md`](CLAUDE.md) ->
-[`docs/hardening/ORCHESTRATION.md`](docs/hardening/ORCHESTRATION.md).
+(every phase carries a dated status block) ->
+[`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) (still open) ->
+[`docs/hardening/review-dossiers-2026-06-09.md`](docs/hardening/review-dossiers-2026-06-09.md).
 
 ## Where It Stands
 
-**The hardening program (docs/hardening/, 42 tasks, 5 phases) is COMPLETE
-and DEPLOYED LIVE** (2026-06-09, merge `ccc0d7b`, Deploy run 27242005458
-all green; live bundle `main-SaSle6SI.js` carries the delta client,
-`/api/rooms` answers 200, migration 0010 applied to remote D1). Highlights:
-delta wire protocol v3 with per-client soft-degrade, first-run tutorial,
-achievements, settings completion (key + gamepad rebinding, colorblind,
-language), share surfaces, crash beacon, structured worker logging,
-lint/typecheck/bundle CI gates, D1 migration-state tracking, entrance
-preload wave (entrance-visible 8.8s to 0.9s at 20 Mbps), listener-leak
-fixes + 50-cycle soak, 100-room load test (0 desyncs / 208k ticks), chaos
-validation (30/30). Tests 1159 -> 1428 passed. Codex's BrowserStack iOS
-first-session spec merged in the same push.
+**v2.3.0 is LIVE** (2026-06-09, release `2b5b2ed` + ratchet fix
+`ceb45b7`, tag `v2.3.0`, Deploy run 27244953409 all green). Live proof:
+`main-Dh4UGGjR.js` served, worker healthz ok, fresh-profile probe shows
+the tutorial offer and the achievements panel (0 of 9), zero console
+errors. The CHANGELOG 2.3.0 entry tells the hardening-program story.
 
-**Cycle 85 (`v2.2.12`, Newsheepdogland entrance readiness) shipped live and
-is validated except one item: the real mobile proof.** Chromium mobile
-emulation passed; no authorized ADB device or BrowserStack credentials were
-available in that run. The v2.2.12 live proof record (stale-cache
-overwrite, Play/pause/menu/Play loop, WebKit Play-path fix) lives in
-[`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) and CHANGELOG. Per Matt's
-contract: do not close Cycle 85 without the real-device pass.
+Cycle 86 phase state:
 
-**Cycle 86 is scaffolded, not started.** Goal: turn the hardening program
-into a player-visible v2.3.0 release and point traffic at it. Phases:
-paired fence-review debt, worker fixes from chaos findings (full-room
-rehydration 409 lockout, reclaimedByOriginal log bug, crash-stack
-truncation), real-device mobile pass (paired, closes Cycle 85), tutorial
-translations, the v2.3.0 cut, launch content (paired, Matt's voice),
-telemetry confirmation.
+- **Phase 1 (fence reviews): done by adversarial-review proxy.** Four
+  independent dossiers, all accept / accept-with-flags. One real defect
+  found (F1 unicast-keyframe basis race) and fixed; fence-list gap
+  closed. Only the two literal "Matt has signed off" boxes remain his.
+- **Phase 2 (worker fixes): shipped** (`83571f6`). Full-room rehydration
+  rejoin (persisted identity reclaims its slot, new joiners still 409),
+  reclaimedByOriginal log fix, /api/event raw-string caps (stack 4096,
+  propsJson 8192, always-valid JSON), basis-aligned unicast keyframes.
+  Chaos harness rerun: 32/32 PASS
+  (`tools/loadtest/chaos-results-rejoinfix-2026-06-09.json`).
+- **Phase 3 (real-device mobile): BLOCKED on hardware, not failed.** Hub
+  down, phone/tablet unreachable, no BrowserStack creds. Checklist is
+  written in the plan, ready to run the moment Matt has the phone or the
+  hub is up. Cycle 85 archives only after this passes.
+- **Phase 4 (tutorial translations): shipped** (`bebce1e`). es/ja/pt/zh-CN,
+  parity allowlist shrunk, i18n ratchet bumped 130 to 136 KiB (recorded).
+- **Phase 5 (v2.3.0 cut): shipped and live** (see above).
+- **Phase 6 (launch content): drafts done** in `docs/launch/` (devlog,
+  description refresh, social copy; prose-checklist clean). Posting is
+  Matt's, and waits on Phase 3 per the plan dependency.
+- **Phase 7 (telemetry): baseline recorded** in the plan. client_error
+  baseline ZERO; renderer_fallback flowing with correct shape; idle tail
+  quiet. Hard stop 3 clear.
 
-## Open Carryover (tracked in the Cycle 86 plan)
+Also done: Dependabot 28 (shell-quote, critical, dev-scope) closed via
+npm override to 1.8.4; stray wrangler processes killed (the
+`../sds-p2-backpressure` worktree husk may now delete cleanly; one
+`worker/` subdir was still busy at last attempt).
 
-- Fence reviews owed from the autonomous hardening run (Phase 1; sign-off
-  boxes in `docs/hardening/` are honestly unchecked).
-- Real mobile proof on Matt's actual phone covering the live default path:
-  first Play, terrain-safe spawn, mobile controls/HUD, pause/Main Menu,
-  second Play, no stale-cache behavior (Phase 3; also run Codex's
-  `tests/browserstack/newsheepdogland-first-session.spec.ts`).
-- Staging activation needs three operator steps (preview D1 +
-  `CF_PREVIEW_D1_ID` + `JWT_SECRET --env preview`); workflow ships dormant
-  (plan Q4).
-- Round-start delta egress lever deliberately deferred (plan Q2; analysis
-  in `docs/hardening/delta-protocol-design.md` Deviations).
-- Housekeeping: one empty locked dir husk at `../sds-p2-backpressure/worker`
-  (deletes after a stray process exits or reboot); ~44 untracked gitignored
-  scratch PNGs at repo root, deletable at leisure.
+## Open Carryover
+
+- Phase 3 hardware: Matt's phone on live, or hub power for tablet ADB, or
+  BrowserStack creds for Codex's `tests/browserstack/` iOS spec.
+- Phase 6 posting (Matt), gated on Phase 3.
+- Two sign-off boxes in `docs/hardening/phase-2-scale-backend.md` (Matt).
+- Q4 staging provisioning (three operator steps; workflow ships dormant).
+- Cycle 85 + 86 closure ritual (`/cycle-close`) once the above land.
+- Post-launch: re-tail worker logs during live MP traffic for the loaded
+  tick-health baseline; egress lever decision (plan Q2) only if CF costs
+  surface; pre-hardening locale allowlist entries (pt sandbox.* etc.).
+- Wrangler-action Node 20 deprecation warning in deploy workflow (forced
+  Node 24 on 2026-06-16; check for a wrangler-action update before then).
 
 ## Working Contract
 
-- No `shared/` edits in Cycle 86; sim-baselines stay byte-identical. Do not
-  regenerate goldens.
-- The Phase 2 RoomDO rejoin fix must not change the wire protocol or
-  room-full semantics for genuinely new joiners.
-- Version bump to 2.3.0 happens only in Phase 5 (the plan is the explicit
-  authorization). No other player-visible version moves.
-- Matt publishes every player-facing artifact; agents draft only.
-- Agent-launched Vite/Playwright sets `SDS_SUPPRESS_BROWSER_OPEN=1`; close
-  every probe page/listener after use.
-- When release proof matters, verify Pages (`https://sheepdogsim.com/`) and
-  the direct Worker health endpoint separately.
+- No `shared/` edits; sim-baselines stay byte-identical.
+- Matt publishes every player-facing artifact; drafts are ready.
+- Don't close Cycle 85 without the real-device pass.
+- Agent-launched Vite/Playwright sets `SDS_SUPPRESS_BROWSER_OPEN=1`;
+  close every probe page/listener after use.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Next cycle plan (scaffolded) | [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) |
+| Active cycle plan (statuses inline) | [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) |
 | Open prior cycle (one item) | [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) |
-| Completed hardening program | [`docs/hardening/ORCHESTRATION.md`](docs/hardening/ORCHESTRATION.md) |
-| Delta protocol spec + deviations | [`docs/hardening/delta-protocol-design.md`](docs/hardening/delta-protocol-design.md) |
-| Chaos findings (Phase 2 inputs) | [`docs/hardening/phase-4-polish-launch.md`](docs/hardening/phase-4-polish-launch.md), `tools/loadtest/chaos-results-2026-06-09.json` |
+| Fence-review dossiers | [`docs/hardening/review-dossiers-2026-06-09.md`](docs/hardening/review-dossiers-2026-06-09.md) |
+| Launch drafts (Matt to post) | [`docs/launch/`](docs/launch/) |
 | Release log | [`CHANGELOG.md`](CHANGELOG.md) |
-| Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
+| Chaos rejoin proof | `tools/loadtest/chaos-results-rejoinfix-2026-06-09.json` |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

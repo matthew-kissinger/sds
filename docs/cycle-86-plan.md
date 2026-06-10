@@ -80,6 +80,19 @@ the cycle should ship ahead of this.
   `docs/cycle-85-plan.md` shall exist only under `docs/archive/cycles/`
   and `docs/BACKLOG.md` shall contain a Cycle 85 entry.
 
+**Status 2026-06-09: executed by adversarial-review proxy under Matt's
+"complete the next cycle" directive** (`d3f58f2`). All four fence items
+reviewed by independent read-only agents; dossiers at
+[`hardening/review-dossiers-2026-06-09.md`](hardening/review-dossiers-2026-06-09.md).
+Verdicts: all accept or accept-with-flags. Actioned: fence-list
+governance gap closed (the four P3-GSV-SPLIT modules added to
+INTERFACE_FENCE.md + shared-sim.md), F1 unicast-keyframe race fixed in
+Phase 2, F4 wording corrected in multiplayer.md, verified design-doc
+acceptance boxes checked. STILL OPEN FOR MATT: the two literal "Matt has
+signed off" boxes (P2-DELTA-DESIGN, and the egress-gate caveat
+acceptance) - honestly his, not proxyable. Q4 staging not provisioned
+(operator steps remain). Cycle 85 closure correctly deferred to Phase 3.
+
 ## Phase 2 - Worker fixes from chaos findings (autonomous, ~3hr)
 
 **Depends on:** Phase 1 (the delta/backpressure review may adjust scope).
@@ -195,6 +208,13 @@ from the hardening program's P1-TUTORIAL).
 - When `npm test` runs, then the locale parity spec shall pass with zero
   `tutorial.*` entries in its allowlist.
 
+**Shipped 2026-06-09** (`bebce1e`): 14 tutorial.* keys translated per
+locale (es/ja/pt/zh-CN), terminology matched to each locale's existing
+vocabulary, placeholders byte-identical; allowlist shrunk es/ja/zh-CN
+39 to 25, pt 57 to 43 (remaining entries are pre-hardening carryover,
+out of scope). Parity + tutorial specs 34/34. Cost one bundle-ratchet
+bump (i18n 130 to 136 KiB, recorded in `ceb45b7`).
+
 ## Phase 5 - Cut v2.3.0 (autonomous, ~2hr)
 
 **Depends on:** Phases 1-4 (release includes their fixes).
@@ -220,6 +240,19 @@ authorization.
 - When `CHANGELOG.md` gains the 2.3.0 entry, then `grep -c` for em-dashes
   in the new entry shall return 0.
 
+**Shipped 2026-06-09.** Version 2.3.0 (`2b5b2ed` + ratchet fix `ceb45b7`,
+tag `v2.3.0` on the shipped tree). First deploy run 27244863970 went red
+on the i18n bundle ratchet (134 > 130 KiB from the Phase 4 translations;
+local run missed it against a stale dist/); budget bumped to 136 with
+recorded attribution, rerun 27244953409 ALL GREEN (Test, E2E Chromium,
+Migrate D1, Worker, Pages). Live proof: `main-Dh4UGGjR.js` served
+(replacing `main-SaSle6SI.js`), `healthz` `{"ok":true}`, fresh-profile
+Playwright probe on live shows the tutorial offer dialog and the
+achievements panel (0 of 9), zero console errors; probe closed.
+CHANGELOG entry: 0 em-dashes, 0 exclamation marks. Validation at cut:
+lint clean, 1448 passed / 8 skipped, build + typecheck clean,
+sim-baselines byte-identical.
+
 ## Phase 6 - Launch content (PAIRED, ~3hr)
 
 **Depends on:** Phase 5 (links a live release), Phase 3 (mobile pass green).
@@ -241,6 +274,13 @@ Matt's voice; Claude drafts, Matt edits and posts. Nothing auto-publishes.
   description refresh, each passing the prose-rule grep checklist, and
   Matt shall have posted or explicitly deferred each one.
 
+**Drafts done 2026-06-09** (`d3f58f2`): `docs/launch/v2.3.0-devlog-draft.md`,
+`v2.3.0-description-refresh.md`, `v2.3.0-social-copy.md`; all pass the
+prose checklist (0 em-dashes, 0 exclamation marks, framing intact).
+POSTING REMAINS OPEN: Matt posts or defers each artifact, and per the
+plan's own dependency the launch post waits on the Phase 3 real-device
+pass.
+
 ## Phase 7 - Telemetry confirmation (autonomous, ~1hr, optional)
 
 **Depends on:** Phase 5 live.
@@ -257,6 +297,24 @@ Matt's voice; Claude drafts, Matt edits and posts. Nothing auto-publishes.
 
 - When Phase 7 ships, then this plan shall contain a dated table of event
   counts by family from production D1.
+
+**Baseline recorded 2026-06-09 (~20:45 ET, post-v2.3.0 deploy).**
+Production D1 `sds-db`, read-only:
+
+| Event (last 24h) | Count | Notes |
+|---|---|---|
+| renderer_mode_resolved | 60 | flowing |
+| scene_swapped | 36 | flowing |
+| renderer_fallback | 17 | all `webgpu-unavailable, requested webgpu, webgpuApiAvailable false` (shape matches spec) |
+| client_error | 0 | zero crash baseline |
+| context_lost | 0 | |
+| konveyor_material_degraded | 0 | |
+
+`wrangler tail sds-worker` (ops token; the default token lacks tail
+permission) for 90 s: zero log lines, i.e. no active rooms at the
+observation window, so no `tick_overrun` / `tick_health_degraded` noise
+at idle. Post-launch cycle should re-tail during live MP traffic for the
+loaded-noise baseline. Hard stop 3 clear: no crash spike.
 
 ## Dependencies
 
