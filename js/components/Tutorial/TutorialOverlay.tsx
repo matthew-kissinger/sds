@@ -62,7 +62,12 @@ export function TutorialOverlay({ machine }: { machine: MachineLike }) {
         position: 'fixed',
         left: 0,
         right: 0,
-        bottom: 'calc(max(env(safe-area-inset-bottom), 8px) + 84px)',
+        // Cycle 87 Phase 6: derive the bottom offset from the HUD's published
+        // reserve (HudLayout sets --sds-bottom-reserve to the real clearance
+        // over the mobile controls) instead of the old hardcoded 84px that
+        // could land the pill on the joystick. Fallback mirrors the desktop
+        // reserve when no HUD is mounted.
+        bottom: 'calc(var(--sds-bottom-reserve, calc(env(safe-area-inset-bottom, 0px) + 16px)) + 8px)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -107,6 +112,9 @@ export function TutorialOverlay({ machine }: { machine: MachineLike }) {
                         border: `1px solid ${alpha(pastoral.cream, 25)}`,
                         borderRadius: 999,
                         padding: '4px 14px',
+                        // 44px touch-target minimum on coarse pointers
+                        // (visual size stays compact via the padding).
+                        minHeight: isTouch ? 44 : undefined,
                         color: pastoral.cream,
                         fontSize: 12,
                         cursor: 'pointer',

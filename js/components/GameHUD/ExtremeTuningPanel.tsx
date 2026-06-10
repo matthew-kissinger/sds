@@ -136,8 +136,8 @@ export function ExtremeTuningPanel({ isVisible, onClose, isCompact = false }: Ex
 
     const wrap: CSSProperties = {
         position: 'absolute',
-        top: isCompact ? '0.5rem' : '1rem',
-        right: isCompact ? '0.5rem' : '1rem',
+        top: `calc(env(safe-area-inset-top, 0px) + ${isCompact ? '0.5rem' : '1rem'})`,
+        right: `calc(env(safe-area-inset-right, 0px) + ${isCompact ? '0.5rem' : '1rem'})`,
         zIndex: Z.panel,
         width: isCompact ? '17rem' : '21rem',
         maxHeight: '80vh',

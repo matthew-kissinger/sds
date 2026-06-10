@@ -14,7 +14,7 @@ import { pastoral, alpha } from '../ui/tokens';
 import { addNote, readNotes, notesAsJson, captureContext, isPlaytestEnabled } from '../../playtest/noteLog.js';
 
 const tabStyle: CSSProperties = {
-    position: 'fixed', right: 0, top: '46%', zIndex: Z.panel,
+    position: 'fixed', right: 'env(safe-area-inset-right, 0px)', top: '46%', zIndex: Z.panel,
     padding: '8px 10px', borderRadius: '10px 0 0 10px', border: 'none', cursor: 'pointer',
     background: alpha(pastoral.ink, 72), color: pastoral.cream, fontSize: 12, fontWeight: 700,
     writingMode: 'vertical-rl', letterSpacing: 1,

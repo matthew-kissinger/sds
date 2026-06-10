@@ -37,11 +37,15 @@ export function mountDayNightChip() {
     const el = document.createElement('div');
     el.id = 'sds-daynight-chip';
     // Cycle 65/66: top-LEFT, BELOW the SheepCounter panel (score + stamina bar)
-    // which lives in HudLayout's topLeft slot. top:148px clears that panel so the
-    // chip never overlays the stamina bar (Matt, Cycle 66 playtest). Aligned to
-    // the same 8px gutter as the slot. A compact left-aligned pill.
+    // which lives in HudLayout's topLeft slot, so the chip never overlays the
+    // stamina bar (Matt, Cycle 66 playtest). Cycle 87 Phase 6: the clearance
+    // reads HudLayout's published --sds-topleft-reserve (plus the safe-area
+    // top the slot itself honors) instead of the old hardcoded top:148px.
+    // Aligned to the same 8px gutter as the slot. A compact left-aligned pill.
     el.style.cssText = [
-        'position:fixed', 'top:148px', 'left:8px',
+        'position:fixed',
+        'top:calc(max(env(safe-area-inset-top, 8px), 8px) + var(--sds-topleft-reserve, 140px))',
+        'left:8px',
         'z-index:' + Z.chips, 'pointer-events:none',
         'font:600 11px/1.3 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif',
         'color:' + CREAM, 'background:rgba(38,30,22,0.5)',

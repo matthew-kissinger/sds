@@ -23,6 +23,7 @@
  *
  * Cycle 48 P1: converted to JSX .tsx. No hex; behavior-identical.
  */
+import { useEffect } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Z } from '../../ui/zIndex.js';
 import { useResponsive } from '../hooks/usePlatform.js';
@@ -58,6 +59,26 @@ export function HudLayout({
         : isLandscapeMobile
             ? 'calc(env(safe-area-inset-bottom, 0px) + 96px)'
             : 'calc(env(safe-area-inset-bottom, 0px) + 16px)';
+
+    // Cycle 87 Phase 6: publish layout reserves as CSS variables on the
+    // document element. Overlays that live OUTSIDE this React root by design
+    // (the tutorial pill in its own root, the vanilla DayNightChip, the
+    // shared toast rail) read them instead of hardcoding magic offsets that
+    // drift from the real HUD footprint:
+    //   --sds-bottom-reserve   bottom clearance over the mobile controls
+    //   --sds-toast-top-offset extra top clearance below the topCenter stack
+    //   --sds-topleft-reserve  height the topLeft stack occupies
+    useEffect(() => {
+        const rootStyle = document.documentElement.style;
+        rootStyle.setProperty('--sds-bottom-reserve', bottomReserve);
+        rootStyle.setProperty('--sds-toast-top-offset', isMobile ? '112px' : '64px');
+        rootStyle.setProperty('--sds-topleft-reserve', '140px');
+        return () => {
+            rootStyle.removeProperty('--sds-bottom-reserve');
+            rootStyle.removeProperty('--sds-toast-top-offset');
+            rootStyle.removeProperty('--sds-topleft-reserve');
+        };
+    }, [bottomReserve, isMobile]);
 
     const cornerGutter = '8px';
     const stackGap = '8px';

@@ -3329,6 +3329,26 @@ window.addEventListener('DOMContentLoaded', async () => {
         .then((m) => m.installSwUpdateToast())
         .catch(() => {});
 
+    // Cycle 87 Phase 6: `?uiprobe=1` enqueues one persistent sample toast
+    // through the real hub so the overlay-collision e2e can hold the rail,
+    // the tutorial offer, and the fallback notice on screen simultaneously.
+    if (urlParams.get('uiprobe') === '1') {
+        import('./ui/toastHub.js').then(({ enqueueToast }) => {
+            enqueueToast({
+                id: 'uiprobe-toast',
+                durationMs: 0,
+                suppressDuringGameplay: true,
+                mount: (rowEl) => {
+                    const el = rowEl.ownerDocument.createElement('div');
+                    el.dataset.testid = 'uiprobe-toast';
+                    el.textContent = 'UI probe toast';
+                    el.style.cssText = 'background:#fff;color:#222;padding:8px 12px;border-radius:8px;';
+                    rowEl.appendChild(el);
+                },
+            });
+        }).catch(() => {});
+    }
+
     // Delegate menu/network flows from gameInstance to menuController for GameBridge
     gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {
         gameInstance.menuController.selectSolo(dogType, singlePlayerMode);

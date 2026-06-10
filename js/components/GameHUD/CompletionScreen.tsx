@@ -500,7 +500,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                 zIndex: Z.critical,
                 opacity: isVisible ? 1 : 0,
                 transition: 'opacity 0.5s ease-out',
-                padding: '20px'
+                padding: 'calc(20px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px))'
             }}
         >
             {/* Confetti */}

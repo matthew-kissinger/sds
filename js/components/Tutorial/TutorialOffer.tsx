@@ -10,9 +10,9 @@
  * all stay live around it.
  */
 import { useState, type CSSProperties } from 'react';
-import { Z } from '../../ui/zIndex.js';
 import { useTranslation } from 'react-i18next';
 import { pastoral, alpha } from '../ui/tokens';
+import { RailPortal } from '../ui/RailPortal.js';
 import { shouldOfferTutorial, markTutorialDone } from './tutorialMachine.js';
 import { startTutorial } from './startTutorial.js';
 
@@ -23,12 +23,12 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
 
     if (!offered || hidden) return null;
 
+    // Cycle 87 Phase 6: the card rides the shared top rail (order 10, below
+    // any hub toast at order 0), so a simultaneous toast and the offer stack
+    // with a gap instead of overlapping in the same top-center band. The rail
+    // owns position/centering; the card keeps its visual language.
     const card: CSSProperties = {
-        position: 'absolute',
-        top: 'max(76px, calc(env(safe-area-inset-top) + 64px))',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'min(360px, 92%)',
+        width: 'min(360px, 92vw)',
         padding: '14px 16px',
         borderRadius: 16,
         background: alpha(pastoral.cream, 88),
@@ -37,7 +37,7 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
         color: pastoral.ink,
-        zIndex: Z.toast,
+        pointerEvents: 'auto',
         fontFamily: 'system-ui, -apple-system, sans-serif',
     };
 
@@ -46,11 +46,13 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
         padding: '8px 14px',
         fontSize: 13,
         fontWeight: 600,
+        minHeight: 44,
         cursor: 'pointer',
     };
 
     return (
-        <div style={card} role="dialog" aria-label={t('tutorial.offerTitle')}>
+        <RailPortal order={10}>
+        <div style={card} role="dialog" aria-label={t('tutorial.offerTitle')} data-testid="tutorial-offer">
             <div style={{ fontSize: 15, fontWeight: 700 }}>{t('tutorial.offerTitle')}</div>
             <div style={{ fontSize: 13, color: pastoral.inkSoft, marginTop: 4, lineHeight: 1.35 }}>
                 {t('tutorial.offerBody')}
@@ -76,5 +78,6 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
                 </button>
             </div>
         </div>
+        </RailPortal>
     );
 }
