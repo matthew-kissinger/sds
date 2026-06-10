@@ -11,6 +11,7 @@
  * entrance chunk loads); the rest of the entrance keeps its literal copy.
  */
 import type { CSSProperties } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { useTranslation } from 'react-i18next';
 import { pastoral, alpha } from '../ui/tokens';
 import { formatSheep } from './worlds';
@@ -51,7 +52,7 @@ export function MobilePerfWarning({ sheepCount, onContinue, onBack }: MobilePerf
       aria-modal="true"
       aria-label={t('mobileWarning.title')}
       style={{
-        position: 'absolute', inset: 0, zIndex: 60,
+        position: 'absolute', inset: 0, zIndex: Z.modal,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(43,38,32,0.45)',
       }}

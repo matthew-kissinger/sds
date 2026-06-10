@@ -18,6 +18,8 @@
  * unchanged: same buttons, handlers, scores, and result text strings.
  */
 
+import { Z } from '../ui/zIndex.js';
+
 // Cycle 61 P2: pastoral palette literals for the inline overlays (mirror of the
 // `pastoral` tokens; inline cssText can't share the var()-driven tokens.ts).
 const PASTORAL_SCRIM = 'rgba(40, 28, 18, 0.72)'; // warm scrim, full-screen cover
@@ -177,7 +179,7 @@ export async function showCompletionOverlay(game, mode, data = {}) {
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 99999;
+            z-index: ${Z.critical};
             font-family: system-ui, sans-serif;
             color: ${PASTORAL_CREAM};
             text-align: center;
@@ -217,7 +219,7 @@ export function showLocalCompletionOverlay(game, result) {
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 99999;
+        z-index: ${Z.critical};
         font-family: system-ui, sans-serif;
         color: ${PASTORAL_CREAM};
         text-align: center;

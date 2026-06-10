@@ -14,6 +14,7 @@
  */
 
 import { getApiBase } from '../../runtimeConfig.js';
+import { Z } from '../../ui/zIndex.js';
 
 let _el = null;
 let _phaseEl = null;
@@ -41,7 +42,7 @@ export function mountDayNightChip() {
     // the same 8px gutter as the slot. A compact left-aligned pill.
     el.style.cssText = [
         'position:fixed', 'top:148px', 'left:8px',
-        'z-index:1200', 'pointer-events:none',
+        'z-index:' + Z.chips, 'pointer-events:none',
         'font:600 11px/1.3 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif',
         'color:' + CREAM, 'background:rgba(38,30,22,0.5)',
         'padding:6px 10px 7px', 'border:1px solid rgba(243,234,211,0.18)',
@@ -183,7 +184,7 @@ export function showSurvivalSummary({ day = 1, score = 0, onRestart, sceneId = '
     const el = document.createElement('div');
     el.id = 'sds-survival-summary';
     el.style.cssText = [
-        'position:fixed', 'inset:0', 'z-index:2000', 'display:flex',
+        'position:fixed', 'inset:0', 'z-index:' + Z.modal, 'display:flex',
         'align-items:center', 'justify-content:center',
         'background:rgba(18,14,10,0.62)', 'backdrop-filter:blur(4px)',
         '-webkit-backdrop-filter:blur(4px)',

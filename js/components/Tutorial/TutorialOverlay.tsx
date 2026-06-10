@@ -11,6 +11,7 @@
  * or GameHUD slot.
  */
 import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { useTranslation } from 'react-i18next';
 import { usePlatform } from '../hooks/usePlatform.js';
 import { pastoral, alpha } from '../ui/tokens';
@@ -66,7 +67,7 @@ export function TutorialOverlay({ machine }: { machine: MachineLike }) {
         flexDirection: 'column',
         alignItems: 'center',
         gap: 8,
-        zIndex: 600,
+        zIndex: Z.tutorial,
         pointerEvents: 'none',
         fontFamily: 'system-ui, -apple-system, sans-serif',
     };

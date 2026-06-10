@@ -11,6 +11,7 @@
  * behavior is preserved.
  */
 import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { useTranslation } from 'react-i18next';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Icon } from '../ui/Icon';
@@ -474,7 +475,7 @@ export function PauseMenu({
         background: 'rgba(0, 0, 0, 0.75)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
-        zIndex: 1000,
+        zIndex: Z.modal,
         animation: 'fadeIn 0.2s ease-out',
         padding: containerPadding,
         pointerEvents: 'auto' // Ensure clicks work despite parent having pointer-events: none

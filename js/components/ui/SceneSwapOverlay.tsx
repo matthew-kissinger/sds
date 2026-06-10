@@ -19,6 +19,7 @@
  * is pastoral.
  */
 import { useEffect, useState, useRef, type CSSProperties } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { subscribeGameEvent } from '../../GameBridge.js';
 import { pastoral, alpha } from './tokens';
 
@@ -106,7 +107,7 @@ export function SceneSwapOverlay() {
     const overlayStyle: CSSProperties = {
         position: 'fixed',
         inset: 0,
-        zIndex: 10000,
+        zIndex: Z.critical,
         background: alpha(pastoral.ink, 55),
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',

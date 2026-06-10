@@ -10,6 +10,7 @@
  * all stay live around it.
  */
 import { useState, type CSSProperties } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { useTranslation } from 'react-i18next';
 import { pastoral, alpha } from '../ui/tokens';
 import { shouldOfferTutorial, markTutorialDone } from './tutorialMachine.js';
@@ -36,7 +37,7 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
         color: pastoral.ink,
-        zIndex: 30,
+        zIndex: Z.toast,
         fontFamily: 'system-ui, -apple-system, sans-serif',
     };
 

@@ -9,17 +9,18 @@
  * feature is opt-in (?notes=1 / ?stats=1) so regular players never see it.
  */
 import { useState, useEffect, useRef, type CSSProperties } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { pastoral, alpha } from '../ui/tokens';
 import { addNote, readNotes, notesAsJson, captureContext, isPlaytestEnabled } from '../../playtest/noteLog.js';
 
 const tabStyle: CSSProperties = {
-    position: 'fixed', right: 0, top: '46%', zIndex: 1500,
+    position: 'fixed', right: 0, top: '46%', zIndex: Z.panel,
     padding: '8px 10px', borderRadius: '10px 0 0 10px', border: 'none', cursor: 'pointer',
     background: alpha(pastoral.ink, 72), color: pastoral.cream, fontSize: 12, fontWeight: 700,
     writingMode: 'vertical-rl', letterSpacing: 1,
 };
 const scrim: CSSProperties = {
-    position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.5)',
+    position: 'fixed', inset: 0, zIndex: Z.modal, background: 'rgba(0,0,0,0.5)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
 };
 const card: CSSProperties = {

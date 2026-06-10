@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
+import { Z } from '../../ui/zIndex.js';
 /**
  * Cycle 66 P7: the Newsheepdogland survival minimap.
  *
@@ -94,7 +95,7 @@ export function mountMinimap({ points, pen } = {}) {
     const wrap = document.createElement('div');
     wrap.id = 'sds-minimap';
     wrap.style.cssText = [
-        'position:fixed', 'top:' + _topOffset(), 'right:8px', 'z-index:1200',
+        'position:fixed', 'top:' + _topOffset(), 'right:8px', 'z-index:' + Z.chips,
         'pointer-events:none', 'user-select:none',
         `width:${Math.round(_xf.wCss)}px`, `height:${Math.round(_xf.hCss)}px`,
         'background:rgba(38,30,22,0.42)', 'border:1px solid rgba(243,234,211,0.18)',

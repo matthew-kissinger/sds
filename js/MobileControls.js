@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2D } from './Vector2D.js';
+import { Z } from './ui/zIndex.js';
 
 /**
  * MobileControls - Bridge for mobile device touch controls and fullscreen management
@@ -291,7 +292,7 @@ export class MobileControls {
             position: fixed;
             top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
             left: calc(env(safe-area-inset-left, 0px) + 0.75rem);
-            z-index: 1001;
+            z-index: ${Z.controls};
             width: 44px;
             height: 44px;
             
@@ -481,7 +482,7 @@ export class MobileControls {
             width: 44px;
             height: 44px;
             border-radius: 0.75rem;
-            z-index: 2000;
+            z-index: ${Z.controls};
             
             background: rgba(0, 191, 255, 0.15);
             backdrop-filter: blur(20px);

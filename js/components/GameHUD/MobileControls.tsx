@@ -16,6 +16,7 @@
  * masking a wiring failure behind a no-op.
  */
 import { useState, useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { getMobileControls, getSceneManager } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 import { Icon } from '../ui/Icon';
@@ -318,11 +319,11 @@ export function MobileControls() {
                 style={isLandscapeMobile ? {
                     right: 'calc(env(safe-area-inset-right, 0px) + 1rem)',
                     top: 'calc(env(safe-area-inset-top, 0px) + 50px)',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', zIndex: 200,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', zIndex: Z.controls,
                 } : {
                     right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
                     bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8rem)',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', zIndex: 200,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', zIndex: Z.controls,
                 }}
             >
                 <button

@@ -14,6 +14,7 @@
  * all timings preserved exactly.
  */
 import { useState, useEffect, useRef } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -496,7 +497,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                zIndex: 99999,
+                zIndex: Z.critical,
                 opacity: isVisible ? 1 : 0,
                 transition: 'opacity 0.5s ease-out',
                 padding: '20px'

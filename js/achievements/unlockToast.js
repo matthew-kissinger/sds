@@ -23,12 +23,18 @@
 
 import { ACHIEVEMENTS } from './definitions.js';
 import { onUnlock } from './engine.js';
+import { enqueueToast } from '../ui/toastHub.js';
 
 /** Toast lifetime before self-dismissal. */
 export const TOAST_DURATION_MS = 6000;
 
-/** Stable id for the stacking container (one per document). */
+/** Stable id for the stacking container (one per document).
+ * Cycle 87 Phase 5: the bespoke container is gone (the shared top rail,
+ * js/ui/overlayRail.js, generalized it); the id remains as the per-unlock
+ * toast id prefix. */
 export const TOAST_CONTAINER_ID = 'achievement-toasts';
+
+let toastSeq = 0;
 
 let installed = false;
 
@@ -82,99 +88,67 @@ export function showAchievementToastForId(id) {
         .catch(() => {});
 }
 
-/** The shared stacking container, created on first use. */
-function ensureContainer() {
-    let container = document.getElementById(TOAST_CONTAINER_ID);
-    if (container) return container;
-    container = document.createElement('div');
-    container.id = TOAST_CONTAINER_ID;
-    Object.assign(container.style, {
-        position: 'fixed',
-        top: 'calc(16px + env(safe-area-inset-top, 0px))',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: '30',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '8px',
-        pointerEvents: 'none',
-    });
-    document.body.appendChild(container);
-    return container;
-}
-
 /**
- * Mount one toast with pre-resolved strings. Self-dismisses after
- * `durationMs` (plus a 300ms fade); never intercepts input.
+ * Enqueue one toast with pre-resolved strings into the shared top rail.
+ * Self-dismisses after `durationMs`; never intercepts input. Achievements
+ * are the one legitimate in-game toast, so they do NOT suppress during
+ * gameplay; multiple unlocks from one event queue and stack per the hub's
+ * max-visible policy.
  *
  * @param {string} title Localized "Achievement unlocked" framing.
  * @param {string} name  Localized achievement name.
  * @param {object} [opts]
  * @param {number} [opts.durationMs]
- * @returns {HTMLElement|null} The toast element (null without a DOM).
+ * @param {object} [opts.hubDeps] Injectable toastHub deps (tests).
+ * @returns {{ dismiss: () => void } | null} Hub handle (null without a DOM).
  */
-export function mountAchievementToast(title, name, { durationMs = TOAST_DURATION_MS } = {}) {
+export function mountAchievementToast(title, name, { durationMs = TOAST_DURATION_MS, hubDeps = {} } = {}) {
     if (typeof document === 'undefined') return null;
-    const container = ensureContainer();
 
-    const root = document.createElement('div');
-    root.setAttribute('role', 'status');
-    root.setAttribute('aria-live', 'polite');
-    Object.assign(root.style, {
-        maxWidth: 'min(300px, calc(100vw - 32px))',
-        padding: '8px 14px',
-        borderRadius: '10px',
-        background: 'color-mix(in srgb, var(--color-cream, #f6f1e7) 94%, transparent)',
-        border: '1px solid var(--color-glass-warm-border, rgba(43,38,32,0.18))',
-        boxShadow: '0 8px 22px rgba(43,38,32,0.22)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        color: 'var(--color-ink, #2b2620)',
-        textAlign: 'center',
-        pointerEvents: 'none',
-        opacity: '0',
-        transition: 'opacity 220ms var(--ease-pastoral, ease-out)',
-    });
+    return enqueueToast({
+        id: `${TOAST_CONTAINER_ID}-${toastSeq++}`,
+        durationMs,
+        suppressDuringGameplay: false,
+        mount: (rowEl) => {
+            const doc = rowEl.ownerDocument;
+            const root = doc.createElement('div');
+            root.setAttribute('role', 'status');
+            root.setAttribute('aria-live', 'polite');
+            Object.assign(root.style, {
+                maxWidth: 'min(300px, calc(100vw - 32px))',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                background: 'color-mix(in srgb, var(--color-cream, #f6f1e7) 94%, transparent)',
+                border: '1px solid var(--color-glass-warm-border, rgba(43,38,32,0.18))',
+                boxShadow: '0 8px 22px rgba(43,38,32,0.22)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                color: 'var(--color-ink, #2b2620)',
+                textAlign: 'center',
+                pointerEvents: 'none',
+            });
 
-    const titleEl = document.createElement('div');
-    titleEl.textContent = title;
-    Object.assign(titleEl.style, {
-        fontSize: '10px',
-        fontWeight: '600',
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'var(--color-ink-soft, rgba(43,38,32,0.72))',
-        lineHeight: '1.3',
-    });
-    const nameEl = document.createElement('div');
-    nameEl.textContent = name;
-    Object.assign(nameEl.style, {
-        marginTop: '2px',
-        fontFamily: 'var(--font-display)',
-        fontSize: '14px',
-        fontWeight: '600',
-        lineHeight: '1.25',
-    });
-    root.append(titleEl, nameEl);
-    container.appendChild(root);
-
-    let removed = false;
-    const dismiss = () => {
-        if (removed) return;
-        removed = true;
-        root.style.opacity = '0';
-        setTimeout(() => {
-            root.remove();
-            if (!container.childElementCount) container.remove();
-        }, 300);
-    };
-    setTimeout(dismiss, durationMs);
-
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => { root.style.opacity = '1'; });
-    } else {
-        root.style.opacity = '1';
-    }
-    return root;
+            const titleEl = doc.createElement('div');
+            titleEl.textContent = title;
+            Object.assign(titleEl.style, {
+                fontSize: '10px',
+                fontWeight: '600',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--color-ink-soft, rgba(43,38,32,0.72))',
+                lineHeight: '1.3',
+            });
+            const nameEl = doc.createElement('div');
+            nameEl.textContent = name;
+            Object.assign(nameEl.style, {
+                marginTop: '2px',
+                fontFamily: 'var(--font-display)',
+                fontSize: '14px',
+                fontWeight: '600',
+                lineHeight: '1.25',
+            });
+            root.append(titleEl, nameEl);
+            rowEl.appendChild(root);
+        },
+    }, hubDeps);
 }

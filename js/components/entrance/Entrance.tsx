@@ -13,6 +13,7 @@
  * play route to multiplayer / sandbox / 2-player).
  */
 import { useState, useEffect, useRef, type CSSProperties } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { pastoral, alpha } from '../ui/tokens';
 import { useMenuNavigation } from '../hooks/useMenuNavigation';
 import { WorldImage, DogAvatar } from './sceneComponents';
@@ -77,9 +78,9 @@ function CornerNav({ nav }: { nav: EntranceNav }) {
       <button style={btn} title="About this project" aria-label="About this project" aria-expanded={infoOpen} onClick={() => setInfoOpen((o) => !o)}><Icon name="info" size={18} /></button>
       {infoOpen && (
         <>
-          <div onClick={() => setInfoOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+          <div onClick={() => setInfoOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: Z.panel }} />
           <div style={{
-            position: 'absolute', top: 48, right: 0, minWidth: 168, padding: 6, zIndex: 41,
+            position: 'absolute', top: 48, right: 0, minWidth: 168, padding: 6, zIndex: Z.panel + 1,
             background: alpha(pastoral.cream, 92), border: `1px solid ${pastoral.glassWarmBorder}`,
             borderRadius: 14, boxShadow: '0 10px 30px rgba(43,38,32,0.24)',
             backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',

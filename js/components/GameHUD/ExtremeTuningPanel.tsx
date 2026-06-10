@@ -12,6 +12,7 @@
  * the same live gameState.params write, the same reset + compact mode.
  */
 import { useMemo, useState, useEffect, type CSSProperties } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { Panel } from '../ui/Panel';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
@@ -137,7 +138,7 @@ export function ExtremeTuningPanel({ isVisible, onClose, isCompact = false }: Ex
         position: 'absolute',
         top: isCompact ? '0.5rem' : '1rem',
         right: isCompact ? '0.5rem' : '1rem',
-        zIndex: 1500,
+        zIndex: Z.panel,
         width: isCompact ? '17rem' : '21rem',
         maxHeight: '80vh',
         overflowY: 'auto',

@@ -15,6 +15,7 @@
  * - Multiplayer/ - Multiplayer UI (Lobby, Leaderboard, Scoreboard)
  */
 import React, { createElement, useState, useEffect, useCallback, Fragment, Component } from 'react';
+import { Z } from '../ui/zIndex.js';
 import { createRoot } from 'react-dom/client';
 
 // Initialize i18n before any components load
@@ -179,7 +180,7 @@ export async function initReactUI() {
                             fontFamily: 'system-ui, sans-serif',
                             padding: '2rem',
                             textAlign: 'center',
-                            zIndex: 9999
+                            zIndex: Z.critical
                         }
                     }, [
                         createElement('h1', {
@@ -969,7 +970,7 @@ export async function initReactUI() {
                         position: 'fixed',
                         right: '8px',
                         bottom: isMobilePlatform ? 'max(env(safe-area-inset-bottom, 0px), 4px)' : '8px',
-                        zIndex: 12,
+                        zIndex: Z.hudMeta,
                         pointerEvents: 'auto',
                         maxWidth: isMobilePlatform ? '56vw' : '420px',
                         padding: '3px 6px',
@@ -1069,7 +1070,7 @@ export async function initReactUI() {
                 createElement(AnimatePresence, { key: 'start-presence', mode: 'wait' },
                     !gameStarted && createElement(motion.div, {
                         key: 'start',
-                        style: { position: 'fixed', inset: 0, zIndex: 5 },
+                        style: { position: 'fixed', inset: 0, zIndex: Z.scene },
                         initial: false,
                         exit: { opacity: 0 },
                         transition: { duration: (reduce || revealHandoff) ? 0 : 0.45, ease: [0.25, 0.8, 0.35, 1] }

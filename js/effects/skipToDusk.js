@@ -15,6 +15,7 @@
  * by the day-loop runner's `tick`.
  */
 import * as THREE from 'three';
+import { Z } from '../ui/zIndex.js';
 
 const DUSK_T = 0.70;       // the herd-back crunch the skip lands on
 const DURATION = 2.6;      // seconds of cutscene
@@ -45,7 +46,7 @@ export function createSkipToDusk(game) {
     btn.textContent = isTouch ? 'SKIP TO DUSK' : 'SKIP TO DUSK  ·  F';
     btn.style.cssText = [
         'position:fixed', 'top:' + top, 'left:50%', 'transform:translateX(-50%)',
-        'z-index:1201', 'pointer-events:auto', 'cursor:pointer', 'display:none',
+        'z-index:' + (Z.chips + 1), 'pointer-events:auto', 'cursor:pointer', 'display:none',
         'font:600 11px/1 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif',
         'letter-spacing:1.2px', 'color:#f3ead3', 'background:rgba(38,30,22,0.62)',
         'padding:7px 13px', 'border:1px solid rgba(243,234,211,0.3)', 'border-radius:999px',

@@ -24,6 +24,7 @@
  * Cycle 48 P1: converted to JSX .tsx. No hex; behavior-identical.
  */
 import type { CSSProperties, ReactNode } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { useResponsive } from '../hooks/usePlatform.js';
 
 function asChildren(value: ReactNode): ReactNode[] {
@@ -69,7 +70,7 @@ export function HudLayout({
         flexDirection: 'column',
         alignItems: 'flex-start',
         gap: stackGap,
-        zIndex: 20,
+        zIndex: Z.hud,
         pointerEvents: 'none',
     };
 
@@ -82,7 +83,7 @@ export function HudLayout({
         flexDirection: 'column',
         alignItems: 'center',
         gap: stackGap,
-        zIndex: 20,
+        zIndex: Z.hud,
         pointerEvents: 'none',
         maxWidth: '92vw',
     };
@@ -95,7 +96,7 @@ export function HudLayout({
         flexDirection: 'column',
         alignItems: 'flex-end',
         gap: stackGap,
-        zIndex: 20,
+        zIndex: Z.hud,
         pointerEvents: 'none',
     };
 
@@ -108,7 +109,7 @@ export function HudLayout({
         flexDirection: 'column',
         alignItems: 'center',
         gap: stackGap,
-        zIndex: 30,
+        zIndex: Z.hudBottom,
         pointerEvents: 'none',
         maxWidth: '92vw',
     };

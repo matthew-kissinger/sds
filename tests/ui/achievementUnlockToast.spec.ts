@@ -19,11 +19,15 @@ import {
     installUnlockToast,
     mountAchievementToast,
     TOAST_DURATION_MS,
-    TOAST_CONTAINER_ID,
 } from '../../js/achievements/unlockToast.js';
 import { recordEvent, _resetForTests } from '../../js/achievements/engine.js';
+import { _resetToastHubForTests } from '../../js/ui/toastHub.js';
+import { TOP_RAIL_ID } from '../../js/ui/overlayRail.js';
 
 let uninstall: (() => void) | null = null;
+
+const railToasts = () =>
+    Array.from(document.querySelectorAll(`#${TOP_RAIL_ID} [role="status"]`)) as HTMLElement[];
 
 beforeEach(() => {
     localStorage.clear();
@@ -34,48 +38,48 @@ afterEach(() => {
     uninstall?.();
     uninstall = null;
     _resetForTests();
+    _resetToastHubForTests();
     localStorage.clear();
-    document.getElementById(TOAST_CONTAINER_ID)?.remove();
+    document.getElementById(TOP_RAIL_ID)?.remove();
     vi.useRealTimers();
 });
 
 describe('mountAchievementToast', () => {
-    it('mounts a polite, non-blocking toast', () => {
-        const el = mountAchievementToast('Achievement unlocked', 'First Pen');
+    it('mounts a polite, non-blocking toast into the shared top rail', () => {
+        const handle = mountAchievementToast('Achievement unlocked', 'First Pen');
+        expect(handle).toBeTruthy();
+        const [el] = railToasts();
         expect(el).toBeTruthy();
-        expect(el!.getAttribute('role')).toBe('status');
-        expect(el!.getAttribute('aria-live')).toBe('polite');
-        expect(el!.style.pointerEvents).toBe('none');
-        expect(el!.textContent).toContain('Achievement unlocked');
-        expect(el!.textContent).toContain('First Pen');
-        const container = document.getElementById(TOAST_CONTAINER_ID)!;
-        expect(container.style.pointerEvents).toBe('none');
-        expect(container.contains(el)).toBe(true);
+        expect(el.getAttribute('role')).toBe('status');
+        expect(el.getAttribute('aria-live')).toBe('polite');
+        expect(el.style.pointerEvents).toBe('none');
+        expect(el.textContent).toContain('Achievement unlocked');
+        expect(el.textContent).toContain('First Pen');
+        const rail = document.getElementById(TOP_RAIL_ID)!;
+        expect(rail.style.pointerEvents).toBe('none');
     });
 
     it('self-dismisses after TOAST_DURATION_MS (fake timers)', () => {
         vi.useFakeTimers();
-        const el = mountAchievementToast('Achievement unlocked', 'First Pen')!;
-        expect(document.body.contains(el)).toBe(true);
+        mountAchievementToast('Achievement unlocked', 'First Pen');
+        expect(railToasts()).toHaveLength(1);
 
         // Just before the deadline it is still mounted.
         vi.advanceTimersByTime(TOAST_DURATION_MS - 1);
-        expect(document.body.contains(el)).toBe(true);
+        expect(railToasts()).toHaveLength(1);
 
-        // Deadline + the 300ms fade-out removes it, and the empty container too.
-        vi.advanceTimersByTime(1 + 300);
-        expect(document.body.contains(el)).toBe(false);
-        expect(document.getElementById(TOAST_CONTAINER_ID)).toBeNull();
+        // Deadline removes it (the hub unmounts the rail row).
+        vi.advanceTimersByTime(2);
+        expect(railToasts()).toHaveLength(0);
     });
 
     it('stacks multiple toasts instead of overwriting (multi-unlock events)', () => {
         vi.useFakeTimers();
         mountAchievementToast('Achievement unlocked', 'First Pen');
         mountAchievementToast('Achievement unlocked', 'Home Field Classic');
-        const container = document.getElementById(TOAST_CONTAINER_ID)!;
-        expect(container.childElementCount).toBe(2);
+        expect(railToasts()).toHaveLength(2);
         vi.advanceTimersByTime(TOAST_DURATION_MS + 300);
-        expect(document.getElementById(TOAST_CONTAINER_ID)).toBeNull();
+        expect(railToasts()).toHaveLength(0);
     });
 });
 
@@ -139,15 +143,15 @@ describe('end to end: engine unlock surfaces a toast', () => {
         // The default show path lazy-imports the (mocked) i18n module; wait
         // for both unlock toasts to land (the import settles asynchronously).
         // This event unlocks first-pen and pen-200-home-field, so the two
-        // toasts stack.
+        // toasts stack in the shared rail.
         await vi.waitFor(() => {
-            expect(document.getElementById(TOAST_CONTAINER_ID)?.childElementCount).toBeGreaterThanOrEqual(2);
+            expect(railToasts().length).toBeGreaterThanOrEqual(2);
         });
-        const container = document.getElementById(TOAST_CONTAINER_ID);
-        expect(container).toBeTruthy();
-        expect(container!.textContent).toContain('Achievement unlocked');
-        expect(container!.textContent).toContain('First Pen');
-        expect(container!.textContent).toContain('Home Field Classic');
+        const rail = document.getElementById(TOP_RAIL_ID);
+        expect(rail).toBeTruthy();
+        expect(rail!.textContent).toContain('Achievement unlocked');
+        expect(rail!.textContent).toContain('First Pen');
+        expect(rail!.textContent).toContain('Home Field Classic');
     });
 
     it('an already-unlocked achievement does not re-toast', async () => {
@@ -158,12 +162,12 @@ describe('end to end: engine unlock surfaces a toast', () => {
         };
         recordEvent('solo-complete', payload);
         await vi.waitFor(() => {
-            expect(document.getElementById(TOAST_CONTAINER_ID)?.childElementCount).toBe(2);
+            expect(railToasts()).toHaveLength(2);
         });
 
         recordEvent('solo-complete', payload);
         // Give any (wrong) re-toast time to land before asserting stability.
         await new Promise((resolve) => setTimeout(resolve, 20));
-        expect(document.getElementById(TOAST_CONTAINER_ID)!.childElementCount).toBe(2);
+        expect(railToasts()).toHaveLength(2);
     });
 });

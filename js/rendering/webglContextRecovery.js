@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
+import { Z } from '../ui/zIndex.js';
 /**
  * P4-CTX-RESTORE: graphics context-loss recovery.
  *
@@ -200,7 +201,7 @@ function mountOverlay(title, body) {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: '2000',
+        zIndex: String(Z.critical),
         maxWidth: 'min(320px, calc(100vw - 32px))',
         padding: '14px 18px',
         borderRadius: '10px',

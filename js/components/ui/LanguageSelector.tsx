@@ -15,6 +15,7 @@
  * the previous LanguageSelector.js.
  */
 import { useState, useRef, useEffect, type CSSProperties, type MouseEvent } from 'react';
+import { Z } from '../../ui/zIndex.js';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES } from '../../i18n.js';
 import { useResponsive } from '../hooks/usePlatform.js';
@@ -125,7 +126,7 @@ export function LanguageSelector({ variant = 'icon', className = '' }: LanguageS
         };
 
         return (
-            <div ref={dropdownRef} style={{ position: 'relative', zIndex: 100 }} className={className}>
+            <div ref={dropdownRef} style={{ position: 'relative', zIndex: Z.modal }} className={className}>
                 <button
                     onClick={toggleOpen}
                     style={buttonStyle}
@@ -270,7 +271,7 @@ export function LanguageSelector({ variant = 'icon', className = '' }: LanguageS
                         borderRadius: '8px',
                         border: '1px solid rgba(255, 255, 255, 0.15)',
                         boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
-                        zIndex: 50,
+                        zIndex: Z.panel,
                         animation: 'fadeInDown 0.2s ease-out',
                     }}
                 >

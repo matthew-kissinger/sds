@@ -22,6 +22,8 @@ import {
     installSwUpdateToast,
     mountSwUpdateToast,
 } from '../../js/boot/swUpdateToast.js';
+import { _resetToastHubForTests } from '../../js/ui/toastHub.js';
+import { TOP_RAIL_ID } from '../../js/ui/overlayRail.js';
 
 type Listener = () => void;
 
@@ -55,8 +57,11 @@ function install(deps: Parameters<typeof installSwUpdateToast>[0]) {
 
 afterEach(() => {
     // installSwUpdateToast has a module-level idempotence guard; uninstall
-    // between tests so each spec gets a fresh install.
+    // between tests so each spec gets a fresh install. The toast hub holds
+    // module state (queue/visible/rail) - reset it too.
     while (uninstalls.length) uninstalls.pop()!();
+    _resetToastHubForTests();
+    document.getElementById(TOP_RAIL_ID)?.remove();
     document.getElementById(SW_UPDATE_TOAST_ID)?.remove();
 });
 
@@ -121,14 +126,16 @@ describe('installSwUpdateToast', () => {
 });
 
 describe('mountSwUpdateToast', () => {
-    it('mounts a persistent toast with the body text and a Refresh button', () => {
+    it('mounts a persistent toast into the shared top rail with body text and a Refresh button', () => {
         vi.useFakeTimers();
         try {
-            const root = mountSwUpdateToast('A new version is ready.', 'Refresh', {
+            const handle = mountSwUpdateToast('A new version is ready.', 'Refresh', {
                 reload: vi.fn(),
             });
-            expect(root).not.toBeNull();
+            expect(handle).not.toBeNull();
             const el = document.getElementById(SW_UPDATE_TOAST_ID)!;
+            // Cycle 87 Phase 5: placement is owned by the shared top rail.
+            expect(el.closest(`#${TOP_RAIL_ID}`)).not.toBeNull();
             expect(el.textContent).toContain('A new version is ready.');
             const button = el.querySelector('button')!;
             expect(button.textContent).toBe('Refresh');
@@ -152,7 +159,7 @@ describe('mountSwUpdateToast', () => {
         expect(reload).toHaveBeenCalledTimes(1);
     });
 
-    it('dedupes: a second mount while one is visible returns null', () => {
+    it('dedupes: a second mount while one is live mounts nothing new', () => {
         const first = mountSwUpdateToast('A new version is ready.', 'Refresh', {
             reload: vi.fn(),
         });
@@ -160,8 +167,27 @@ describe('mountSwUpdateToast', () => {
             reload: vi.fn(),
         });
         expect(first).not.toBeNull();
-        expect(second).toBeNull();
+        expect(second).not.toBeNull(); // hub returns a dismiss handle for the live id
         expect(document.querySelectorAll(`#${SW_UPDATE_TOAST_ID}`)).toHaveLength(1);
+    });
+
+    it('is suppressed during gameplay and flushes when the run ends', () => {
+        vi.useFakeTimers();
+        try {
+            let active = true;
+            mountSwUpdateToast('A new version is ready.', 'Refresh', {
+                reload: vi.fn(),
+                hubDeps: { probe: () => active },
+            });
+            expect(document.getElementById(SW_UPDATE_TOAST_ID)).toBeNull();
+            vi.advanceTimersByTime(1_000); // still playing - still queued
+            expect(document.getElementById(SW_UPDATE_TOAST_ID)).toBeNull();
+            active = false;
+            vi.advanceTimersByTime(300); // next suppression poll flushes
+            expect(document.getElementById(SW_UPDATE_TOAST_ID)).not.toBeNull();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });
 
