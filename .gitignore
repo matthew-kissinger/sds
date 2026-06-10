@@ -151,3 +151,7 @@ cycle*-validation/
 # Regenerable from tools/newsheepdogland-hero-final.mjs; only the encoded
 # assets/scenes/entrance/*.webp ship.
 hero-recapture/
+
+# Trailer capture output (frames, clips, assembled mp4). Regenerable from
+# tools/trailer/drone-ascent.mjs + assemble.mjs.
+tools/trailer/output/
