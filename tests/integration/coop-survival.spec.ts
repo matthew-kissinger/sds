@@ -7,9 +7,17 @@
 // to automate"). It exercises the real wire path end-to-end against a live local
 // worker: REST register (mint) -> create a survival room -> join -> two WS
 // upgrades with admission tickets -> host startGame -> both clients receive the
-// DO-authoritative `gameStateUpdate` snapshots carrying the survival block, and
-// (via the env-gated __testAdvanceSurvival seam) both see the wolves the DO
-// spawns at nightfall. The DO is authoritative; clients render from the snapshot.
+// DO-authoritative game frames carrying the survival block, and (via the
+// env-gated __testAdvanceSurvival seam) both see the wolves the DO spawns at
+// nightfall. The DO is authoritative; clients render from the snapshot.
+//
+// Upkeep A1 (dossier F5): the clients join as v3, so the DO sends them the
+// keyframe/delta cadence - a full `gameStateUpdate` only ~1Hz with
+// `gameStateDelta` frames in between. TestClient now mirrors the
+// NetworkManager reconstruction, so this spec observes state through the
+// reconstructed `.snapshots` stream at the broadcast cadence instead of
+// sampling only the 1Hz keyframes. The REST + WS handshake helpers moved to
+// helpers/liveWorker.ts (shared with mixed-cohort.spec.ts).
 //
 // Gated OFF by default so `npm test` stays green with no worker running. To run
 // (verified recipe, Cycle 68 P3):
@@ -23,13 +31,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 
-import { TestClient } from "./helpers/wsClient";
+import { createSurvivalRoom, joinRoom, register, wsClient } from "./helpers/liveWorker";
+import type { TestClient } from "./helpers/wsClient";
 import { PROTOCOL_VERSION } from "../../shared/protocol.js";
 import { newsheepdogland } from "../../shared/scenes/newsheepdogland.js";
 
 const RUN_LIVE = process.env.COOP_SURVIVAL_LIVE === "1";
-const HTTP_BASE = process.env.INTEGRATION_WORKER_URL ?? "http://localhost:8787";
-const WS_BASE = process.env.INTEGRATION_WORKER_WS ?? HTTP_BASE.replace(/^http/, "ws");
 const ARTIFACT_DIR = "cycle68-validation/coop";
 const NIGHT_PROBE_T = 0.85;
 
@@ -41,76 +48,18 @@ function secondsToNightProbe(): number {
   return Math.ceil(delta * secondsPerDay);
 }
 
-interface RegisterResult { token: string; persistentId: string; }
-interface RoomResult { roomCode: string; playerId: string; wsTicket: string; }
-
-async function register(displayName: string): Promise<RegisterResult> {
-  // Omit persistent_id so the worker mints a fresh server-side identity (P-SEC-1).
-  const res = await fetch(`${HTTP_BASE}/api/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ display_name: displayName, name_type: "custom" }),
-  });
-  if (!res.ok) throw new Error(`register failed: ${res.status} ${await res.text()}`);
-  const data = (await res.json()) as any;
-  const persistentId = data.playerProfile?.persistentId ?? data.playerProfile?.persistent_id;
-  if (!data.token) throw new Error("register returned no token");
-  return { token: data.token, persistentId };
-}
-
-async function createSurvivalRoom(token: string, playerName: string, dogType: string): Promise<RoomResult> {
-  const res = await fetch(`${HTTP_BASE}/api/rooms`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      token,
-      playerName,
-      dogType,
-      protocolVersion: PROTOCOL_VERSION,
-      roomSettings: {
-        maxPlayers: 4,
-        isPublic: true,
-        name: `${playerName}'s survival`,
-        gameMode: "survival",
-        sceneId: "newsheepdogland",
-      },
-    }),
-  });
-  if (!res.ok) throw new Error(`createRoom failed: ${res.status} ${await res.text()}`);
-  const data = (await res.json()) as any;
-  return { roomCode: data.roomCode, playerId: data.playerId, wsTicket: data.wsTicket };
-}
-
-async function joinRoom(token: string, roomCode: string, playerName: string, dogType: string): Promise<RoomResult> {
-  const res = await fetch(`${HTTP_BASE}/api/rooms/${roomCode}/join`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, playerName, dogType, protocolVersion: PROTOCOL_VERSION }),
-  });
-  if (!res.ok) throw new Error(`joinRoom failed: ${res.status} ${await res.text()}`);
-  const data = (await res.json()) as any;
-  return { roomCode: data.roomCode, playerId: data.playerId, wsTicket: data.wsTicket };
-}
-
-function wsClient(roomCode: string, r: RoomResult, name: string, dogType: string): TestClient {
-  // The WS upgrade authenticates on playerId + ticket only (P-SEC-2); identity
-  // was stored by the REST join, so don't let TestClient append name/dogType.
-  const url = `${WS_BASE}/r/${roomCode}/ws?playerId=${encodeURIComponent(r.playerId)}&ticket=${encodeURIComponent(r.wsTicket)}`;
-  return new TestClient(url, { playerId: r.playerId, playerName: name, dogType }, { appendIdentityQuery: false });
-}
-
-/** Wait for a gameStateUpdate snapshot whose `predicate` holds, polling frames. */
+/**
+ * Wait for a reconstructed snapshot (keyframe OR applied delta) whose
+ * `predicate` holds. Upkeep A1: observing `.snapshots` instead of raw
+ * `gameStateUpdate` frames keeps the spec at the broadcast cadence under the
+ * v3 keyframe/delta protocol.
+ */
 async function waitForState(client: TestClient, predicate: (s: any) => boolean, budgetMs = 8000): Promise<any> {
-  const deadline = Date.now() + budgetMs;
-  // Scan frames already buffered first, then await new ones.
-  for (const m of client.allOfType("gameStateUpdate")) {
-    if (predicate(m)) return m;
+  // Scan snapshots already reconstructed first, then await new ones.
+  for (const s of client.snapshots) {
+    if (predicate(s)) return s;
   }
-  while (Date.now() < deadline) {
-    const msg = await client.waitFor("gameStateUpdate", Math.max(250, deadline - Date.now()));
-    if (predicate(msg)) return msg;
-  }
-  throw new Error("waitForState: predicate never satisfied within budget");
+  return client.waitForSnapshot(predicate, budgetMs);
 }
 
 describe.skipIf(!RUN_LIVE)("Cycle 68 P3: two-client live co-op survival", () => {
@@ -164,6 +113,18 @@ describe.skipIf(!RUN_LIVE)("Cycle 68 P3: two-client live co-op survival", () => 
       artifact.wolfCountA = wolvesA.wolves.length;
       artifact.wolfCountB = wolvesB.wolves.length;
       artifact.nightPhase = wolvesA.survival.phase;
+
+      // Upkeep A1 acceptance: a v3 join observes game frames at the broadcast
+      // cadence, not the ~1Hz keyframe cadence. The raw wire stream carries
+      // gameStateDelta frames between keyframes, and the reconstructed
+      // snapshot stream therefore outnumbers the keyframes.
+      const keyframesA = clientA.allOfType("gameStateUpdate").length;
+      const deltasA = clientA.allOfType("gameStateDelta").length;
+      expect(deltasA).toBeGreaterThan(0);
+      expect(clientA.snapshots.length).toBeGreaterThan(keyframesA);
+      artifact.keyframesA = keyframesA;
+      artifact.deltaFramesA = deltasA;
+      artifact.snapshotsA = clientA.snapshots.length;
       artifact.ok = true;
     } finally {
       await Promise.all([clientA.close(), clientB.close()]);
