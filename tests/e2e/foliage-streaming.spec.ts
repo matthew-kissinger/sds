@@ -48,10 +48,24 @@ test.describe('Newsheepdogland foliage streaming', () => {
     await play.dispatchEvent('click');
     await expect(page.locator('#canvas-container canvas')).toBeAttached({ timeout: 90_000 });
 
-    // Streaming arms when the scene body completes and starts ~6.5s later;
-    // waves run in idle slots. CI runners take most of the window for a
-    // single wave (software-GPU compileAsync), so assert progress, not
-    // completion.
+    // Cycle 88 Phase 2: the impostor cold coverage builds inside the
+    // scene-load transition (the canvas attaches earlier, while the swap
+    // overlay is still up), so poll until the cold pass reports complete -
+    // the first playable frame carries island-wide impostor coverage.
+    await expect(async () => {
+      const cold = await page.evaluate(() => (window as any).__sdsFoliageColdCoverage ?? null);
+      expect(cold).not.toBeNull();
+      expect(cold.error).toBeNull();
+      expect(cold.aborted).toBe(false);
+      expect(cold.completedAt).toBeGreaterThan(0);
+      expect(cold.trees).toBeGreaterThan(500);
+      expect(cold.meshes).toBeGreaterThan(0);
+    }).toPass({ timeout: 120_000 });
+
+    // Streaming arms when the scene body completes and starts on the
+    // QualityGovernor warmup signal (10s fallback); waves run in idle slots.
+    // CI runners take most of the window for a single wave (software-GPU
+    // compileAsync), so assert progress, not completion.
     await expect(async () => {
       const diag = await page.evaluate(() => (window as any).__sdsFoliageStreaming ?? null);
       expect(diag).not.toBeNull();
@@ -65,8 +79,8 @@ test.describe('Newsheepdogland foliage streaming', () => {
       const w = window as any;
       const game = w.__sds?.gameInstanceRef;
       const scene = game?.currentScene;
-      const cold = scene?.terrain?.zones ?? {};
-      const coldRects = Object.entries(cold)
+      const coldZones = scene?.terrain?.zones ?? {};
+      const coldRects = Object.entries(coldZones)
         .filter(([name]) => name !== 'playArea')
         .map(([, r]) => r as { minX: number; maxX: number; minZ: number; maxZ: number });
       const trees = game?.terrainBuilder?.treeInstances ?? [];
@@ -82,6 +96,11 @@ test.describe('Newsheepdogland foliage streaming', () => {
     expect(result.diag.totalStreamedTrees).toBeGreaterThan(0);
     expect(result.treesBeyondCold).toBeGreaterThan(0);
     expect(result.totalTrees).toBeGreaterThan(result.treesBeyondCold);
+    // Cycle 88 Phase 3: landed waves reuse the cold scatter cache and retire
+    // their zone's impostor instances.
+    for (const wave of result.diag.perWave) {
+      expect(wave.fromCache).toBe(true);
+    }
   });
 
   test('@local-only completes all waves island-wide with no quality demotion', async ({ page, context, browserName }) => {
@@ -124,6 +143,7 @@ test.describe('Newsheepdogland foliage streaming', () => {
         !coldRects.some((r) => t.x >= r.minX && t.x <= r.maxX && t.z >= r.minZ && t.z <= r.maxZ));
       return {
         diag: w.__sdsFoliageStreaming,
+        coldCoverage: w.__sdsFoliageColdCoverage ?? null,
         totalTrees: trees.length,
         treesBeyondCold: beyondCold.length,
         qualityIndex: game?.qualityGovernor?.getState?.()?.qualityIndex ?? null,
@@ -134,6 +154,14 @@ test.describe('Newsheepdogland foliage streaming', () => {
     expect(result.treesBeyondCold).toBeGreaterThan(500);
     expect(result.totalTrees).toBeGreaterThan(result.treesBeyondCold);
     expect(result.diag.grass?.built).toBe(true);
+    // Cycle 88: with every wave landed, every cold impostor instance has
+    // been retired - no double representation anywhere on the island.
+    expect(result.coldCoverage).not.toBeNull();
+    expect(result.coldCoverage.error).toBeNull();
+    expect(result.coldCoverage.completedAt).toBeGreaterThan(0);
+    const retired = result.diag.perWave.reduce(
+      (s: number, wave: { retiredImpostors?: number }) => s + (wave.retiredImpostors ?? 0), 0);
+    expect(retired).toBe(result.coldCoverage.trees);
     // missWindows is deliberately never asserted: it is a transient
     // in-flight counter (the step-down requires 2 consecutive misses).
     expect(result.qualityIndex).toBe(0);

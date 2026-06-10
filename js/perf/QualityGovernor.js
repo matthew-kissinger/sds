@@ -59,6 +59,11 @@ export class QualityGovernor {
         this.missWindows = 0;
         this.recoverWindows = 0;
         this.qualityIndex = 0;
+        // Cycle 88 Phase 4: one-shot warmup-complete signal. Consumers (the
+        // foliage streamer) subscribe instead of guessing the window with a
+        // fixed timer; fires on the first sample past warmupUntil.
+        this.warmupCompleted = false;
+        this._warmupListeners = [];
         // Cycle 87 Phase 1: the renderer is never demoted on frame budget.
         // fallbackReason stays null for the life of the session; the field
         // survives only so the quality-state shape consumers read is stable.
@@ -94,6 +99,7 @@ export class QualityGovernor {
             this.lastSampleAt = now;
             return this.state;
         }
+        if (!this.warmupCompleted) this._completeWarmup();
         // Discontinuity guard: a long gap since the previous sample (un-hide, a
         // modal, a debugger pause) yields one giant catch-up frame. Discard the
         // stale window instead of folding the spike into the percentile.
@@ -157,6 +163,26 @@ export class QualityGovernor {
 
     getState() {
         return { ...this.state };
+    }
+
+    /**
+     * Cycle 88 Phase 4: subscribe to the one-shot warmup-complete signal.
+     * Fires on the first frame sample past the warmup window; if the window
+     * already closed, the callback runs immediately (synchronously).
+     */
+    onWarmupComplete(cb) {
+        if (typeof cb !== 'function') return;
+        if (this.warmupCompleted) { cb(); return; }
+        this._warmupListeners.push(cb);
+    }
+
+    _completeWarmup() {
+        this.warmupCompleted = true;
+        const listeners = this._warmupListeners;
+        this._warmupListeners = [];
+        for (const cb of listeners) {
+            try { cb(); } catch (err) { console.warn('[QUALITY] warmup listener threw:', err); }
+        }
     }
 
     _budget() {

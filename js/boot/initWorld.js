@@ -207,6 +207,23 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             console.log(`[OBSTACLES] ${trees.length} trees, ${rocks.length} rocks (filtered from ${rockPositions.length})`);
         }
 
+        // Cycle 88 Phase 2: island-wide impostor cold coverage. Kicked off
+        // here (right after trees + rocks exist) so its chunked scatter and
+        // the atlas fetch interleave with the remaining await-bound stages;
+        // awaited at its own stage just before scene-body-complete so the
+        // first playable frame shows the whole island at low fidelity. Soft
+        // failure = today's bare-island cold path; never blocks on the
+        // network (texture binds whenever it lands).
+        let coldCoveragePromise = null;
+        if (game.currentScene?.terrain?.streamedZones) {
+            coldCoveragePromise = import('../world/foliageStreaming.js')
+                .then(({ buildColdFoliageCoverage }) => buildColdFoliageCoverage(game))
+                .catch((err) => {
+                    console.warn('[FOLIAGE] cold coverage failed (keeping the bare-island cold path):', err);
+                    return null;
+                });
+        }
+
         logStep('Adding mountains');
         await game.terrainBuilder.addMountains();
 
@@ -630,6 +647,16 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // Create optimized sheep flock (visible during start screen)
         logStep('Creating sheep flock');
         game.gameState.createSheepFlock(game.sceneManager.getScene());
+
+        // Cycle 88 Phase 2: settle the cold impostor coverage before the
+        // scene reads as complete. By now its chunked scatter has been
+        // interleaving with the stages above, so this await typically pays
+        // only the remainder; the stage mark makes the real cost visible in
+        // the load breakdown (hard stop #1 evidence).
+        if (coldCoveragePromise) {
+            logStep('Cold impostor coverage');
+            await coldCoveragePromise;
+        }
 
         logStep('Scene body complete');
         if (game._wolfPack?.init) {

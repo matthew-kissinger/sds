@@ -12,8 +12,9 @@
  * scene teardown (clearTrees/dispose) needs no new paths.
  *
  * Scheduling: armed from buildSceneBody (the wolf lazy-load pattern), starts
- * START_DELAY_MS after arming (covers the QualityGovernor warmup so streaming
- * never reads as a cold-load frame spike), then one requestIdleCallback per
+ * on the QualityGovernor warmup-complete signal (bounded by
+ * FALLBACK_START_DELAY_MS, so streaming never reads as a cold-load frame
+ * spike), then one requestIdleCallback per
  * wave with a macrotask yield between the scatter and the mesh build. The
  * whole pipeline aborts via the scene's AbortController (`game._sceneAbort`),
  * so an in-flight wave never builds into a disposed scene.
@@ -31,15 +32,21 @@ import { generateTrees } from '../../shared/TreePlacement.js';
 import { mulberry32 } from '../../shared/Random.js';
 import {
     buildAdditiveTreeMeshes,
+    buildColdImpostorMeshes,
     cullTreesForScene,
+    loadColdImpostorAtlas,
+    retireColdImpostorWave,
     toTreeInstancesByType,
 } from './TreePlacement.js';
 import { getSceneManager } from '../GameBridge.js';
 import { TIER_PRESETS } from '../HardwareTier.js';
 
-/** Delay from arming (scene body complete) to the first wave. Covers the
- * QualityGovernor 6s warmup window so wave cost never folds into it. */
-export const START_DELAY_MS = 6500;
+/** Cycle 88 Phase 4: arming is signal-based - the streamer starts when the
+ * QualityGovernor reports its warmup window closed (the fixed 6.5s timer it
+ * replaces existed only to outwait that window). This fallback timer bounds
+ * the wait so a missing governor (load failure, headless harness) can never
+ * stall streaming forever. */
+export const FALLBACK_START_DELAY_MS = 10_000;
 
 /** Cycle 87 Phase 4: zone rects larger than this split into quadrant
  * sub-waves (recursively, depth-capped) so a single scatter slice stays
@@ -154,6 +161,139 @@ export function scatterWave(builder, sceneDef, wave, existingTrees) {
 }
 
 /**
+ * Cycle 88 Phase 2: island-wide impostor cold coverage. Runs INSIDE the
+ * scene-load transition (Q1 decision): scatters every planned wave (one
+ * chunk per wave with macrotask yields so the CPU interleaves with the
+ * remaining await-bound build stages), caches the per-wave results for the
+ * streamer to reuse (scatter once, build per wave), and places at most
+ * tilesX-per-type static cross-billboard InstancedMeshes sourcing the
+ * pre-baked kiln albedo atlas - so the first playable frame shows the whole
+ * island's tree silhouette at low fidelity instead of a bare island.
+ *
+ * Sparse mode (low tier, Phase 4 / Q3): one generateTrees pass at horizon
+ * density over the whole streamed extent under its own salt - coverage
+ * without the full-density cache no wave will ever upgrade.
+ *
+ * Failure is soft by contract: any error leaves builder._foliageColdCoverage
+ * unset, so the streamer falls back to scattering its own waves exactly as
+ * Cycle 87 shipped (bare island, waves materialize). Never blocks
+ * first-interactive on the network: only the ~1KB sidecars are awaited
+ *(8s-bounded); the albedo textures bind whenever their fetch resolves and
+ * the meshes stay invisible until then.
+ *
+ * @param {object} game SheepDogSimulation instance.
+ * @param {{signal?: AbortSignal, tier?: string, sparse?: boolean,
+ *          loadAtlas?: (type: string) => Promise<object|null>}} [opts]
+ * @returns {Promise<object | null>} diag (also on window.__sdsFoliageColdCoverage), null when inert.
+ */
+export async function buildColdFoliageCoverage(game, opts = {}) {
+    const sceneDef = game?.currentScene;
+    const builder = game?.terrainBuilder;
+    if (!sceneDef?.terrain?.streamedZones || !builder) return null;
+    const signal = opts.signal ?? game._sceneAbort?.signal ?? null;
+    const tier = opts.tier ?? getSceneManager()?.getTier?.() ?? 'med';
+    const tierPreset = TIER_PRESETS[tier] ?? TIER_PRESETS.med;
+    const sparse = opts.sparse ?? ((tierPreset.foliageStreamWaves ?? Infinity) === 0);
+
+    const diag = {
+        sceneId: sceneDef.id,
+        tier,
+        mode: sparse ? 'sparse' : 'full',
+        plannedWaves: 0,
+        scatteredWaves: 0,
+        trees: 0,
+        meshes: 0,
+        scatterMs: 0,
+        atlasMs: 0,
+        buildMs: 0,
+        textureBoundAt: 0,
+        completedAt: 0,
+        aborted: false,
+        error: null,
+    };
+    if (typeof window !== 'undefined') window.__sdsFoliageColdCoverage = diag;
+
+    try {
+        const cache = new Map();
+        const seed = sceneDef?.terrain?.seed ?? 0;
+        if (sparse) {
+            const t0 = performance.now();
+            const extent = sceneDef.terrain.streamedZones.horizon
+                ?? Object.values(sceneDef.terrain.streamedZones).at(-1);
+            const rng = mulberry32((seed ^ fnv1a('foliage-cold:sparse')) >>> 0);
+            const flat = generateTrees(sceneDef, rng, {
+                zones: { horizon: extent, playArea: sceneDef?.terrain?.zones?.playArea },
+                excludeRects: coldExclusionRects(sceneDef),
+                existingTrees: builder.treeInstances || [],
+                rockPositions: builder.rockPositions,
+            });
+            cache.set('coldCoverage:sparse', cullTreesForScene(builder, flat));
+            diag.scatterMs += Math.round(performance.now() - t0);
+            diag.plannedWaves = 1;
+            diag.scatteredWaves = 1;
+        } else {
+            const waves = planFoliageWaves(sceneDef);
+            diag.plannedWaves = waves.length;
+            const existing = [...(builder.treeInstances || [])];
+            for (const wave of waves) {
+                if (signal?.aborted) { diag.aborted = true; return diag; }
+                const t0 = performance.now();
+                const streamed = scatterWave(builder, sceneDef, wave, existing);
+                diag.scatterMs += Math.round(performance.now() - t0);
+                cache.set(wave.name, streamed);
+                existing.push(...streamed);
+                diag.scatteredWaves += 1;
+                await yieldMacrotask();
+            }
+        }
+        const flatAll = [...cache.values()].flat();
+        diag.trees = flatAll.length;
+
+        const types = [...new Set(flatAll.map((t) => t.type))];
+        const loadAtlas = opts.loadAtlas ?? loadColdImpostorAtlas;
+        const tAtlas = performance.now();
+        const atlasByType = {};
+        await Promise.all(types.map(async (type) => {
+            atlasByType[type] = await loadAtlas(type);
+        }));
+        diag.atlasMs = Math.round(performance.now() - tAtlas);
+        if (signal?.aborted) { diag.aborted = true; return diag; }
+
+        const tBuild = performance.now();
+        const waveTrees = [...cache.entries()].map(([name, trees]) => ({ name, trees }));
+        const built = buildColdImpostorMeshes(builder, waveTrees, atlasByType);
+        diag.buildMs = Math.round(performance.now() - tBuild);
+        diag.meshes = built.meshes.length;
+
+        // Late-bind the albedo atlases: visibility follows the network, the
+        // scene build never does.
+        for (const type of types) {
+            atlasByType[type]?.texturePromise?.then((texture) => {
+                if (!texture || signal?.aborted) return;
+                const mat = built.materialsByType[type];
+                if (!mat) return;
+                mat.map = texture;
+                mat.needsUpdate = true;
+                for (const mesh of built.meshes) {
+                    if (mesh.userData.foliageColdImpostor?.type === type) mesh.visible = true;
+                }
+                diag.textureBoundAt = performance.now();
+            });
+        }
+
+        builder._foliageColdCoverage = { cache, ranges: built.ranges, diag };
+        diag.completedAt = performance.now();
+        console.log(`[FOLIAGE] cold impostor coverage: ${diag.trees} trees in ${diag.meshes} meshes `
+            + `(${diag.mode}, scatter ${diag.scatterMs}ms, build ${diag.buildMs}ms)`);
+        return diag;
+    } catch (err) {
+        diag.error = String(err?.message || err);
+        console.warn('[FOLIAGE] cold impostor coverage failed (keeping the bare-island cold path):', err);
+        return diag;
+    }
+}
+
+/**
  * Refresh the solo-sim obstacle bundle after a wave lands. Atomic reassign;
  * skipped in multiplayer (the Worker is authoritative there and never knows
  * about trees anyway - keeping MP client prediction's obstacle set identical
@@ -176,7 +316,10 @@ async function refreshObstacles(game) {
  * the scene body is complete. Inert when the scene declares no streamedZones.
  *
  * @param {object} game SheepDogSimulation instance.
- * @param {{signal?: AbortSignal, startDelayMs?: number}} [opts]
+ * @param {{signal?: AbortSignal, startDelayMs?: number, tier?: string,
+ *          qualityGovernor?: {onWarmupComplete: Function}}} [opts]
+ *   startDelayMs bypasses the warmup signal (tests); tier overrides the
+ *   SceneManager tier; qualityGovernor overrides game.qualityGovernor.
  * @returns {{planned: number, diag: object} | null} null when inert.
  */
 export function armFoliageStreaming(game, opts = {}) {
@@ -192,7 +335,7 @@ export function armFoliageStreaming(game, opts = {}) {
     const streamGrass = tierPreset.foliageStreamGrass !== false;
 
     const signal = opts.signal ?? game._sceneAbort?.signal ?? null;
-    const startDelayMs = opts.startDelayMs ?? START_DELAY_MS;
+    const startDelayMs = opts.startDelayMs ?? null;
 
     const diag = {
         sceneId: sceneDef.id,
@@ -217,11 +360,15 @@ export function armFoliageStreaming(game, opts = {}) {
                 if (signal?.aborted) { diag.aborted = true; return; }
 
                 const t0 = performance.now();
-                // Canopy spacing respects everything already placed: cold
-                // trees + every earlier wave (builder.treeInstances is the
-                // cumulative flat list).
+                // Cycle 88 Phase 3: the cold coverage pass already scattered
+                // every wave (same salts, same existing-tree order) - reuse
+                // its cache so the wave pays ~0 scatter. Without coverage
+                // (failed or absent) scatter live, exactly as Cycle 87 did:
+                // canopy spacing respects everything already placed (cold
+                // trees + every earlier wave via builder.treeInstances).
                 const existing = builder.treeInstances || [];
-                const streamed = scatterWave(builder, sceneDef, wave, existing);
+                const cached = builder._foliageColdCoverage?.cache?.get(wave.name) ?? null;
+                const streamed = cached ?? scatterWave(builder, sceneDef, wave, existing);
                 const scatterMs = Math.round(performance.now() - t0);
 
                 if (signal?.aborted) { diag.aborted = true; return; }
@@ -248,7 +395,12 @@ export function armFoliageStreaming(game, opts = {}) {
                 }
                 const buildMs = Math.round(performance.now() - t1);
 
-                diag.perWave.push({ name: wave.name, trees: streamed.length, meshes, scatterMs, buildMs });
+                // Cycle 88 Phase 3: the wave's LOD0 meshes are in the scene -
+                // retire the zone's cold impostor instances (zero-scale, no
+                // rebuild) so the two representations never double-render.
+                const retiredImpostors = retireColdImpostorWave(builder, wave.name);
+
+                diag.perWave.push({ name: wave.name, trees: streamed.length, meshes, scatterMs, buildMs, fromCache: !!cached, retiredImpostors });
                 diag.totalStreamedTrees += streamed.length;
                 diag.wavesDone += 1;
                 console.log(`[FOLIAGE] wave ${wave.name}: +${streamed.length} trees (${meshes} meshes, scatter ${scatterMs}ms, build ${buildMs}ms)`);
@@ -278,7 +430,25 @@ export function armFoliageStreaming(game, opts = {}) {
         }
     };
 
-    const timer = setTimeout(run, startDelayMs);
+    // Cycle 88 Phase 4: start on the QualityGovernor's warmup-complete
+    // signal (so wave cost never folds into the warmup window), bounded by
+    // the fallback timer. An explicit opts.startDelayMs (tests) bypasses the
+    // signal and keeps the pure-timer behavior.
+    let started = false;
+    let timer = null;
+    const begin = () => {
+        if (started || signal?.aborted) return;
+        started = true;
+        clearTimeout(timer);
+        run();
+    };
+    if (startDelayMs !== null) {
+        timer = setTimeout(begin, startDelayMs);
+    } else {
+        timer = setTimeout(begin, FALLBACK_START_DELAY_MS);
+        const governor = opts.qualityGovernor ?? game.qualityGovernor ?? null;
+        governor?.onWarmupComplete?.(begin);
+    }
     signal?.addEventListener?.('abort', () => {
         clearTimeout(timer);
         diag.aborted = true;

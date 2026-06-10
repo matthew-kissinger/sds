@@ -545,6 +545,248 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {})
 }
 
 /**
+ * Cycle 88 Phase 2: minimal kiln artifacts for the cold impostor coverage -
+ * sidecar JSON + albedo atlas only (~1.2MB per type vs ~3.6MB for the full
+ * relighting triple; the static cross-billboard never reads normal/depth).
+ * The sidecar await is bounded (8s) so a dead network can't stall the scene
+ * build; the texture rides an unawaited promise and binds whenever it lands.
+ * Cached per type across scene swaps, like the loadKilnImpostor cache.
+ *
+ * @param {string} treeType e.g. 'tree1'
+ * @returns {Promise<{sidecar: object, texturePromise: Promise<THREE.Texture|null>} | null>}
+ */
+const _coldImpostorAtlasCache = new Map();
+export async function loadColdImpostorAtlas(treeType) {
+    if (_coldImpostorAtlasCache.has(treeType)) return _coldImpostorAtlasCache.get(treeType);
+    const promise = (async () => {
+        try {
+            const base = await resolveImpostorBase(treeType);
+            const res = await fetch(`${base}.json`, { signal: AbortSignal.timeout(8000) });
+            if (!res.ok) throw new Error(`sidecar HTTP ${res.status}`);
+            const sidecar = await res.json();
+            const texturePromise = new Promise((resolve, reject) => {
+                new THREE.TextureLoader().load(`${base}.png`, resolve, undefined, reject);
+            }).then((texture) => {
+                texture.colorSpace = THREE.SRGBColorSpace;
+                // Match loadKilnImpostor: no mips (bilinear across 4x4 tile
+                // borders glints), keep aniso for foreshortened quads.
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                texture.anisotropy = 8;
+                texture.wrapS = THREE.ClampToEdgeWrapping;
+                texture.wrapT = THREE.ClampToEdgeWrapping;
+                texture.generateMipmaps = false;
+                texture.needsUpdate = true;
+                return texture;
+            }).catch((err) => {
+                console.warn(`[FOLIAGE] cold impostor albedo load failed for ${treeType}:`, err);
+                return null;
+            });
+            return { sidecar, texturePromise };
+        } catch (err) {
+            console.warn(`[FOLIAGE] cold impostor sidecar load failed for ${treeType}:`, err);
+            return null;
+        }
+    })();
+    _coldImpostorAtlasCache.set(treeType, promise);
+    return promise;
+}
+
+/**
+ * Cycle 88 Phase 2: 3-quad cross-billboard (the durable far-tree pattern)
+ * with UVs into ONE tile of the kiln albedo atlas: the given azimuth column
+ * at the lowest elevation row (the row gameplay cameras blend toward). Quad
+ * spans the bake frustum (boundsRadius x 1.02, same math as
+ * createKilnImpostorGeometry) centered on the sidecar's Y center, so the
+ * tile content maps 1:1 like the camera-facing kiln quad does. UVs are
+ * inset half a texel so bilinear sampling never crosses into a neighbour
+ * tile (different view = hue glints).
+ *
+ * @param {object} sidecar Kiln sidecar JSON.
+ * @param {number} azTileIndex 0..tilesX-1 azimuth column.
+ * @returns {THREE.BufferGeometry}
+ */
+export function createColdImpostorGeometry(sidecar, azTileIndex) {
+    const dx = sidecar.bbox.max[0] - sidecar.bbox.min[0];
+    const dy = sidecar.bbox.max[1] - sidecar.bbox.min[1];
+    const dz = sidecar.bbox.max[2] - sidecar.bbox.min[2];
+    const frustumHalf = Math.sqrt(dx * dx + dy * dy + dz * dz) * 0.5 * 1.02;
+    const yCenter = sidecar.yOffset ?? (sidecar.bbox.min[1] + sidecar.bbox.max[1]) * 0.5;
+
+    const tilesX = sidecar.tilesX ?? 4;
+    const tilesY = sidecar.tilesY ?? 4;
+    const elRow = tilesY - 1; // lowest elevation row
+    const insetU = 0.5 / (sidecar.atlasWidth ?? tilesX * 512);
+    const insetV = 0.5 / (sidecar.atlasHeight ?? tilesY * 512);
+    const u0 = azTileIndex / tilesX + insetU;
+    const u1 = (azTileIndex + 1) / tilesX - insetU;
+    const v0 = (tilesY - 1 - elRow) / tilesY + insetV;
+    const v1 = (tilesY - elRow) / tilesY - insetV;
+
+    const yBottom = yCenter - frustumHalf;
+    const yTop = yCenter + frustumHalf;
+    const positions = [];
+    const uvs = [];
+    for (let q = 0; q < 3; q++) {
+        const angle = (q * Math.PI) / 3;
+        const ax = Math.cos(angle) * frustumHalf;
+        const az = Math.sin(angle) * frustumHalf;
+        positions.push(
+            -ax, yBottom, -az, ax, yBottom, az, ax, yTop, az,
+            -ax, yBottom, -az, ax, yTop, az, -ax, yTop, -az
+        );
+        uvs.push(
+            u0, v0, u1, v0, u1, v1,
+            u0, v0, u1, v1, u0, v1
+        );
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+    return geo;
+}
+
+/**
+ * Cycle 88 Phase 2: build the static impostor coverage meshes for the cold
+ * path. Instances batch per (treeType, azimuth tile) - at most tilesX small
+ * InstancedMeshes per type, 18 verts per instance - appended wave-by-wave so
+ * every (batch, wave) pair is one contiguous index range; the returned
+ * `ranges` map lets a streamed wave retire its zone's impostors by writing
+ * zero-scale matrices (Q2 decision) without any rebuild.
+ *
+ * Materials start with `map: null` and meshes invisible; the caller binds
+ * the albedo texture whenever its fetch resolves, so a slow network delays
+ * impostor VISIBILITY, never the scene build. Meshes ride `builder.trees`
+ * (clearTrees removes + disposes owned geometry/material; map is nulled
+ * there so the cached atlas texture survives the swap) and the materials
+ * ride `builder._impostorMaterials` so setImpostorTint's cross-billboard
+ * fallback path tints them with time-of-day.
+ *
+ * @param {object} builder TerrainBuilder instance.
+ * @param {Array<{name: string, trees: Array}>} waves scene-culled flat trees per wave.
+ * @param {Record<string, {sidecar: object} | null>} atlasByType
+ * @returns {{meshes: THREE.InstancedMesh[], materialsByType: Record<string, THREE.Material>,
+ *            ranges: Map<string, Array<{mesh: THREE.InstancedMesh, start: number, count: number}>>,
+ *            totalInstances: number}}
+ */
+export function buildColdImpostorMeshes(builder, waves, atlasByType) {
+    const dummyPos = new THREE.Vector3();
+    const dummyQuat = new THREE.Quaternion();
+    const dummyScale = new THREE.Vector3();
+    const dummyEuler = new THREE.Euler();
+    const matrix = new THREE.Matrix4();
+
+    // Partition: batch per (type, azTile); each batch keeps wave-ordered
+    // entries so ranges stay contiguous.
+    const batches = new Map();
+    for (const wave of waves) {
+        for (const t of wave.trees) {
+            const atlas = atlasByType[t.type];
+            if (!atlas?.sidecar) continue;
+            const tilesX = atlas.sidecar.tilesX ?? 4;
+            // Stable per-instance azimuth-tile pick from the scatter's own
+            // rotation - deterministic, no extra RNG stream.
+            const azTile = Math.floor(((t.rotationY % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) / (2 * Math.PI) * tilesX) % tilesX;
+            const key = `${t.type}:${azTile}`;
+            let batch = batches.get(key);
+            if (!batch) {
+                batch = { type: t.type, azTile, entries: [] };
+                batches.set(key, batch);
+            }
+            batch.entries.push({ tree: t, waveName: wave.name });
+        }
+    }
+
+    const meshes = [];
+    const materialsByType = {};
+    const ranges = new Map();
+    let totalInstances = 0;
+
+    for (const batch of batches.values()) {
+        const atlas = atlasByType[batch.type];
+        if (!materialsByType[batch.type]) {
+            const mat = new THREE.MeshBasicMaterial({
+                map: null,
+                transparent: false,
+                alphaTest: 0.4,
+                side: THREE.DoubleSide,
+                depthWrite: true,
+                fog: true,
+            });
+            materialsByType[batch.type] = mat;
+            if (!builder._impostorMaterials) builder._impostorMaterials = [];
+            builder._impostorMaterials.push(mat);
+        }
+        const geometry = createColdImpostorGeometry(atlas.sidecar, batch.azTile);
+        const mesh = new THREE.InstancedMesh(geometry, materialsByType[batch.type], batch.entries.length);
+        let rangeStart = 0;
+        let rangeWave = null;
+        const flushRange = (end) => {
+            if (rangeWave === null || end === rangeStart) return;
+            let list = ranges.get(rangeWave);
+            if (!list) { list = []; ranges.set(rangeWave, list); }
+            list.push({ mesh, start: rangeStart, count: end - rangeStart });
+        };
+        batch.entries.forEach(({ tree, waveName }, i) => {
+            if (waveName !== rangeWave) {
+                flushRange(i);
+                rangeStart = i;
+                rangeWave = waveName;
+            }
+            dummyPos.set(tree.x, builder._groundY(tree.x, tree.z), tree.z);
+            dummyQuat.setFromEuler(dummyEuler.set(0, tree.rotationY, 0));
+            dummyScale.setScalar(tree.scale);
+            matrix.compose(dummyPos, dummyQuat, dummyScale);
+            mesh.setMatrixAt(i, matrix);
+        });
+        flushRange(batch.entries.length);
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.computeBoundingBox?.();
+        mesh.computeBoundingSphere?.();
+        mesh.frustumCulled = true;
+        mesh.castShadow = false; // durable far-impostor rule
+        mesh.receiveShadow = false;
+        mesh.visible = false; // shown when the albedo texture binds
+        mesh.userData.foliageColdImpostor = { type: batch.type, azTile: batch.azTile };
+        builder.scene.add(mesh);
+        builder.trees.push(mesh);
+        meshes.push(mesh);
+        totalInstances += batch.entries.length;
+    }
+
+    return { meshes, materialsByType, ranges, totalInstances };
+}
+
+/**
+ * Cycle 88 Phase 3: retire one wave's cold impostor instances after the
+ * wave's LOD0 meshes land. Zero-scale matrices collapse the quads to
+ * degenerate triangles - no rebuild, one small instanceMatrix upload per
+ * touched mesh (Q2 decision).
+ *
+ * @param {object} builder TerrainBuilder instance.
+ * @param {string} waveName
+ * @returns {number} instances retired
+ */
+const ZERO_MATRIX = new THREE.Matrix4().set(
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 1,
+);
+export function retireColdImpostorWave(builder, waveName) {
+    const rangeList = builder._foliageColdCoverage?.ranges?.get(waveName);
+    if (!rangeList) return 0;
+    let retired = 0;
+    for (const { mesh, start, count } of rangeList) {
+        for (let i = 0; i < count; i++) mesh.setMatrixAt(start + i, ZERO_MATRIX);
+        mesh.instanceMatrix.needsUpdate = true;
+        retired += count;
+    }
+    return retired;
+}
+
+/**
  * @param {object} builder TerrainBuilder instance.
  * @param {Array | null} [competitivePastures]
  * @returns {Promise<Array>} Array of InstancedMesh2 created.

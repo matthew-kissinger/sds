@@ -1636,6 +1636,11 @@ export class TerrainBuilder {
         }
         this._treeCullControllers = [];
         this._computeRenderer = null;
+
+        // Cycle 88: drop the cold-coverage scatter cache + impostor range
+        // bookkeeping. The impostor meshes themselves were removed/disposed
+        // in the loop above (they ride this.trees like every other tree mesh).
+        this._foliageColdCoverage = null;
     }
     
     /**

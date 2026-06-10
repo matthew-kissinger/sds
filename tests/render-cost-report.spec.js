@@ -263,4 +263,30 @@ describe('Desktop WebGPU quality governance (Cycle 82)', () => {
         expect(governor.samples.length).toBe(0);
         expect(governor.getState().qualityIndex).toBe(0);
     });
+
+    it('fires the warmup-complete signal once, on the first sample past the window (Cycle 88 P4)', () => {
+        const governor = new QualityGovernor({ isMobile: false, tier: 'high', sampleWindowMs: 7000, warmupMs: 0 });
+        const fired = [];
+        governor.onWarmupComplete(() => fired.push('a'));
+        expect(governor.warmupCompleted).toBe(false);
+        // warmupMs 0: the very first sample is already past the window.
+        governor.sample({ frameTime: 16, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
+        expect(governor.warmupCompleted).toBe(true);
+        expect(fired).toEqual(['a']);
+        // Late subscribers run immediately and exactly once.
+        governor.onWarmupComplete(() => fired.push('b'));
+        governor.sample({ frameTime: 16, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
+        expect(fired).toEqual(['a', 'b']);
+    });
+
+    it('does not fire the warmup signal inside the warmup grace (Cycle 88 P4)', () => {
+        const governor = new QualityGovernor({ isMobile: false, tier: 'high', sampleWindowMs: 1, warmupMs: 60_000 });
+        const fired = [];
+        governor.onWarmupComplete(() => fired.push('x'));
+        for (let i = 0; i < 10; i++) {
+            governor.sample({ frameTime: 16, rendererMode: 'webgpu-production', sceneId: 'newsheepdogland' });
+        }
+        expect(governor.warmupCompleted).toBe(false);
+        expect(fired).toEqual([]);
+    });
 });

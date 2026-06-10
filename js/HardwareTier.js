@@ -113,9 +113,12 @@ export const TIER_PRESETS = {
         // [start, end] crossfade band for LOD0->LOD2 alphaHash. Mobile-low
         // pushes the band closer (80-100m) so geometry budget stays low.
         lod0CrossfadeBand:   [80, 100],
-        // Cycle 87 Phase 4: low-tier devices stream only the first deferred
-        // tree zone (the near band) and no streamed grass.
-        foliageStreamWaves:  1,
+        // Cycle 88 Phase 4 (supersedes the Cycle 87 1-wave cap): low-tier
+        // devices keep the island-wide IMPOSTOR cold coverage forever - no
+        // LOD0 upgrade waves, no streamed grass. Coverage without the
+        // consolidated-mesh build cost; foliageStreamWaves 0 also routes the
+        // cold pass to the sparse one-pass scatter.
+        foliageStreamWaves:  0,
         foliageStreamGrass:  false,
     },
     med: {
