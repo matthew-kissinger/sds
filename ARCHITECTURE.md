@@ -6,8 +6,8 @@ A real-time 3D herding game with GPU-accelerated rendering, edge-hosted multipla
 
 ### Key technical features
 
-- **GPU-first rendering** — 200 sheep in a single draw call via Three.js `InstancedMesh` with a custom vertex shader that animates legs and heads per-instance.
-- **Edge multiplayer** — authoritative 60 Hz sim runs in a Durable Object; state is broadcast over WebSocket as MessagePack frames. No colocated "game server" — rooms live wherever Cloudflare puts them.
+- **GPU-first rendering** — up to 5,000 sheep in a single draw call via Three.js `InstancedMesh` with a custom vertex shader that animates legs and heads per-instance.
+- **Edge multiplayer** — authoritative 60 Hz sim runs in a Durable Object; state is broadcast over WebSocket as MessagePack frames. Wire protocol v3 (shipped 2026-06-09) sends changed-sheep delta frames with a full keyframe every 60 ticks; older clients soft-degrade to full frames (see Network protocol below). No colocated "game server" — rooms live wherever Cloudflare puts them.
 - **Hybrid single / multiplayer** — shared deterministic sim in `shared/` is imported by both the browser client (for single-player and prediction) and the Worker (for authoritative multiplayer). Flocking behavior is byte-identical.
 - **Adaptive jitter buffer** — client widens the interpolation window automatically when packet arrival stddev rises, without reopening connections.
 - **Cross-platform input** — desktop keyboard, full-analog gamepad, and touch joystick paths share a single `InputHandler`.
@@ -17,7 +17,7 @@ A real-time 3D herding game with GPU-accelerated rendering, edge-hosted multipla
 ### Client
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Three.js | 0.184 | WebGL rendering |
+| Three.js | 0.184 | WebGL rendering, progressive WebGPU on capable browsers |
 | React | 19.2 | UI (uses `React.createElement`, no JSX) |
 | Vite | 7.3 | Build tooling |
 | Tailwind CSS | 4.1 | Styling |
@@ -86,11 +86,16 @@ See [docs/archive/c-retry/contract.md](docs/archive/c-retry/contract.md) for the
 │                                                                              │
 │  shared/ (bundled into the worker via esbuild)                               │
 │      ├── BoundaryCollision.js                                                │
+│      ├── CompetitiveLayout.js                                                │
+│      ├── CompetitiveMode.js                                                  │
 │      ├── FlockingAlgorithms.js                                               │
-│      ├── GameStateValidation.js                                              │
+│      ├── GameProgress.js                                                     │
+│      ├── GameStateValidation.js (shim over the four split modules)           │
 │      ├── MovementPhysics.js                                                  │
 │      ├── ObjectiveLogic.js                                                   │
 │      ├── objective.js          (Cycle 34 — multi-stage objective state)     │
+│      ├── protocol.js           (wire constants, PROTOCOL_VERSION 3)          │
+│      ├── SpawnLogic.js                                                       │
 │      └── Vector2D.js                                                         │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -289,7 +294,8 @@ Discriminated boundary shape introduced in Cycle 5: `RectBoundary {kind:'rect', 
 - On `/join`, appends the joiner and broadcasts `playerJoined` to existing sessions.
 - On `/ws` upgrade, validates `playerId` is a known player, calls `server.accept()`, binds the WebSocket to the session table.
 - `handleClientMessage` dispatches on `t`: `playerInput`, `startGame`, `setDogType`, `setModeLock`, `leaveRoom`, `ping`.
-- On `startGame`, builds a DO adapter that exposes the subset of RoomManager/Room surface `GameSim.js` expects, instantiates `GameSimulation`, starts the 60 Hz tick, and starts a 60 Hz broadcast loop (`setInterval`, 16 ms) that emits `gameStateUpdate` to every session.
+- On `startGame`, builds a DO adapter that exposes the subset of RoomManager/Room surface `GameSim.js` expects, instantiates `GameSimulation`, starts the 60 Hz tick, and starts a 60 Hz broadcast loop (`setInterval`, 16 ms). Since wire protocol v3 the loop (`broadcastGameFrame`) splits sessions by cohort: sessions that joined with `protocolVersion >= 3` get changed-sheep `gameStateDelta` frames with a full `gameStateUpdate` keyframe every 60 ticks; older sessions get full `gameStateUpdate` frames every interval.
+- Backpressure eviction: a client whose socket backlog stays over 256 KB (or whose sends keep throwing) for ~4 s of consecutive broadcast intervals is evicted (close 1013) through the normal disconnect/grace/host-migration path. While saturated its frames are skipped; a v3 client recovers via `requestKeyframe`.
 - Handles host migration on WS close.
 
 #### worker/src/LobbyDO.ts — Singleton lobby DO
@@ -345,14 +351,18 @@ Every frame is MessagePack-encoded with a `t` (type) discriminator:
 - `setModeLock` — `{locked}` (host only)
 - `leaveRoom` — `{}`
 - `ping` — `{id, timestamp}`
+- `requestKeyframe` — v3 clients only; asks for a fresh full snapshot (unicast, capped at 2 per second per client)
 
 **Server → Client**
 - `roomUpdated`, `playerJoined`, `playerLeft`, `hostChanged`, `modeLockChanged`
 - `gameStarted` — `{room, gameState}`
-- `gameStateUpdate` — the sim snapshot described in `GameSim.js createGameStateSnapshot`. Optional `objective` block on Open Country rooms (Cycle 34 Phase 3); absent on Field / Rolling Hills.
+- `gameStateUpdate` — the full sim snapshot described in `GameSim.js createGameStateSnapshot`, tick-stamped. Optional `objective` block on Open Country rooms (Cycle 34 Phase 3); absent on Field / Rolling Hills. Since protocol v3 this is the keyframe for v3 sessions and the every-interval frame for older sessions.
+- `gameStateDelta` — v3 sessions only: carries only the sheep whose quantized wire record changed since the previous broadcast frame, keyed by array index (full record per changed sheep). Top-level scalars, the full `sheepdogs` array, and the conditional blocks ride every frame.
 - `gameComplete` — mode-specific completion payload
 - `pong` — `{id, timestamp}`
 - `roomError`, `error`
+
+**Wire protocol v3** (shipped 2026-06-09): sessions that join with `protocolVersion >= 3` get `gameStateDelta` frames plus a full `gameStateUpdate` keyframe every `KEYFRAME_INTERVAL_TICKS = 60` ticks, on game start, on socket bind mid-game, and on a capped `requestKeyframe`. Past 85% of the flock changed, the DO sends a keyframe instead of a delta, so the delta path is never meaningfully worse than the old full-frame cost. Sessions that joined with an older or absent `protocolVersion` soft-degrade to full frames every interval; no refusal. Constants live in [shared/protocol.js](shared/protocol.js); the delta builder is `getDeltaPathFrame` in [worker/src/GameSim.js](worker/src/GameSim.js); client reconstruction lives entirely in [js/NetworkManager.js](js/NetworkManager.js), so downstream consumers still see full snapshots. Full spec including measured savings: [docs/hardening/delta-protocol-design.md](docs/hardening/delta-protocol-design.md).
 
 The server-to-client state snapshot is the same shape the legacy Geckos server used, so the client's `handleMultiplayerGameState` path is unchanged apart from message transport. Wire-format extensions are net-additive optional fields per [DECISIONS.md](DECISIONS.md); pre-cycle clients ignore unknown fields and post-cycle clients fall back to legacy behavior when the field is absent.
 

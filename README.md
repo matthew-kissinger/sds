@@ -60,6 +60,8 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - MessagePack-over-WebSocket state frames; client adaptive-jitter-buffer widens automatically as RTT stddev rises
 - D1 leaderboards with per-mode best times and a discriminator-based identity (#0001-style tags)
 - Reconnect grace window — drop a tab and rejoin within 15 s without losing your run
+- Wire protocol v3 (v2.3.0): changed-sheep delta frames with a full keyframe every 60 ticks; older clients soft-degrade to full frames, and a socket that stays saturated past 256 KB for ~4 s is evicted through the normal host-migration path
+- Server-minted identity (P-SEC-1): the worker derives your persistent id from a verified token bound to a device-held secret, so a leaked id alone is useless
 
 ### 🎨 Cinematic visual layer
 - **WebGPU-primary renderer path** on capable browsers, with explicit WebGL fallback and a forced `?renderer=webgl` escape hatch
@@ -70,9 +72,11 @@ If you're learning 3D web games, real-time multiplayer on edge compute, or large
 - Three camera modes: **Classic** (top-down isometric), **Follow** (cinematic chase with ridge-clearance lift), **Free** (mouse-yaw orbit)
 
 ### 🌐 Mobile + i18n + accessibility
+- Interactive tutorial (v2.3.0): a guided first-run herding lesson, offered once to fresh profiles and replayable from the menu
+- 9 achievements and full keyboard/gamepad control rebinding (v2.3.0)
 - Touch joystick + on-screen sprint button + responsive HUD; PWA-installable from any browser
 - Full gamepad support (analog stick + buttons)
-- 5 languages: English, Spanish, Portuguese, Japanese, Simplified Chinese ([more contributions welcome](js/locales/))
+- 5 languages across the whole UI and the tutorial: English, Spanish, Portuguese, Japanese, Simplified Chinese ([more contributions welcome](js/locales/))
 
 ### 🔬 SEO + share-ready
 - Per-scene metadata: `<title>`, `og:image`, `og:title`, `og:description`, `twitter:*` all switch on `?scene=X` deeplink — *new in v2.1.0*
@@ -198,6 +202,7 @@ Full diagrams + network protocol + module-level details: [ARCHITECTURE.md](ARCHI
 
 We work in numbered cycles; player-visible ships get a `vN.N.N` tag with a CHANGELOG entry. The last cycles delivered everything you see today; here's where the surface is moving right now:
 
+- **`v2.3.0`** (2026-06-09) - Hardening release: interactive tutorial in 5 languages, 9 achievements, control rebinding, wire protocol v3 (changed-sheep delta frames with soft-degrade for older clients), backpressure eviction, server-minted identity (P-SEC-1/2), and full-room rejoin rehydration.
 - **`v2.2.5`** (2026-06-09) - Mobile WebGPU primary hotfix: WebGPU-capable mobile browsers stay on the production WebGPU path for Newsheepdogland, and the homestead terrain mesh now covers the spawn so the dog no longer snaps to the water/skirt surface.
 - **`v2.2.4`** (2026-06-09) - Cycle 83 wolf/bark/night polish: wolves are larger and clearer, bark reaches sheep and wolves at the intended medium/long distances, bark audio unlocks from the bark command, and Newsheepdogland night is darker with the visual sun below the horizon at `NIGHT_T`.
 - **`v2.2.3`** (2026-06-09) - Newsheepdogland feel-and-hero release: desktop WebGPU flagship proof on the 3070, shorter survival pressure, validated two-dog survival co-op, and the Newsheepdogland homestead/pen/grass hero as the entrance default.
