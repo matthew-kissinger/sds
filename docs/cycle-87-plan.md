@@ -27,6 +27,8 @@ Undo the visual gutting of Newsheepdogland without giving back the fast first Pl
 
 ## Phase 1 - Renderer policy: never demote on frame budget (~3hr, autonomous, ships first)
 
+> **Status: SHIPPED 2026-06-10** (commit `7df916a`). All acceptance lines verified in-session (no-write + floor-telemetry specs green; boot shim deletes legacy records; diagnostics row live in Settings under the WebGPU toggle, all 5 locales). Remaining evidence: tomorrow's S24+ pass (doubles as Cycle 85 Phase 3).
+
 **Independently testable.** Ships today so tomorrow's connected-device session validates it.
 
 1. **QualityGovernor** ([`js/perf/QualityGovernor.js`](../js/perf/QualityGovernor.js)): delete `_recordFallback`, its callsite, and the `autoFallback` reload mechanism. Quality stepping is unchanged and remains the only response to budget misses. Emit `webgpu_frame_budget_floor` telemetry (lazy import) once per session the first time a mobile session logs 3 consecutive over-budget windows at the floor: `{ deviceTier, frameP95, frameP99, sceneId, qualityIndex }`.
@@ -43,6 +45,8 @@ Undo the visual gutting of Newsheepdogland without giving back the fast first Pl
 - When the settings panel opens, the system shall display effective renderer, fallback reason, device tier, and quality index.
 
 ## Phase 2 - Tree streaming foundation (~4hr, autonomous)
+
+> **Status: SHIPPED 2026-06-10** (commit `7ed8be0`). Cold bound unchanged; streamed determinism, cold-rect exclusion, and abort-mid-wave specs green. Live probe later confirmed +1,728 streamed trees on NSL.
 
 **Depends on:** nothing (parallel-safe with Phase 1).
 
@@ -62,6 +66,8 @@ Undo the visual gutting of Newsheepdogland without giving back the fast first Pl
 
 ## Phase 3 - Grass streaming (~3hr, autonomous)
 
+> **Status: SHIPPED 2026-06-10** (commit `06ae9ac`). Q1 resolved at `clumpsPerChunk.desktop = 140`; streamed estimator bound < 250k green; visualGolden opt-out verified (goldens byte-identical). Live probe: +138,575 streamed clumps.
+
 **Depends on:** Phase 2 (streamer + scene-def fields).
 
 1. [`js/GrassSystem.js`](../js/GrassSystem.js): `_computeCullController` becomes `_computeCullControllers` array (dispose path updated); `buildStreamedGrass()` gathers the wider extent skipping cold-grid chunks; streaming disabled under `?visualGolden=1`.
@@ -77,6 +83,8 @@ Undo the visual gutting of Newsheepdogland without giving back the fast first Pl
 
 ## Phase 4 - Streaming polish, tier gating, probe (~3hr, autonomous)
 
+> **Status: SHIPPED 2026-06-10** (commit `c983761`; e2e CI-safety follow-up `d9d785c`). Quad-split sub-waves (NSL = 40 planned), tier gating live, compileAsync prewarm in idle slots. Probe on desktop: all waves complete, qualityIndex 0. The quality assertion is `@local-only` (CI renders on SwiftShader); CI runs the renderer-agnostic streaming proof. Q2 resolved: horizon impostors read fine. Stretch (coastline meadow quads) NOT taken - BACKLOG.
+
 **Depends on:** Phases 2-3.
 
 1. [`js/HardwareTier.js`](../js/HardwareTier.js): `TIER_PRESETS[].foliageStreamWaves` (low: 1 tree wave, no grass; mid/high: all).
@@ -91,6 +99,8 @@ Undo the visual gutting of Newsheepdogland without giving back the fast first Pl
 - When the probe runs against the preview build, all planned waves shall complete within 30 seconds of Play.
 
 ## Phase 5 - Overlay z registry + toast hub (~4hr, autonomous)
+
+> **Status: SHIPPED 2026-06-10** (commit `26224e7`). zIndex band registry + source-scan spec, overlayRail + toastHub (12 specs), all 3 toasts migrated, 19-file z-literal sweep.
 
 **Depends on:** nothing (parallel-safe with Phases 2-4).
 
@@ -109,6 +119,8 @@ Undo the visual gutting of Newsheepdogland without giving back the fast first Pl
 
 ## Phase 6 - HUD reserves, tutorial placement, safe-area, e2e (~4hr, autonomous)
 
+> **Status: SHIPPED 2026-06-10** (commit `82615a8`). CSS-var reserves published from HudLayout; tutorial pill derives from `--sds-bottom-reserve`; offer rides the rail via RailPortal; safe-area sweep done; 44px touch targets taken (not deferred). `overlay-collision.spec.ts` green at 390x844. Remaining evidence: manual device check tomorrow.
+
 **Depends on:** Phase 5.
 
 1. [`js/components/GameHUD/HudLayout.tsx`](../js/components/GameHUD/HudLayout.tsx) publishes `--sds-bottom-reserve`, `--sds-toast-top-offset`, `--sds-topleft-reserve` on `documentElement` (cross-React-root handoff; TutorialOverlay/DayNightChip/Minimap live outside its root by design).
@@ -125,6 +137,8 @@ Undo the visual gutting of Newsheepdogland without giving back the fast first Pl
 - When `overlay-collision.spec.ts` runs at 390x844, no two overlay bounding boxes shall intersect.
 
 ## Phase 7 - Retire "konveyor" (~4hr, autonomous, LAST, own commits)
+
+> **Status: SHIPPED 2026-06-10** (commit `ac32488`; follow-up `1a8b1d5` untracked `tools/trailer/` which the rename commit swept in by mistake - the files remain in that one commit's history, flagged to Matt). Zero-grep verified; goldens + sim-baselines pass without regeneration; post-rename boot probe all 11 gates true. Naming rule codified in scene-and-render.md + AGENTS.md; DECISIONS.md entry added. Q3 resolved: chunk family unchanged (`other` bumped 544 -> 545 KiB, recorded).
 
 **Depends on:** Phases 1-6 shipped (rename after functional work so diffs stay reviewable). Mechanical, zero behavior change. Scope: live code + tests; `docs/archive/`, `cycleN-validation/`, CHANGELOG/DECISIONS history untouched; only the ~6 `tools/` probes that import live modules get updated.
 

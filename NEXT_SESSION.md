@@ -1,95 +1,96 @@
-# Next Session - upkeep program shipped; Matt's two launch items remain
+# Next Session - Cycle 87 shipped; device validation day
 
-> **Updated:** 2026-06-09 (late)
-> **For:** Cycle 86 (`docs/cycle-86-plan.md`; Cycle 85 still open on the
-> real mobile proof, absorbed as Cycle 86 Phase 3). The post-launch
-> upkeep program (`docs/upkeep/2026-06-post-launch-upkeep.md`) ran
-> autonomously and is COMPLETE.
-> **Pickup priority:** The two remaining Matt items, planned for
-> 2026-06-10: (1) real-device mobile pass on his phone (Phase 3, closes
-> Cycle 85), (2) post or defer the launch drafts in `docs/launch/`
-> (Phase 6). Then `/cycle-close` for 85 + 86.
+> **Updated:** 2026-06-10
+> **For:** Cycle 87 (`docs/cycle-87-plan.md`, all 7 phases shipped 2026-06-10;
+> Cycles 85 and 86 remain open on Matt's two items).
+> **Pickup priority:** Real-device pass on the connected S24+ (validates
+> Cycle 87 Phase 1 renderer policy AND closes Cycle 85 Phase 3), then
+> Matt posts or defers `docs/launch/`, then `/cycle-close` for 85 + 86 + 87.
 
 ## Cold-Start Orientation
 
-Read in order: this file -> [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md)
-(dated status blocks per phase) ->
-[`docs/upkeep/2026-06-post-launch-upkeep.md`](docs/upkeep/2026-06-post-launch-upkeep.md)
-(per-phase status blocks + checked acceptance) ->
-[`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) (still open).
+Read in order: this file -> [`docs/cycle-87-plan.md`](docs/cycle-87-plan.md)
+(per-phase status blocks, all shipped) ->
+[`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) and
+[`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) (both open on Matt items only).
 
 ## Where It Stands
 
-**v2.3.0 is LIVE** (2026-06-09, tag `v2.3.0`). Cycle 86 Phases 1, 2, 4,
-5, 7 complete; Phase 3 hardware-blocked for Matt tomorrow; Phase 6 drafts
-ready in `docs/launch/` for Matt to post.
+**Cycle 87 shipped end-to-end on 2026-06-10** (commits `7df916a`, `7ed8be0`,
+`06ae9ac`, `c983761`, `26224e7`, `82615a8`, `ac32488`, fixes `1a8b1d5` +
+`d9d785c`):
 
-**Upkeep program complete** (2026-06-09 late, commits `5258af4`..`e4430eb`):
+- **Renderer trust (P1):** frame-budget renderer demotion deleted; the
+  sticky `sds-renderer-fallback` record is removed on boot and on the
+  settings toggle; `webgpu_frame_budget_floor` telemetry replaces it;
+  read-only renderer diagnostics row in Settings under the WebGPU toggle.
+- **NSL foliage streaming (P2-P4):** post-Play idle-scheduled waves restore
+  the pre-trim island (live probe: +1,728 trees, +138,575 grass clumps,
+  qualityIndex 0); cold-path bounds unchanged; tier-gated (low: 1 wave, no
+  grass); diag on `window.__sdsFoliageStreaming`.
+- **Overlay system (P5-P6):** z-band registry (`js/ui/zIndex.js`), shared
+  top rail + toast hub with gameplay suppression, HUD CSS-var reserves,
+  safe-area sweep, 44px touch targets; `overlay-collision.spec.ts` proves
+  no intersections at 390x844.
+- **Konveyor retired (P7):** zero `konveyor` matches in live code/tests;
+  goldens and sim-baselines pass without regeneration; naming rule codified
+  (files name WHAT, not WHEN) in `.claude/rules/scene-and-render.md` +
+  `AGENTS.md`; DECISIONS.md entry.
 
-- **A (review-debt tests):** delta-aware integration wsClient +
-  broadcast-cadence coop-survival, new mixed-cohort spec (v3 vs v2
-  streams + cross-cohort equality, 3/3 live), committed 600k-pair
-  rectBoundarySteer fuzz, unicast-keyframe backpressure guard in RoomDO
-  with 5 unit tests.
-- **B (localization):** all four parity allowlists at zero (~118 keys
-  translated incl. the pt sandbox.* gap); i18n ratchet 136 -> 140 KiB,
-  recorded.
-- **C (majors):** typescript 6.0.3, i18next 26.3.1 + react-i18next
-  17.0.8, concurrently 10.0.3 (shell-quote override dropped) all
-  shipped with per-upgrade validation. vite 8 NOT taken: Rolldown swap
-  vs our object-form manualChunks + bundle-graph preload plugin +
-  chunk-family ratchet is a deliberate migration cycle (recorded in the
-  program doc Phase C table).
-- **D (lint):** shared/ no-restricted-imports verified active, worker/
-  pattern gap closed, proof run, shared-sim.md updated.
-- **E (housekeeping):** 44 scratch PNGs gone, p2-backpressure husk
-  removed (9 orphaned holder processes killed), all three cycle83
-  worktrees + branches removed (fully merged, verdict table in the
-  program doc), stale hardening line-refs annotated.
-- **F (docs):** README/ARCHITECTURE/llms.txt truth-up to v2.3.0; site
-  copy untouched (Phase 6, Matt's).
-- **G (quality):** audit at
-  [`docs/upkeep/code-quality-audit-2026-06.md`](docs/upkeep/code-quality-audit-2026-06.md)
-  with prioritized proposals; 3 verified-dead files deleted (361 LOC).
-  HeightFogPatch.js deliberately left (dormant Cycle 25-C foundation,
-  proposal #2: activate or delete).
+Known wart: commit `ac32488` accidentally swept in Matt's untracked
+`tools/trailer/` WIP; `1a8b1d5` untracked it again (files live on in that
+one commit's history). `tools/trailer/output/` is now gitignored.
 
-Validation at close: lint, both typechecks, build, 1456 passed / 11
-skipped on fresh dist, sim-baselines byte-identical, deploys green
-(wave 1 run 27249719972 success; wave 2 + final noted in the program
-doc).
+## Tomorrow's Device Run (the pickup)
+
+On the S24+ (USB debugging enabled, ADB via hub if needed):
+
+1. Load sheepdogsim.com, open Settings: the "Renderer status" row should
+   read `webgpu-production` (WebGL only if `navigator.gpu` is absent).
+2. Play Newsheepdogland 2-3 minutes: renderer stays WebGPU, foliage
+   streams in past the homestead, overlays do not overlap the touch
+   controls or tutorial.
+3. Check D1 for `webgpu_frame_budget_floor` events afterwards (expected
+   telemetry, not a failure signal).
+
+This run is the Cycle 85 Phase 3 evidence and the Cycle 87 P1 acceptance.
 
 ## Open Carryover
 
-- Phase 3 hardware (planned 2026-06-10): Matt's phone on live, or hub
-  power for tablet ADB, or BrowserStack creds for `tests/browserstack/`.
-- Phase 6 posting (Matt), gated on Phase 3.
-- Q4 staging provisioning (three operator steps; optional).
-- Cycle 85 + 86 closure ritual (`/cycle-close`) once the above land.
-- Paired-session candidates from the quality audit: main.js boot-seam
-  extraction, HeightFogPatch activate-or-delete decision.
-- vite 8 / Rolldown migration as its own future cycle phase.
-- Post-launch: re-tail worker logs during live MP traffic for the loaded
-  tick-health baseline; egress lever decision (plan Q2) only if CF costs
-  surface.
+- Matt: post or defer the launch drafts in `docs/launch/` (Cycle 86 P6).
+- `/cycle-close` ritual for 85, 86, and 87 once the device pass lands.
+- **Scene-loading sequencing review (Matt's 2026-06-10 ask):** evaluate
+  impostor-first cold path (first frame complete at low fidelity, waves
+  upgrade instead of materialize), arming the streamer at scene-body
+  completion instead of the fixed 6.5s delay, and a per-scene loading
+  contract on SceneDef. Recommendation delivered in-session; spike the
+  impostor cold-bake cost in `tools/` before any plan (per the
+  spike-risky-primitives preference). Candidate Cycle 88.
+- BACKLOG candidates from 87: coastline-aware meadow quads (P4 stretch,
+  not taken); `?konveyorNativeTreeImpostors` read alias removal after one
+  release.
+- Earlier carryover unchanged: vite 8 / Rolldown migration cycle, main.js
+  boot-seam extraction, HeightFogPatch activate-or-delete, Q4 staging
+  provisioning, worker log re-tail during live MP traffic.
 
 ## Working Contract
 
-- No `shared/` edits; sim-baselines stay byte-identical.
-- Matt publishes every player-facing artifact; drafts are ready.
+- No `shared/` deterministic-core edits; sim-baselines stay byte-identical.
+- Matt publishes every player-facing artifact.
 - Don't close Cycle 85 without the real-device pass.
 - Agent-launched Vite/Playwright sets `SDS_SUPPRESS_BROWSER_OPEN=1`;
   close every probe page/listener after use.
+- CI e2e runs with `--grep-invert='@local-only'`; hardware-dependent
+  assertions (real-GPU quality reads) carry the `@local-only` tag.
 
 ## Reference Table
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan (statuses inline) | [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) |
-| Upkeep program (complete, statuses inline) | [`docs/upkeep/2026-06-post-launch-upkeep.md`](docs/upkeep/2026-06-post-launch-upkeep.md) |
-| Quality audit + proposals | [`docs/upkeep/code-quality-audit-2026-06.md`](docs/upkeep/code-quality-audit-2026-06.md) |
-| Open prior cycle (one item) | [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) |
+| Just-shipped cycle (statuses inline) | [`docs/cycle-87-plan.md`](docs/cycle-87-plan.md) |
+| Open prior cycles (Matt items) | [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md), [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) |
 | Launch drafts (Matt to post) | [`docs/launch/`](docs/launch/) |
-| Fence-review dossiers | [`docs/hardening/review-dossiers-2026-06-09.md`](docs/hardening/review-dossiers-2026-06-09.md) |
+| Streaming diag | `window.__sdsFoliageStreaming` (browser console) |
+| Renderer diagnostics | Settings panel, under the WebGPU toggle |
 | Release log | [`CHANGELOG.md`](CHANGELOG.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
