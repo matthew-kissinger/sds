@@ -54,6 +54,33 @@ function estimateDesktopGrassMax(scene) {
     return chunks * adjustedClumpsPerChunk;
 }
 
+// Cycle 87 Phase 3: mirror of GrassSystem.buildStreamedGrass's grid walk -
+// the streamed annulus out to grass.streamed.grassRadius, skipping cells the
+// cold grid (worldSize bbox) already covered, SDF-culled at the coast.
+function estimateStreamedDesktopGrassMax(scene) {
+    const grass = scene.grass;
+    const streamed = grass.streamed;
+    if (!streamed) return 0;
+    const chunkSize = 40;
+    const coldWorldSize = Math.max(420, (grass.grassRadius + 40) * 2);
+    const coldHalf = coldWorldSize / 2;
+    const worldSize = (streamed.grassRadius + 40) * 2;
+    const halfWorld = worldSize / 2;
+    const chunksPerSide = Math.ceil(worldSize / chunkSize);
+    const field = getCoastlineField(scene.boundary);
+    let chunks = 0;
+    for (let cx = 0; cx < chunksPerSide; cx++) {
+        for (let cz = 0; cz < chunksPerSide; cz++) {
+            const centerX = grass.grassCenter.x - halfWorld + cx * chunkSize + chunkSize / 2;
+            const centerZ = grass.grassCenter.z - halfWorld + cz * chunkSize + chunkSize / 2;
+            if (centerX >= grass.grassCenter.x - coldHalf && centerX <= grass.grassCenter.x + coldHalf
+                && centerZ >= grass.grassCenter.z - coldHalf && centerZ <= grass.grassCenter.z + coldHalf) continue;
+            if (sampleSignedDistance(field, centerX, centerZ) >= -chunkSize) chunks++;
+        }
+    }
+    return chunks * streamed.clumpsPerChunk.desktop;
+}
+
 describe('Newsheepdogland SceneDef (Cycle 64)', () => {
     const scene = loadScene('newsheepdogland');
 
@@ -126,6 +153,31 @@ describe('Newsheepdogland SceneDef (Cycle 64)', () => {
 
     it('keeps the default grass budget bounded for entrance Play', () => {
         expect(estimateDesktopGrassMax(scene)).toBeLessThan(90_000);
+    });
+
+    it('declares streamed island grass with a bounded post-Play budget (Cycle 87 P3)', () => {
+        expect(scene.grass.streamed).toBeTruthy();
+        expect(scene.grass.streamed.grassRadius).toBeGreaterThan(scene.grass.grassRadius);
+        // Mobile streams no grass; the cold field already runs reduced density.
+        expect(scene.grass.streamed.clumpsPerChunk.mobile).toBe(0);
+        const streamedMax = estimateStreamedDesktopGrassMax(scene);
+        expect(streamedMax).toBeGreaterThan(0);
+        expect(streamedMax).toBeLessThan(250_000);
+    });
+
+    it('declares streamed tree zones covering the island beyond the cold corridor (Cycle 87 P2)', () => {
+        const streamed = scene.terrain.streamedZones;
+        expect(streamed).toBeTruthy();
+        for (const name of ['nearField', 'midField', 'farField', 'horizon']) {
+            const s = streamed[name];
+            const c = scene.terrain.zones[name];
+            expect(s).toBeTruthy();
+            // Each streamed rect strictly contains its cold counterpart.
+            expect(s.minX).toBeLessThan(c.minX);
+            expect(s.maxX).toBeGreaterThan(c.maxX);
+            expect(s.minZ).toBeLessThan(c.minZ);
+            expect(s.maxZ).toBeGreaterThan(c.maxZ);
+        }
     });
 
     it('boundaryToBounds returns the polygon bbox', () => {

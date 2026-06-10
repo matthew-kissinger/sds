@@ -100,6 +100,14 @@ export class GrassSystem {
         // (flagship coastline desktop WebGPU). Picked up + driven + disposed by
         // TerrainBuilder; null on every per-chunk path.
         this._computeCullController = null;
+        // Cycle 87 Phase 3: second compute-cull controller for the streamed
+        // grass annulus (built post-first-interactive by foliageStreaming via
+        // buildStreamedGrass). Own material instance (the compute remap nodes
+        // are per-controller), driven alongside the primary in TerrainBuilder
+        // and updated in the per-frame fan-outs below.
+        this._streamedCullController = null;
+        this._streamedMaterial = null;
+        this._streamedBladeControls = null;
         // Grass thins to zero over the last `_coastShoreFade` metres before the
         // shore. The shoreline-Y cull still owns the exact waterline.
         this._coastShoreFade = 28;
@@ -1322,6 +1330,135 @@ export class GrassSystem {
     }
 
     /**
+     * Cycle 87 Phase 3: build the streamed grass annulus declared by
+     * `sceneGrass.streamed` ({ grassRadius, clumpsPerChunk }). Called by
+     * js/world/foliageStreaming.js as the final wave, AFTER first-interactive.
+     * Covers the grid out to streamed.grassRadius around grassCenter, skipping
+     * every cell the cold grid already covered. On the consolidated WebGPU
+     * path this builds a SECOND compute-cull controller with its own material
+     * (the compaction remap nodes are per-controller); on the per-chunk path
+     * it adds ordinary chunks sharing the live material.
+     *
+     * Inert (returns {built:false}) when the scene declares no streamed grass,
+     * the per-tier clump count is 0, init failed, or a visual-golden run is
+     * active (goldens stay byte-identical).
+     *
+     * @returns {{built: boolean, reason?: string, clumps?: number}}
+     */
+    buildStreamedGrass() {
+        const streamed = this.sceneGrass?.streamed;
+        if (!streamed || typeof streamed.grassRadius !== 'number') return { built: false, reason: 'no-config' };
+        if (!this.initializationSucceeded) return { built: false, reason: 'init-failed' };
+        if (createVisualGoldenRandom()) return { built: false, reason: 'visual-golden' };
+        if (this._streamedCullController) return { built: false, reason: 'already-built' };
+        const clumpsPerChunk = this.isMobile
+            ? (streamed.clumpsPerChunk?.mobile ?? 0)
+            : (streamed.clumpsPerChunk?.desktop ?? 0);
+        if (!(clumpsPerChunk > 0)) return { built: false, reason: 'zero-clumps' };
+        if (streamed.grassRadius <= this.config.grassRadius) return { built: false, reason: 'radius-inside-cold' };
+
+        const { chunkSize } = this.config;
+        const streamedWorldSize = (streamed.grassRadius + 40) * 2;
+        const halfWorld = streamedWorldSize / 2;
+        const chunksPerSide = Math.ceil(streamedWorldSize / chunkSize);
+        const gridOriginX = this._grassCenter.x;
+        const gridOriginZ = this._grassCenter.z;
+        // The cold grid's coverage bbox: cells whose center falls inside it
+        // were already considered by the cold build (generated or SDF-culled).
+        const coldHalf = this.config.worldSize / 2;
+        const coldMinX = gridOriginX - coldHalf, coldMaxX = gridOriginX + coldHalf;
+        const coldMinZ = gridOriginZ - coldHalf, coldMaxZ = gridOriginZ + coldHalf;
+
+        const offsets = [];
+        const transforms = [];
+        const perChunkCells = [];
+        for (let cx = 0; cx < chunksPerSide; cx++) {
+            for (let cz = 0; cz < chunksPerSide; cz++) {
+                const chunkMinX = gridOriginX - halfWorld + cx * chunkSize;
+                const chunkMinZ = gridOriginZ - halfWorld + cz * chunkSize;
+                const chunkMaxX = chunkMinX + chunkSize;
+                const chunkMaxZ = chunkMinZ + chunkSize;
+                const chunkCenterX = (chunkMinX + chunkMaxX) / 2;
+                const chunkCenterZ = (chunkMinZ + chunkMaxZ) / 2;
+                if (chunkCenterX >= coldMinX && chunkCenterX <= coldMaxX
+                    && chunkCenterZ >= coldMinZ && chunkCenterZ <= coldMaxZ) continue;
+                if (this._isCoastline) {
+                    const sd = sampleSignedDistance(this._coastField, chunkCenterX, chunkCenterZ);
+                    if (sd < -chunkSize) continue;
+                } else {
+                    const dx = chunkCenterX - gridOriginX;
+                    const dz = chunkCenterZ - gridOriginZ;
+                    if (Math.sqrt(dx * dx + dz * dz) > streamed.grassRadius + chunkSize) continue;
+                }
+                if (this._computeCullController) {
+                    this._gatherChunkClumps(chunkMinX, chunkMinZ, chunkMaxX, chunkMaxZ, clumpsPerChunk, offsets, transforms);
+                } else {
+                    perChunkCells.push({ cx, cz, chunkMinX, chunkMinZ, chunkMaxX, chunkMaxZ });
+                }
+            }
+        }
+
+        if (!this._computeCullController) {
+            // Per-chunk path (WebGL fallback): ordinary chunks sharing the live
+            // material; keyed with an 's' prefix so streamed cells never
+            // collide with cold grid keys.
+            let added = 0;
+            for (const cell of perChunkCells) {
+                const chunk = this.createChunk(
+                    cell.cx, cell.cz,
+                    cell.chunkMinX, cell.chunkMinZ, cell.chunkMaxX, cell.chunkMaxZ,
+                    clumpsPerChunk
+                );
+                if (chunk) {
+                    this.chunks.set(`s${cell.cx}_${cell.cz}`, chunk);
+                    added += chunk.mesh?.count ?? 0;
+                }
+            }
+            this.stats.totalClumps = (this.stats.totalClumps ?? 0) + added;
+            console.log(`[GRASS] streamed per-chunk grass: +${added} clumps`);
+            return { built: added > 0, clumps: added };
+        }
+
+        const count = offsets.length / 3;
+        if (count === 0) return { built: false, reason: 'no-clumps-gathered' };
+        try {
+            const webGpuModules = getKonveyorWebGpuModules();
+            // createGrassMaterial repoints the instance-level controls/summary
+            // at the newest material; snapshot the primary's and restore after
+            // so per-frame updates keep driving BOTH (see the fan-outs below).
+            const primaryControls = this.konveyorGrassBladeMaterialControls;
+            const primarySummary = this.konveyorGrassBladeMaterialSummary;
+            let streamedMaterial = null;
+            const controller = createGrassComputeCull(webGpuModules, {
+                clumpGeometry: this.clumpGeometry,
+                offsets: new Float32Array(offsets),
+                transforms: new Float32Array(transforms),
+                count,
+                cullRadius: Math.max(4, this.config.chunkSize * 0.15),
+                buildMaterial: (nodes) => {
+                    streamedMaterial = this.createGrassMaterial(nodes);
+                    return streamedMaterial;
+                },
+            });
+            this._streamedBladeControls = streamedMaterial?.userData?.konveyorGrassBladeMaterialControls ?? null;
+            this._streamedMaterial = streamedMaterial;
+            this.konveyorGrassBladeMaterialControls = primaryControls;
+            this.konveyorGrassBladeMaterialSummary = primarySummary;
+            this._streamedCullController = controller;
+            this.scene.add(controller.mesh);
+            this.stats.totalClumps = (this.stats.totalClumps ?? 0) + count;
+            console.log(`[GRASS] streamed compute-cull grass: +${count} clumps -> 1 InstancedMesh`);
+            return { built: true, clumps: count };
+        } catch (e) {
+            console.warn('[GRASS] streamed grass build failed (cold grass unaffected):', e);
+            this._streamedCullController = null;
+            this._streamedMaterial = null;
+            this._streamedBladeControls = null;
+            return { built: false, reason: String(e?.message || e) };
+        }
+    }
+
+    /**
      * Create a single chunk of grass
      */
     createChunk(cx, cz, minX, minZ, maxX, maxZ, clumpCount) {
@@ -1789,6 +1926,13 @@ export class GrassSystem {
                 count: this.interactorCount,
                 material: this.grassMaterial,
             });
+            this._streamedBladeControls?.updateInteractors?.({
+                positions: this.interactorPositions,
+                data: this.interactorData,
+                facings: this.interactorFacings,
+                count: this.interactorCount,
+                material: this._streamedMaterial,
+            });
         } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.interactorPositions.value = this.interactorPositions;
             this.grassMaterial.uniforms.interactorData.value = this.interactorData;
@@ -1865,6 +2009,13 @@ export class GrassSystem {
                 camera,
                 sceneFog: this.scene?.fog ?? null,
                 material: this.grassMaterial,
+            });
+            this._streamedBladeControls?.update?.({
+                time: this.time,
+                deltaTime,
+                camera,
+                sceneFog: this.scene?.fog ?? null,
+                material: this._streamedMaterial,
             });
         } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.time.value = this.time;
@@ -2041,6 +2192,7 @@ export class GrassSystem {
     setWind(strength, direction) {
         if (this.konveyorGrassBladeMaterialControls?.setWind) {
             this.konveyorGrassBladeMaterialControls.setWind({ strength, direction, material: this.grassMaterial });
+            this._streamedBladeControls?.setWind?.({ strength, direction, material: this._streamedMaterial });
         } else if (this.grassMaterial?.uniforms) {
             this.grassMaterial.uniforms.windStrength.value = strength;
             if (direction) {
@@ -2060,6 +2212,7 @@ export class GrassSystem {
         if (!sunDir || !this.grassMaterial) return;
         if (this.konveyorGrassBladeMaterialControls?.setSunDirection) {
             this.konveyorGrassBladeMaterialControls.setSunDirection({ sunDir, material: this.grassMaterial });
+            this._streamedBladeControls?.setSunDirection?.({ sunDir, material: this._streamedMaterial });
             return;
         }
         if (this.grassMaterial.uniforms?.uSunDirection) {
@@ -2072,6 +2225,10 @@ export class GrassSystem {
             this.konveyorGrassBladeMaterialControls.setInteractionShadowStrength({
                 strength,
                 material: this.grassMaterial,
+            });
+            this._streamedBladeControls?.setInteractionShadowStrength?.({
+                strength,
+                material: this._streamedMaterial,
             });
             return true;
         }
@@ -2107,6 +2264,20 @@ export class GrassSystem {
             try { this.scene.remove(this._computeCullController.mesh); } catch { /* ignore */ }
             try { this._computeCullController.dispose(); } catch { /* ignore */ }
             this._computeCullController = null;
+        }
+
+        // Cycle 87 Phase 3: streamed controller owns its cloned geometry and
+        // its own material instance (the primary material is disposed below).
+        if (this._streamedCullController) {
+            try { this.scene.remove(this._streamedCullController.mesh); } catch { /* ignore */ }
+            try { this._streamedCullController.dispose(); } catch { /* ignore */ }
+            this._streamedCullController = null;
+        }
+        if (this._streamedMaterial) {
+            try { this._streamedBladeControls?.dispose?.(); } catch { /* ignore */ }
+            try { this._streamedMaterial.dispose(); } catch { /* ignore */ }
+            this._streamedMaterial = null;
+            this._streamedBladeControls = null;
         }
 
         if (this.grassMaterial) {

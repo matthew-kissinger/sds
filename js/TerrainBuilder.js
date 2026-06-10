@@ -1559,8 +1559,10 @@ export class TerrainBuilder {
     _driveComputeCull(camera) {
         if (!camera) return;
         const grassCtrl = this.grassSystem?._computeCullController ?? null;
+        // Cycle 87 Phase 3: the streamed grass annulus has its own controller.
+        const streamedGrassCtrl = this.grassSystem?._streamedCullController ?? null;
         const treeCtrls = this._treeCullControllers;
-        if (!grassCtrl && (!treeCtrls || treeCtrls.length === 0)) return;
+        if (!grassCtrl && !streamedGrassCtrl && (!treeCtrls || treeCtrls.length === 0)) return;
         const renderer = this._resolveComputeRenderer();
         if (!renderer) return;
         if (grassCtrl) {
@@ -1572,6 +1574,7 @@ export class TerrainBuilder {
                     .catch(() => { /* ignore */ });
             }
         }
+        if (streamedGrassCtrl) streamedGrassCtrl.runCull(camera, renderer);
         for (let i = 0; i < treeCtrls.length; i++) treeCtrls[i].runCull(camera, renderer);
     }
 

@@ -203,8 +203,20 @@ export function armFoliageStreaming(game, opts = {}) {
                 }
                 await yieldMacrotask();
             }
+            // Cycle 87 Phase 3: grass streams as the final wave, after every
+            // tree wave has landed. GrassSystem.buildStreamedGrass owns the
+            // gating (inert without grass.streamed / zero per-tier clumps /
+            // visual-golden runs).
+            if (!signal?.aborted && builder.grassSystem?.buildStreamedGrass) {
+                await idleSlot(signal);
+                if (signal?.aborted) { diag.aborted = true; return; }
+                const tg = performance.now();
+                const grassResult = builder.grassSystem.buildStreamedGrass();
+                diag.grass = { ...grassResult, ms: Math.round(performance.now() - tg) };
+            }
             diag.completedAt = performance.now();
-            console.log(`[FOLIAGE] streaming complete: +${diag.totalStreamedTrees} trees in ${diag.wavesDone} waves`);
+            console.log(`[FOLIAGE] streaming complete: +${diag.totalStreamedTrees} trees in ${diag.wavesDone} waves`
+                + (diag.grass?.built ? `, +${diag.grass.clumps} streamed grass clumps` : ''));
         } catch (err) {
             diag.error = String(err?.message || err);
             console.warn('[FOLIAGE] streaming failed (scene keeps its cold-path foliage):', err);

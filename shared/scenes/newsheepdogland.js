@@ -113,6 +113,15 @@ export const newsheepdogland = {
         // grass belongs behind a measured LOD pass, not the entrance Play click.
         grassCenter: { x: 250, z: -1080 },
         grassRadius: 560,
+        // Cycle 87 Phase 3: the wider island grass streams in after
+        // first-interactive as the final foliage wave (the cold path keeps the
+        // 560m homestead radius above). Reduced clump density for the annulus;
+        // mobile streams no grass (the cold field already runs reduced
+        // density there).
+        streamed: {
+            grassRadius: 1560,
+            clumpsPerChunk: { desktop: 140, mobile: 0 },
+        },
         // The tall-grass shore band across the foot, just inside the sole.
         tallZones: [
             { minX: -250, maxX: 750, minZ: -1380, maxZ: -1050, heightMul: 1.8 },
