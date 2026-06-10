@@ -1,85 +1,77 @@
-# Next Session - Cycle 86 nearly done; Matt-only items remain
+# Next Session - upkeep program shipped; Matt's two launch items remain
 
-> **Updated:** 2026-06-09
-> **For:** Cycle 86 (`docs/cycle-86-plan.md`, executed autonomously
-> through Phases 1, 2, 4, 5, 7; Cycle 85 still open on the real mobile
-> proof, absorbed as Cycle 86 Phase 3).
+> **Updated:** 2026-06-09 (late)
+> **For:** Cycle 86 (`docs/cycle-86-plan.md`; Cycle 85 still open on the
+> real mobile proof, absorbed as Cycle 86 Phase 3). The post-launch
+> upkeep program (`docs/upkeep/2026-06-post-launch-upkeep.md`) ran
+> autonomously and is COMPLETE.
 > **Pickup priority:** The two remaining Matt items, planned for
 > 2026-06-10: (1) real-device mobile pass on his phone (Phase 3, closes
 > Cycle 85), (2) post or defer the launch drafts in `docs/launch/`
-> (Phase 6). The fence sign-offs landed 2026-06-09 (Matt signed off
-> in-session on the delta design + egress deviation); review debt is
-> fully cleared.
+> (Phase 6). Then `/cycle-close` for 85 + 86.
 
 ## Cold-Start Orientation
 
 Read in order: this file -> [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md)
-(every phase carries a dated status block) ->
-[`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) (still open) ->
-[`docs/hardening/review-dossiers-2026-06-09.md`](docs/hardening/review-dossiers-2026-06-09.md).
+(dated status blocks per phase) ->
+[`docs/upkeep/2026-06-post-launch-upkeep.md`](docs/upkeep/2026-06-post-launch-upkeep.md)
+(per-phase status blocks + checked acceptance) ->
+[`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) (still open).
 
 ## Where It Stands
 
-**v2.3.0 is LIVE** (2026-06-09, release `2b5b2ed` + ratchet fix
-`ceb45b7`, tag `v2.3.0`, Deploy run 27244953409 all green). Live proof:
-`main-Dh4UGGjR.js` served, worker healthz ok, fresh-profile probe shows
-the tutorial offer and the achievements panel (0 of 9), zero console
-errors. The CHANGELOG 2.3.0 entry tells the hardening-program story.
+**v2.3.0 is LIVE** (2026-06-09, tag `v2.3.0`). Cycle 86 Phases 1, 2, 4,
+5, 7 complete; Phase 3 hardware-blocked for Matt tomorrow; Phase 6 drafts
+ready in `docs/launch/` for Matt to post.
 
-Cycle 86 phase state:
+**Upkeep program complete** (2026-06-09 late, commits `5258af4`..`e4430eb`):
 
-- **Phase 1 (fence reviews): done by adversarial-review proxy.** Four
-  independent dossiers, all accept / accept-with-flags. One real defect
-  found (F1 unicast-keyframe basis race) and fixed; fence-list gap
-  closed. Only the two literal "Matt has signed off" boxes remain his.
-- **Phase 2 (worker fixes): shipped** (`83571f6`). Full-room rehydration
-  rejoin (persisted identity reclaims its slot, new joiners still 409),
-  reclaimedByOriginal log fix, /api/event raw-string caps (stack 4096,
-  propsJson 8192, always-valid JSON), basis-aligned unicast keyframes.
-  Chaos harness rerun: 32/32 PASS
-  (`tools/loadtest/chaos-results-rejoinfix-2026-06-09.json`).
-- **Phase 3 (real-device mobile): BLOCKED on hardware, not failed.** Hub
-  down, phone/tablet unreachable, no BrowserStack creds. Checklist is
-  written in the plan, ready to run the moment Matt has the phone or the
-  hub is up. Cycle 85 archives only after this passes.
-- **Phase 4 (tutorial translations): shipped** (`bebce1e`). es/ja/pt/zh-CN,
-  parity allowlist shrunk, i18n ratchet bumped 130 to 136 KiB (recorded).
-- **Phase 5 (v2.3.0 cut): shipped and live** (see above).
-- **Phase 6 (launch content): drafts done** in `docs/launch/` (devlog,
-  description refresh, social copy; prose-checklist clean). Posting is
-  Matt's, and waits on Phase 3 per the plan dependency.
-- **Phase 7 (telemetry): baseline recorded** in the plan. client_error
-  baseline ZERO; renderer_fallback flowing with correct shape; idle tail
-  quiet. Hard stop 3 clear.
+- **A (review-debt tests):** delta-aware integration wsClient +
+  broadcast-cadence coop-survival, new mixed-cohort spec (v3 vs v2
+  streams + cross-cohort equality, 3/3 live), committed 600k-pair
+  rectBoundarySteer fuzz, unicast-keyframe backpressure guard in RoomDO
+  with 5 unit tests.
+- **B (localization):** all four parity allowlists at zero (~118 keys
+  translated incl. the pt sandbox.* gap); i18n ratchet 136 -> 140 KiB,
+  recorded.
+- **C (majors):** typescript 6.0.3, i18next 26.3.1 + react-i18next
+  17.0.8, concurrently 10.0.3 (shell-quote override dropped) all
+  shipped with per-upgrade validation. vite 8 NOT taken: Rolldown swap
+  vs our object-form manualChunks + bundle-graph preload plugin +
+  chunk-family ratchet is a deliberate migration cycle (recorded in the
+  program doc Phase C table).
+- **D (lint):** shared/ no-restricted-imports verified active, worker/
+  pattern gap closed, proof run, shared-sim.md updated.
+- **E (housekeeping):** 44 scratch PNGs gone, p2-backpressure husk
+  removed (9 orphaned holder processes killed), all three cycle83
+  worktrees + branches removed (fully merged, verdict table in the
+  program doc), stale hardening line-refs annotated.
+- **F (docs):** README/ARCHITECTURE/llms.txt truth-up to v2.3.0; site
+  copy untouched (Phase 6, Matt's).
+- **G (quality):** audit at
+  [`docs/upkeep/code-quality-audit-2026-06.md`](docs/upkeep/code-quality-audit-2026-06.md)
+  with prioritized proposals; 3 verified-dead files deleted (361 LOC).
+  HeightFogPatch.js deliberately left (dormant Cycle 25-C foundation,
+  proposal #2: activate or delete).
 
-Also done: Dependabot 28 (shell-quote, critical, dev-scope) closed via
-npm override to 1.8.4; stray wrangler processes killed (the
-`../sds-p2-backpressure` worktree husk may now delete cleanly; one
-`worker/` subdir was still busy at last attempt).
-
-## Autonomous queue
-
-[`docs/upkeep/2026-06-post-launch-upkeep.md`](docs/upkeep/2026-06-post-launch-upkeep.md)
-is scaffolded and pre-authorized: review-debt tests (A), localization
-completion (B), major dep upgrades one at a time (C), shared/ import
-lint (D), housekeeping (E), repo-doc truth-up (F), code-quality audit +
-zero-risk cleanups (G). Ground rules in the doc are binding; it must not
-touch Cycle 86 Phases 3/6.
+Validation at close: lint, both typechecks, build, 1456 passed / 11
+skipped on fresh dist, sim-baselines byte-identical, deploys green
+(wave 1 run 27249719972 success; wave 2 + final noted in the program
+doc).
 
 ## Open Carryover
 
 - Phase 3 hardware (planned 2026-06-10): Matt's phone on live, or hub
-  power for tablet ADB, or BrowserStack creds for Codex's
-  `tests/browserstack/` iOS spec.
+  power for tablet ADB, or BrowserStack creds for `tests/browserstack/`.
 - Phase 6 posting (Matt), gated on Phase 3.
-- Q4 staging provisioning (three operator steps; workflow ships dormant,
-  optional).
+- Q4 staging provisioning (three operator steps; optional).
 - Cycle 85 + 86 closure ritual (`/cycle-close`) once the above land.
+- Paired-session candidates from the quality audit: main.js boot-seam
+  extraction, HeightFogPatch activate-or-delete decision.
+- vite 8 / Rolldown migration as its own future cycle phase.
 - Post-launch: re-tail worker logs during live MP traffic for the loaded
   tick-health baseline; egress lever decision (plan Q2) only if CF costs
-  surface; pre-hardening locale allowlist entries (pt sandbox.* etc.).
-- Wrangler-action Node 20 deprecation warning in deploy workflow (forced
-  Node 24 on 2026-06-16; check for a wrangler-action update before then).
+  surface.
 
 ## Working Contract
 
@@ -94,9 +86,10 @@ touch Cycle 86 Phases 3/6.
 | Area | Source of truth |
 |---|---|
 | Active cycle plan (statuses inline) | [`docs/cycle-86-plan.md`](docs/cycle-86-plan.md) |
+| Upkeep program (complete, statuses inline) | [`docs/upkeep/2026-06-post-launch-upkeep.md`](docs/upkeep/2026-06-post-launch-upkeep.md) |
+| Quality audit + proposals | [`docs/upkeep/code-quality-audit-2026-06.md`](docs/upkeep/code-quality-audit-2026-06.md) |
 | Open prior cycle (one item) | [`docs/cycle-85-plan.md`](docs/cycle-85-plan.md) |
-| Fence-review dossiers | [`docs/hardening/review-dossiers-2026-06-09.md`](docs/hardening/review-dossiers-2026-06-09.md) |
 | Launch drafts (Matt to post) | [`docs/launch/`](docs/launch/) |
+| Fence-review dossiers | [`docs/hardening/review-dossiers-2026-06-09.md`](docs/hardening/review-dossiers-2026-06-09.md) |
 | Release log | [`CHANGELOG.md`](CHANGELOG.md) |
-| Chaos rejoin proof | `tools/loadtest/chaos-results-rejoinfix-2026-06-09.json` |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

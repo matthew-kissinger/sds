@@ -2,9 +2,13 @@
 
 > **Created:** 2026-06-09, Matt-directed ("scaffold the rest of the goals
 > ... polish, rearc, refactor, code gold, housekeeping").
-> **Status:** PENDING. Sits alongside the numbered cycle plans (the
+> **Status:** COMPLETE 2026-06-09 (late). All seven phases executed
+> autonomously under /goal; per-phase status blocks and checked
+> acceptance boxes below. Commits `5258af4`..`e4430eb` plus the final
+> docs commit; Deploy runs 27249719972 (wave 1) and 27250125166 (wave 2)
+> both green. Sits alongside the numbered cycle plans (the
 > docs/hardening/ precedent), because Cycle 86 stays open on Matt's two
-> paired items and this program must not touch them.
+> paired items and this program did not touch them.
 > **Authorization scope:** everything in this doc is pre-authorized for
 > autonomous execution EXCEPT where a phase says report-only. Update each
 > phase's Status line and check acceptance boxes as verified.
@@ -164,8 +168,9 @@ Acceptance:
 - [x] When the phase ends, then this doc shall list per-major: shipped
       (version) or reverted (reason). (Table above; C1 is a recorded
       blocker rather than a revert since the breakage was documentary.)
-- [ ] When the final push lands, then the Deploy run shall be green.
-      (Pending the wave-2 push.)
+- [x] When the final push lands, then the Deploy run shall be green.
+      (Wave-2 run 27250125166: Test, E2E Chromium, Migrate, Worker, and
+      Pages all success.)
 
 ## Phase D - Import-discipline lint for shared/
 
