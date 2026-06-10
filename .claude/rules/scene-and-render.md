@@ -37,7 +37,7 @@ Rules that fall out of this (Cycle 88; decision record in `DECISIONS.md` 2026-06
 - **Cold scatter and wave scatter must agree.** The cold coverage scatters with the per-wave salts (`foliage-wave:<name>`) against the cumulative prior-tree list, byte-identical to what the streamer would scatter; the streamer reuses the cache. Never let the two paths drift.
 - **Streaming arms off the QualityGovernor warmup-complete signal**, bounded by `FALLBACK_START_DELAY_MS`. Don't reintroduce fixed start timers.
 - **Low tier keeps the impostor island forever** (sparse one-pass scatter, no LOD0 waves, no streamed grass) - coverage without the consolidated-mesh build cost.
-- **The impostor cold pass never gates first-interactive on the network**: sidecars are awaited (8s-bounded), albedo atlases bind whenever they land, failure degrades softly to the bare-island path.
+- **The impostor cold pass never gates first-interactive on the network**: only the scatter (pure CPU) is awaited; the atlas fetch + impostor mesh build run as a detached continuation (`coverage.impostorsReady`) and a wave that lands first records itself in `coverage.retiredWaves` so the build skips it. No fetch timeouts on this path - on software-GPU hosts the blocked main thread makes any timer fire spuriously against an already-arrived response.
 
 ## Atmosphere drives `scene.fog`
 

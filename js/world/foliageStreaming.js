@@ -174,12 +174,18 @@ export function scatterWave(builder, sceneDef, wave, existingTrees) {
  * density over the whole streamed extent under its own salt - coverage
  * without the full-density cache no wave will ever upgrade.
  *
- * Failure is soft by contract: any error leaves builder._foliageColdCoverage
- * unset, so the streamer falls back to scattering its own waves exactly as
- * Cycle 87 shipped (bare island, waves materialize). Never blocks
- * first-interactive on the network: only the ~1KB sidecars are awaited
- *(8s-bounded); the albedo textures bind whenever their fetch resolves and
- * the meshes stay invisible until then.
+ * The returned promise resolves after the SCATTER (pure CPU, deterministic);
+ * the atlas fetch + impostor mesh build run as a DETACHED continuation
+ * (`coverage.impostorsReady`), so no network fetch or fetch-vs-timer race
+ * can ever gate first-interactive - on software-GPU hosts the main thread
+ * blocks long enough that any fetch timeout fires spuriously (the
+ * Deploy-run-27281421931 lesson). A wave that lands before its impostors
+ * exist records itself in `coverage.retiredWaves` and the build skips it.
+ *
+ * Failure is soft by contract: a scatter error leaves
+ * builder._foliageColdCoverage unset, so the streamer falls back to
+ * scattering its own waves exactly as Cycle 87 shipped (bare island, waves
+ * materialize); a continuation error just means no impostors appear.
  *
  * @param {object} game SheepDogSimulation instance.
  * @param {{signal?: AbortSignal, tier?: string, sparse?: boolean,
@@ -249,42 +255,65 @@ export async function buildColdFoliageCoverage(game, opts = {}) {
         const flatAll = [...cache.values()].flat();
         diag.trees = flatAll.length;
 
-        const types = [...new Set(flatAll.map((t) => t.type))];
-        const loadAtlas = opts.loadAtlas ?? loadColdImpostorAtlas;
-        const tAtlas = performance.now();
-        const atlasByType = {};
-        await Promise.all(types.map(async (type) => {
-            atlasByType[type] = await loadAtlas(type);
-        }));
-        diag.atlasMs = Math.round(performance.now() - tAtlas);
-        if (signal?.aborted) { diag.aborted = true; return diag; }
+        // The cache is live from here: waves can stream off it even if the
+        // impostor build below never finishes.
+        const coverage = {
+            cache,
+            ranges: null,
+            retiredWaves: new Set(),
+            diag,
+            impostorsReady: null,
+        };
+        builder._foliageColdCoverage = coverage;
 
-        const tBuild = performance.now();
-        const waveTrees = [...cache.entries()].map(([name, trees]) => ({ name, trees }));
-        const built = buildColdImpostorMeshes(builder, waveTrees, atlasByType);
-        diag.buildMs = Math.round(performance.now() - tBuild);
-        diag.meshes = built.meshes.length;
+        // Detached impostor continuation - see the doc comment above.
+        coverage.impostorsReady = (async () => {
+            try {
+                const types = [...new Set(flatAll.map((t) => t.type))];
+                const loadAtlas = opts.loadAtlas ?? loadColdImpostorAtlas;
+                const tAtlas = performance.now();
+                const atlasByType = {};
+                await Promise.all(types.map(async (type) => {
+                    atlasByType[type] = await loadAtlas(type);
+                }));
+                diag.atlasMs = Math.round(performance.now() - tAtlas);
+                if (signal?.aborted) { diag.aborted = true; return diag; }
 
-        // Late-bind the albedo atlases: visibility follows the network, the
-        // scene build never does.
-        for (const type of types) {
-            atlasByType[type]?.texturePromise?.then((texture) => {
-                if (!texture || signal?.aborted) return;
-                const mat = built.materialsByType[type];
-                if (!mat) return;
-                mat.map = texture;
-                mat.needsUpdate = true;
-                for (const mesh of built.meshes) {
-                    if (mesh.userData.foliageColdImpostor?.type === type) mesh.visible = true;
+                const tBuild = performance.now();
+                const waveTrees = [...cache.entries()]
+                    .filter(([name]) => !coverage.retiredWaves.has(name))
+                    .map(([name, trees]) => ({ name, trees }));
+                const built = buildColdImpostorMeshes(builder, waveTrees, atlasByType);
+                coverage.ranges = built.ranges;
+                diag.buildMs = Math.round(performance.now() - tBuild);
+                diag.meshes = built.meshes.length;
+
+                // Late-bind the albedo atlases: visibility follows the
+                // network, the scene build never does.
+                for (const type of types) {
+                    atlasByType[type]?.texturePromise?.then((texture) => {
+                        if (!texture || signal?.aborted) return;
+                        const mat = built.materialsByType[type];
+                        if (!mat) return;
+                        mat.map = texture;
+                        mat.needsUpdate = true;
+                        for (const mesh of built.meshes) {
+                            if (mesh.userData.foliageColdImpostor?.type === type) mesh.visible = true;
+                        }
+                        diag.textureBoundAt = performance.now();
+                    });
                 }
-                diag.textureBoundAt = performance.now();
-            });
-        }
 
-        builder._foliageColdCoverage = { cache, ranges: built.ranges, diag };
-        diag.completedAt = performance.now();
-        console.log(`[FOLIAGE] cold impostor coverage: ${diag.trees} trees in ${diag.meshes} meshes `
-            + `(${diag.mode}, scatter ${diag.scatterMs}ms, build ${diag.buildMs}ms)`);
+                diag.completedAt = performance.now();
+                console.log(`[FOLIAGE] cold impostor coverage: ${diag.trees} trees in ${diag.meshes} meshes `
+                    + `(${diag.mode}, scatter ${diag.scatterMs}ms, build ${diag.buildMs}ms)`);
+            } catch (err) {
+                diag.error = String(err?.message || err);
+                console.warn('[FOLIAGE] cold impostor build failed (island keeps the cached scatter, no impostors):', err);
+            }
+            return diag;
+        })();
+
         return diag;
     } catch (err) {
         diag.error = String(err?.message || err);

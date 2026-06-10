@@ -548,9 +548,13 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {})
  * Cycle 88 Phase 2: minimal kiln artifacts for the cold impostor coverage -
  * sidecar JSON + albedo atlas only (~1.2MB per type vs ~3.6MB for the full
  * relighting triple; the static cross-billboard never reads normal/depth).
- * The sidecar await is bounded (8s) so a dead network can't stall the scene
- * build; the texture rides an unawaited promise and binds whenever it lands.
- * Cached per type across scene swaps, like the loadKilnImpostor cache.
+ * Nothing here is awaited on the scene-build critical path (the impostor
+ * build is a detached continuation), so no fetch timeout is needed - a
+ * hung or failed fetch only means the impostors never appear. No abort
+ * timer either: on software-GPU hosts the main thread can block past any
+ * reasonable bound and a timer would spuriously beat the arrived response
+ * (the Deploy-run-27281421931 failure mode). Cached per type across scene
+ * swaps, like the loadKilnImpostor cache.
  *
  * @param {string} treeType e.g. 'tree1'
  * @returns {Promise<{sidecar: object, texturePromise: Promise<THREE.Texture|null>} | null>}
@@ -561,7 +565,7 @@ export async function loadColdImpostorAtlas(treeType) {
     const promise = (async () => {
         try {
             const base = await resolveImpostorBase(treeType);
-            const res = await fetch(`${base}.json`, { signal: AbortSignal.timeout(8000) });
+            const res = await fetch(`${base}.json`);
             if (!res.ok) throw new Error(`sidecar HTTP ${res.status}`);
             const sidecar = await res.json();
             const texturePromise = new Promise((resolve, reject) => {
@@ -775,7 +779,14 @@ const ZERO_MATRIX = new THREE.Matrix4().set(
     0, 0, 0, 1,
 );
 export function retireColdImpostorWave(builder, waveName) {
-    const rangeList = builder._foliageColdCoverage?.ranges?.get(waveName);
+    const coverage = builder._foliageColdCoverage;
+    if (!coverage) return 0;
+    // Record the retirement even when the impostor meshes don't exist yet
+    // (the detached impostor build is still in flight on slow hosts): the
+    // build skips retired waves, so a landed LOD0 zone never gains a late
+    // double representation.
+    coverage.retiredWaves?.add(waveName);
+    const rangeList = coverage.ranges?.get(waveName);
     if (!rangeList) return 0;
     let retired = 0;
     for (const { mesh, start, count } of rangeList) {

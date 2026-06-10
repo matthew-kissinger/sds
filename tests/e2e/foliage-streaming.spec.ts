@@ -37,7 +37,8 @@ test.describe('Newsheepdogland foliage streaming', () => {
 
   test('arms streaming and lands the first wave beyond the cold corridor', async ({ page, context, browserName }) => {
     test.skip(browserName !== 'chromium', 'streaming diag reads are Chromium-only');
-    test.setTimeout(240_000);
+    // Two 120s polls + SwiftShader-speed boot need more than the old 240s.
+    test.setTimeout(300_000);
 
     await context.addInitScript(seedIdentity, 'player_e2e_foliage_arm');
 
@@ -48,10 +49,10 @@ test.describe('Newsheepdogland foliage streaming', () => {
     await play.dispatchEvent('click');
     await expect(page.locator('#canvas-container canvas')).toBeAttached({ timeout: 90_000 });
 
-    // Cycle 88 Phase 2: the impostor cold coverage builds inside the
-    // scene-load transition (the canvas attaches earlier, while the swap
-    // overlay is still up), so poll until the cold pass reports complete -
-    // the first playable frame carries island-wide impostor coverage.
+    // Cycle 88 Phase 2: the impostor cold coverage scatters inside the
+    // scene-load transition and its mesh build runs as a detached
+    // continuation, so poll until it reports complete - on real GPUs that
+    // is within the load; on SwiftShader it slots in between waves.
     await expect(async () => {
       const cold = await page.evaluate(() => (window as any).__sdsFoliageColdCoverage ?? null);
       expect(cold).not.toBeNull();

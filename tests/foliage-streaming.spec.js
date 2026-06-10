@@ -120,6 +120,7 @@ describe('buildColdFoliageCoverage (Cycle 88 Phase 2)', () => {
         const game = makeStubGame();
         const builder = game.terrainBuilder;
         const diag = await buildColdFoliageCoverage(game, { tier: 'med', loadAtlas: stubAtlasLoader() });
+        await builder._foliageColdCoverage.impostorsReady;
         expect(diag.error).toBeNull();
         expect(diag.aborted).toBe(false);
         expect(diag.mode).toBe('full');
@@ -173,6 +174,7 @@ describe('buildColdFoliageCoverage (Cycle 88 Phase 2)', () => {
     it('sparse mode places one-pass coverage for low-tier hosts', async () => {
         const game = makeStubGame();
         const diag = await buildColdFoliageCoverage(game, { tier: 'low', sparse: true, loadAtlas: stubAtlasLoader() });
+        await game.terrainBuilder._foliageColdCoverage.impostorsReady;
         expect(diag.error).toBeNull();
         expect(diag.mode).toBe('sparse');
         expect(diag.scatteredWaves).toBe(1);
@@ -185,11 +187,37 @@ describe('buildColdFoliageCoverage (Cycle 88 Phase 2)', () => {
     it('sidecar failure degrades to the bare-island cold path (no meshes, no error)', async () => {
         const game = makeStubGame();
         const diag = await buildColdFoliageCoverage(game, { tier: 'med', loadAtlas: stubAtlasLoader({ failSidecar: true }) });
+        await game.terrainBuilder._foliageColdCoverage.impostorsReady;
         expect(diag.error).toBeNull();
         expect(diag.meshes).toBe(0);
         expect(game.terrainBuilder.trees.length).toBe(0);
         // The scatter cache still hands the streamer its waves.
         expect(game.terrainBuilder._foliageColdCoverage.cache.size).toBe(NSL_PLANNED_WAVES);
+    });
+
+    it('a wave retired before the impostor build lands is skipped by the build', async () => {
+        const game = makeStubGame();
+        const builder = game.terrainBuilder;
+        // Hold the atlas fetch until after a wave retires (the slow-host race).
+        let releaseAtlas;
+        const gate = new Promise((resolve) => { releaseAtlas = resolve; });
+        const diag = await buildColdFoliageCoverage(game, {
+            tier: 'med',
+            loadAtlas: async () => {
+                await gate;
+                return { sidecar: FAKE_SIDECAR, texturePromise: Promise.resolve({ isTexture: true }) };
+            },
+        });
+        const coverage = builder._foliageColdCoverage;
+        const firstWave = [...coverage.cache.entries()].find(([, trees]) => trees.length > 0);
+        const { retireColdImpostorWave } = await import('../js/world/TreePlacement.js');
+        expect(retireColdImpostorWave(builder, firstWave[0])).toBe(0); // no ranges yet
+        releaseAtlas();
+        await coverage.impostorsReady;
+        // The retired wave got no impostor instances; everything else did.
+        expect(coverage.ranges.has(firstWave[0])).toBe(false);
+        const built = [...coverage.ranges.values()].flat().reduce((s, r) => s + r.count, 0);
+        expect(built).toBe(diag.trees - firstWave[1].length);
     });
 
     it('aborting leaves the builder untouched', async () => {
@@ -210,6 +238,7 @@ describe('waves upgrade the cold coverage (Cycle 88 Phase 3)', () => {
         const game = makeStubGame();
         const builder = game.terrainBuilder;
         const coldDiag = await buildColdFoliageCoverage(game, { tier: 'med', loadAtlas: stubAtlasLoader() });
+        await builder._foliageColdCoverage.impostorsReady;
         expect(coldDiag.error).toBeNull();
 
         vi.useFakeTimers();
