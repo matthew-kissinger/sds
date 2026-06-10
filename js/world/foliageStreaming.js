@@ -34,10 +34,37 @@ import {
     cullTreesForScene,
     toTreeInstancesByType,
 } from './TreePlacement.js';
+import { getSceneManager } from '../GameBridge.js';
+import { TIER_PRESETS } from '../HardwareTier.js';
 
 /** Delay from arming (scene body complete) to the first wave. Covers the
  * QualityGovernor 6s warmup window so wave cost never folds into it. */
 export const START_DELAY_MS = 6500;
+
+/** Cycle 87 Phase 4: zone rects larger than this split into quadrant
+ * sub-waves (recursively, depth-capped) so a single scatter slice stays
+ * small even on slow hosts. The Poisson walk costs by rect area; measured
+ * ~85ms per 2.7M m^2 on the reference desktop, so 1.5M m^2 keeps reference
+ * slices ~25-45ms and slow-host slices bounded. Canopy spacing holds across
+ * sub-rect borders because every sub-wave checks against all prior trees. */
+export const MAX_WAVE_AREA_M2 = 1_500_000;
+const MAX_SPLIT_DEPTH = 2;
+
+function splitRect(name, rect, depth = 0) {
+    const area = (rect.maxX - rect.minX) * (rect.maxZ - rect.minZ);
+    if (area <= MAX_WAVE_AREA_M2 || depth >= MAX_SPLIT_DEPTH) {
+        return [{ name, zoneRect: rect }];
+    }
+    const midX = (rect.minX + rect.maxX) / 2;
+    const midZ = (rect.minZ + rect.maxZ) / 2;
+    const quads = [
+        { minX: rect.minX, maxX: midX, minZ: rect.minZ, maxZ: midZ },
+        { minX: midX, maxX: rect.maxX, minZ: rect.minZ, maxZ: midZ },
+        { minX: rect.minX, maxX: midX, minZ: midZ, maxZ: rect.maxZ },
+        { minX: midX, maxX: rect.maxX, minZ: midZ, maxZ: rect.maxZ },
+    ];
+    return quads.flatMap((q, i) => splitRect(`${name}.q${i}`, q, depth + 1));
+}
 
 /** FNV-1a 32-bit hash for wave-name salting. */
 export function fnv1a(str) {
@@ -50,25 +77,33 @@ export function fnv1a(str) {
 }
 
 /**
- * Plan the streaming waves for a scene def. Pure; used by tests.
+ * Plan the streaming waves for a scene def. Pure; used by tests. Each zone
+ * yields one or more sub-waves (large rects quad-split, Phase 4); every wave
+ * carries its parent `zone` plus a zero-based `zoneIndex` for tier gating.
  *
  * @param {import('../../shared/scenes/types.js').SceneDef} sceneDef
- * @returns {Array<{name: string, zoneRect: object}>}
+ * @param {{maxZones?: number}} [opts] Tier gate: stream only the first
+ *   `maxZones` zones (default all).
+ * @returns {Array<{name: string, zone: string, zoneIndex: number, zoneRect: object}>}
  */
-export function planFoliageWaves(sceneDef) {
+export function planFoliageWaves(sceneDef, opts = {}) {
     const streamed = sceneDef?.terrain?.streamedZones;
     if (!streamed) return [];
-    // Same near-to-far vocabulary order as the cold scatter's ZONES table.
+    const maxZones = opts.maxZones ?? Infinity;
+    // Same near-to-far vocabulary order as the cold scatter's ZONES table;
+    // any non-standard zone names append after, sorted for determinism.
     const order = ['nearField', 'midField', 'farField', 'horizon'];
+    const zoneNames = [
+        ...order.filter((name) => streamed[name]),
+        ...Object.keys(streamed).sort().filter((name) => !order.includes(name)),
+    ];
     const waves = [];
-    for (const name of order) {
-        if (streamed[name]) waves.push({ name, zoneRect: streamed[name] });
-    }
-    // Any non-standard zone names append after the known order, sorted for
-    // determinism.
-    for (const name of Object.keys(streamed).sort()) {
-        if (!order.includes(name)) waves.push({ name, zoneRect: streamed[name] });
-    }
+    zoneNames.forEach((zone, zoneIndex) => {
+        if (zoneIndex >= maxZones) return;
+        for (const sub of splitRect(zone, streamed[zone])) {
+            waves.push({ ...sub, zone, zoneIndex });
+        }
+    });
     return waves;
 }
 
@@ -107,7 +142,10 @@ export function scatterWave(builder, sceneDef, wave, existingTrees) {
     const seed = sceneDef?.terrain?.seed ?? 0;
     const rng = mulberry32((seed ^ fnv1a(`foliage-wave:${wave.name}`)) >>> 0);
     const flat = generateTrees(sceneDef, rng, {
-        zones: { [wave.name]: wave.zoneRect, playArea: sceneDef?.terrain?.zones?.playArea },
+        // Key by the PARENT zone name: the scatter's ZONES table (minDist /
+        // scale per zone) only knows the standard vocabulary, while sub-waves
+        // carry quad-split names like 'nearField.q2'.
+        zones: { [wave.zone ?? wave.name]: wave.zoneRect, playArea: sceneDef?.terrain?.zones?.playArea },
         excludeRects: coldExclusionRects(sceneDef),
         existingTrees,
         rockPositions: builder.rockPositions,
@@ -145,14 +183,20 @@ export function armFoliageStreaming(game, opts = {}) {
     const sceneDef = game?.currentScene;
     const builder = game?.terrainBuilder;
     if (!sceneDef || !builder) return null;
-    const waves = planFoliageWaves(sceneDef);
+    // Cycle 87 Phase 4: hardware tier gates how much of the island streams.
+    // Low tier (mobile-class) gets the near band only and no streamed grass.
+    const tier = opts.tier ?? getSceneManager()?.getTier?.() ?? 'med';
+    const tierPreset = TIER_PRESETS[tier] ?? TIER_PRESETS.med;
+    const waves = planFoliageWaves(sceneDef, { maxZones: tierPreset.foliageStreamWaves ?? Infinity });
     if (waves.length === 0) return null;
+    const streamGrass = tierPreset.foliageStreamGrass !== false;
 
     const signal = opts.signal ?? game._sceneAbort?.signal ?? null;
     const startDelayMs = opts.startDelayMs ?? START_DELAY_MS;
 
     const diag = {
         sceneId: sceneDef.id,
+        tier,
         planned: waves.length,
         wavesDone: 0,
         startedAt: 0,
@@ -190,6 +234,17 @@ export function armFoliageStreaming(game, opts = {}) {
                     const byType = toTreeInstancesByType(builder, streamed);
                     meshes = buildAdditiveTreeMeshes(builder, byType, { label: wave.name });
                     builder.treeInstances = existing.concat(streamed);
+                    // Prewarm the new meshes' pipelines inside the idle slot so
+                    // their first visible frame doesn't pay the compile stall.
+                    try {
+                        const renderer = builder._resolveComputeRenderer?.()
+                            ?? getSceneManager()?.getRenderer?.()
+                            ?? null;
+                        const camera = getSceneManager()?.getCamera?.() ?? null;
+                        if (renderer?.compileAsync && camera) {
+                            await renderer.compileAsync(builder.scene, camera);
+                        }
+                    } catch { /* prewarm is best-effort */ }
                 }
                 const buildMs = Math.round(performance.now() - t1);
 
@@ -205,9 +260,9 @@ export function armFoliageStreaming(game, opts = {}) {
             }
             // Cycle 87 Phase 3: grass streams as the final wave, after every
             // tree wave has landed. GrassSystem.buildStreamedGrass owns the
-            // gating (inert without grass.streamed / zero per-tier clumps /
-            // visual-golden runs).
-            if (!signal?.aborted && builder.grassSystem?.buildStreamedGrass) {
+            // config gating (no grass.streamed / zero per-tier clumps /
+            // visual-golden); Phase 4 adds the tier gate here.
+            if (!signal?.aborted && streamGrass && builder.grassSystem?.buildStreamedGrass) {
                 await idleSlot(signal);
                 if (signal?.aborted) { diag.aborted = true; return; }
                 const tg = performance.now();

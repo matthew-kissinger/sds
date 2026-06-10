@@ -20,7 +20,7 @@ import { field } from '../shared/scenes/field.js';
  * diag) runs the real code path.
  */
 
-function makeStubGame(sceneDef = newsheepdogland) {
+function makeStubGame(sceneDef = newsheepdogland, { grassSystem = null } = {}) {
     const builder = {
         sceneDef,
         treeInstances: [],
@@ -29,6 +29,7 @@ function makeStubGame(sceneDef = newsheepdogland) {
         trees: [],
         isMobile: false,
         scene: { add() {} },
+        grassSystem,
         _groundY: () => 1, // above the waterline; water cull keeps everything
     };
     return {
@@ -39,15 +40,35 @@ function makeStubGame(sceneDef = newsheepdogland) {
     };
 }
 
+// NSL zone sub-wave counts under MAX_WAVE_AREA quad-splitting: nearField 4,
+// midField 4, farField 16, horizon 16.
+const NSL_PLANNED_WAVES = 40;
+
 afterEach(() => {
     vi.useRealTimers();
 });
 
 describe('planFoliageWaves', () => {
-    it('plans one wave per streamed zone in near-to-far order', () => {
+    it('plans sub-waves per streamed zone in near-to-far order', () => {
         const waves = planFoliageWaves(newsheepdogland);
-        expect(waves.map((w) => w.name)).toEqual(['nearField', 'midField', 'farField', 'horizon']);
-        expect(waves[0].zoneRect).toEqual(newsheepdogland.terrain.streamedZones.nearField);
+        expect(waves.length).toBe(NSL_PLANNED_WAVES);
+        // Zones appear grouped in vocabulary order.
+        const zoneSequence = [...new Set(waves.map((w) => w.zone))];
+        expect(zoneSequence).toEqual(['nearField', 'midField', 'farField', 'horizon']);
+        // Every sub-rect sits inside its parent zone rect.
+        for (const w of waves) {
+            const parent = newsheepdogland.terrain.streamedZones[w.zone];
+            expect(w.zoneRect.minX).toBeGreaterThanOrEqual(parent.minX);
+            expect(w.zoneRect.maxX).toBeLessThanOrEqual(parent.maxX);
+            expect(w.zoneRect.minZ).toBeGreaterThanOrEqual(parent.minZ);
+            expect(w.zoneRect.maxZ).toBeLessThanOrEqual(parent.maxZ);
+        }
+    });
+
+    it('gates by maxZones (tier gate)', () => {
+        const waves = planFoliageWaves(newsheepdogland, { maxZones: 1 });
+        expect(waves.length).toBeGreaterThan(0);
+        expect(waves.every((w) => w.zone === 'nearField')).toBe(true);
     });
 
     it('is inert for scenes without streamedZones', () => {
@@ -80,9 +101,9 @@ describe('armFoliageStreaming', () => {
         vi.useFakeTimers();
         const game = makeStubGame();
         const armed = armFoliageStreaming(game, { startDelayMs: 0 });
-        expect(armed.planned).toBe(4);
+        expect(armed.planned).toBe(NSL_PLANNED_WAVES);
         await vi.runAllTimersAsync();
-        expect(armed.diag.wavesDone).toBe(4);
+        expect(armed.diag.wavesDone).toBe(NSL_PLANNED_WAVES);
         expect(armed.diag.aborted).toBe(false);
         expect(armed.diag.error).toBeNull();
         expect(armed.diag.totalStreamedTrees).toBeGreaterThan(0);
@@ -133,7 +154,31 @@ describe('armFoliageStreaming', () => {
         abort.abort();
         await vi.runAllTimersAsync();
         expect(armed.diag.aborted).toBe(true);
-        expect(armed.diag.wavesDone).toBeLessThan(4);
+        expect(armed.diag.wavesDone).toBeLessThan(NSL_PLANNED_WAVES);
+    });
+
+    it('low tier streams only the near band and no grass (Cycle 87 P4)', async () => {
+        vi.useFakeTimers();
+        const grassSystem = { buildStreamedGrass: vi.fn(() => ({ built: true, clumps: 5 })) };
+        const game = makeStubGame(newsheepdogland, { grassSystem });
+        const armed = armFoliageStreaming(game, { startDelayMs: 0, tier: 'low' });
+        await vi.runAllTimersAsync();
+        expect(armed.diag.tier).toBe('low');
+        expect(armed.diag.wavesDone).toBe(armed.planned);
+        expect(armed.planned).toBeLessThan(NSL_PLANNED_WAVES);
+        // Only nearField sub-waves ran.
+        expect(armed.diag.perWave.every((w) => w.name.startsWith('nearField'))).toBe(true);
+        expect(grassSystem.buildStreamedGrass).not.toHaveBeenCalled();
+    });
+
+    it('mid tier streams grass as the final wave (Cycle 87 P4)', async () => {
+        vi.useFakeTimers();
+        const grassSystem = { buildStreamedGrass: vi.fn(() => ({ built: true, clumps: 5 })) };
+        const game = makeStubGame(newsheepdogland, { grassSystem });
+        const armed = armFoliageStreaming(game, { startDelayMs: 0, tier: 'med' });
+        await vi.runAllTimersAsync();
+        expect(grassSystem.buildStreamedGrass).toHaveBeenCalledTimes(1);
+        expect(armed.diag.grass).toMatchObject({ built: true, clumps: 5 });
     });
 
     it('uses the documented default start delay', () => {

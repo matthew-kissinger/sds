@@ -113,6 +113,10 @@ export const TIER_PRESETS = {
         // [start, end] crossfade band for LOD0->LOD2 alphaHash. Mobile-low
         // pushes the band closer (80-100m) so geometry budget stays low.
         lod0CrossfadeBand:   [80, 100],
+        // Cycle 87 Phase 4: low-tier devices stream only the first deferred
+        // tree zone (the near band) and no streamed grass.
+        foliageStreamWaves:  1,
+        foliageStreamGrass:  false,
     },
     med: {
         clumpsPerChunkScale: 1.0, // applied to scene's desktop value
@@ -132,6 +136,9 @@ export const TIER_PRESETS = {
         // 20m alphaHash crossfade (180-200m) eliminates the pop entirely.
         usesLod1ForFoliage:  false,
         lod0CrossfadeBand:   [180, 200],
+        // Cycle 87 Phase 4: mid/high tiers stream every deferred zone + grass.
+        foliageStreamWaves:  Infinity,
+        foliageStreamGrass:  true,
     },
     high: {
         clumpsPerChunkScale: 1.0,
@@ -140,5 +147,7 @@ export const TIER_PRESETS = {
         meadowQuadEnabled:   false, // Cycle 51: disabled, see the med-tier note
         usesLod1ForFoliage:  false,
         lod0CrossfadeBand:   [180, 200],
+        foliageStreamWaves:  Infinity,
+        foliageStreamGrass:  true,
     },
 };
