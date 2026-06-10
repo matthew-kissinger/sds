@@ -497,10 +497,12 @@ Docs to update (P2-DELTA-DOC, after ship):
 > Boxes checked 2026-06-09 (Cycle 86 Phase 1) per the post-hoc adversarial
 > review ([`review-dossiers-2026-06-09.md`](review-dossiers-2026-06-09.md));
 > each was verified against tests and code at review. The egress-gate line
-> stays open: it holds from ~65% round progress, not at round start (see
-> Deviations). The section 4 unicast consistency note was found wrong at
-> review (dossier F1) and fixed in Cycle 86 Phase 2 with basis-aligned
-> unicast keyframes.
+> stays unchecked as written: it holds from ~65% round progress, not at
+> round start (see Deviations). Matt signed off on that deviation
+> 2026-06-09 (progress-scaled savings accepted; levers stay deferred per
+> Cycle 86 plan Q2). The section 4 unicast consistency note was found
+> wrong at review (dossier F1) and fixed in Cycle 86 Phase 2 with
+> basis-aligned unicast keyframes.
 
 P2-DELTA-IMPL (server):
 
@@ -552,7 +554,8 @@ P2-DELTA-CLIENT:
 
 > 2026-06-09 (Cycle 86 Phase 1): all four were accepted by the acting
 > reviewer during the autonomous run and re-verified at post-hoc review
-> (dossier). They remain listed for Matt's own pass.
+> (dossier). **SIGNED OFF by Matt 2026-06-09** (in-session, with the
+> egress deviation accepted alongside).
 
 1. Confirm per-client soft-degrade over refuse (section 5 recommendation).
 2. Confirm N = 60 (section 4).

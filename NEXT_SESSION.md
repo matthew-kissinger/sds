@@ -4,10 +4,12 @@
 > **For:** Cycle 86 (`docs/cycle-86-plan.md`, executed autonomously
 > through Phases 1, 2, 4, 5, 7; Cycle 85 still open on the real mobile
 > proof, absorbed as Cycle 86 Phase 3).
-> **Pickup priority:** The three Matt-only items: (1) real-device mobile
-> pass on his phone (Phase 3, closes Cycle 85), (2) post or defer the
-> launch drafts in `docs/launch/` (Phase 6), (3) the two "Matt has signed
-> off" boxes in `docs/hardening/` (dossiers ready).
+> **Pickup priority:** The two remaining Matt items, planned for
+> 2026-06-10: (1) real-device mobile pass on his phone (Phase 3, closes
+> Cycle 85), (2) post or defer the launch drafts in `docs/launch/`
+> (Phase 6). The fence sign-offs landed 2026-06-09 (Matt signed off
+> in-session on the delta design + egress deviation); review debt is
+> fully cleared.
 
 ## Cold-Start Orientation
 
@@ -57,11 +59,12 @@ npm override to 1.8.4; stray wrangler processes killed (the
 
 ## Open Carryover
 
-- Phase 3 hardware: Matt's phone on live, or hub power for tablet ADB, or
-  BrowserStack creds for Codex's `tests/browserstack/` iOS spec.
+- Phase 3 hardware (planned 2026-06-10): Matt's phone on live, or hub
+  power for tablet ADB, or BrowserStack creds for Codex's
+  `tests/browserstack/` iOS spec.
 - Phase 6 posting (Matt), gated on Phase 3.
-- Two sign-off boxes in `docs/hardening/phase-2-scale-backend.md` (Matt).
-- Q4 staging provisioning (three operator steps; workflow ships dormant).
+- Q4 staging provisioning (three operator steps; workflow ships dormant,
+  optional).
 - Cycle 85 + 86 closure ritual (`/cycle-close`) once the above land.
 - Post-launch: re-tail worker logs during live MP traffic for the loaded
   tick-health baseline; egress lever decision (plan Q2) only if CF costs

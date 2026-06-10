@@ -88,10 +88,12 @@ Verdicts: all accept or accept-with-flags. Actioned: fence-list
 governance gap closed (the four P3-GSV-SPLIT modules added to
 INTERFACE_FENCE.md + shared-sim.md), F1 unicast-keyframe race fixed in
 Phase 2, F4 wording corrected in multiplayer.md, verified design-doc
-acceptance boxes checked. STILL OPEN FOR MATT: the two literal "Matt has
-signed off" boxes (P2-DELTA-DESIGN, and the egress-gate caveat
-acceptance) - honestly his, not proxyable. Q4 staging not provisioned
-(operator steps remain). Cycle 85 closure correctly deferred to Phase 3.
+acceptance boxes checked. **Matt signed off in-session 2026-06-09** on
+both remaining boxes (the delta design and the egress deviation,
+progress-scaled savings accepted) - Phase 1 is now fully complete; every
+fence-review checkbox in `docs/hardening/` is checked or carries his
+recorded acceptance. Q4 staging not provisioned (operator steps remain,
+optional). Cycle 85 closure correctly deferred to Phase 3.
 
 ## Phase 2 - Worker fixes from chaos findings (autonomous, ~3hr)
 
@@ -324,6 +326,24 @@ Phase 3 (paired) + Phase 4 run parallel to Phase 2
 Phases 1-4 -> Phase 5 -> Phase 6 (paired, also gated by Phase 3)
 Phase 5 -> Phase 7 (optional)
 ```
+
+## Post-release upkeep (2026-06-09, Matt-directed addendum)
+
+- Dependabot 28 (shell-quote, critical, dev-scope) closed via npm
+  override to 1.8.4; `npm audit` 0 vulnerabilities.
+- `cloudflare/wrangler-action` v3 to v4 in deploy.yml + preview.yml
+  (node24 runtime, clears the June 16 forced-switch deprecation; v4's
+  only major change is defaulting to Wrangler v4, which the worker
+  already uses via its package.json).
+- In-range dependency updates, root + worker (`npm update`): wrangler
+  4.84.1 to 4.99.0, workers-types 4.20260609.1, vitest 4.1.8, Playwright
+  1.60.0, react 19.2.7, vite 7.3.5, eslint 10.4.1, tailwindcss 4.3,
+  i18next 25.10.10, gltf-transform 4.4, et al. Majors deliberately
+  deferred (vite 8, typescript 6, @vitejs/plugin-react 6, concurrently
+  10, i18next 26, react-i18next 17, vite-plugin-static-copy 4): not the
+  night before launch; candidates for a post-launch upkeep phase.
+- Validation after updates: lint clean, both typechecks clean, build
+  green, 1448 passed / 8 skipped against a fresh dist.
 
 ## Frozen files (cycle-specific additions)
 

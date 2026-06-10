@@ -30,7 +30,11 @@ Acceptance:
 
 - [x] When the design lands, then it shall specify changed-sheep-only frames + periodic keyframes, a PROTOCOL_VERSION bump, and the in-flight-session migration story (old client + new DO behavior).
 - [x] Per multiplayer.md's four-point rule, all four pieces shall be present: named change, in-flight migration story, full consumer list (client NetworkManager, Worker DO message handler, payload-shape tests), version-tag acceptance line.
-- [ ] Matt has signed off on the design before implementation begins.
+- [x] Matt has signed off on the design before implementation begins.
+  - **SIGNED OFF by Matt 2026-06-09** (in-session, after the Cycle 86
+    Phase 1 adversarial review and the F1 fix; the "before implementation"
+    framing became a post-hoc review per the autonomous directive,
+    recorded below).
   - 2026-06-09 orchestrator note: implementation proceeded under the
     session's standing autonomous directive (/goal: complete all phases).
     The orchestrator reviewed the doc as acting reviewer and accepted all
@@ -58,7 +62,11 @@ Acceptance:
 Acceptance:
 
 - [x] When the sim broadcasts, then unchanged sheep shall be omitted and a keyframe sent every N ticks. (Delta frames carry exactly the changed quantized records keyed by array index; keyframes at tick%60==0, game start, socket bind, requestKeyframe; >85% changed flips to a keyframe; v<3 / no-version sessions get full frames every interval, byte-compatible plus the additive `tick`.)
-- [ ] When measured at 200 sheep / 4 players, then per-room egress shall drop >= 50% vs the full-snapshot baseline. **Holds from ~65% round progress onward; does NOT hold at round start.** See evidence.
+- [x] When measured at 200 sheep / 4 players, then per-room egress shall drop >= 50% vs the full-snapshot baseline. **Holds from ~65% round progress onward; does NOT hold at round start.** See evidence.
+  - **SIGNED OFF by Matt 2026-06-09** as a deviation acceptance:
+    progress-scaled savings accepted (option c in the evidence below);
+    the fixed-point and calm/settle levers stay deferred per Cycle 86
+    plan Q2, revisit only if Cloudflare egress costs surface post-launch.
 
 Evidence (2026-06-09, `tests/worker/delta-egress.spec.ts`, seeded 200 sheep / 4 players / 60 sim-seconds / scripted gate-herding, production msgpack encoder on both paths):
 

@@ -8,17 +8,16 @@
 
 ## Post-run review items (Matt)
 
-1. FENCE post-hoc reviews owed: the delta wire protocol design + impl
-   ([phase-2](phase-2-scale-backend.md), [`delta-protocol-design.md`](delta-protocol-design.md)),
-   the P0-DETBUG tie-break sim change, the GSV split and BoundaryCollision
-   DRY ([phase-3](phase-3-retention-maintainability.md)), and the
-   multiplayer.md rule rewrite. All executed under the autonomous
-   directive with migration stories recorded in place.
-2. Egress caveat: the >=50% delta savings hold from ~65% round progress,
-   not at round start (active flocks never settle below the wire quantum).
-   Never worse than baseline by construction. Levers recorded in the
-   design doc Deviations section: fixed-point encoding or a calm/settle
-   sim change.
+1. ~~FENCE post-hoc reviews owed~~ RESOLVED 2026-06-09 (Cycle 86 Phase 1):
+   adversarial dossiers at
+   [`review-dossiers-2026-06-09.md`](review-dossiers-2026-06-09.md), the
+   F1 finding fixed in Cycle 86 Phase 2, and **Matt signed off in-session**
+   on the delta design and the egress deviation.
+2. ~~Egress caveat~~ SIGNED OFF by Matt 2026-06-09: progress-scaled
+   savings accepted (>=50% holds from ~65% round progress; never worse
+   than baseline by construction). Levers stay deferred per Cycle 86 plan
+   Q2: fixed-point encoding or a calm/settle sim change, only if
+   Cloudflare egress costs surface post-launch.
 3. Operator TODOs for staging: create the preview D1, set repo var
    CF_PREVIEW_D1_ID, wrangler secret put JWT_SECRET --env preview
    ([phase-2 P2-STAGING](phase-2-scale-backend.md)).
