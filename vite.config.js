@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
-import { readFileSync, writeFileSync, readdirSync, unlinkSync, statSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync, unlinkSync, statSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 
 const buildTarget = process.env.BUILD_TARGET || 'web'
@@ -20,6 +20,10 @@ function patchThreeAddonImport(content) {
 }
 
 // Cloudflare Pages has a 26MB per-file limit; .blend source files aren't needed at runtime.
+// Cycle 91 Phase 6: the same pass prunes dead runtime assets that ride along
+// with the whole-dir assets copy - the scatter GLBs (scatter system removed
+// Cycle 19) and the Mountain_Group GLBs (procedural ring removed; the loader
+// entries are gone too).
 function excludeBlendFilesPlugin() {
   return {
     name: 'exclude-blend-files',
@@ -28,11 +32,12 @@ function excludeBlendFilesPlugin() {
         for (const name of readdirSync(dir)) {
           const p = join(dir, name)
           if (statSync(p).isDirectory()) walk(p)
-          else if (/\.(blend|blend1)$/i.test(name)) unlinkSync(p)
+          else if (/\.(blend|blend1)$/i.test(name) || /^Mountain_Group_\d\.glb$/i.test(name)) unlinkSync(p)
         }
       }
       const dist = resolve(__dirname, 'dist')
       try { walk(dist) } catch {}
+      try { rmSync(resolve(dist, 'assets/models/scatter'), { recursive: true, force: true }) } catch {}
     }
   }
 }
@@ -121,7 +126,23 @@ export default defineConfig({
         // Exclude assets/_originals (the gitignored pristine GLB bake sources,
         // ~40 MB locally). It never ships from CI since it isn't committed, but
         // a local `wrangler deploy dist` would otherwise bundle it. Guard it.
-        { src: ['assets/*', '!assets/_originals'], dest: 'assets' },
+        // Cycle 91 Phase 6: dev-only payloads out of dist - marketing
+        // captures (~42 MB), the LP_BorderCollie .blend sources (~67 MB,
+        // nothing references the dir at runtime since the dead PolyArt png
+        // preload dropped), and the source screenshot pile in assets/images
+        // (~14 MB; the referenced favicon + PWA icons re-add below).
+        {
+          src: [
+            'assets/*',
+            '!assets/_originals',
+            '!assets/marketing',
+            '!assets/LP_BorderCollie_Blend_v01',
+            '!assets/images',
+          ],
+          dest: 'assets',
+        },
+        { src: 'assets/images/favicon.png', dest: 'assets/images' },
+        { src: 'assets/images/icons/*', dest: 'assets/images/icons' },
         { src: 'node_modules/three/build/three.webgpu.min.js', dest: 'assets/vendor/three' },
         { src: 'node_modules/three/build/three.core.min.js', dest: 'assets/vendor/three' },
         {

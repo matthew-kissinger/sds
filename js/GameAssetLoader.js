@@ -62,10 +62,9 @@ export class GameAssetLoader {
             // Fence and gate kit (one shared-texture GLB for all four pieces)
             'assets/models/Fence_Kit-v1.0.0.glb',
 
-            // Environment details
+            // Environment details (Cycle 91 Phase 6: Mountain_Group preloads
+            // removed with the dead mountain model loads)
             'assets/models/Farm house.glb',
-            'assets/models/Mountain_Group_1.glb',
-            'assets/models/Mountain_Group_2.glb',
             'assets/models/trees/tree2.glb',
             'assets/models/rocks/rock2.glb',
             'assets/models/rocks/rock3.glb',

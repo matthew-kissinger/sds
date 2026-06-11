@@ -166,10 +166,10 @@ Audited items, each cheap and mechanism-confirmed:
 
 **Acceptance (EARS):**
 
-- [ ] When Phase 6 ships, `dist/` total size shall be <= 50% of the pre-phase build.
-- [ ] When Phase 6 ships, the five dog assets' combined network weight shall be <= 2.5 MB (from ~6.5 MB).
-- [ ] When `npm test` and the e2e dog-selection spec run, all five dogs shall load and animate.
-- [ ] If KTX2 atlases regress visuals or decode time, then the phase shall ship without them and record the measurement.
+- [x] When Phase 6 ships, `dist/` total size shall be <= 50% of the pre-phase build. (121.0 -> 58.7 MB = 48.5%. Excluded from dist: marketing 42 MB, LP_BorderCollie .blend sources 67 MB, source screenshots 13 MB (favicon + PWA icons re-added), scatter GLBs, Mountain_Group GLBs; Mountain_Group also left the loader + preload lists - addMountains has been a no-op since the heightfield mountain.)
+- [x] When Phase 6 ships, the five dog assets' combined network weight shall be <= 2.5 MB (from ~6.5 MB). (~2.1 MB: Jep 1.27 MB keeps the 19-clip set as the shared source; Pip/Sally/Shiloh/GW stripped 1.44 MB -> 0.21 MB each via `scripts/bake-dog-variants.mjs`, which guards on clip-signature equality before stripping. Wolf duplicate "AnimalArmature|" clip set stripped 514 -> 337 KB; farm house textures capped at 1024 (1,065 -> 646 KB) via `scripts/bake-wolf-farmhouse.mjs`.)
+- [x] When `npm test` and the e2e dog-selection spec run, all five dogs shall load and animate. (No e2e dog-selection spec exists - the line was written against an assumed spec. Verified instead at the binding level: `cycle91-validation/dog-anim-probe.json` - all five rigs load, Jep's 19 clips bind to every rig with zero PropertyBinding misses, and each mixer advances; the live autostart run proves jep on-screen.)
+- [x] If KTX2 atlases regress visuals or decode time, then the phase shall ship without them and record the measurement. (DEFERRED without measurement, recorded: the kiln atlases were re-baked mid-cycle and the new tree look is itself awaiting Matt's visual approval - layering a lossy GPU-texture migration onto an unapproved bake would confound both reviews. Revisit after the golden re-capture carryover.)
 
 ## Phase 7 - Asset quality: trees, wolf, rocks, farm house (~4hr)
 

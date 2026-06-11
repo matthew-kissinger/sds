@@ -411,10 +411,11 @@ export class TerrainBuilder {
                 { name: 'rock2', path: 'assets/models/rocks/rock2.glb' },
                 { name: 'rock3', path: 'assets/models/rocks/rock3.glb' }
             ],
-            mountains: [
-                { name: 'mountain1', path: 'assets/models/Mountain_Group_1.glb' },
-                { name: 'mountain2', path: 'assets/models/Mountain_Group_2.glb' }
-            ],
+            // Cycle 91 Phase 6: Mountain_Group GLBs removed - addMountains
+            // has been a no-op since the heightfield mountain shipped, so
+            // every scene load fetched + parsed them for nothing. The GLBs
+            // also stop shipping in dist (vite.config prune).
+            mountains: [],
             buildings: [
                 { name: 'farmhouse', path: 'assets/models/Farm house.glb' }
             ]
@@ -725,8 +726,18 @@ export class TerrainBuilder {
         return this.loader.loadAsync(path)
             .then((gltf) => {
                 this.models.animals[name] = gltf.scene;
-                this.models.animals[name + '_animations'] = gltf.animations;
-                console.log(`[OK] Loaded ${name} with ${gltf.animations.length} animations from ${path}`);
+                // Cycle 91 Phase 6: the non-default dog GLBs ship WITHOUT
+                // animations (scripts/bake-dog-variants.mjs strips the
+                // duplicated clip set, ~800 KB x4). All five rigs share the
+                // same skeleton + clip names, so Jep - the critical-loaded
+                // default, guaranteed present before any dog selection - is
+                // the shared clip source.
+                const animations = gltf.animations?.length
+                    ? gltf.animations
+                    : (this.models.animals['jep_animations'] ?? []);
+                this.models.animals[name + '_animations'] = animations;
+                console.log(`[OK] Loaded ${name} with ${gltf.animations.length} embedded animations`
+                    + `${gltf.animations.length ? '' : ` (sharing jep's ${animations.length} clips)`} from ${path}`);
             })
             .catch((err) => {
                 console.error(`[ERROR] Failed to load animal/${name} (${path}): ${err.message || err}`);
