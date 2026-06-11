@@ -14,6 +14,9 @@
 //   node tools/cycle89-jitter-probe.mjs --check=1             # regression rail vs cycle89-validation/jitter-budgets.json
 //   node tools/cycle89-jitter-probe.mjs --scene=field --mode=classic --runs=1 --out=...
 //   node tools/cycle89-jitter-probe.mjs --drive=0                # idle camera (legacy capture shape)
+//   node tools/cycle89-jitter-probe.mjs --boxState=1             # per-run nvidia-smi + CPU load telemetry (Cycle 92)
+//   node tools/cycle89-jitter-probe.mjs --heapProfile=1          # CDP sampling heap profile -> top allocation sites
+//                                                                  (use a --minify=false build so names survive)
 //
 // The default mode is `practice` because Home Field's Just Play rung is
 // exactly 3 sheep (shared/scenes/field.js soloLadder) - the reported repro.
@@ -25,7 +28,11 @@ import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { chromium } from 'playwright';
+
+const execFileAsync = promisify(execFile);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -91,6 +98,8 @@ function parseArgs(argv) {
         renderer: '',
         channel: 'chrome',
         headless: '0',
+        boxState: '0',
+        heapProfile: '0',
     };
     const parsed = { ...defaults };
     for (const arg of argv.slice(2)) {
@@ -111,10 +120,75 @@ function parseArgs(argv) {
         drive: parsed.drive === '1' || parsed.drive === 'true',
         waitFoliage: parsed.waitFoliage === '1' || parsed.waitFoliage === 'true',
         headless: parsed.headless === '1' || parsed.headless === 'true',
+        boxState: parsed.boxState === '1' || parsed.boxState === 'true',
+        heapProfile: parsed.heapProfile === '1' || parsed.heapProfile === 'true',
     };
 }
 
 const round = (v, d = 2) => (typeof v === 'number' && Number.isFinite(v) ? Number(v.toFixed(d)) : v);
+
+// ---------------------------------------------------------------------------
+// Cycle 92: box-state telemetry. The Cycle 91 pill gate flipped between two
+// measurement windows on identical code; per-run GPU clock/power-state + CPU
+// load samples let a battery's numbers be read against the box, not just the
+// page. Failures degrade to recorded nulls - the probe never dies on telemetry.
+
+async function sampleBoxState() {
+    const state = { at: new Date().toISOString() };
+    try {
+        const { stdout } = await execFileAsync('nvidia-smi', [
+            '--query-gpu=clocks.sm,clocks.mem,power.draw,pstate,temperature.gpu,utilization.gpu,memory.used',
+            '--format=csv,noheader,nounits',
+        ], { timeout: 10_000 });
+        const [sm, mem, power, pstate, temp, util, vram] = stdout.trim().split(',').map((s) => s.trim());
+        state.gpu = {
+            clockSmMHz: Number(sm), clockMemMHz: Number(mem), powerW: Number(power),
+            pstate, tempC: Number(temp), utilPct: Number(util), vramUsedMB: Number(vram),
+        };
+    } catch (e) {
+        state.gpu = { error: String(e?.message || e).slice(0, 120) };
+    }
+    try {
+        const { stdout } = await execFileAsync('powershell', [
+            '-NoProfile', '-Command', '(Get-CimInstance Win32_Processor).LoadPercentage',
+        ], { timeout: 15_000 });
+        state.cpuLoadPct = Number(stdout.trim());
+        if (!Number.isFinite(state.cpuLoadPct)) state.cpuLoadPct = null;
+    } catch {
+        state.cpuLoadPct = null;
+    }
+    return state;
+}
+
+// Cycle 92: fold a CDP sampling heap profile (HeapProfiler.stopSampling tree)
+// into top allocation sites by self-sampled bytes. Run this against a
+// --minify=false production build so callframe names survive.
+
+function foldHeapProfile(profile) {
+    if (!profile?.head) return null;
+    const sites = new Map();
+    let total = 0;
+    const visit = (node) => {
+        const cf = node.callFrame ?? {};
+        const self = node.selfSize ?? 0;
+        if (self > 0) {
+            total += self;
+            const source = (cf.url || '').split('/').pop() || '(unknown)';
+            const key = `${cf.functionName || '(anonymous)'}@${source}:${(cf.lineNumber ?? -2) + 1}`;
+            const cur = sites.get(key)
+                ?? { bytes: 0, fn: cf.functionName || '(anonymous)', source, line: (cf.lineNumber ?? -2) + 1 };
+            cur.bytes += self;
+            sites.set(key, cur);
+        }
+        for (const c of node.children ?? []) visit(c);
+    };
+    visit(profile.head);
+    const topSites = [...sites.values()]
+        .sort((a, b) => b.bytes - a.bytes)
+        .slice(0, 25)
+        .map((s) => ({ fn: s.fn, source: s.source, line: s.line, mb: round(s.bytes / 1048576) }));
+    return { totalSampledMB: round(total / 1048576), topSites };
+}
 
 function buildUrl(args, scene, mode) {
     const url = new URL(args.baseUrl);
@@ -142,10 +216,12 @@ function installRecorder() {
         });
         W.__jitterLT.observe({ entryTypes: ['longtask'] });
     } catch { /* longtask unsupported - leave empty */ }
+    // 250ms sampling (was 1s pre-Cycle-92) for sharper GC-drop timing and a
+    // usable allocation-rate slope between drops.
     W.__jitterHeap = setInterval(() => {
         const m = performance.memory;
         if (m) W.__jitter.heap.push({ t: performance.now(), used: m.usedJSHeapSize });
-    }, 1000);
+    }, 250);
     const tick = (now) => {
         if (W.__jitter.done) return;
         W.__jitter.times.push(now);
@@ -472,7 +548,11 @@ function computeMetrics(raw, measureMs) {
 
     // Correlation: a hitch "matches" a longtask if its frame end falls inside
     // the longtask interval (+10ms slack); it matches a GC drop if it lands in
-    // the 1.2s window before the heap sample that dropped.
+    // the window before the heap sample that dropped. The window is 600ms
+    // (sample interval 250ms + slack) since Cycle 92; pre-92 manifests used
+    // 1200ms against 1s sampling, so heapDropFraction is not directly
+    // comparable across that boundary.
+    const HEAP_DROP_WINDOW_MS = 600;
     const heapDrops = [];
     for (let i = 1; i < heap.length; i++) {
         const drop = heap[i - 1].used - heap[i].used;
@@ -482,8 +562,35 @@ function computeMetrics(raw, measureMs) {
     let nearHeapDrop = 0;
     for (const t of hitchTimes) {
         if (longtasks.some((lt) => t >= lt.start - 10 && t <= lt.start + lt.dur + 10)) nearLongtask++;
-        if (heapDrops.some((d) => t >= d.t - 1200 && t <= d.t)) nearHeapDrop++;
+        if (heapDrops.some((d) => t >= d.t - HEAP_DROP_WINDOW_MS && t <= d.t)) nearHeapDrop++;
     }
+
+    // Cycle 92: steady-state allocation rate. Sum of positive heap-growth
+    // deltas over the recording span - what the page allocates per second
+    // (reclaimed garbage shows up as the drops, so growth-sum ~= allocation).
+    let heapGrownBytes = 0;
+    for (let i = 1; i < heap.length; i++) {
+        const d = heap[i].used - heap[i - 1].used;
+        if (d > 0) heapGrownBytes += d;
+    }
+    const heapSpanMs = heap.length > 1 ? heap[heap.length - 1].t - heap[0].t : 0;
+    const allocRateMBs = heapSpanMs > 0 ? (heapGrownBytes / 1048576) / (heapSpanMs / 1000) : null;
+
+    // Cycle 92: per-frame attribution for the worst frames (>= 50ms). Each
+    // entry says whether the frame coincided with a longtask and/or a GC drop
+    // so the >= 100ms stall class can be attributed run by run.
+    const worstFrames = [];
+    for (let i = 0; i < n; i++) {
+        if (deltas[i] < 50) continue;
+        const t = times[i + 1];
+        worstFrames.push({
+            ms: round(deltas[i]),
+            atMs: round(t - times[0]),
+            nearLongtask: longtasks.some((lt) => t >= lt.start - 10 && t <= lt.start + lt.dur + 10),
+            nearHeapDrop: heapDrops.some((d) => t >= d.t - HEAP_DROP_WINDOW_MS && t <= d.t),
+        });
+    }
+    worstFrames.sort((a, b) => b.ms - a.ms);
 
     // Timeline: hitches per 5s bucket relative to recording start, plus an
     // early/steady split. The repro is "lags for a bit while moving, then
@@ -538,7 +645,10 @@ function computeMetrics(raw, measureMs) {
             samples: heap.length,
             drops: heapDrops.length,
             largestDropMB: round(heapDrops.reduce((a, d) => Math.max(a, d.dropBytes), 0) / 1048576),
+            allocRateMBs: round(allocRateMBs),
+            grownMB: round(heapGrownBytes / 1048576),
         },
+        worstFrames: worstFrames.slice(0, 20),
         worstDeltasMs: sorted.slice(Math.max(0, n - 10)).map((v) => round(v)),
         hitchDeltasMs: hitchIndices.slice(0, 200).map((i) => round(deltas[i])),
     };
@@ -567,6 +677,12 @@ async function captureRun(args, { scene, mode, config, runIndex }) {
     page.on('crash', () => pageErrors.push('page crashed'));
 
     try {
+        const boxBefore = args.boxState ? await sampleBoxState() : null;
+        let cdp = null;
+        if (args.heapProfile) {
+            cdp = await context.newCDPSession(page);
+            await cdp.send('HeapProfiler.enable');
+        }
         await page.goto(buildUrl(args, scene, mode), { waitUntil: 'domcontentloaded', timeout: 60_000 });
         await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 120_000 });
         await page.bringToFront().catch(() => {});
@@ -617,6 +733,15 @@ async function captureRun(args, { scene, mode, config, runIndex }) {
         // Warmup is deliberately idle: when driving, the first-movement cost
         // lands INSIDE the recording window so the timeline can show it.
         await page.waitForTimeout(1000);
+        // includeObjectsCollectedBy*GC: without these the profile only shows
+        // still-live objects - the GC churn we're attributing would be invisible.
+        if (cdp) {
+            await cdp.send('HeapProfiler.startSampling', {
+                samplingInterval: 32768,
+                includeObjectsCollectedByMajorGC: true,
+                includeObjectsCollectedByMinorGC: true,
+            });
+        }
         await page.evaluate(installRecorder);
         if (args.drive) {
             await driveInput(page, args.measureMs);
@@ -625,6 +750,17 @@ async function captureRun(args, { scene, mode, config, runIndex }) {
             await page.waitForTimeout(args.measureMs + 500);
         }
         const raw = await page.evaluate(collectRecorder);
+        let heapProfile = null;
+        if (cdp) {
+            try {
+                const { profile } = await cdp.send('HeapProfiler.stopSampling');
+                heapProfile = foldHeapProfile(profile);
+                await cdp.send('HeapProfiler.disable');
+            } catch (e) {
+                heapProfile = { error: String(e?.message || e).slice(0, 200) };
+            }
+        }
+        const boxAfter = args.boxState ? await sampleBoxState() : null;
 
         const contextState = await page.evaluate(() => ({
             sceneId: window.__currentSceneId ?? null,
@@ -650,6 +786,8 @@ async function captureRun(args, { scene, mode, config, runIndex }) {
             capturedAt: new Date().toISOString(),
             ...contextState,
             toggleResult,
+            boxState: args.boxState ? { before: boxBefore, after: boxAfter } : undefined,
+            heapProfile: heapProfile ?? undefined,
             metrics,
             consoleErrors,
             pageErrors,
@@ -686,6 +824,7 @@ function aggregateRuns(runs) {
         worstMaxMs: round(Math.max(...ms.map((m) => m.maxMs ?? 0))),
         meanLongtaskCount: round(mean((m) => m.longtasks.count), 1),
         meanHeapDrops: round(mean((m) => m.heap.drops), 1),
+        meanAllocRateMBs: round(mean((m) => m.heap.allocRateMBs ?? 0)),
         meanLongtaskHitchFraction: round(mean((m) => m.hitchCorrelation.longtaskFraction)),
         meanHeapDropHitchFraction: round(mean((m) => m.hitchCorrelation.heapDropFraction)),
         phaseLockMean: { mod10: sumLock('mod10'), mod20: sumLock('mod20'), mod60: sumLock('mod60') },
@@ -707,6 +846,9 @@ async function runBaseline(args) {
             first10s: result.metrics.first10sHitchCount, steadyPer30s: result.metrics.steadyHitchRatePer30s,
             timeline: result.metrics.hitchTimelinePer5s,
             onePercentLowFps: result.metrics.onePercentLowFps, longtasks: result.metrics.longtasks?.count,
+            heapDrops: result.metrics.heap?.drops, allocRateMBs: result.metrics.heap?.allocRateMBs,
+            maxMs: result.metrics.maxMs,
+            gpuClockSm: result.boxState?.after?.gpu?.clockSmMHz, pstate: result.boxState?.after?.gpu?.pstate,
         }));
     }
 

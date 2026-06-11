@@ -51,10 +51,10 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 
 **Acceptance (EARS):**
 
-- [ ] When a driven probe run executes with `--boxState=1`, the output manifest shall record GPU clock/power/temperature/utilization samples per run.
-- [ ] When a driven probe run executes with `--heapProfile=1`, the output manifest shall record the top allocation sites (bytes, function, source) for the measure window.
-- [ ] When a probe run completes, `metrics.heap.allocRateMBs` shall be a finite number.
-- [ ] When Phase 1 ships, `npm run perf:jitter -- --check=1` (field rail) shall pass unchanged.
+- [x] When a driven probe run executes with `--boxState=1`, the output manifest shall record GPU clock/power/temperature/utilization samples per run. (smoke-probe2.json: before P8/210MHz, after P3/1095MHz, power/temp/util/vram + cpuLoadPct per run.)
+- [x] When a driven probe run executes with `--heapProfile=1`, the output manifest shall record the top allocation sites (bytes, function, source) for the measure window. (GC-inclusive sampling; smoke run: 367.8MB sampled, top site getDynamicCacheKey@three.webgpu 68.4MB/10s.)
+- [x] When a probe run completes, `metrics.heap.allocRateMBs` shall be a finite number. (Field practice: 21.4-22.2 MB/s.)
+- [x] When Phase 1 ships, `npm run perf:jitter -- --check=1` (field rail) shall pass unchanged. (PASS 2026-06-11: mean 1%-low 135.7 vs >= 55, worst 13.9ms vs <= 45ms, hitch rate 1.7 vs <= 300. Note: 250ms heap sampling reads ~3x the drop count of the old 1s sampling; historical comparisons use a 1s-downsampled recount.)
 
 ## Phase 2 — Attribute the variance and the stall (~3hr)
 
