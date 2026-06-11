@@ -20,7 +20,7 @@ Each agent picking up a phase should:
 
 1. **Q1: Does Newsheepdogland become the default entrance world now that the pill is off?** Author lean: not yet - Rolling Hills loads in ~2.3s and reads instantly; NSL is a 14s cold load at 20Mbps and a survival-mode pitch. Promote it after the look is approved and the load story improves, not as a side effect of the pill. Matt decides in Phase 1; either way the decision lands in `DECISIONS.md`.
 2. **Q2: Does three r185 fix the shadow override `alphaTest` version churn upstream?** Author lean: read the r185 changelog/source before bumping. Our fix (`js/rendering/shadowOverrideMaterialFix.js`) is instance-level and harmless either way; it stays as a guard regardless, but the Phase 3 battery proves whether it still carries the load.
-3. **Q3: Take the vite 8 / @vitejs/plugin-react 6 majors this cycle?** Author lean: no. Minors only (`@types/node`, `browserstack-node-sdk`, sharp if trivial). Build-tool majors get their own quiet cycle, not a polish cycle that re-pins every visual baseline.
+3. **Q3: Take the vite 8 / @vitejs/plugin-react 6 majors this cycle?** Author lean: no - and now measured (2026-06-11 dep-drift pass): vite 8 (rolldown) needs function-form `manualChunks` and re-chunks the bundle with ~160 KiB more raw JS (three 604 -> 697, ui 127 -> 176, other 551 -> 652 KiB; main 538), failing the ratchet on three budgets; `vite-plugin-static-copy` 4 changes copy semantics (nests source paths under dest, loses favicon/models/vendor layout) and needs a 12-target migration. Both majors are deliberately held at `^7.3.5` / `^5.2.0` / `^3.4.0`; a future migration cycle owns the re-chunk decision and the copy-target rewrite. Minors + sharp 0.35 were taken.
 
 ## Architecture / shared changes
 
