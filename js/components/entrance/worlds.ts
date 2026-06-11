@@ -120,7 +120,6 @@ export const WORLDS: World[] = [
     render: '/assets/scenes/entrance/newsheepdogland.webp',
     accent: color.sceneNewsheepdogland,
     gradient: 'linear-gradient(180deg, #b9a98c 0%, #8f8a86 45%, #6a6f8c 78%, #3f4a63 100%)',
-    experimental: true,
   },
 ];
 
