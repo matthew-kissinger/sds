@@ -36,9 +36,9 @@ One pass over lighting, runtime perf, load sequencing, and assets, every fix gat
 
 **Acceptance (EARS):**
 
-- [ ] When Phase 1 ships, the NSL driven survival probe shall report median FPS >= 130 and mean 1%-low >= 55.
-- [ ] While the dog stands still, the day loop shall not write sun light position/target (guarded by last-texel comparison).
-- [ ] When `npm run perf:jitter -- --check` runs, the field rail shall pass unchanged.
+- [x] When Phase 1 ships, the NSL driven survival probe shall report median FPS >= 130 and mean 1%-low >= 55. (142.9 / 65.7, commit `eaa4e3c`.)
+- [x] While the dog stands still, the day loop shall not write sun light position/target (guarded by last-texel comparison).
+- [x] When `npm run perf:jitter -- --check` runs, the field rail shall pass unchanged.
 
 ## Phase 2 - Canopy shadows via cheap casters + on-demand updates (~4hr)
 
@@ -75,7 +75,7 @@ Work items:
 5. **Minimap fixes**: timer/minimap layout collision resolved, devicePixelRatio backing-store scaling, timer added to the HUD layout asserts.
 6. Tree-asset tests (`tests/tree-assets.spec.js` budgets, scatter goldens) re-validated; budget bumps deliberate and recorded here.
 
-**Status (2026-06-11, mid-phase):** items 1-3, 5, 6 SHIPPED; item 4 (NSL full LOD chain) is the open work. Findings while shipping:
+**Status (2026-06-11): ALL ITEMS SHIPPED.** Item 4 landed fused with Phase 3's consolidation (one architecture: appendable per-type compute-cull controllers + a per-type far-impostor controller; LOD0 within 200m camera-XZ, kiln cross-billboards beyond, gate flips on only when the atlas is renderable so a failed fetch degrades to the pre-91 island-wide LOD0, never to absent trees). Matt's distant-leaf dissolve is structurally fixed: the far ring now holds the silhouette as billboards. Far-controller simplification recorded: one azimuth tile per type (per-instance rotation still varies orientation); upgrade to per-instance tile selection only if the survey reads samey. Findings while shipping:
 
 - **pixel-forge impostor gen was NOT broken** (Matt asked to check): the re-baked atlases are faithful; nothing to fix upstream.
 - **White-trunk root cause (fixed, not patched):** the WebGPU path builds bespoke node materials and `webgpuTreeBranchNodeMaterial` carried only a flat color from the flat-tint era - the new PBR bark textures were silently dropped (white tint showed through). Fixed at both levels: the bake now exports transform-free GLBs (bark V-repeat baked into UVs, no KHR_texture_transform dependency) and the branch node material samples the source map/normal/AO (`mergeBranchMaterial` carries them; GLBs without maps keep the old flat path).
@@ -88,8 +88,8 @@ Work items:
 **Acceptance (EARS):**
 
 - [x] When Phase 2.5 ships, tree LOD0/LOD1 GLBs and kiln atlases shall be re-baked from the upgraded pipeline with before/after survey shots under `cycle91-validation/asset-survey/`.
-- [ ] When Phase 2.5 ships, fully-streamed NSL shall render LOD0/LOD1/impostor by camera distance via the consolidated cull pass (verified by controller instance counts in a probe snapshot).
-- [ ] When Phase 2.5 ships, the NSL driven probe shall report median and 1%-low no worse than the Phase 1 run (142.9 / 65.7).
+- [x] When Phase 2.5 ships, fully-streamed NSL shall render LOD0/LOD1/impostor by camera distance via the consolidated cull pass (verified by controller instance counts in a probe snapshot). (Shipped as LOD0-near / kiln-impostor-far at 200m camera-XZ; the LOD1 mid-band stays off on desktop per the durable no-LOD1 rule. Probe snapshot `cycle91-validation/lod-chain-probe/lod-chain-state.json`: 6 controllers, tree1 1,381 + tree2 498 instances, far controllers active, near gates on.)
+- [x] When Phase 2.5 ships, the NSL driven probe shall report median and 1%-low no worse than the Phase 1 run (142.9 / 65.7). (144.9 median / 139.3 mean 1%-low, 5 runs, `cycle91-validation/jitter-nsl-post-lodchain.json` - the far ring dropping LOD0 fragment+caster cost removed the vsync-edge flap.)
 - [x] When Phase 2.5 ships, the game timer and minimap shall not overlap (layout assert includes the timer) and the minimap canvas shall scale by devicePixelRatio (DPR scaling was already present; the overlap fix ships via the `--sds-topright-reserve` CSS variable).
 - [x] When `npm test` runs, tree-asset budgets and scatter-position goldens shall pass (bumps recorded here).
 - [ ] If the ez-tree git install cannot build, then the bake shall ship on 1.1.0 and the gap shall be recorded in BACKLOG. (N/A - the git build worked.)
@@ -106,11 +106,11 @@ Work items:
 
 **Acceptance (EARS):**
 
-- [ ] When Phase 3 ships, `gameInstance.terrainBuilder._treeCullControllers.length` on fully-streamed NSL shall be <= 8.
-- [ ] When `npm test` runs, the scene-loading-stages spec shall pass unchanged.
-- [ ] When Phase 3 ships, the NSL driven probe shall show median and 1%-low no worse than Phase 2's run.
-- [ ] When Phase 3 ships, trees beyond the far-switch distance on NSL shall render as kiln cross-billboard impostors (verified via controller instance counts in a probe snapshot).
-- [ ] When Phase 3 ships, before/after far-silhouette survey shots shall exist under `cycle91-validation/asset-survey/` for Matt's review.
+- [x] When Phase 3 ships, `gameInstance.terrainBuilder._treeCullControllers.length` on fully-streamed NSL shall be <= 8. (6: 4 LOD0 + 2 far-impostor. Shipped fused with Phase 2.5 item 4 - appendable controllers ARE the consolidation; waves append into per-type controllers instead of minting ~108.)
+- [x] When `npm test` runs, the scene-loading-stages spec shall pass unchanged. (1,518 pass.)
+- [x] When Phase 3 ships, the NSL driven probe shall show median and 1%-low no worse than Phase 2's run. (144.9 / 139.3; Phase 2 runs after this by design - gate held against Phase 1's 142.9 / 65.7.)
+- [x] When Phase 3 ships, trees beyond the far-switch distance on NSL shall render as kiln cross-billboard impostors (verified via controller instance counts in a probe snapshot). (far controllers cover all 1,879 landed trees; cull pass keeps the >= 200m complement.)
+- [x] When Phase 3 ships, before/after far-silhouette survey shots shall exist under `cycle91-validation/asset-survey/` for Matt's review. (`cycle91-validation/lod-chain-probe/nsl-gameplay-view.png` + `nsl-far-silhouette.png`; pre-LOD-chain references in `asset-survey/`.)
 
 ## Phase 4 - Per-frame CPU and GC waste batch (~3hr)
 
@@ -183,6 +183,19 @@ Audited items, each cheap and mechanism-confirmed:
 - [ ] When Phase 7 ships, before/after survey PNGs shall exist for tree1, tree2, wolf, rocks, and the farm house under `cycle91-validation/asset-survey/`.
 - [ ] When the NSL driven probe re-runs post-rebake, median and 1%-low shall be no worse than Phase 3's run.
 - [ ] If any re-bake reads worse in the survey than the current asset, then it shall be reverted and the params recorded.
+
+## Phase 7.5 - NSL ground texture distribution pass (Matt's directive, 2026-06-11)
+
+Matt, mid-cycle: "i still dont like the texture of the ground and how it is dark or brown in some places as that distribution seems like gridded - we should do a pass to fix all that as well." Two symptoms: (a) dark/brown ground patches, (b) their distribution reads as grid-aligned.
+
+1. Diagnose where the patchiness comes from (terrain color noise octaves, heightfield-derived palette bands, splat/detail tiling) and specifically why it grid-aligns - likely an axis-aligned or cell-quantized noise sample rather than a rotated/blended one.
+2. Fix at the source (rotated/decorrelated noise, palette re-tune via `TerrainDef.colors`), not with an overlay patch.
+3. Before/after survey shots at noon + golden hour into `cycle91-validation/lighting-survey/`.
+
+**Acceptance (EARS):**
+
+- [ ] When Phase 7.5 ships, before/after ground survey shots shall exist under `cycle91-validation/lighting-survey/` showing no grid-aligned dark patch distribution.
+- [ ] When Phase 7.5 ships, the NSL driven probe shall hold median and 1%-low no worse than the prior phase's run.
 
 ## Phase 8 - Lighting uplift + final gates + pill decision (~3hr)
 

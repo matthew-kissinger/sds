@@ -34,7 +34,9 @@ import {
     buildAdditiveTreeMeshes,
     buildColdImpostorMeshes,
     cullTreesForScene,
+    enableConsolidatedFarImpostors,
     loadColdImpostorAtlas,
+    reserveConsolidatedTreeCapacity,
     retireColdImpostorWave,
     toTreeInstancesByType,
 } from './TreePlacement.js';
@@ -260,6 +262,18 @@ export async function buildColdFoliageCoverage(game, opts = {}) {
         const flatAll = [...cache.values()].flat();
         diag.trees = flatAll.length;
 
+        // Cycle 91 Phase 3: size the consolidated tree controllers for the
+        // whole island NOW - still behind the load overlay - so wave appends
+        // never pay a controller rebuild. Sparse mode never streams waves,
+        // so the corridor-sized controllers stay as-is.
+        if (!sparse) {
+            try {
+                reserveConsolidatedTreeCapacity(builder, flatAll);
+            } catch (err) {
+                console.warn('[FOLIAGE] consolidated capacity reserve failed (waves will grow on append):', err);
+            }
+        }
+
         // The cache is live from here: waves can stream off it even if the
         // impostor build below never finishes.
         const coverage = {
@@ -307,6 +321,18 @@ export async function buildColdFoliageCoverage(game, opts = {}) {
                         }
                         diag.textureBoundAt = performance.now();
                     });
+                }
+
+                // Cycle 91 (Phase 2.5 item 4): once a type's atlas is
+                // renderable, the consolidated path gets its far-impostor
+                // controller and the LOD0 near gate flips on. Registered
+                // AFTER the binding .then above so the material's map is
+                // bound before the far mesh first renders. Sparse mode keeps
+                // the impostor island with no LOD0 waves (durable low-tier
+                // rule), so the chain stays off there.
+                if (!sparse) {
+                    diag.farImpostorTypes = enableConsolidatedFarImpostors(
+                        builder, atlasByType, built.materialsByType, { signal });
                 }
 
                 diag.completedAt = performance.now();

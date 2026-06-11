@@ -1659,6 +1659,15 @@ export class TerrainBuilder {
             for (const c of this._treeCullControllers) { try { c.dispose?.(); } catch { /* ignore */ } }
         }
         this._treeCullControllers = [];
+        // Cycle 91: drop the consolidated-controller registry (controllers were
+        // disposed above; the far-impostor cross-billboard geometry is the one
+        // piece the registry owns directly).
+        if (this._treeCullRegistry) {
+            for (const entry of this._treeCullRegistry.values()) {
+                try { entry.farGeometry?.dispose?.(); } catch { /* ignore */ }
+            }
+        }
+        this._treeCullRegistry = null;
         this._computeRenderer = null;
 
         // Cycle 88: drop the cold-coverage scatter cache + impostor range

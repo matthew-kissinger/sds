@@ -47,6 +47,302 @@ function materialCastsShadow(material) {
     return !mats.some(m => m && (m.alphaHash === true || m.alphaTest > 0 || m.transparent === true));
 }
 
+/**
+ * Cycle 91 (Phase 2.5 item 4): camera-XZ distance past which consolidated
+ * LOD0 trees hand off to the per-type far-impostor controller. Matches the
+ * WebGL per-instance chain's 200m impostor switch. Camera-relative is safe
+ * on the compute path (per-frame data-compaction, no mesh/render-list
+ * switching), unlike the WebGL billboard rule's distance-from-origin
+ * requirement.
+ */
+export const CONSOLIDATED_FAR_SWITCH_DISTANCE = 200;
+
+const _appendDummy = new THREE.Object3D();
+
+function writeConsolidatedTreeData(instances, baseOffset, matrices, offsets) {
+    instances.forEach((inst, i) => {
+        _appendDummy.position.copy(inst.position);
+        if (Number.isFinite(inst.groundY)) {
+            const scaleScalar = Number.isFinite(inst.scaleScalar)
+                ? inst.scaleScalar
+                : (Number.isFinite(inst.scale?.y) ? inst.scale.y : 1);
+            _appendDummy.position.y = inst.groundY + (baseOffset ?? 0) * scaleScalar;
+        }
+        _appendDummy.quaternion.setFromEuler(inst.rotation);
+        _appendDummy.scale.copy(inst.scale);
+        _appendDummy.updateMatrix();
+        _appendDummy.matrix.toArray(matrices, i * 16);
+        offsets[i * 3] = _appendDummy.position.x;
+        offsets[i * 3 + 1] = _appendDummy.position.y;
+        offsets[i * 3 + 2] = _appendDummy.position.z;
+    });
+}
+
+// Impostor quads sit at groundY with the scatter's own rotation + scale -
+// the same transform recipe as the cold-coverage cross-billboards, so the
+// far ring matches what the loading impostors already showed.
+function writeConsolidatedImpostorData(instances, matrices, offsets) {
+    instances.forEach((inst, i) => {
+        _appendDummy.position.copy(inst.position);
+        if (Number.isFinite(inst.groundY)) _appendDummy.position.y = inst.groundY;
+        _appendDummy.quaternion.setFromEuler(inst.rotation);
+        _appendDummy.scale.copy(inst.scale);
+        _appendDummy.updateMatrix();
+        _appendDummy.matrix.toArray(matrices, i * 16);
+        offsets[i * 3] = _appendDummy.position.x;
+        offsets[i * 3 + 1] = _appendDummy.position.y;
+        offsets[i * 3 + 2] = _appendDummy.position.z;
+    });
+}
+
+function collectLod0MeshDefs(builder, treeType) {
+    const model = builder.models.trees[treeType];
+    if (!model) return [];
+    const meshDefs = [];
+    model.traverse(child => {
+        if (!child.isMesh || !child.geometry) return;
+        meshDefs.push({
+            geometry: child.geometry,
+            material: child.material,
+            meshName: child.name || '(unnamed)',
+            sourceLod: 'lod0',
+            baseOffset: model.userData?.modelBaseYOffset ?? 0,
+        });
+    });
+    return meshDefs;
+}
+
+const EMPTY_F32 = new Float32Array(0);
+
+function makeLod0Controller(builder, cullModules, treeType, meshDef, init) {
+    const controller = createTreeComputeCull(cullModules, {
+        geometry: meshDef.geometry,
+        material: meshDef.material,
+        matrices: init.matrices,
+        offsets: init.offsets,
+        count: init.count,
+        capacity: init.capacity,
+        castShadow: !builder.isMobile && materialCastsShadow(meshDef.material),
+        lodRole: 'near',
+        lodDistance: CONSOLIDATED_FAR_SWITCH_DISTANCE,
+        lodEnabled: init.lodEnabled ?? false,
+    });
+    controller.diag.treeType = treeType;
+    controller.diag.meshName = meshDef.meshName ?? null;
+    const im = controller.mesh;
+    // clearTrees removes it from the scene; the controller owns the cloned
+    // geometry disposal and the material is shared -> skip both in clearTrees.
+    im.userData.sharedFromGlbCache = true;
+    im.userData.webgpuNativeInstancing = 'tree';
+    im.userData.webgpuNativeChunkKey = 'consolidated';
+    im.userData.webgpuTreeType = treeType;
+    builder.scene.add(im);
+    builder._treeCullControllers.push(controller);
+    return controller;
+}
+
+/**
+ * Cycle 91 Phase 3: per-type consolidated controller registry. One appendable
+ * compute-cull controller per (treeType x LOD0 child-mesh) plus at most one
+ * far-impostor controller per type - streamed waves append instances instead
+ * of minting per-wave controllers (~108 on NSL -> <= 8).
+ */
+function getOrCreateConsolidatedEntry(builder, cullModules, treeType, meshDefs, initialCapacity) {
+    if (!builder._treeCullRegistry) builder._treeCullRegistry = new Map();
+    let entry = builder._treeCullRegistry.get(treeType);
+    if (entry) return { entry, created: false };
+    const capacity = Math.max(initialCapacity, 1);
+    entry = {
+        treeType,
+        used: 0,
+        capacity,
+        lod0: [],
+        far: null,
+        farGeometry: null,
+        impostorMatrices: new Float32Array(capacity * 16),
+        impostorOffsets: new Float32Array(capacity * 3),
+    };
+    for (const meshDef of meshDefs) {
+        const controller = makeLod0Controller(builder, cullModules, treeType, meshDef, {
+            matrices: EMPTY_F32, offsets: EMPTY_F32, count: 0, capacity,
+        });
+        entry.lod0.push({ meshDef, controller });
+    }
+    builder._treeCullRegistry.set(treeType, entry);
+    return { entry, created: true };
+}
+
+function replaceTrackedController(builder, oldCtrl, fresh) {
+    const oldMesh = oldCtrl.mesh;
+    builder.scene.remove(oldMesh);
+    if (Array.isArray(builder.trees)) {
+        const ti = builder.trees.indexOf(oldMesh);
+        if (ti >= 0) builder.trees.splice(ti, 1, fresh.mesh);
+        else if (!builder.trees.includes(fresh.mesh)) builder.trees.push(fresh.mesh);
+    }
+    const ci = builder._treeCullControllers?.indexOf(oldCtrl) ?? -1;
+    if (ci >= 0) builder._treeCullControllers.splice(ci, 1);
+    oldCtrl.dispose();
+}
+
+/**
+ * Grow a type entry to `neededCapacity` by rebuilding its controllers with
+ * larger source stores. Happens at most once per scene load on the normal
+ * path (reserveConsolidatedTreeCapacity sizes exactly from the cold-coverage
+ * scatter cache, behind the load overlay); the x2 headroom covers the
+ * no-cache live-scatter fallback.
+ */
+function growConsolidatedEntry(builder, cullModules, entry, neededCapacity) {
+    if (neededCapacity <= entry.capacity) return;
+    const capacity = Math.max(neededCapacity, Math.ceil(entry.capacity * 2));
+    for (const slot of entry.lod0) {
+        const old = slot.controller;
+        const state = old.getAppendState();
+        const fresh = makeLod0Controller(builder, cullModules, entry.treeType, slot.meshDef, {
+            matrices: state.matrices,
+            offsets: state.offsets,
+            count: state.used,
+            capacity,
+            lodEnabled: old.diag.lodEnabled,
+        });
+        replaceTrackedController(builder, old, fresh);
+        slot.controller = fresh;
+    }
+    const newIM = new Float32Array(capacity * 16);
+    newIM.set(entry.impostorMatrices.subarray(0, entry.used * 16));
+    const newIO = new Float32Array(capacity * 3);
+    newIO.set(entry.impostorOffsets.subarray(0, entry.used * 3));
+    entry.impostorMatrices = newIM;
+    entry.impostorOffsets = newIO;
+    if (entry.far) {
+        const oldFar = entry.far;
+        const fresh = makeFarImpostorController(builder, cullModules, entry, oldFar.mesh.material);
+        replaceTrackedController(builder, oldFar, fresh);
+        entry.far = fresh;
+    }
+    entry.capacity = capacity;
+}
+
+function makeFarImpostorController(builder, cullModules, entry, material) {
+    const far = createTreeComputeCull(cullModules, {
+        geometry: entry.farGeometry,
+        material,
+        matrices: entry.impostorMatrices,
+        offsets: entry.impostorOffsets,
+        count: entry.used,
+        capacity: entry.impostorMatrices.length / 16,
+        castShadow: false, // durable far-impostor rule
+        receiveShadow: false,
+        lodRole: 'far',
+        lodDistance: CONSOLIDATED_FAR_SWITCH_DISTANCE,
+    });
+    far.diag.treeType = entry.treeType;
+    far.diag.meshName = 'far-impostor';
+    const im = far.mesh;
+    im.userData.sharedFromGlbCache = true; // coverage meshes own the material teardown
+    im.userData.webgpuNativeInstancing = 'tree';
+    im.userData.webgpuNativeChunkKey = 'consolidated-far';
+    im.userData.webgpuTreeType = entry.treeType;
+    builder.scene.add(im);
+    builder._treeCullControllers.push(far);
+    return far;
+}
+
+/**
+ * Append a wave (or the cold corridor) of one type's instances into the
+ * consolidated controllers, creating them on first use. Returns the entry
+ * plus any meshes created (callers track them for teardown).
+ */
+export function appendConsolidatedTreeInstances(builder, cullModules, treeType, instances, opts = {}) {
+    const createdMeshes = [];
+    if (!builder._treeCullControllers) builder._treeCullControllers = [];
+    let entry = builder._treeCullRegistry?.get(treeType) ?? null;
+    if (!entry) {
+        const meshDefs = opts.meshDefs ?? collectLod0MeshDefs(builder, treeType);
+        if (!meshDefs.length) return { entry: null, createdMeshes };
+        const made = getOrCreateConsolidatedEntry(builder, cullModules, treeType, meshDefs, instances.length);
+        entry = made.entry;
+        if (made.created) for (const slot of entry.lod0) createdMeshes.push(slot.controller.mesh);
+    }
+    growConsolidatedEntry(builder, cullModules, entry, entry.used + instances.length);
+    const n = instances.length;
+    const m = new Float32Array(n * 16);
+    const o = new Float32Array(n * 3);
+    for (const slot of entry.lod0) {
+        writeConsolidatedTreeData(instances, slot.meshDef.baseOffset ?? 0, m, o);
+        slot.controller.append(m, o, n);
+    }
+    // The impostor store rides every append so the far controller (created
+    // when the kiln atlas resolves) always covers exactly the landed LOD0
+    // set - never an un-landed wave, which the cold coverage still shows.
+    writeConsolidatedImpostorData(instances, m, o);
+    if (entry.far) {
+        entry.far.append(m, o, n);
+    } else {
+        entry.impostorMatrices.set(m.subarray(0, n * 16), entry.used * 16);
+        entry.impostorOffsets.set(o.subarray(0, n * 3), entry.used * 3);
+    }
+    entry.used += n;
+    return { entry, createdMeshes };
+}
+
+/**
+ * Size the consolidated controllers for the whole island in one pass. Called
+ * by buildColdFoliageCoverage right after the wave scatter cache is built -
+ * still inside the load transition, so the one-time controller rebuild hides
+ * behind the swap overlay and wave appends later never reallocate.
+ */
+export function reserveConsolidatedTreeCapacity(builder, flatTrees) {
+    const registry = builder._treeCullRegistry;
+    if (!registry || !flatTrees?.length) return;
+    const cullModules = getWebGpuModules();
+    if (!cullModules?.TSL) return;
+    const counts = {};
+    for (const t of flatTrees) counts[t.type] = (counts[t.type] ?? 0) + 1;
+    for (const [type, add] of Object.entries(counts)) {
+        const entry = registry.get(type);
+        if (entry) growConsolidatedEntry(builder, cullModules, entry, entry.used + add);
+    }
+}
+
+/**
+ * Cycle 91 (Phase 2.5 item 4): activate the full LOD chain on the
+ * consolidated path. Once a type's kiln albedo atlas is renderable, create
+ * its far-impostor controller (everything beyond the switch distance renders
+ * as kiln cross-billboards, sharing the cold-coverage material so tint +
+ * texture binding ride along) and flip the LOD0 controllers' near gate on.
+ * Until then LOD0 renders island-wide - exactly the pre-91 behavior - so a
+ * failed atlas fetch degrades to the shipped look, never to absent trees.
+ */
+export function enableConsolidatedFarImpostors(builder, atlasByType, materialsByType, opts = {}) {
+    const registry = builder._treeCullRegistry;
+    const cullModules = getWebGpuModules();
+    if (!registry || !cullModules?.TSL) return 0;
+    let scheduled = 0;
+    for (const [treeType, entry] of registry) {
+        const atlas = atlasByType?.[treeType];
+        const material = materialsByType?.[treeType];
+        if (!atlas?.sidecar || !material || entry.far) continue;
+        scheduled++;
+        atlas.texturePromise?.then((texture) => {
+            if (!texture || opts.signal?.aborted) return;
+            if (builder._treeCullRegistry !== registry || entry.far) return; // scene swapped / raced
+            try {
+                entry.farGeometry = createColdImpostorGeometry(atlas.sidecar, 0);
+                const far = makeFarImpostorController(builder, cullModules, entry, material);
+                if (Array.isArray(builder.trees)) builder.trees.push(far.mesh);
+                entry.far = far;
+                for (const slot of entry.lod0) slot.controller.setLodEnabled(true);
+                console.log(`[FOLIAGE] far-impostor LOD active for ${treeType}: `
+                    + `${entry.used} instances, LOD0 within ${CONSOLIDATED_FAR_SWITCH_DISTANCE}m`);
+            } catch (err) {
+                console.warn(`[FOLIAGE] far-impostor LOD enable failed for ${treeType}:`, err);
+            }
+        });
+    }
+    return scheduled;
+}
+
 export function resolveWebGpuNativeTreeImpostorRoute(search = (typeof window === 'undefined' ? '' : window.location.search)) {
     const params = new URLSearchParams(search);
     const mode = params.get('webgpuNativeTreeImpostors');
@@ -111,6 +407,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
         : null;
     if (treeCullModules?.TSL) {
         builder._treeCullControllers = []; // fresh per build; prior controllers disposed by clearTrees
+        builder._treeCullRegistry = new Map();
     }
 
     for (const [treeType, instances] of Object.entries(treeInstances)) {
@@ -184,62 +481,33 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
         }
 
         // Cycle 81: consolidated compute-cull path (see treeCullModules above). One
-        // InstancedMesh per meshDef across the whole scene, GPU per-instance culled,
-        // bypassing the per-chunk fan-out (no hybrid impostor LOD on this path to keep).
+        // appendable InstancedMesh per (type x child-mesh) across the whole scene,
+        // GPU per-instance culled; streamed waves append into the same controllers
+        // (Cycle 91 Phase 3) and the far-impostor controller completes the LOD
+        // chain once the kiln atlas resolves (Phase 2.5 item 4).
         if (treeCullModules?.TSL) {
-            const cullDummy = new THREE.Object3D();
-            for (const meshDef of meshDefs) {
-                const matrices = new Float32Array(instances.length * 16);
-                const offsets = new Float32Array(instances.length * 3);
-                instances.forEach((inst, i) => {
-                    cullDummy.position.copy(inst.position);
-                    if (Number.isFinite(inst.groundY)) {
-                        const scaleScalar = Number.isFinite(inst.scaleScalar)
-                            ? inst.scaleScalar
-                            : (Number.isFinite(inst.scale?.y) ? inst.scale.y : 1);
-                        cullDummy.position.y = inst.groundY + (meshDef.baseOffset ?? 0) * scaleScalar;
-                    }
-                    cullDummy.quaternion.setFromEuler(inst.rotation);
-                    cullDummy.scale.copy(inst.scale);
-                    cullDummy.updateMatrix();
-                    cullDummy.matrix.toArray(matrices, i * 16);
-                    offsets[i * 3] = cullDummy.position.x;
-                    offsets[i * 3 + 1] = cullDummy.position.y;
-                    offsets[i * 3 + 2] = cullDummy.position.z;
-                });
-                const controller = createTreeComputeCull(treeCullModules, {
-                    geometry: meshDef.geometry,
-                    material: meshDef.material,
-                    matrices,
-                    offsets,
-                    count: instances.length,
-                    castShadow: !builder.isMobile && materialCastsShadow(meshDef.material),
-                });
-                const im = controller.mesh;
-                // clearTrees removes it from the scene; the controller owns the cloned
-                // geometry disposal and the material is shared -> skip both in clearTrees.
-                im.userData.sharedFromGlbCache = true;
-                im.userData.webgpuNativeInstancing = 'tree';
-                im.userData.webgpuNativeChunkKey = 'consolidated';
-                im.userData.webgpuTreeType = treeType;
-                builder.scene.add(im);
-                instancedMeshes.push(im);
-                builder._treeCullControllers.push(controller);
-                groups.push({
-                    type: treeType,
-                    chunkKey: 'consolidated',
-                    meshName: meshDef.meshName,
-                    instances: instances.length,
-                    isInstancedMesh: im.isInstancedMesh === true,
-                    isInstancedMesh2: im.isInstancedMesh2 === true,
-                    frustumCulled: im.frustumCulled === true,
-                    sourceLod: meshDef.sourceLod,
-                    hybridRole: meshDef.hybridRole ?? null,
-                    baseOffset: meshDef.baseOffset ?? null,
-                    vertexCount: meshDef.geometry.attributes?.position?.count ?? 0,
-                });
+            const { entry, createdMeshes } = appendConsolidatedTreeInstances(
+                builder, treeCullModules, treeType, instances, { meshDefs });
+            for (const im of createdMeshes) instancedMeshes.push(im);
+            if (entry) {
+                for (const slot of entry.lod0) {
+                    const im = slot.controller.mesh;
+                    groups.push({
+                        type: treeType,
+                        chunkKey: 'consolidated',
+                        meshName: slot.meshDef.meshName,
+                        instances: instances.length,
+                        isInstancedMesh: im.isInstancedMesh === true,
+                        isInstancedMesh2: im.isInstancedMesh2 === true,
+                        frustumCulled: im.frustumCulled === true,
+                        sourceLod: slot.meshDef.sourceLod,
+                        hybridRole: slot.meshDef.hybridRole ?? null,
+                        baseOffset: slot.meshDef.baseOffset ?? null,
+                        vertexCount: slot.meshDef.geometry.attributes?.position?.count ?? 0,
+                    });
+                }
             }
-            console.log(`[TERRAIN] ${treeType}: ${instances.length} instances -> ${meshDefs.length} consolidated compute-cull mesh(es)`);
+            console.log(`[TERRAIN] ${treeType}: ${instances.length} instances -> ${entry?.lod0.length ?? 0} consolidated compute-cull mesh(es)`);
             continue;
         }
 
@@ -463,8 +731,7 @@ export function toTreeInstancesByType(builder, flatTrees) {
  * @param {{label?: string}} [opts]
  * @returns {number} meshes created
  */
-export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {}) {
-    const label = opts.label ?? 'streamed';
+export function buildAdditiveTreeMeshes(builder, treeInstancesByType, _opts = {}) {
     const dummy = new THREE.Object3D();
     let meshCount = 0;
 
@@ -479,15 +746,7 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {})
     for (const [treeType, instances] of Object.entries(treeInstancesByType)) {
         if (instances.length === 0 || !builder.models.trees[treeType]) continue;
 
-        const meshDefs = [];
-        builder.models.trees[treeType].traverse(child => {
-            if (!child.isMesh || !child.geometry) return;
-            meshDefs.push({
-                geometry: child.geometry,
-                material: child.material,
-                baseOffset: builder.models.trees[treeType]?.userData?.modelBaseYOffset ?? 0,
-            });
-        });
+        const meshDefs = collectLod0MeshDefs(builder, treeType);
 
         const writeMatrix = (inst, meshDef, write) => {
             dummy.position.copy(inst.position);
@@ -504,31 +763,14 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {})
         };
 
         if (useComputeCull) {
-            for (const meshDef of meshDefs) {
-                const matrices = new Float32Array(instances.length * 16);
-                const offsets = new Float32Array(instances.length * 3);
-                instances.forEach((inst, i) => writeMatrix(inst, meshDef, (d) => {
-                    d.matrix.toArray(matrices, i * 16);
-                    offsets[i * 3] = d.position.x;
-                    offsets[i * 3 + 1] = d.position.y;
-                    offsets[i * 3 + 2] = d.position.z;
-                }));
-                const controller = createTreeComputeCull(cullModules, {
-                    geometry: meshDef.geometry,
-                    material: meshDef.material,
-                    matrices,
-                    offsets,
-                    count: instances.length,
-                    castShadow: !builder.isMobile && materialCastsShadow(meshDef.material),
-                });
-                const im = controller.mesh;
-                im.userData.sharedFromGlbCache = true;
-                im.userData.webgpuNativeInstancing = 'tree';
-                im.userData.webgpuNativeChunkKey = `consolidated-${label}`;
-                im.userData.webgpuTreeType = treeType;
-                builder.scene.add(im);
+            // Cycle 91 Phase 3: append into the consolidated per-type
+            // controllers instead of minting per-wave controllers (~108 on a
+            // full NSL stream -> <= 8). createdMeshes is only non-empty when
+            // a type had no cold-corridor presence (controllers minted here).
+            const { createdMeshes } = appendConsolidatedTreeInstances(
+                builder, cullModules, treeType, instances, { meshDefs });
+            for (const im of createdMeshes) {
                 builder.trees.push(im);
-                builder._treeCullControllers.push(controller);
                 meshCount++;
             }
             continue;
