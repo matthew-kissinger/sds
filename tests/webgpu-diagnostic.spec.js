@@ -38,6 +38,7 @@ import {
 } from '../js/diagnostics/webgpuGlbMaterialProof.js';
 import { RUNTIME_GLB_RENDER_PREVIEW_ASSETS } from '../js/diagnostics/webgpuRuntimeGlbPreview.js';
 import { createSkyFogSamplePacket } from '../js/atmosphere/skyFogSamplePacket.js';
+import { DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { WATER_PALETTE_RGB, mixWaterBaseColor } from '../js/water/AnimeWater.js';
 import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProductionPlacementPlan.js';
 import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockPlacementPlan.js';
@@ -518,7 +519,7 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(scene).toMatchObject({
       active: true,
       requestedSceneId: 'missing',
-      sceneId: 'newsheepdogland',
+      sceneId: DEFAULT_SCENE_ID,
       skyPresetName: 'dusk',
       fallbackReason: 'unknown-scene',
     });

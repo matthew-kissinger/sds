@@ -38,18 +38,18 @@ async function seedIdentity(ctx: BrowserContext) {
     });
 }
 
-const WORLD_STEPS_FROM_FLAGSHIP: Record<string, number> = {
-    'field': 1,
-    'rolling-hills': 2,
-    'open-country': 3,
+const WORLD_STEPS_FROM_DEFAULT: Record<string, number> = {
+    'field': 3,
+    'rolling-hills': 0,
+    'open-country': 1,
 };
 
 // Cycle 51 world-first entrance: the world is armed via the prev/next switcher,
-// not a ?scene= deep-link. The default is the Cycle 82 flagship
-// Newsheepdogland; the SEO fallback main also contains scene names, so use the
-// known carousel offset instead of querying visible text.
+// not a ?scene= deep-link. The default is Rolling Hills (Cycle 89); the SEO
+// fallback main also contains scene names, so use the known carousel offset
+// instead of querying visible text.
 async function armWorld(page: Page, sceneId: string) {
-    const steps = WORLD_STEPS_FROM_FLAGSHIP[sceneId];
+    const steps = WORLD_STEPS_FROM_DEFAULT[sceneId];
     const nextBtn = page.getByRole('button', { name: /Next world/i });
     await expect(nextBtn).toBeVisible({ timeout: 30_000 });
     for (let i = 0; i < steps; i++) {

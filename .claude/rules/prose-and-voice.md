@@ -26,7 +26,7 @@ Per-biome:
 - **Home Field**: flat fenced pasture, single perimeter pen with a gate. The starter biome.
 - **Rolling Hills**: 180-metre island with rolling heightfield, golden-hour mood, lightning-zap corral.
 - **Open Country**: 380-metre island with multi-stage gather-and-portal objective.
-- **Newsheepdogland**: boot-shaped survival island (~3.2 km^2) with a northern mountain, a homestead pen, a day/night cycle, and wolves after dark. The WebGPU flagship and the default entrance world.
+- **Newsheepdogland**: boot-shaped survival island (~3.2 km^2) with a northern mountain, a homestead pen, a day/night cycle, and wolves after dark. The WebGPU flagship, marked experimental (WIP) in the entrance since Cycle 89 while runtime perf is tuned; Rolling Hills is the default entrance world.
 
 Per-mode (six core, plus Survival on Newsheepdogland):
 

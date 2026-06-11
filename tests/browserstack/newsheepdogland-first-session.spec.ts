@@ -56,6 +56,15 @@ async function seedReturningPlayer(context: BrowserContext) {
 
 async function waitForEntrance(page: Page) {
   await waitForVisibleButton(page, { text: 'Play' }, 120_000);
+}
+
+// Cycle 89: the entrance lands on Rolling Hills; Newsheepdogland is the
+// experimental world two "Next world" steps along the carousel.
+async function armNewsheepdogland(page: Page) {
+  for (let i = 0; i < 2; i++) {
+    await clickVisibleButton(page, { aria: 'Next world' }, 45_000);
+    await page.waitForTimeout(300);
+  }
   await page.waitForFunction(() => (document.body?.innerText ?? '').includes('Newsheepdogland'), null, {
     timeout: 30_000,
   });
@@ -294,8 +303,11 @@ test('Newsheepdogland first-session loop survives stale cache and stale scene st
       window.location.assign(url);
     }, FIRST_SESSION_URL);
     await waitForEntrance(page);
-    report.entranceScreenshot = await screenshot(page, testInfo, 'newsheepdogland-entrance');
+    // The cache proof may reload the page (which resets the world carousel to
+    // the Rolling Hills default), so run it before arming Newsheepdogland.
     report.cacheProof = await verifyMutableCacheOverwrite(page);
+    await armNewsheepdogland(page);
+    report.entranceScreenshot = await screenshot(page, testInfo, 'newsheepdogland-entrance');
 
     await clickVisibleButton(page, { text: 'Play' }, 45_000);
     await page.locator('#canvas-container canvas').waitFor({ state: 'attached', timeout: 150_000 });
@@ -322,6 +334,7 @@ test('Newsheepdogland first-session loop survives stale cache and stale scene st
       minimap: false,
     }, 90_000);
 
+    await armNewsheepdogland(page);
     await clickVisibleButton(page, { text: 'Play' }, 45_000);
     const secondReady = await waitForState(page, {
       scene: 'newsheepdogland',

@@ -21,9 +21,11 @@ const SCENES = {
     'newsheepdogland': newsheepdogland
 };
 
-// Cycle 85: the canonical URL-less/default scene matches the entrance flagship.
-// Older modes still pin their own scene ids when they need a specific biome.
-export const DEFAULT_SCENE_ID = 'newsheepdogland';
+// Cycle 89: default back to Rolling Hills while Newsheepdogland's runtime
+// perf is tuned; the survival island stays registered as an experimental
+// (WIP) world. Older modes still pin their own scene ids when they need a
+// specific biome.
+export const DEFAULT_SCENE_ID = 'rolling-hills';
 
 /**
  * @param {string} [id] Scene id; defaults to DEFAULT_SCENE_ID.

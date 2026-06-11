@@ -14,10 +14,11 @@ import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
 import { DEFAULT_SCENE_ID, loadScene } from '../shared/scenes/index.js';
 
 describe('familiesForWorld (Cycle 59 P7)', () => {
-    it('the entrance leads with Newsheepdogland survival', () => {
-        expect(WORLDS[DEFAULT_WORLD_INDEX]?.id).toBe('newsheepdogland');
-        expect(DEFAULT_SCENE_ID).toBe('newsheepdogland');
+    it('the entrance leads with Rolling Hills; Newsheepdogland is experimental', () => {
+        expect(WORLDS[DEFAULT_WORLD_INDEX]?.id).toBe('rolling-hills');
+        expect(DEFAULT_SCENE_ID).toBe('rolling-hills');
         expect(loadScene().id).toBe(WORLDS[DEFAULT_WORLD_INDEX]?.id);
+        expect(WORLDS.find((w) => w.id === 'newsheepdogland')?.experimental).toBe(true);
         expect(familiesForWorld('newsheepdogland').map((f) => f.id)).toEqual(['survival']);
     });
 

@@ -72,8 +72,8 @@ async function seedIdentity(page: Page) {
 }
 
 // Same world-first entrance drive as scene-swap-stability.spec.ts: the
-// entrance opens on the flagship (newsheepdogland); "Next world" steps to
-// field, the cheapest scene to rebuild repeatedly.
+// entrance opens on Rolling Hills (Cycle 89 default); "Previous world" steps
+// back to field, the cheapest scene to rebuild repeatedly.
 async function bootSoloClassicOnField(page: Page) {
   await seedIdentity(page);
   await page.goto('/?perfMode=1', { waitUntil: 'domcontentloaded' });
@@ -81,9 +81,9 @@ async function bootSoloClassicOnField(page: Page) {
   const play = page.getByRole('button', { name: 'Play', exact: true });
   await expect(play).toBeVisible({ timeout: 30_000 });
 
-  const nextBtn = page.getByRole('button', { name: /Next world/i });
-  await expect(nextBtn).toBeVisible({ timeout: 30_000 });
-  await nextBtn.dispatchEvent('click');
+  const prevBtn = page.getByRole('button', { name: /Previous world/i });
+  await expect(prevBtn).toBeVisible({ timeout: 30_000 });
+  await prevBtn.dispatchEvent('click');
   await page.waitForTimeout(200);
 
   const classic = page.getByRole('button', { name: /Classic\s+\d/i });

@@ -35,6 +35,8 @@ export interface World {
   accent: string;
   /** CSS gradient approximation, shown under the image while it decodes. */
   gradient: string;
+  /** Work-in-progress world: the entrance shows an Experimental badge. */
+  experimental?: boolean;
 }
 
 export interface Dog {
@@ -118,6 +120,7 @@ export const WORLDS: World[] = [
     render: '/assets/scenes/entrance/newsheepdogland.webp',
     accent: color.sceneNewsheepdogland,
     gradient: 'linear-gradient(180deg, #b9a98c 0%, #8f8a86 45%, #6a6f8c 78%, #3f4a63 100%)',
+    experimental: true,
   },
 ];
 
@@ -198,8 +201,9 @@ export const WAYS: Way[] = [
 export const formatSheep = (n: number): string => n.toLocaleString('en-US');
 
 /**
- * The entrance leads with Newsheepdogland during the Cycle 82 flagship push.
- * Dog and difficulty persist per-player, but the landing world is fixed so the
- * current flagship is always the first frame.
+ * The entrance leads with Rolling Hills (Cycle 89). Newsheepdogland stepped
+ * back to an experimental (WIP) world while its runtime perf is tuned; it
+ * stays one "Next world" step away with an Experimental badge. Dog and
+ * difficulty persist per-player; the landing world is fixed.
  */
-export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'newsheepdogland'));
+export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'rolling-hills'));

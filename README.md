@@ -114,7 +114,7 @@ URL params for fast scene picking + shoot setup:
 - `?scene=field` — Home Field
 - `?scene=rolling-hills` — Rolling Hills
 - `?scene=open-country` — Open Country
-- `?scene=newsheepdogland` — Newsheepdogland survival island (default entrance world)
+- `?scene=newsheepdogland` — Newsheepdogland survival island (experimental, performance tuning ongoing)
 - `?cinematic=1` — exposes `window.__sdsCinema` for scripted captures + free-fly camera + tone-map override
 - `?ui=off` — hide React overlay (canvas-only render)
 - `?sun=N` — N in 0..1 (`0.06` = dusk, `0.20` = golden hour, `0.50` = noon)

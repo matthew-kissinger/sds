@@ -253,7 +253,22 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button onClick={flow.prevWorld} title="Previous world" aria-label="Previous world" style={chipRound}><Icon name="prev" size={18} /></button>
             <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: compact ? 22 : 26, fontWeight: 600, lineHeight: 1.1 }}>{flow.world.name}</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: compact ? 22 : 26, fontWeight: 600, lineHeight: 1.1 }}>
+                {flow.world.name}
+                {flow.world.experimental && (
+                  <span
+                    title="Work in progress: performance tuning is ongoing"
+                    style={{
+                      display: 'inline-block', verticalAlign: 'middle', marginLeft: 8, padding: '2px 9px',
+                      fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                      borderRadius: 999, border: `1px solid ${pastoral.glassWarmBorder}`,
+                      background: alpha(pastoral.ink, 6), color: pastoral.inkSoft,
+                    }}
+                  >
+                    Experimental
+                  </span>
+                )}
+              </div>
               <div style={{ fontSize: 13, color: pastoral.inkSoft, marginTop: 3, lineHeight: 1.25, overflow: 'hidden', textOverflow: compact ? undefined : 'ellipsis', whiteSpace: compact ? 'normal' : 'nowrap' }}>{flow.world.tagline}</div>
             </div>
             <button onClick={flow.nextWorld} title="Next world" aria-label="Next world" style={chipRound}><Icon name="next" size={18} /></button>

@@ -14,7 +14,7 @@ The site is the game. Open the URL, herd some sheep, close the tab. Single-playe
 - [Home Field](https://sheepdogsim.com/scenes/home-field): flat fenced pasture with a single gate. The starter biome.
 - [Rolling Hills](https://sheepdogsim.com/scenes/rolling-hills): 180-metre sunset island with rolling heightfield and a lightning corral.
 - [Open Country](https://sheepdogsim.com/scenes/open-country): 380-metre wild island with a multi-stage gather-and-portal objective.
-- [Newsheepdogland](https://sheepdogsim.com/scenes/newsheepdogland): boot-shaped survival island with a homestead pen, a day/night cycle, and wolves after dark. The WebGPU flagship scene and the default entrance world.
+- [Newsheepdogland](https://sheepdogsim.com/scenes/newsheepdogland): boot-shaped survival island with a homestead pen, a day/night cycle, and wolves after dark. The WebGPU flagship scene, currently marked experimental while performance tuning continues.
 
 ## Source and reuse
 

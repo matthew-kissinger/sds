@@ -30,8 +30,9 @@ const BUDGETS = {
   p95FrameTime: 30,   // ms — tail budget
 };
 
-const WORLD_STEPS_FROM_FLAGSHIP: Record<string, number> = {
-  'open-country': 3,
+// "Next world" clicks from the Rolling Hills landing (Cycle 89 default).
+const WORLD_STEPS_FROM_DEFAULT: Record<string, number> = {
+  'open-country': 1,
 };
 
 async function seedIdentity(page: Page) {
@@ -55,7 +56,7 @@ async function startSoloClassic(page: Page) {
   // sidesteps the hover-transform stability issue documented in smoke.spec.ts.
   const nextBtn = page.getByRole('button', { name: /Next world/i });
   await expect(nextBtn).toBeVisible({ timeout: 30_000 });
-  for (let i = 0; i < WORLD_STEPS_FROM_FLAGSHIP['open-country']; i++) {
+  for (let i = 0; i < WORLD_STEPS_FROM_DEFAULT['open-country']; i++) {
     await nextBtn.dispatchEvent('click');
     await page.waitForTimeout(200);
   }
