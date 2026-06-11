@@ -256,7 +256,7 @@ Durable stops per [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md), plus:
 - [x] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover. (P1-P7.5 shipped; P8 items 1-2 deferred to BACKLOG, item 3 skipped per its own clause; all carryovers listed in the BACKLOG close entry.)
 - [x] When `npm test` runs at cycle close, all vitest specs shall pass. (1518 passed, 11 skipped, 0 failed, 2026-06-11.)
 - [x] When `npm run build` runs at cycle close, production build shall be clean and the ratchet shall pass. (Clean build 5.4s; ratchet green at main 620 / other 551 KiB, bumps recorded in Phase 8.)
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions. (Verified after push.)
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions. (Deploy run 27355897568 on a19470b: success, 2026-06-11. Follow-up docs commits trigger no deploy by the workflow paths-ignore.)
 - [ ] When the cycle closes, the NSL driven probe shall report median >= 130 FPS and mean 1%-low >= 55 with shadows intact. (PARTIAL: median 144.9 with shadows intact clears 130 in every battery. Mean 1%-low is 70.5 in the 13:33Z battery and 54.2 in the shipping-build re-run; the A/A control attributes the gap to box state. Not robustly met; same carryover as the pill gate.)
 - [x] When the cycle closes, a consolidated before/after report (perf numbers, load times, dist size, asset surveys) shall exist for Matt's scale-back decisions. (`cycle91-validation/REPORT.md`.)
 
