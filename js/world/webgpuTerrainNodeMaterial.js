@@ -5,7 +5,7 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
   terrain,
   heightTexture
 ) {
-  const { clamp, float, length, max, mix, positionView, positionWorld, sin, smoothstep, texture, uv, vec2, vec3 } = TSL;
+  const { clamp, dot, float, floor, fract, length, max, mix, positionView, positionWorld, sin, smoothstep, texture, uv, vec2, vec3 } = TSL;
   const linearColor = (color) => color;
   const groundUv = uv();
   const worldXZ = vec2(positionWorld.x, positionWorld.z);
@@ -16,40 +16,36 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
   // the original n1/n2/n3 were sums of plane SINE waves - four periodic
   // stripe families whose thresholded product is a regular interference
   // lattice, so the dirt patches repeated on a visible grid. Replaced with
-  // MaterialX perlin noise (aperiodic, matching the WebGL path's value-noise
-  // fbm character), each octave rotated ~43deg so no two share an axis.
-  // The sine path stays as the fallback for a TSL build without mx_noise.
-  const mxNoise = TSL.mx_noise_float ?? null;
-  const wave01 = (node) => sin(node).mul(0.5).add(0.5);
-  let n1, n2, n3;
-  if (mxNoise) {
-    const ROT_C = 0.7314; // cos 43deg
-    const ROT_S = 0.6820; // sin 43deg
-    const rot = (p) => vec2(
-      p.x.mul(ROT_C).sub(p.y.mul(ROT_S)),
-      p.x.mul(ROT_S).add(p.y.mul(ROT_C))
-    );
-    // Perlin output sits mostly in [-0.6, 0.6]; x0.9 + 0.5 spreads it over
-    // ~[0, 1] like the old wave01 sums so downstream thresholds keep their
-    // meaning, just over organic blobs instead of stripes.
-    const noise01 = (p, seed) => clamp(mxNoise(vec3(p.x, p.y, seed)).mul(0.9).add(0.5), 0.0, 1.0);
-    n1 = noise01(worldXZ.mul(0.012), 0.0).mul(0.55)
-      .add(noise01(rot(worldXZ).mul(0.026), 13.7).mul(0.45));
-    n2 = noise01(rot(worldXZ).mul(0.045), 31.4).mul(0.6)
-      .add(noise01(worldXZ.mul(0.08), 47.1).mul(0.4));
-    n3 = noise01(worldXZ.mul(0.15), 71.3).mul(0.5)
-      .add(noise01(rot(worldXZ).mul(0.11), 5.9).mul(0.5));
-  } else {
-    n1 = wave01(worldXZ.x.mul(0.021).add(worldXZ.y.mul(0.017)))
-      .mul(0.55)
-      .add(wave01(worldXZ.x.mul(-0.013).add(worldXZ.y.mul(0.029)).add(1.7)).mul(0.45));
-    n2 = wave01(worldXZ.x.mul(0.047).add(worldXZ.y.mul(-0.034)).add(2.4))
-      .mul(0.6)
-      .add(wave01(worldXZ.x.mul(0.025).add(worldXZ.y.mul(0.061)).add(5.1)).mul(0.4));
-    n3 = wave01(worldXZ.x.mul(0.151).add(worldXZ.y.mul(0.097)).add(0.6))
-      .mul(0.5)
-      .add(wave01(worldXZ.x.mul(-0.113).add(worldXZ.y.mul(0.139)).add(3.3)).mul(0.5));
-  }
+  // the hash-based VALUE noise the WebGL terrain shader has shipped for
+  // years (aperiodic blobs, proven affordable on the fully-visible field).
+  // mx_noise_float was tried first and regressed the field rail's 1%-low
+  // from 71 to ~31 FPS - six 3D perlin evals per terrain fragment are too
+  // hot for a full-screen flat pasture. Octaves rotate ~43deg so no two
+  // share a lattice axis.
+  const hash2 = (p) => fract(sin(dot(p, vec2(127.1, 311.7))).mul(43758.5453123));
+  const valueNoise01 = (p) => {
+    const i = floor(p);
+    const f = fract(p);
+    const u = f.mul(f).mul(f.mul(-2.0).add(3.0));
+    const a = hash2(i);
+    const b = hash2(i.add(vec2(1.0, 0.0)));
+    const c = hash2(i.add(vec2(0.0, 1.0)));
+    const d = hash2(i.add(vec2(1.0, 1.0)));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+  };
+  const ROT_C = 0.7314; // cos 43deg
+  const ROT_S = 0.6820; // sin 43deg
+  const rot = (p) => vec2(
+    p.x.mul(ROT_C).sub(p.y.mul(ROT_S)),
+    p.x.mul(ROT_S).add(p.y.mul(ROT_C))
+  );
+  const noise01 = (p, seed) => valueNoise01(p.add(vec2(seed, seed * 1.7)));
+  const n1 = noise01(worldXZ.mul(0.012), 0.0).mul(0.55)
+    .add(noise01(rot(worldXZ).mul(0.026), 13.7).mul(0.45));
+  const n2 = noise01(rot(worldXZ).mul(0.045), 31.4).mul(0.6)
+    .add(noise01(worldXZ.mul(0.08), 47.1).mul(0.4));
+  const n3 = noise01(worldXZ.mul(0.15), 71.3).mul(0.5)
+    .add(noise01(rot(worldXZ).mul(0.11), 5.9).mul(0.5));
   const height01 = clamp(texture(heightTexture, heightUv).r, 0.0, 1.0);
   const heightLift = smoothstep(0.16, 0.82, height01);
   const low = vec3(...linearColor(terrain.lowColor));
