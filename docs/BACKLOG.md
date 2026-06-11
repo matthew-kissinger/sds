@@ -4,6 +4,24 @@
 
 ## Recently Completed
 
+### Cycle 92 - `nsl-frame-floor` (closed 2026-06-11)
+
+Plan archived at [`docs/archive/cycles/cycle-92-plan.md`](archive/cycles/cycle-92-plan.md). Executed fully autonomously ("complete cycle 92"). **SHIPPED: P1-P5 plus absorbed Phase 4.5 (Matt's impostor trunk-split report).** Direct-to-main commits `fbbd0879` (P1 probe telemetry), `7e28448e` (P3/P4.5 fixes + specs), `ad3be0e9` (P5 pill removal). Evidence: `cycle92-validation/REPORT.md` + `ATTRIBUTION.md` (local).
+
+- **Root cause of the NSL frame floor (P2).** three r184 renders all shadow casters through one shared override material per light; its `alphaTest` setter bumps `material.version` on every zero-crossing, and NSL mixes alphaTest 0 (trunks, dog, fences) with 0.4 (canopy billboards). Every shadow render object recomputed its full string cache key every frame: 221.5 recomputes/frame, 4.6-7.7 GB allocation churn per 30s run, 95% of hitches GC-correlated. Proven live with RenderObject instrumentation + GC-inclusive CDP heap profiling.
+- **The fix (P3).** `js/rendering/shadowOverrideMaterialFix.js`: a non-bumping `alphaTest` accessor on that one material instance (one-shot install via `onBeforeShadow`), pipeline-key discrimination verified intact. Result: churn -92% (to 406-518 MB/run), hitch rate 513.8 -> 2.2 per 30s, mean 1%-low 70.9/54.8 -> 133.0. Deviation recorded: the `allocRateMBs` proxy moved only -24% (it never saw the young-gen churn); accepted on the CDP ground-truth measure.
+- **The >= 100ms stall (P4).** Caught live (B4: 1006.8ms frame, zero longtasks, not near a heap drop, healthy box state) - environment-attributed (GPU/driver/compositor), not page JS. Carryover: GPU-process trace next bad window.
+- **Impostor trunk-split (P4.5, Matt's report).** Kiln bakes center on the bbox, so the trunk sat ~6% off-center in every tile; crossed quads splayed it into 2-3 parallel trunks. Fixed with a per-quad in-plane shift in `createColdImpostorGeometry`; A/B proof `cycle92-validation/impostor-ab.png`, spec `tests/impostor-cross-billboard.spec.js`.
+- **Pill REMOVED (P5).** Bracketed gate protocol (control 2 / gate 5 / control 2, valid iff controls within 10%): window 1 void at 28.5% drift (protocol worked); window 2 valid at 0.7% drift, GATE PASS at mean 1%-low 137.2 / worst 20.9ms vs the 55/45ms bar. `experimental: true` removed from the NSL entrance entry. Rolling Hills stays the default world (separate product decision).
+- **Probe upgrades (P1).** `--boxState=1` (nvidia-smi + CPU load per run), `--heapProfile=1` (CDP sampling profiler with GC-collected objects), 250ms heap sampling, `allocRateMBs`, `worstFrames` near-longtask/near-heap-drop attribution.
+- **Shipped numbers.** 1525 vitest green (counting-families spec updated to the pill-less state); field rail PASS post-fix; NSL driven survival 1%-low now sits within ~7% of the 143 vsync median.
+
+Deferred / carryover:
+
+- GPU-process trace capture for the environment stall class, next time a bad window appears.
+- No NSL jitter rail exists; with the floor at 120-140 a future cycle could budget one so a regression to 70 cannot ship silently.
+- Everything in the Cycle 91 carryover below still stands (Matt review queue, P8 lighting, rock re-bake, KTX2, golden re-capture, S24+, launch posting).
+
 ### Cycle 91 - `lighting-perf-optimization` / `nsl-budget-headroom` (closed 2026-06-11)
 
 Plan archived at [`docs/archive/cycles/cycle-91-plan.md`](archive/cycles/cycle-91-plan.md). Executed fully autonomously after "complete all of cycle then commit and push". **SHIPPED: P1, P2, P2.5 (Matt's tree-remake directive), P3, P4, P5, P6, P7, P7.5 (Matt's ground-texture directive); P8 lighting items deferred on rationale, gates run.** Direct-to-main commits `eaa4e3c` (P1 caster scope), `9687c4b` (P2.5 tree remake), `869bc08` (LOD chain + controller consolidation), `b4ef8b3` (P4/P5 waste + boot), `91adef4` (P2 canopy + ground noise), `b5f9d66` (ratchet), `62ea1b5` (P6 assets), `cf78aee` (statuses), `2d875a0` (terrain value-noise fix). Consolidated before/after report: `cycle91-validation/REPORT.md` (local).
