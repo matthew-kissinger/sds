@@ -11,20 +11,20 @@
   "projection": "orthographic",
   "bbox": {
     "min": [
-      -0.3073673136846635,
+      -0.236320783592627,
       0,
-      -0.3250882786073605
+      -0.2816386120516551
     ],
     "max": [
-      0.3452585481093361,
+      0.2574322736163801,
       1,
-      0.3546136519147391
+      0.2089471044368585
     ]
   },
   "source": {
-    "path": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\models\\trees\\tree1.glb",
-    "bytes": 225352,
-    "tris": 3783
+    "path": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree1.glb",
+    "bytes": 1951076,
+    "tris": 3616
   },
   "auxLayers": [
     "albedo",

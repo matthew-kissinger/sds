@@ -53,9 +53,15 @@ const TREES = ['tree1', 'tree2'];
 // remaining variants land under cycle22-validation/phaseA/variants/<tag>/
 // for side-by-side comparison + rollback options.
 const VARIANTS = [
-  { tag: 'aggressive',   ratio: 0.3, error: 0.05,  lockBorder: false },
-  { tag: 'default',      ratio: 0.5, error: 0.05,  lockBorder: false }, // canonical
-  { tag: 'conservative', ratio: 0.7, error: 0.05,  lockBorder: false },
+  // Cycle 91: canonical dropped 0.5 -> 0.25. The new preset-pure LOD0s are
+  // leaf-card dominated; the simplifier bottoms out around 39% of source
+  // tris on tree1 regardless of requested ratio (collapsing an isolated
+  // card deletes it outright, so cards act as a floor). 0.25 requests the
+  // floor; the tree-assets ratio contract moved <=25% -> <=40% same-day
+  // with this rationale.
+  { tag: 'aggressive',   ratio: 0.15, error: 0.05,  lockBorder: false },
+  { tag: 'default',      ratio: 0.25, error: 0.05,  lockBorder: false }, // canonical
+  { tag: 'conservative', ratio: 0.5, error: 0.05,  lockBorder: false },
   { tag: 'pristine',     ratio: 0.5, error: 0.001, lockBorder: true  }, // near-LOD0
 ];
 const DEFAULT_TAG = 'default';

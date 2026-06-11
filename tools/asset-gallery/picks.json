@@ -1,45 +1,23 @@
 {
   "dir": "tools/asset-gallery/staging",
-  "savedAt": "2026-05-04T00:30:00.000Z",
-  "_note": "Cycle 16 Phase 1+3 integrated picks (gallery-reviewed by Matt 2026-05-04). Cycle 22: pine slot removed per Matt's directive. The full 18-item gallery selection is preserved in git history of this file (commit 595e30c → next). Each entry below carries an explicit `canonicalName` so semantic slot mapping doesn't depend on bbox-height sort. To swap any pick: edit the canonicalName field, run `node tools/asset-gen/integrate.mjs --compress`.",
+  "savedAt": "2026-06-11T00:00:00.000Z",
+  "_note": "Cycle 91 tree re-ground (ez-tree main @48dc193, preset-pure structure, real PBR bark, green aspen leaf swap). Picked from cycle91-validation/asset-survey/staging/ survey shots; Matt reviews the survey and can swap any pick (edit canonicalName, run `node tools/asset-gen/integrate.mjs --compress`). Rocks unchanged from the Cycle 16 gallery review. LOD1s are produced from the LOD0 picks by bake-tree-lod1.mjs (meshopt), not gallery picks, since Cycle 91. Prior picks preserved in git history.",
   "picks": [
     {
-      "path": "tools/asset-gallery/staging/trees/aspen_small_single.glb",
-      "name": "aspen_small_single.glb",
+      "path": "tools/asset-gallery/staging/trees/aspen_small_double_lowcanopy_green.glb",
+      "name": "aspen_small_double_lowcanopy_green.glb",
       "canonicalName": "tree1.glb",
-      "_role": "slim pasture silhouette (3783 tris mobile LOD0)",
-      "tris": 3783,
-      "bbox": {
-        "sx": 0.645,
-        "sy": 1,
-        "sz": 0.708
-      }
+      "_role": "slim pasture silhouette (3616 tris, green ash-leaf swap on aspen structure, lowered canopy)",
+      "tris": 3616,
+      "bbox": { "sy": 1 }
     },
     {
       "path": "tools/asset-gallery/staging/trees/oak_medium_single.glb",
       "name": "oak_medium_single.glb",
       "canonicalName": "tree2.glb",
-      "_role": "broad canopy anchor (7700 tris mobile LOD0)",
-      "tris": 7700,
-      "bbox": {
-        "sx": 0.821,
-        "sy": 1,
-        "sz": 0.818
-      }
-    },
-    {
-      "path": "tools/asset-gallery/staging/trees-lod1/aspen_small_single_lod1.glb",
-      "name": "aspen_small_single_lod1.glb",
-      "canonicalName": "tree1_lod1.glb",
-      "_role": "mobile LOD1 sibling (944 tris, <=25% of paired LOD0)",
-      "tris": 944
-    },
-    {
-      "path": "tools/asset-gallery/staging/trees-lod1/oak_medium_single_lod1.glb",
-      "name": "oak_medium_single_lod1.glb",
-      "canonicalName": "tree2_lod1.glb",
-      "_role": "mobile LOD1 sibling (1924 tris, <=25% of paired LOD0)",
-      "tris": 1924
+      "_role": "broad canopy anchor (8486 tris, preset-pure mature oak)",
+      "tris": 8486,
+      "bbox": { "sy": 1 }
     },
     {
       "path": "tools/asset-gallery/staging/rocks/pebble_round_small.glb",
@@ -47,9 +25,7 @@
       "canonicalName": "rock1.glb",
       "_role": "small classic pebble (~0.10m)",
       "tris": 180,
-      "bbox": {
-        "sy": 0.1
-      }
+      "bbox": { "sy": 0.1 }
     },
     {
       "path": "tools/asset-gallery/staging/rocks/boulder_chunky_mid.glb",
@@ -57,9 +33,7 @@
       "canonicalName": "rock2.glb",
       "_role": "medium grey-brown boulder (~0.28m)",
       "tris": 180,
-      "bbox": {
-        "sy": 0.28
-      }
+      "bbox": { "sy": 0.28 }
     },
     {
       "path": "tools/asset-gallery/staging/rocks/spire_jagged_dark.glb",
@@ -67,9 +41,7 @@
       "canonicalName": "rock3.glb",
       "_role": "tall jagged slate spire (~0.50m) — replaces the previous warm-granite craggy formation for more silhouette drama",
       "tris": 320,
-      "bbox": {
-        "sy": 0.5
-      }
+      "bbox": { "sy": 0.5 }
     }
   ]
 }

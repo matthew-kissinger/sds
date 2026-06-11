@@ -52,6 +52,19 @@ export function patchTreeWindMaterial(builder, material, bboxMinY, bboxMaxY) {
         shader.uniforms.uTreeBaseY = uTreeBaseY;
         shader.uniforms.uTreeTopY = uTreeTopY;
 
+        // Cycle 91: the re-baked leaf cards carry rounded canopy normals
+        // (geometry normals pointing outward from each card's origin,
+        // ez-tree main #43). The default double-sided backface flip
+        // (`normal *= faceDirection`) inverts them on back-facing cards,
+        // shading half the canopy as if lit from inside. Skip the flip on
+        // double-sided tree materials, mirroring ez-tree's own shader.
+        if (material.side === THREE.DoubleSide) {
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <normal_fragment_begin>',
+                THREE.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;', '')
+            );
+        }
+
         shader.vertexShader = shader.vertexShader
             .replace(
                 '#include <common>',

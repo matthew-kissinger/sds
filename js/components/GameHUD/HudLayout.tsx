@@ -68,17 +68,23 @@ export function HudLayout({
     //   --sds-bottom-reserve   bottom clearance over the mobile controls
     //   --sds-toast-top-offset extra top clearance below the topCenter stack
     //   --sds-topleft-reserve  height the topLeft stack occupies
+    //   --sds-topright-reserve height the topRight stack occupies (Cycle 91:
+    //                          the NSL minimap pins to the same corner the
+    //                          GameTimer renders in and was drawing under it)
+    const topRightCount = asChildren(topRight).length;
     useEffect(() => {
         const rootStyle = document.documentElement.style;
         rootStyle.setProperty('--sds-bottom-reserve', bottomReserve);
         rootStyle.setProperty('--sds-toast-top-offset', isMobile ? '112px' : '64px');
         rootStyle.setProperty('--sds-topleft-reserve', '140px');
+        rootStyle.setProperty('--sds-topright-reserve', topRightCount > 0 ? '72px' : '0px');
         return () => {
             rootStyle.removeProperty('--sds-bottom-reserve');
             rootStyle.removeProperty('--sds-toast-top-offset');
             rootStyle.removeProperty('--sds-topleft-reserve');
+            rootStyle.removeProperty('--sds-topright-reserve');
         };
-    }, [bottomReserve, isMobile]);
+    }, [bottomReserve, isMobile, topRightCount]);
 
     const cornerGutter = '8px';
     const stackGap = '8px';

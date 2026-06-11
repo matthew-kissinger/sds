@@ -254,6 +254,7 @@ async function readHudRects(page: Page) {
       skipDusk: rectFor('#sds-skip-dusk'),
       cameraMode: rectFor('button[aria-label^="Camera mode:"]'),
       fullscreenButton: rectFor('#mobile-fullscreen-button'),
+      gameTimer: rectFor('[data-sds-hud-panel="game-timer"]'),
     };
   });
 }
@@ -273,6 +274,7 @@ async function assertHudLayout(page: Page, label: string) {
     ['skipDusk', 'cameraMode'],
     ['skipDusk', 'minimap'],
     ['fullscreenButton', 'mobileHud'],
+    ['gameTimer', 'minimap'],
   ] as const;
   const collisions = pairs
     .map(([left, right]) => ({ left, right, overlap: overlap(rects[left], rects[right]) }))

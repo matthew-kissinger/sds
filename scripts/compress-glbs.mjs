@@ -40,10 +40,24 @@ const SKIP_THRESHOLD = 0.7; // Skip if current is already <70% of original.
 // rigs and silhouette-critical foliage cards must not be downscaled here.
 const TEXTURE_CAPS = [{ match: /(Fence|Gate|Corner)_/i, maxDim: 512 }];
 
+// Per-asset texture FORMAT conversion. The Cycle 91 tree bakes embed
+// photographic ambientcg bark (color+AO+normal) + 512px leaf cards;
+// GLTFExporter writes them as PNG, which lands ~2 MB per tree GLB. WebP
+// q85 at these resolutions is visually transparent at SDS viewing
+// distances and cuts most of the texture bytes (EXT_texture_webp; every
+// SDS-supported browser decodes it). Flat-color legacy assets stay PNG.
+const TEXTURE_FORMATS = [{ match: /^tree\d(_lod1)?\.glb$/i, format: 'webp', quality: 85 }];
+
 /** Largest allowed texture dimension for `relPath`, or null to preserve native. */
 function textureCapFor(relPath) {
   const base = relPath.split(/[\\/]/).pop();
   return TEXTURE_CAPS.find((c) => c.match.test(base))?.maxDim ?? null;
+}
+
+/** Texture format-conversion rule for `relPath`, or null to keep source format. */
+function textureFormatFor(relPath) {
+  const base = relPath.split(/[\\/]/).pop();
+  return TEXTURE_FORMATS.find((c) => c.match.test(base)) ?? null;
 }
 
 /** Recursively collect every .glb under `dir`, skipping the originals backup. */
@@ -114,9 +128,14 @@ async function main() {
       // Always re-read from the pristine backup so transforms compose cleanly.
       const document = await io.read(backup);
       const maxDim = textureCapFor(rel);
+      const formatRule = textureFormatFor(rel);
       const transforms = [dedup(), weld(), prune()];
-      if (maxDim) {
-        transforms.push(textureCompress({ encoder: sharp, resize: [maxDim, maxDim] }));
+      if (maxDim || formatRule) {
+        transforms.push(textureCompress({
+          encoder: sharp,
+          ...(maxDim ? { resize: [maxDim, maxDim] } : {}),
+          ...(formatRule ? { targetFormat: formatRule.format, quality: formatRule.quality } : {}),
+        }));
       }
       transforms.push(
         // encodeSpeed=0 = best compression (level 7-equivalent), decodeSpeed=5 = balanced runtime.

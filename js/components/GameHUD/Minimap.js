@@ -51,7 +51,10 @@ function _sizeMax() {
 
 function _topOffset() {
     if (_isCompactMobile()) return 'calc(env(safe-area-inset-top, 0px) + 96px)';
-    return '8px';
+    // Cycle 91: clear the HUD's topRight stack (the GameTimer renders in the
+    // same corner; the minimap used to draw under it). HudLayout publishes
+    // the reserve, 0px when the slot is empty.
+    return 'calc(max(env(safe-area-inset-top, 8px), 8px) + var(--sds-topright-reserve, 0px))';
 }
 
 /**

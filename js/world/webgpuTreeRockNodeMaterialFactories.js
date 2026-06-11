@@ -49,6 +49,12 @@ function mergeBranchMaterial(defaults, previous) {
     result.baseColor = color;
     result.baseColorLinear = true;
   }
+  // Cycle 91: carry the source GLB's bark textures (the re-baked trees ship
+  // real PBR bark; dropping these rendered trunks as the flat tint - solid
+  // white once the tint went neutral).
+  if (previous?.map) result.map = previous.map;
+  if (previous?.normalMap) result.normalMap = previous.normalMap;
+  if (previous?.aoMap) result.aoMap = previous.aoMap;
   if (previous?.roughness !== undefined) result.roughness = previous.roughness;
   if (previous?.metalness !== undefined) result.metalness = previous.metalness;
   return result;

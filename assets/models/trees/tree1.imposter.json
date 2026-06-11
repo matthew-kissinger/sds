@@ -9,6 +9,33 @@
   "worldSize": 1,
   "yOffset": 0.5,
   "projection": "orthographic",
+  "bbox": {
+    "min": [
+      -0.236320783592627,
+      0,
+      -0.2816386120516551
+    ],
+    "max": [
+      0.2574322736163801,
+      1,
+      0.2089471044368585
+    ]
+  },
+  "source": {
+    "path": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree1.glb",
+    "bytes": 1951076,
+    "tris": 3616
+  },
+  "auxLayers": [
+    "albedo",
+    "normal",
+    "depth"
+  ],
+  "bgColor": "transparent",
+  "colorLayer": "baseColor",
+  "normalSpace": "capture-view",
+  "edgeBleedPx": 2,
+  "textureColorSpace": "srgb",
   "axis": "hemi-y",
   "hemi": true,
   "layout": "latlon",
@@ -24,33 +51,6 @@
     0.5235987755982988,
     0.08726646259971647
   ],
-  "bbox": {
-    "min": [
-      -0.30735816354251005,
-      0,
-      -0.3250702435522191
-    ],
-    "max": [
-      0.3452493979671826,
-      1,
-      0.3545956168595977
-    ]
-  },
-  "source": {
-    "path": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree1.glb",
-    "bytes": 470988,
-    "tris": 5880
-  },
-  "auxLayers": [
-    "albedo",
-    "normal",
-    "depth"
-  ],
-  "bgColor": "transparent",
-  "colorLayer": "baseColor",
-  "normalSpace": "capture-view",
-  "edgeBleedPx": 2,
-  "textureColorSpace": "srgb",
   "objectId": "tree1",
   "category": "tree",
   "variant": "base",

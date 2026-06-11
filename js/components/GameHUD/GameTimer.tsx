@@ -28,7 +28,7 @@ export function GameTimer({ gameTime, timeLimit }: GameTimerProps) {
     const isLowTime = isTimedMode && timeRemaining < 30;
 
     return (
-        <HudPanel className={`py-2 px-4 ${isLowTime ? 'border-red-500/50' : ''}`}>
+        <HudPanel testId="game-timer" className={`py-2 px-4 ${isLowTime ? 'border-red-500/50' : ''}`}>
             {isTimedMode ? (
                 <>
                     <div className={`font-mono text-2xl ${isLowTime ? 'text-red-400' : 'text-white'}`}>

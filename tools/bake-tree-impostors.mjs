@@ -39,25 +39,20 @@ const execFileP = promisify(execFile);
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const SDS_ROOT = resolve(HERE, '..');
 const PF_ROOT = resolve(SDS_ROOT, '../pixel-forge');
-const PF_TSX = resolve(PF_ROOT, 'node_modules/.bin/tsx');
-const PF_CLI = resolve(PF_ROOT, 'packages/cli/src/index.ts');
-// Windows packs tsx as a .exe shim; .cmd may also exist depending on the
-// installer. Prefer .exe (direct executable) over .cmd (shell wrapper).
-const PF_TSX_WIN_EXE = `${PF_TSX}.exe`;
-const PF_TSX_WIN_CMD = `${PF_TSX}.cmd`;
+// Cycle 91: pixel-forge ships a compiled CLI now - invoke it with plain
+// node instead of the old tsx-against-CLI-source path (no bun/tsx
+// requirement in consumer repos, per pixel-forge's own packaging intent).
+const PF_CLI = resolve(PF_ROOT, 'packages/cli/dist/index.js');
 
 const MANIFEST_PATH = resolve(SDS_ROOT, 'assets/objects.manifest.json');
 
-function pickTsxBin() {
-  if (process.platform === 'win32') {
-    if (existsSync(PF_TSX_WIN_EXE)) return PF_TSX_WIN_EXE;
-    if (existsSync(PF_TSX_WIN_CMD)) return PF_TSX_WIN_CMD;
+function assertCliBuilt() {
+  if (!existsSync(PF_CLI)) {
+    throw new Error(
+      `pixel-forge compiled CLI not found at ${PF_CLI}. ` +
+      `Run \`bun run build\` in ${PF_ROOT} (packages/cli) first.`
+    );
   }
-  if (existsSync(PF_TSX)) return PF_TSX;
-  throw new Error(
-    `pixel-forge tsx binary not found. Expected ${PF_TSX}, ${PF_TSX_WIN_EXE}, or ${PF_TSX_WIN_CMD}. ` +
-    `Run \`bun install\` in ${PF_ROOT} first.`
-  );
 }
 
 /** Load + lightly validate the object manifest. */
@@ -143,7 +138,7 @@ export function augmentSidecarFile(sidecarPath, identity) {
   writeFileSync(sidecarPath, serializeSidecar(withImpostorIdentity(sidecar, identity)));
 }
 
-async function bakeOne(obj, layoutId, preset, variant, tsxBin) {
+async function bakeOne(obj, layoutId, preset, variant) {
   const src = resolve(SDS_ROOT, obj.source);
   if (!existsSync(src)) throw new Error(`missing source GLB: ${src}`);
   const out = impostorAssetBase(obj, preset, variant);
@@ -172,7 +167,7 @@ async function bakeOne(obj, layoutId, preset, variant, tsxBin) {
   const t0 = Date.now();
   const layoutDesc = isOctahedral ? `octahedral ${preset.grid ?? '8x8'}` : `${preset.angles} ${preset.axis}`;
   console.log(`[bake] ${obj.id} / ${layoutId} / ${variant.id} (${layoutDesc}, tile ${preset.tileSize})…`);
-  const { stdout, stderr } = await execFileP(tsxBin, args, {
+  const { stdout, stderr } = await execFileP(process.execPath, args, {
     cwd: PF_ROOT,
     maxBuffer: 16 * 1024 * 1024,
   });
@@ -204,8 +199,10 @@ async function bakeOne(obj, layoutId, preset, variant, tsxBin) {
 export async function bakeAll({ augmentOnly = false } = {}) {
   const manifest = loadManifest();
   const targets = [...enabledImpostorTargets(manifest)];
-  const tsxBin = augmentOnly ? null : pickTsxBin();
-  if (!augmentOnly) console.log(`pixel-forge tsx:  ${tsxBin}`);
+  if (!augmentOnly) {
+    assertCliBuilt();
+    console.log(`pixel-forge cli:  ${PF_CLI}`);
+  }
   console.log(`manifest:         ${MANIFEST_PATH}`);
   console.log(`mode:             ${augmentOnly ? 'augment-only (no render)' : 'full bake'}`);
   console.log(`impostor targets: ${targets.map((t) => `${t.obj.id}/${t.layoutId}/${t.variant.id}`).join(', ') || '(none)'}\n`);
@@ -213,7 +210,7 @@ export async function bakeAll({ augmentOnly = false } = {}) {
   let count = 0;
   for (const t of targets) {
     if (!augmentOnly) {
-      await bakeOne(t.obj, t.layoutId, t.preset, t.variant, tsxBin);
+      await bakeOne(t.obj, t.layoutId, t.preset, t.variant);
     } else if (!existsSync(t.sidecarPath)) {
       throw new Error(
         `--augment-only: sidecar missing for ${t.obj.id}/${t.layoutId}/${t.variant.id} ` +

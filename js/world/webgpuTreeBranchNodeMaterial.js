@@ -3,7 +3,7 @@
 import { Vector2 as ThreeVector2 } from 'three';
 
 export function createWebGpuTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }, treeBranch = {}) {
-  const { clamp, float, length, mix, normalize, positionLocal, positionView, positionWorld, sin, smoothstep, time, uniform, vec3 } = TSL;
+  const { clamp, float, length, mix, normalize, positionLocal, positionView, positionWorld, sin, smoothstep, texture, time, uniform, vec3 } = TSL;
   const linearColor = (color) => color.map((value) => (
     value <= 0.04045
       ? value / 12.92
@@ -35,7 +35,17 @@ export function createWebGpuTreeBranchNodeMaterial({ MeshStandardNodeMaterial, T
   const fogColor = vec3(...linearColor(treeBranch.fogColor ?? [0.5651, 0.6333, 0.6665])).mul(treeBranch.fogColorScale ?? 0.62);
   const fogBlend = smoothstep(treeBranch.fogNear ?? 220, treeBranch.fogFar ?? 700, length(positionView))
     .mul(treeBranch.fogStrength ?? 0.72);
-  material.colorNode = mix(vec3(...color), fogColor, fogBlend);
+  // Cycle 91: textured bark. The re-baked tree GLBs carry real PBR bark
+  // (color + AO + normal, V-repeat baked into UVs - no texture transform);
+  // sample the source map and treat the flat color as a tint. GLBs without
+  // a map (the pre-91 flat-tint era, any fallback asset) keep the old
+  // flat-color path byte-for-byte.
+  const albedo = treeBranch.map
+    ? texture(treeBranch.map).rgb.mul(vec3(...color))
+    : vec3(...color);
+  material.colorNode = mix(albedo, fogColor, fogBlend);
+  if (treeBranch.normalMap) material.normalMap = treeBranch.normalMap;
+  if (treeBranch.aoMap) material.aoMap = treeBranch.aoMap;
   material.positionNode = positionLocal.add(vec3(windDir.x.mul(branchSway), 0.0, windDir.y.mul(branchSway)));
   material.userData.webgpuUsesSourceColor = treeBranch.baseColorLinear === true;
   material.userData.webgpuUsesDistanceFog = true;

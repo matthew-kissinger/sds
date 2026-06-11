@@ -19,7 +19,12 @@
 <script type="module">
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { Tree } from '/node_modules/@dgreenheck/ez-tree/build/ez-tree.es.js';
+// Cycle 91: ez-tree main-branch build served from the sibling clone
+// (../ez-tree, pinned commit recorded in bake-trees.mjs). Main externalizes
+// textures: the caller supplies bark.maps / leaves.map as THREE.Texture
+// instances, which is what lets the bake choose real PBR bark and a
+// deliberate leaf-texture resolution instead of the 1.1.0 bundled assets.
+import { Tree } from '/ez-tree/build/ez-tree.es.js';
 
 const status = document.getElementById('status');
 
@@ -40,6 +45,65 @@ function applyTweaks(target, tweaks) {
 }
 
 /**
+ * Fetch an image and downscale it onto a canvas. Returns a CanvasTexture
+ * (GLTFExporter embeds canvases via toDataURL). Downscaling happens at
+ * load so the exported GLB carries exactly the resolution the recipe
+ * asked for - ambientcg bark ships at 1K per map, which would dominate
+ * the GLB size budget at native size.
+ */
+async function loadScaledTexture(url, targetSize, { srgb = false } = {}) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`texture fetch failed: ${url} (${res.status})`);
+    const bitmap = await createImageBitmap(await res.blob());
+    const size = targetSize ?? bitmap.width;
+    const cnv = document.createElement('canvas');
+    cnv.width = size;
+    cnv.height = size;
+    const ctx = cnv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, size, size);
+    bitmap.close();
+    const tex = new THREE.CanvasTexture(cnv);
+    if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
+    tex.flipY = true;
+    return tex;
+}
+
+const barkCache = new Map();
+/**
+ * ambientcg bark PBR set from the ez-tree clone's demo assets.
+ * Color + AO + normal only: MeshPhong ignores roughnessMap, and skipping
+ * it keeps one full map out of every exported GLB.
+ */
+async function loadBarkMaps(barkType, targetSize) {
+    const key = `${barkType}@${targetSize}`;
+    if (barkCache.has(key)) return barkCache.get(key);
+    const dir = `${barkType}_1K-JPG`;
+    const base = `/ez-tree/src/app/public/textures/bark/${dir}/${dir}`;
+    // Not every ambientcg set ships AO (Bark001 doesn't); treat it as optional.
+    const maps = {
+        color: await loadScaledTexture(`${base}_Color.jpg`, targetSize, { srgb: true }),
+        ao: await loadScaledTexture(`${base}_AmbientOcclusion.jpg`, targetSize).catch(() => null),
+        normal: await loadScaledTexture(`${base}_NormalGL.jpg`, targetSize),
+        roughness: null,
+    };
+    barkCache.set(key, maps);
+    return maps;
+}
+
+const leafCache = new Map();
+async function loadLeafMap(leafType, targetSize) {
+    const key = `${leafType}@${targetSize}`;
+    if (leafCache.has(key)) return leafCache.get(key);
+    const tex = await loadScaledTexture(
+        `/ez-tree/src/app/public/textures/leaves/${leafType}.png`, targetSize, { srgb: true },
+    );
+    leafCache.set(key, tex);
+    return tex;
+}
+
+/**
  * Generate a tree, normalize it to a target world-space height (so the
  * existing TerrainBuilder placement code's scale-variance ranges remain
  * unchanged), name child meshes for downstream identification, strip
@@ -56,7 +120,47 @@ window.__bakeTree = async function bakeTree(recipe) {
     tree.loadPreset(recipe.preset);
     if (recipe.seed != null) tree.options.seed = recipe.seed;
     if (recipe.tweaks) applyTweaks(tree.options, recipe.tweaks);
+    // Multiplicative scales on the preset's own leaf tuning (the absolute
+    // values live in the preset JSON; recipes only nudge them).
+    if (recipe.leafCountScale) {
+        tree.options.leaves.count = Math.max(1, Math.round(tree.options.leaves.count * recipe.leafCountScale));
+    }
+    if (recipe.leafSizeScale) {
+        tree.options.leaves.size *= recipe.leafSizeScale;
+    }
+
+    // Resolve textures from the type identifiers (preset-supplied unless the
+    // recipe overrode them). Loaded and downscaled before generate so the
+    // material picks them up directly.
+    const barkType = recipe.barkType ?? tree.options.bark.type;
+    if (tree.options.bark.textured && barkType) {
+        tree.options.bark.maps = await loadBarkMaps(barkType, recipe.barkTextureSize ?? 512);
+    }
+    const leafType = recipe.leafType ?? tree.options.leaves.type;
+    if (leafType) {
+        tree.options.leaves.map = await loadLeafMap(leafType, recipe.leafTextureSize ?? 512);
+    }
+
     tree.generate();
+
+    // Bake the bark V-repeat into the geometry UVs and clear the texture
+    // transform. ez-tree bakes U into UVs already but applies V tiling at
+    // runtime via texture.repeat.y = 1/textureScale.y, which GLTFExporter
+    // writes as KHR_texture_transform - an extension SDS's bespoke WebGPU
+    // node materials (and any plain-uv consumer) never read. Baking it in
+    // makes the GLB self-contained: plain uv() sampling is correct
+    // everywhere.
+    const barkScaleY = tree.options.bark?.textureScale?.y;
+    const trunkUv = tree.branchesMesh?.geometry?.getAttribute?.('uv');
+    if (trunkUv && Number.isFinite(barkScaleY) && barkScaleY !== 0) {
+        for (let i = 0; i < trunkUv.count; i++) trunkUv.setY(i, trunkUv.getY(i) / barkScaleY);
+        trunkUv.needsUpdate = true;
+        const m = tree.branchesMesh.material;
+        for (const key of ['map', 'aoMap', 'normalMap', 'roughnessMap']) {
+            const t = m?.[key];
+            if (t) { t.repeat.set(1, 1); t.offset.set(0, 0); }
+        }
+    }
 
     // Name children so downstream GLB consumers can distinguish trunk
     // from leaves (e.g. for per-mesh shader weights or LOD impostors).
@@ -66,29 +170,12 @@ window.__bakeTree = async function bakeTree(recipe) {
     // Drop EZ-Tree's runtime onBeforeCompile callbacks. They don't
     // survive the GLB roundtrip anyway, but stripping them locally
     // keeps the exported material lean and makes intent explicit:
-    // SDS's _patchTreeWindMaterial owns leaf wind end-to-end.
+    // SDS's _patchTreeWindMaterial owns leaf wind end-to-end. The
+    // rounded leaf normals (main-branch improvement) are GEOMETRY
+    // normals and ride the export; only the backface-flip skip lives
+    // in the shader, mirrored on the SDS side at integration.
     if (tree.leavesMesh.material) tree.leavesMesh.material.onBeforeCompile = undefined;
     if (tree.branchesMesh.material) tree.branchesMesh.material.onBeforeCompile = undefined;
-
-    // Downsample the leaf alpha texture before export. EZ-Tree ships
-    // 1024×1024 leaf PNGs; in SDS trees are seen from ≥10m and shrink
-    // further with distance — 384×384 keeps mid-distance leaves crisp
-    // while staying ~7× smaller than native after PNG encode. (256²
-    // earlier round read soft once leaf-count was bumped past 40.)
-    const leafMap = tree.leavesMesh?.material?.map;
-    if (leafMap?.image) {
-        const target = recipe.leafTextureSize ?? 384;
-        const src = leafMap.image;
-        const cnv = document.createElement('canvas');
-        cnv.width = target;
-        cnv.height = target;
-        const ctx = cnv.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(src, 0, 0, target, target);
-        leafMap.image = cnv;
-        leafMap.needsUpdate = true;
-    }
 
     // Normalize to a target height so the existing placement code's
     // per-tree scale-variance ranges work unchanged. EZ-Tree presets

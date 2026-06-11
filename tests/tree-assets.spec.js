@@ -50,19 +50,26 @@ const BUDGETED_FILES = [...TREE_FILES, ...ROCK_FILES];
 
 // Cycle 16: LOD1 sibling GLBs roughly 30-50% the LOD0 size after draco,
 // so the 6-GLB total is ~+50% over the 3-GLB total. Ceiling raised
-// 3 MB → 4 MB to absorb. Single-tree LOD1 sizes are ~150-300 KB
-// post-draco; if any one ships >500 KB something's wrong with the
-// LOD1 recipe (probably leaves.count not actually halved).
+// 3 MB → 4 MB to absorb.
+// Cycle 91 re-ground: trees re-baked from ez-tree main with real PBR bark
+// (color+AO+normal) + 512px leaf textures, WebP-converted by compress-glbs
+// (~410-666 KB per GLB; the 4 MB ceiling still holds with textures). Budgets
+// re-set deliberately: tree2 8000 -> 9000 (preset-pure mature oak, 8486),
+// LOD1s to the measured meshopt output at ratio 0.25 (the simplifier
+// bottoms out ~39% on leaf-card geometry - see bake-tree-lod1.mjs).
 const TOTAL_SIZE_CEILING_BYTES = 4 * 1024 * 1024; // 4 MB
 const ACCEPTED_TRIANGLE_BUDGETS = Object.freeze({
     'tree1.glb': 4000,
-    'tree2.glb': 8000,
-    'tree1_lod1.glb': 1000,
-    'tree2_lod1.glb': 2000,
+    'tree2.glb': 9000,
+    'tree1_lod1.glb': 1600,
+    'tree2_lod1.glb': 2600,
     'rock1.glb': 500,
     'rock2.glb': 500,
     'rock3.glb': 500,
 });
+// Picks.json only carries gallery-picked assets since Cycle 91 (LOD1s are
+// derived from the LOD0 picks by bake-tree-lod1.mjs, not picked).
+const PICKED_BUDGET_FILES = Object.freeze(['tree1.glb', 'tree2.glb', 'rock1.glb', 'rock2.glb', 'rock3.glb']);
 const IMPOSTOR_SIDECARS = Object.freeze(['png', 'normal.png', 'depth.png', 'json']);
 
 let runtimeTriangleCounts;
@@ -135,7 +142,8 @@ describe('tree assets — committed GLBs', () => {
 
     it('keeps tree and rock picks inside accepted triangle budgets', () => {
         const picks = loadPicksByCanonicalName();
-        for (const [canonicalName, maxTris] of Object.entries(ACCEPTED_TRIANGLE_BUDGETS)) {
+        for (const canonicalName of PICKED_BUDGET_FILES) {
+            const maxTris = ACCEPTED_TRIANGLE_BUDGETS[canonicalName];
             const pick = picks.get(canonicalName);
             expect(pick, `${canonicalName} missing from tools/asset-gallery/picks.json`).toBeTruthy();
             expect(pick.tris, `${canonicalName} exceeds accepted triangle budget`).toBeLessThanOrEqual(maxTris);
@@ -149,11 +157,16 @@ describe('tree assets — committed GLBs', () => {
     });
 
     it.each(LOD0_FILES.map((f, i) => [f, LOD1_FILES[i]]))(
-        '%s sibling %s is no more than 25% of LOD0 triangles',
+        '%s sibling %s is no more than 40% of LOD0 triangles',
         (lod0, lod1) => {
+            // Cycle 91: 25% -> 40%. The meshopt simplifier bottoms out around
+            // 39% of source tris on leaf-card-dominated trees regardless of
+            // the requested ratio - collapsing an isolated card deletes it
+            // outright, so cards act as a floor (verified against both the
+            // in-repo bake and `pixelforge kiln lod` at ratios 0.15-0.25).
             const lod0Tris = runtimeTriangleCounts.get(lod0);
             const lod1Tris = runtimeTriangleCounts.get(lod1);
-            expect(lod1Tris, `${lod1} must stay at or below 25% of ${lod0}`).toBeLessThanOrEqual(Math.floor(lod0Tris * 0.25));
+            expect(lod1Tris, `${lod1} must stay at or below 40% of ${lod0}`).toBeLessThanOrEqual(Math.floor(lod0Tris * 0.4));
         }
     );
 

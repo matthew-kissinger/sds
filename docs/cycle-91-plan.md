@@ -55,6 +55,45 @@ One pass over lighting, runtime perf, load sequencing, and assets, every fix gat
 - [ ] When Phase 2 ships, the NSL driven probe shall hold median >= 130 and 1%-low >= 55.
 - [ ] If the layer pattern breaks instanced receivers on r184, then the phase shall record the repro in the plan and ship the fallback instead.
 
+## Phase 2.5 - Tree pipeline remake + NSL full LOD chain + minimap (Matt's directive, 2026-06-11, ~2 days)
+
+**Pre-empts all remaining phases** (Matt: "can we do all this before continuing anything else? then we can go back to cycle work"). Absorbs Phase 3 items 4-5 (distance LOD) and Phase 7 items 1-2 (tree re-bakes). Runs BEFORE shadow Phase 2, since remade impostors feed the canopy-caster design.
+
+Intake facts (2026-06-11 investigation):
+
+- ez-tree 1.1.0 is the latest npm release, but GitHub main carries unreleased quality work (May 2026): stratified leaf/branch sampling (kills visible spiral patterns), custom rounded leaf normals, world-axis growth-force fix. Using "improved ez-tree" means installing from git main (pinned commit).
+- Current bakes never used the library properly: `bark.textured = false, flatShading = true` (flat tinted bark, PBR bark sets unused), leaf textures downsampled to 384px, wind callbacks stripped.
+- pixel-forge (`../pixel-forge`, active 2026-06-11) now ships a compiled `pixelforge` CLI with `kiln lod` (meshopt LOD chains) and the established `kiln bake-imposter` (latlon + octahedral, normal/depth aux). Our `bake-tree-impostors.mjs` still shells into tsx + CLI source.
+- Minimap probe (`../cycle91-validation/minimap-probe/`): silhouette/markers correct, but the game timer renders on top of the minimap (both top-right; timer absent from layout asserts) and the canvas has no devicePixelRatio scaling.
+
+Work items:
+
+1. **ez-tree upgrade**: install from GitHub main (pinned commit); fallback to 1.1.0 + recorded gap if the git build fails. Note main externalizes textures - bake harness may need to serve them.
+2. **First-principles LOD0 re-bake** (`tools/bake-trees.mjs`, `tools/bake-trees/bake.html`): textured PBR bark, deliberate leaf size/count/tint per species, reviewed leaf-texture resolution, stratified-sampling benefit captured. Candidate matrix + survey shots into `cycle91-validation/asset-survey/`; picks recorded in `tools/asset-gallery/picks.json`.
+3. **LOD1 + LOD2 re-bakes**: LOD1 via `pixelforge kiln lod` (or the existing meshopt recipe if its output reads better - decided by survey); kiln impostor atlases re-baked (latlon + octahedral, normal/depth) with the compiled CLI; `bake-tree-impostors.mjs` updated to call it.
+4. **NSL full LOD chain**: cull-pass selection LOD0 (near) / LOD1 (mid band) / kiln impostor (far) on the consolidated path, per-type controllers sharing source offset buffers (the Phase 3 item-4 design, now three-level). Desktop mid-band enablement is a survey decision (re-validates the durable desktop no-LOD1 rule with the remade assets, per its own removal clause).
+5. **Minimap fixes**: timer/minimap layout collision resolved, devicePixelRatio backing-store scaling, timer added to the HUD layout asserts.
+6. Tree-asset tests (`tests/tree-assets.spec.js` budgets, scatter goldens) re-validated; budget bumps deliberate and recorded here.
+
+**Status (2026-06-11, mid-phase):** items 1-3, 5, 6 SHIPPED; item 4 (NSL full LOD chain) is the open work. Findings while shipping:
+
+- **pixel-forge impostor gen was NOT broken** (Matt asked to check): the re-baked atlases are faithful; nothing to fix upstream.
+- **White-trunk root cause (fixed, not patched):** the WebGPU path builds bespoke node materials and `webgpuTreeBranchNodeMaterial` carried only a flat color from the flat-tint era - the new PBR bark textures were silently dropped (white tint showed through). Fixed at both levels: the bake now exports transform-free GLBs (bark V-repeat baked into UVs, no KHR_texture_transform dependency) and the branch node material samples the source map/normal/AO (`mergeBranchMaterial` carries them; GLBs without maps keep the old flat path).
+- **Bark re-pick:** the preset-default Bark001/Bark002 washed white under SDS ambient (Cycle 17 precedent); re-picked Bark014 (red-brown, tree1) / Bark015 (warm tan, tree2) after a visual pass over all 11 shipped sets.
+- **Matt's distance observation (open, drives item 4):** small trees at distance render full LOD0 and their alphaHash leaf cards dissolve at sub-pixel coverage ("leaves almost nonexistent"). The structural fix is item 4's far-switch to impostors (cross-billboards hold silhouette); if a mid-band still reads thin after that, the asset-side lever is a leaf size/count bump on tree1 (the new bake has ~900 leaf quads vs the old 2,310, so per-card coverage matters more).
+- LOD1 ratio contract moved <= 25% -> <= 40% (meshopt bottoms out ~39% on leaf-card geometry; verified against `pixelforge kiln lod` too); tree2 budget 8000 -> 9000; impostor hash goldens regenerated (the documented accept-a-new-bake act). Tree GLBs converted to WebP textures in compress-glbs (8.3 MB -> 1.9 MB total).
+- ez-tree main is vendored as a sibling clone (`../ez-tree`, pinned 48dc193, `npm run build:lib`); the bake server serves it at `/ez-tree/*`.
+- WebGL leaf rounded-normals backface-flip skip shipped in `shaderPatches.js`; the WebGPU leaf node material equivalent is unverified (visual survey next session).
+
+**Acceptance (EARS):**
+
+- [x] When Phase 2.5 ships, tree LOD0/LOD1 GLBs and kiln atlases shall be re-baked from the upgraded pipeline with before/after survey shots under `cycle91-validation/asset-survey/`.
+- [ ] When Phase 2.5 ships, fully-streamed NSL shall render LOD0/LOD1/impostor by camera distance via the consolidated cull pass (verified by controller instance counts in a probe snapshot).
+- [ ] When Phase 2.5 ships, the NSL driven probe shall report median and 1%-low no worse than the Phase 1 run (142.9 / 65.7).
+- [x] When Phase 2.5 ships, the game timer and minimap shall not overlap (layout assert includes the timer) and the minimap canvas shall scale by devicePixelRatio (DPR scaling was already present; the overlap fix ships via the `--sds-topright-reserve` CSS variable).
+- [x] When `npm test` runs, tree-asset budgets and scatter-position goldens shall pass (bumps recorded here).
+- [ ] If the ez-tree git install cannot build, then the bake shall ship on 1.1.0 and the gap shall be recorded in BACKLOG. (N/A - the git build worked.)
+
 ## Phase 3 - Tree cull controller consolidation: ~108 -> one per type x child-mesh (~4hr)
 
 **Depends on:** nothing (parallel-safe with Phase 2, but lands after it to keep probe attribution clean).
@@ -62,8 +101,8 @@ One pass over lighting, runtime perf, load sequencing, and assets, every fix gat
 1. `buildAdditiveTreeMeshes` currently creates one compute-cull controller per wave x type x child-mesh (~108 on NSL): ~650 uniform writes, ~216 dispatches, ~27x duplicated geometry buffers, ~110 indirect draws per pass, every frame. Restructure to one controller per type x child-mesh (~6 on NSL) with capacity for the full island; waves append instances into the consolidated source buffers instead of minting controllers. [`js/world/foliageStreaming.js`](../js/world/foliageStreaming.js), [`js/world/TreePlacement.js`](../js/world/TreePlacement.js), [`js/world/treeComputeCull.js`](../js/world/treeComputeCull.js).
 2. Cold-corridor meshes fold into the same controllers (corridor trees are wave zero).
 3. Loading-stage contract unchanged: impostor-first coverage, wave retirement, low-tier behavior identical. [`tests/scene-loading-stages.spec.js`](../tests/scene-loading-stages.spec.js) stays green.
-4. **Runtime distance LOD via impostor selection in the cull pass** (folded in 2026-06-11; steady-state NSL currently renders LOD0 to the island edge): per tree type, one additional compute-cull controller renders far instances as kiln cross-billboards. Both controller kinds read the same per-type source offset buffer; the LOD0 controllers' cull condition gains a `distance(cameraPos, offset) < FAR_SWITCH` term, the impostor controller keeps the complement. Reuses the cold-coverage cross-billboard geometry/material path (minimal kiln artifacts - sidecar + albedo atlas - already fetched on NSL, zero new network). Impostor controllers never cast shadows (durable far-impostor rule). Target: ~6 LOD0 + 2 impostor = 8 controllers. The camera-relative threshold is safe on this path, unlike the WebGL billboard rule's distance-from-origin requirement: the compute pass re-evaluates every frame with no mesh/render-list switching (data-compaction only changes instance counts; meshes stay pinned), so the per-frame mesh-swap cost that rule guards against does not exist here.
-5. **Survey-gated**: before/after far-canopy silhouette shots into `cycle91-validation/asset-survey/`; if the billboard ring reads worse than LOD0-everywhere, push the threshold out or revert. Matt reviews; nothing ships as "better" without the shots.
+4. **[ABSORBED into Phase 2.5 item 4]** Runtime distance LOD via impostor selection in the cull pass (folded in 2026-06-11; steady-state NSL currently renders LOD0 to the island edge): per tree type, one additional compute-cull controller renders far instances as kiln cross-billboards. Both controller kinds read the same per-type source offset buffer; the LOD0 controllers' cull condition gains a `distance(cameraPos, offset) < FAR_SWITCH` term, the impostor controller keeps the complement. Reuses the cold-coverage cross-billboard geometry/material path (minimal kiln artifacts - sidecar + albedo atlas - already fetched on NSL, zero new network). Impostor controllers never cast shadows (durable far-impostor rule). Target: ~6 LOD0 + 2 impostor = 8 controllers. The camera-relative threshold is safe on this path, unlike the WebGL billboard rule's distance-from-origin requirement: the compute pass re-evaluates every frame with no mesh/render-list switching (data-compaction only changes instance counts; meshes stay pinned), so the per-frame mesh-swap cost that rule guards against does not exist here.
+5. **[ABSORBED into Phase 2.5]** Survey-gated: before/after far-canopy silhouette shots into `cycle91-validation/asset-survey/`; if the billboard ring reads worse than LOD0-everywhere, push the threshold out or revert. Matt reviews; nothing ships as "better" without the shots.
 
 **Acceptance (EARS):**
 
@@ -132,8 +171,8 @@ Audited items, each cheap and mechanism-confirmed:
 
 **Depends on:** Phase 6 (bake pipeline touched once). **Visual change by design** - every change captured as before/after survey shots for Matt's review; nothing player-facing is announced by the agent.
 
-1. **tree2 cost re-bake**: 7,700 tris (2x tree1) for 30% of NSL placements - re-bake with reduced leaf recursion targeting <= 5,000 tris at matched silhouette (meshopt recipe: `lockBorder: false, error: 0.05`). [`tools/bake-trees.mjs`](../tools/bake-trees.mjs).
-2. **tree1 quality re-bake**: leaf size/variance + bark tint pass on the EZ-Tree params (70% of all NSL trees; Matt: "our trees are probably not great"). Same tri budget.
+1. **[ABSORBED into Phase 2.5 items 2-3]** tree2 cost re-bake: 7,700 tris (2x tree1) for 30% of NSL placements - re-bake with reduced leaf recursion targeting <= 5,000 tris at matched silhouette (meshopt recipe: `lockBorder: false, error: 0.05`). [`tools/bake-trees.mjs`](../tools/bake-trees.mjs).
+2. **[ABSORBED into Phase 2.5 items 2-3]** tree1 quality re-bake: leaf size/variance + bark tint pass on the EZ-Tree params (70% of all NSL trees; Matt: "our trees are probably not great"). Same tri budget.
 3. **Wolf texture/material pass**: the night antagonist is 4 flat colors - bake a simple palette+gradient texture or vertex-color upgrade in the existing pipeline; no external 3D services without Matt's confirmation (standing preference).
 4. **Rock re-bake** at higher subdivision for the near-pen formations; **farm house** gets the 1024 cap from Phase 6 verified up close.
 5. Survey captures: before/after per asset into `cycle91-validation/asset-survey/`.

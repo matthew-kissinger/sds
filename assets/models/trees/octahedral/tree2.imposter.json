@@ -6,25 +6,25 @@
   "tileSize": 256,
   "atlasWidth": 2048,
   "atlasHeight": 2048,
-  "worldSize": 1.0000082391889382,
-  "yOffset": 0.5000041195944691,
+  "worldSize": 1,
+  "yOffset": 0.5,
   "projection": "orthographic",
   "bbox": {
     "min": [
-      -0.4135517670121835,
+      -0.37674256270912543,
       0,
-      -0.37792078111270255
+      -0.37517642286753133
     ],
     "max": [
-      0.40728931178869804,
-      1.0000082391889382,
-      0.4397137893692449
+      0.358030797166374,
+      1,
+      0.33654125384584477
     ]
   },
   "source": {
-    "path": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\models\\trees\\tree2.glb",
-    "bytes": 400296,
-    "tris": 7700
+    "path": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree2.glb",
+    "bytes": 2494736,
+    "tris": 8486
   },
   "auxLayers": [
     "albedo",
