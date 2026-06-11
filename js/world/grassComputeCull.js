@@ -95,17 +95,23 @@ export function createGrassComputeCull(webGpuModules, opts) {
     return {
         mesh,
         diag,
+        // Batched-submit path (Cycle 90): see treeComputeCull.js. The driver
+        // collects `passes` across controllers into one renderer.compute()
+        // call so each frame pays one queue.submit, not one per controller.
+        passes: [resetPass, cullPass],
+        updateCullUniforms(camera) {
+            projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+            frustum.setFromProjectionMatrix(projView);
+            for (let p = 0; p < 6; p++) {
+                const pl = frustum.planes[p];
+                planeUniforms[p].value.set(pl.normal.x, pl.normal.y, pl.normal.z, pl.constant);
+            }
+        },
         runCull(camera, renderer) {
             if (!renderer || !camera || !renderer.compute) return;
             try {
-                projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-                frustum.setFromProjectionMatrix(projView);
-                for (let p = 0; p < 6; p++) {
-                    const pl = frustum.planes[p];
-                    planeUniforms[p].value.set(pl.normal.x, pl.normal.y, pl.normal.z, pl.constant);
-                }
-                renderer.compute(resetPass);
-                renderer.compute(cullPass);
+                this.updateCullUniforms(camera);
+                renderer.compute(this.passes);
             } catch (e) {
                 diag.error = String(e?.message || e);
             }

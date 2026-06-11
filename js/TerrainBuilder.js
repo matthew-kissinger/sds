@@ -1565,8 +1565,28 @@ export class TerrainBuilder {
         if (!grassCtrl && !streamedGrassCtrl && (!treeCtrls || treeCtrls.length === 0)) return;
         const renderer = this._resolveComputeRenderer();
         if (!renderer) return;
-        if (grassCtrl) {
-            grassCtrl.runCull(camera, renderer);
+        // Cycle 90: ONE renderer.compute(array) call for every controller's
+        // reset+cull passes. Each compute() call is a full command encoder +
+        // queue.submit() in the WebGPU backend; NSL's per-wave streamed
+        // controllers (~110) cost 220 submits = ~21ms/frame, measured as
+        // 36 vs 145 FPS median (cycle90-validation/jitter-attribution-*.json).
+        // Dispatch order inside the shared pass is spec-guaranteed, so each
+        // controller's reset lands before its cull exactly as before.
+        const nodes = this._computeCullPassScratch ?? (this._computeCullPassScratch = []);
+        nodes.length = 0;
+        const collect = (ctrl) => {
+            if (!ctrl || ctrl.cullDisabled || !ctrl.passes) return;
+            ctrl.updateCullUniforms(camera);
+            nodes.push(ctrl.passes[0], ctrl.passes[1]);
+        };
+        collect(grassCtrl);
+        collect(streamedGrassCtrl);
+        if (treeCtrls) for (let i = 0; i < treeCtrls.length; i++) collect(treeCtrls[i]);
+        if (nodes.length === 0) return;
+        try {
+            renderer.compute(nodes);
+        } catch { /* per-controller diag errors stay on the controllers */ }
+        if (grassCtrl && !grassCtrl.cullDisabled) {
             this._cullReadbackTick = (this._cullReadbackTick + 1) | 0;
             if (this._cullReadbackTick % 20 === 0) {
                 grassCtrl.readbackVisibleAsync(renderer)
@@ -1574,8 +1594,6 @@ export class TerrainBuilder {
                     .catch(() => { /* ignore */ });
             }
         }
-        if (streamedGrassCtrl) streamedGrassCtrl.runCull(camera, renderer);
-        for (let i = 0; i < treeCtrls.length; i++) treeCtrls[i].runCull(camera, renderer);
     }
 
     /**

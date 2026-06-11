@@ -59,6 +59,9 @@ const MATRIX_CONFIGS = [
     { id: 'tree-cull-off', toggle: 'tree-cull-off' },
     { id: 'cull-off-all', toggle: 'cull-off-all' },
     { id: 'readback-off', toggle: 'readback-off' },
+    { id: 'computecull-off', toggle: 'computecull-off' },
+    { id: 'grasscull-off', toggle: 'grasscull-off' },
+    { id: 'treecull-compute-off', toggle: 'treecull-compute-off' },
     { id: 'perfmon-off', toggle: 'perfmon-off' },
     { id: 'governor-off', toggle: 'governor-off' },
     { id: 'collision-profile', collisionProbe: true },
@@ -78,6 +81,7 @@ function parseArgs(argv) {
         check: '0',
         contrast: '1',
         drive: '1',
+        waitFoliage: '0',
         renderer: '',
         channel: 'chrome',
         headless: '0',
@@ -99,6 +103,7 @@ function parseArgs(argv) {
         check: parsed.check === '1' || parsed.check === 'true',
         contrast: parsed.contrast === '1' || parsed.contrast === 'true',
         drive: parsed.drive === '1' || parsed.drive === 'true',
+        waitFoliage: parsed.waitFoliage === '1' || parsed.waitFoliage === 'true',
         headless: parsed.headless === '1' || parsed.headless === 'true',
     };
 }
@@ -163,6 +168,36 @@ function applyToggle(toggleId) {
         if (!ctrl) return { applied: false, reason: 'no grass compute-cull controller' };
         ctrl.readbackVisibleAsync = () => Promise.resolve(-1);
         return { applied: true };
+    }
+    if (toggleId === 'computecull-off') {
+        // Cycle 90: freeze the entire compute-cull drive. The last-written
+        // indirect counts keep drawing (frozen visible set), so draw cost
+        // stays roughly live while the per-frame compute submits drop to zero.
+        const tb = gi.terrainBuilder;
+        if (!tb || typeof tb._driveComputeCull !== 'function') return { applied: false, reason: 'no _driveComputeCull' };
+        const grassCtrl = tb.grassSystem?._computeCullController ?? null;
+        const streamedCtrl = tb.grassSystem?._streamedCullController ?? null;
+        const treeCtrls = tb._treeCullControllers ?? [];
+        if (!grassCtrl && !streamedCtrl && treeCtrls.length === 0) return { applied: false, reason: 'no cull controllers' };
+        tb._driveComputeCull = () => {};
+        return { applied: true, controllers: { grass: !!grassCtrl, streamed: !!streamedCtrl, trees: treeCtrls.length } };
+    }
+    if (toggleId === 'grasscull-off') {
+        // cullDisabled is honored by the batched _driveComputeCull driver;
+        // runCull is also noop'd for the pre-batching driver shape.
+        const tb = gi.terrainBuilder;
+        const grassCtrl = tb?.grassSystem?._computeCullController ?? null;
+        const streamedCtrl = tb?.grassSystem?._streamedCullController ?? null;
+        if (!grassCtrl && !streamedCtrl) return { applied: false, reason: 'no grass cull controllers' };
+        if (grassCtrl) { grassCtrl.cullDisabled = true; grassCtrl.runCull = () => {}; }
+        if (streamedCtrl) { streamedCtrl.cullDisabled = true; streamedCtrl.runCull = () => {}; }
+        return { applied: true, controllers: { grass: !!grassCtrl, streamed: !!streamedCtrl } };
+    }
+    if (toggleId === 'treecull-compute-off') {
+        const treeCtrls = gi.terrainBuilder?._treeCullControllers ?? [];
+        if (treeCtrls.length === 0) return { applied: false, reason: 'no tree cull controllers' };
+        for (const c of treeCtrls) { c.cullDisabled = true; c.runCull = () => {}; }
+        return { applied: true, controllers: { trees: treeCtrls.length } };
     }
     if (toggleId === 'trees-off') {
         const trees = gi.terrainBuilder?.trees;
@@ -465,6 +500,16 @@ async function captureRun(args, { scene, mode, config, runIndex }) {
         await page.goto(buildUrl(args, scene, mode), { waitUntil: 'domcontentloaded', timeout: 60_000 });
         await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 120_000 });
         await page.bringToFront().catch(() => {});
+        if (args.waitFoliage) {
+            // Streamed scenes (NSL): gate the warmup clock on foliage-streaming
+            // completion so the measure window is steady-state, not wave landings.
+            // Non-fatal on scenes without streaming or if waves stall: the
+            // capture proceeds and the manifest records what actually ran.
+            await page.waitForFunction(
+                () => (window.__sdsFoliageStreaming?.completedAt ?? 0) > 0,
+                null, { timeout: 120_000 },
+            ).catch(() => { console.log('[C89-JITTER] waitFoliage timed out or n/a; proceeding'); });
+        }
         await page.waitForTimeout(args.warmupMs);
 
         await page.evaluate((isolation) => {
@@ -517,6 +562,13 @@ async function captureRun(args, { scene, mode, config, runIndex }) {
             qualityIndex: window.gameInstance?.qualityGovernor?.qualityIndex ?? null,
             sheepCount: window.gameInstance?.gameState?.getSheep?.()?.length ?? null,
             collision: window.__perfHarness?.getSummary?.()?.collision ?? null,
+            foliage: window.__sdsFoliageStreaming
+                ? {
+                    planned: window.__sdsFoliageStreaming.planned ?? null,
+                    wavesDone: window.__sdsFoliageStreaming.wavesDone ?? null,
+                    completed: (window.__sdsFoliageStreaming.completedAt ?? 0) > 0,
+                }
+                : null,
         }));
 
         const metrics = computeMetrics(raw, args.measureMs);

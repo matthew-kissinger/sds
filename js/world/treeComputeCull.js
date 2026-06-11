@@ -82,17 +82,28 @@ export function createTreeComputeCull(webGpuModules, opts) {
     return {
         mesh,
         diag,
+        // Batched-submit path (Cycle 90): the driver updates uniforms here and
+        // collects `passes` from every live controller into ONE
+        // renderer.compute(array) call. Each renderer.compute() is its own
+        // command encoder + queue.submit() in the WebGPU backend; per-wave
+        // streaming had fanned NSL out to ~110 controllers = 220 submits per
+        // frame (measured 36 vs 145 FPS median, cycle90-validation).
+        // WebGPU guarantees dispatch ordering within one compute pass, so
+        // reset-then-cull stays correct inside the shared pass.
+        passes: [resetPass, cullPass],
+        updateCullUniforms(camera) {
+            projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+            frustum.setFromProjectionMatrix(projView);
+            for (let p = 0; p < 6; p++) {
+                const pl = frustum.planes[p];
+                planeUniforms[p].value.set(pl.normal.x, pl.normal.y, pl.normal.z, pl.constant);
+            }
+        },
         runCull(camera, renderer) {
             if (!renderer || !camera || !renderer.compute) return;
             try {
-                projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-                frustum.setFromProjectionMatrix(projView);
-                for (let p = 0; p < 6; p++) {
-                    const pl = frustum.planes[p];
-                    planeUniforms[p].value.set(pl.normal.x, pl.normal.y, pl.normal.z, pl.constant);
-                }
-                renderer.compute(resetPass);
-                renderer.compute(cullPass);
+                this.updateCullUniforms(camera);
+                renderer.compute(this.passes);
             } catch (e) {
                 diag.error = String(e?.message || e);
             }
