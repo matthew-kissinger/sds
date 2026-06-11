@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 /**
  * Cycle 87 Phase 4: post-first-interactive foliage streaming proof.
@@ -16,6 +16,25 @@ import { test, expect } from '@playwright/test';
  *   streamed coverage lands island-wide, and the QualityGovernor records no
  *   quality demotion. CI invokes playwright with --grep-invert='@local-only'.
  */
+
+// Rolling Hills is the default entrance world (Cycle 89); Newsheepdogland
+// must be armed via the carousel before Play. The armed state does not
+// persist across menu returns, so call this before every Play click.
+async function armNewsheepdogland(page: Page) {
+  const next = page.getByRole('button', { name: 'Next world' });
+  await expect(next).toBeVisible({ timeout: 30_000 });
+  // Scope to the entrance overlay: the page's seo-content also contains a
+  // "Newsheepdogland" link that an unscoped getByText would match. Substring
+  // match: the armed title also carries the Experimental (WIP) pill, so an
+  // exact match never fires.
+  const armedTitle = page.locator('#react-overlay').getByText('Newsheepdogland');
+  for (let i = 0; i < 5; i++) {
+    if (await armedTitle.isVisible().catch(() => false)) break;
+    await next.dispatchEvent('click');
+    await page.waitForTimeout(150);
+  }
+  await expect(armedTitle).toBeVisible({ timeout: 5_000 });
+}
 
 function seedIdentity(id: string) {
   const identity = {
@@ -43,6 +62,7 @@ test.describe('Newsheepdogland foliage streaming', () => {
     await context.addInitScript(seedIdentity, 'player_e2e_foliage_arm');
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await armNewsheepdogland(page);
 
     const play = page.getByRole('button', { name: 'Play', exact: true });
     await expect(play).toBeVisible({ timeout: 30_000 });
@@ -114,6 +134,7 @@ test.describe('Newsheepdogland foliage streaming', () => {
     await context.addInitScript(seedIdentity, 'player_e2e_foliage_full');
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await armNewsheepdogland(page);
 
     const play = page.getByRole('button', { name: 'Play', exact: true });
     await expect(play).toBeVisible({ timeout: 30_000 });

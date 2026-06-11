@@ -134,6 +134,25 @@ test.describe('SDS smoke', () => {
     expect(errors, `Unexpected console errors during gameplay: ${errors.join('\n')}`).toEqual([]);
   });
 
+  // Rolling Hills is the default entrance world (Cycle 89); Newsheepdogland
+  // must be armed via the carousel before Play. Entrance state resets to the
+  // default on every menu return, so re-arm before each Play click.
+  const armNewsheepdogland = async (page: Page) => {
+    const next = page.getByRole('button', { name: 'Next world' });
+    await expect(next).toBeVisible({ timeout: 30_000 });
+    // Scope to the entrance overlay: the page's seo-content also contains a
+    // "Newsheepdogland" link that an unscoped getByText would match. Substring
+    // match: the armed title also carries the Experimental (WIP) pill, so an
+    // exact match never fires.
+    const armedTitle = page.locator('#react-overlay').getByText('Newsheepdogland');
+    for (let i = 0; i < 5; i++) {
+      if (await armedTitle.isVisible().catch(() => false)) break;
+      await next.dispatchEvent('click');
+      await page.waitForTimeout(150);
+    }
+    await expect(armedTitle).toBeVisible({ timeout: 5_000 });
+  };
+
   test('Newsheepdogland returns to menu and starts again with survival surfaces', async ({ page, context }) => {
     test.setTimeout(240_000);
     const errors = collectConsoleErrors(page);
@@ -177,7 +196,7 @@ test.describe('SDS smoke', () => {
     };
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('Newsheepdogland', { exact: true })).toBeVisible({ timeout: 30_000 });
+    await armNewsheepdogland(page);
 
     await page.getByRole('button', { name: 'Play', exact: true }).dispatchEvent('click');
     await expect(page.locator('#canvas-container canvas')).toBeAttached({ timeout: 90_000 });
@@ -197,6 +216,7 @@ test.describe('SDS smoke', () => {
       });
     }).toPass({ timeout: 30_000 });
 
+    await armNewsheepdogland(page);
     await page.getByRole('button', { name: 'Play', exact: true }).dispatchEvent('click');
     await expectSurvivalRunReady();
 
