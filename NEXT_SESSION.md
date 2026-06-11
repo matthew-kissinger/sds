@@ -1,8 +1,8 @@
 # Next Session - Cycle 93 intake (visual-queue-and-polish)
 
 > **Updated:** 2026-06-11
-> **For:** Cycle 93 (`docs/cycle-93-plan.md`, scaffolded - needs Goal + Phases)
-> **Pickup priority:** Matt reviews the visual queue (Cycle 91 tree remake / canopy shadows / ground noise / wolf gradient surveys, plus Cycle 92's impostor trunk-split A/B at `cycle92-validation/impostor-ab.png`), then fill the Cycle 93 plan and run `/cycle-start`.
+> **For:** Cycle 93 (`docs/cycle-93-plan.md`, authored - run /cycle-start)
+> **Pickup priority:** Matt reviews the visual queue (Cycle 91 tree remake / canopy shadows / ground noise / wolf gradient surveys, plus Cycle 92's impostor trunk-split A/B at `cycle92-validation/impostor-ab.png`), the Cycle 93 plan is authored (Phase 1 is that paired review session); run `/cycle-start` to begin.
 
 ## Cold-Start Orientation
 
