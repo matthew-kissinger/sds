@@ -61,6 +61,7 @@ Trees beyond `FAR_LOD_DIST` (distance-from-origin, scene-scoped — typically 25
 
 - The threshold is **distance-from-origin**, not distance-from-camera. It's a static decision per tree at scene load.
 - Camera-relative LOD would require per-frame mesh↔billboard switching — out of scope without a deliberate cycle for it.
+- **Exception (Cycle 91): the consolidated compute-cull path is camera-relative, and only it.** The cull pass re-evaluates per instance per frame as pure data compaction - instance counts change, meshes stay pinned in the render list - so the mesh-swap churn this rule guards against cannot occur. NSL renders LOD0 within `CONSOLIDATED_FAR_SWITCH_DISTANCE` (200m) of the camera and kiln cross-billboard impostors beyond, selected inside `treeComputeCull`'s pass via the shared per-type offset buffers. Far-impostor controllers never cast shadows. The WebGL/per-chunk paths keep the distance-from-origin rule above. Decision record: [`DECISIONS.md`](../../DECISIONS.md) Cycle 91.
 
 ## Grass discipline
 
