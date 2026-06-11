@@ -97,6 +97,33 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 
 - [ ] When Phase 4 ships, a 5-run driven NSL battery shall show worst frame <= 45ms, or the >= 100ms stall class shall be attributed to environment with recorded evidence and an explicit carryover note.
 
+## Phase 4.5 — Impostor cross-billboard trunk-split fix (~2hr)
+
+**Absorbed mid-cycle from Matt (2026-06-11):** "the imposter trees (LOD2) seem to load the
+cross billboard thing with 2 images but it gives off this trunk split look as they are not
+symmetrical." Same absorption pattern as Cycle 91's Phase 7.5.
+
+Root cause: the kiln bake centers its ortho camera on the model's bounding-box center, so
+the trunk (model origin) sits off-center in every atlas tile by its projection onto the
+capture view's right vector (tree1: 5.8% of half-width, verified against atlas pixels
+within 0.3% across all four azimuths). The crossed quads rotate about the instance origin,
+so each plane draws the trunk offset in a different direction - 2-3 parallel trunk lines.
+
+1. **In-plane compensation** in `createColdImpostorGeometry`: shift every quad by `-uT`
+   along its own plane direction, `uT = -cx*sin(a) + cz*cos(a)` for the baked azimuth `a`.
+   Covers cold coverage, consolidated far impostors, and the canopy shadow caster (all
+   share the function).
+2. **Spec**: `tests/impostor-cross-billboard.spec.js` pins centered-bbox regression,
+   per-azimuth shift, vertex count, and the single-tile UV window.
+3. **Visual check**: an NSL screenshot with far impostors in frame into
+   `cycle92-validation/` for Matt's review.
+
+**Acceptance (EARS):**
+
+- [ ] When `createColdImpostorGeometry` builds a quad set for an off-center-bbox sidecar, each quad's in-plane center shall equal `-uT` for the chosen azimuth tile (vitest).
+- [ ] When the bbox is centered, the geometry shall be byte-equivalent to the pre-fix shape (vitest regression).
+- [ ] When Phase 4.5 ships, a post-fix NSL far-impostor screenshot shall exist for Matt's review.
+
 ## Phase 5 — Bracketed pill gate + decision (~2hr)
 
 **Depends on:** Phases 3-4.

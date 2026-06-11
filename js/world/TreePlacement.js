@@ -29,6 +29,7 @@ import { createTreeComputeCull } from './treeComputeCull.js';
 import { getWebGpuModules } from './webgpuModules.js';
 import { TIER_PRESETS } from '../HardwareTier.js';
 import { shouldUseWebGpuProductionNativeInstancing } from '../rendering/webgpuRuntimeMode.js';
+import { suppressShadowOverrideVersionChurn } from '../rendering/shadowOverrideMaterialFix.js';
 import { resolveImpostorBase } from './objectImpostorManifest.js';
 
 const HYBRID_TREE_LOD1_SWITCH_DISTANCE = 56;
@@ -292,6 +293,14 @@ function makeCanopyShadowCaster(builder, entry, sidecar, texture) {
     // the cached atlas texture survives the swap) - no shared-cache tag.
     caster.userData.webgpuTreeCanopyShadowCaster = true;
     caster.userData.webgpuTreeType = entry.treeType;
+    // Cycle 92: this caster is what introduces alphaTest > 0 into the depth
+    // pass (everything else casting is opaque), so it installs the shared
+    // shadow override material's version-churn fix on its first shadow
+    // render. One-shot; see shadowOverrideMaterialFix.js for the mechanism.
+    caster.onBeforeShadow = (_r, _o, _c, _sc, _g, overrideMaterial) => {
+        suppressShadowOverrideVersionChurn(overrideMaterial);
+        caster.onBeforeShadow = () => {};
+    };
     sun.shadow.camera.layers.enable(TREE_SHADOW_LAYER);
     builder.scene.add(caster);
     return caster;
@@ -993,17 +1002,35 @@ export function createColdImpostorGeometry(sidecar, azTileIndex) {
     const v0 = (tilesY - 1 - elRow) / tilesY + insetV;
     const v1 = (tilesY - elRow) / tilesY - insetV;
 
+    // Cycle 92: trunk-split fix. The kiln camera centers on the bbox center,
+    // so the trunk (model origin) sits off-center in every tile by its
+    // projection onto the capture view's right vector (kiln dirFromAzEl gives
+    // camera right = (sin a, 0, -cos a), so uT = -cx*sin(a) + cz*cos(a);
+    // verified against atlas pixels, tree1 az0-3 within 0.3%). The crossed
+    // planes rotate about the instance origin, so without compensation each
+    // plane draws the trunk offset a different direction and the tree reads
+    // as a split trunk. Shift every quad in-plane by -uT so the trunk column
+    // lands on the rotation axis (and on the LOD0 trunk position).
+    const tileAz = sidecar.azimuths?.[azTileIndex] ?? (azTileIndex * Math.PI * 2) / tilesX;
+    const cx = (sidecar.bbox.min[0] + sidecar.bbox.max[0]) * 0.5;
+    const cz = (sidecar.bbox.min[2] + sidecar.bbox.max[2]) * 0.5;
+    const trunkU = -cx * Math.sin(tileAz) + cz * Math.cos(tileAz);
+
     const yBottom = yCenter - frustumHalf;
     const yTop = yCenter + frustumHalf;
     const positions = [];
     const uvs = [];
     for (let q = 0; q < 3; q++) {
         const angle = (q * Math.PI) / 3;
-        const ax = Math.cos(angle) * frustumHalf;
-        const az = Math.sin(angle) * frustumHalf;
+        const rx = Math.cos(angle);
+        const rz = Math.sin(angle);
+        const ax = rx * frustumHalf;
+        const az = rz * frustumHalf;
+        const sx = -trunkU * rx;
+        const sz = -trunkU * rz;
         positions.push(
-            -ax, yBottom, -az, ax, yBottom, az, ax, yTop, az,
-            -ax, yBottom, -az, ax, yTop, az, -ax, yTop, -az
+            -ax + sx, yBottom, -az + sz, ax + sx, yBottom, az + sz, ax + sx, yTop, az + sz,
+            -ax + sx, yBottom, -az + sz, ax + sx, yTop, az + sz, -ax + sx, yTop, -az + sz
         );
         uvs.push(
             u0, v0, u1, v0, u1, v1,
