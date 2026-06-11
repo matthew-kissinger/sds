@@ -141,6 +141,31 @@ function readGameState() {
     return newData;
 }
 
+/** Cycle 91 Phase 4: first-key emptiness probe (no allocation). */
+function isEmptyObject(o) {
+    for (const k in o) {
+        if (Object.prototype.hasOwnProperty.call(o, k)) return false;
+    }
+    return true;
+}
+
+/**
+ * Cycle 91 Phase 4: solo play carries constant-empty multiplayer collections;
+ * skip the three per-frame JSON.stringify calls for that case. Multiplayer
+ * (<= 4 players) keeps the stringify compare - missing a scoreboard update
+ * costs more than the tiny serialization.
+ */
+function mpCollectionsEqual(a, b) {
+    if (a.players.length === 0 && b.players.length === 0
+        && isEmptyObject(a.scores) && isEmptyObject(b.scores)
+        && isEmptyObject(a.gates) && isEmptyObject(b.gates)) {
+        return true;
+    }
+    return JSON.stringify(a.players) === JSON.stringify(b.players)
+        && JSON.stringify(a.scores) === JSON.stringify(b.scores)
+        && JSON.stringify(a.gates) === JSON.stringify(b.gates);
+}
+
 /**
  * Whether two snapshots are equal for HUD-display purposes. gameTime is
  * compared at whole-second granularity (the timer renders MM:SS); the
@@ -165,9 +190,7 @@ function hudEqual(a, b) {
         a.roundBased === b.roundBased &&
         a.round === b.round &&
         a.counted === b.counted &&
-        JSON.stringify(a.players) === JSON.stringify(b.players) &&
-        JSON.stringify(a.scores) === JSON.stringify(b.scores) &&
-        JSON.stringify(a.gates) === JSON.stringify(b.gates)
+        mpCollectionsEqual(a, b)
     );
 }
 

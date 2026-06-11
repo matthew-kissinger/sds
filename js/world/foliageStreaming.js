@@ -441,17 +441,23 @@ export function armFoliageStreaming(game, opts = {}) {
                     const byType = toTreeInstancesByType(builder, streamed);
                     meshes = buildAdditiveTreeMeshes(builder, byType, { label: wave.name });
                     builder.treeInstances = existing.concat(streamed);
-                    // Prewarm the new meshes' pipelines inside the idle slot so
+                    // Prewarm new meshes' pipelines inside the idle slot so
                     // their first visible frame doesn't pay the compile stall.
-                    try {
-                        const renderer = builder._resolveComputeRenderer?.()
-                            ?? getSceneManager()?.getRenderer?.()
-                            ?? null;
-                        const camera = getSceneManager()?.getCamera?.() ?? null;
-                        if (renderer?.compileAsync && camera) {
-                            await renderer.compileAsync(builder.scene, camera);
-                        }
-                    } catch { /* prewarm is best-effort */ }
+                    // Cycle 91 Phase 5: with the consolidated appendable
+                    // controllers a wave normally creates NO new meshes
+                    // (meshes === 0) - skip the whole-scene compileAsync that
+                    // used to run for every wave.
+                    if (meshes > 0) {
+                        try {
+                            const renderer = builder._resolveComputeRenderer?.()
+                                ?? getSceneManager()?.getRenderer?.()
+                                ?? null;
+                            const camera = getSceneManager()?.getCamera?.() ?? null;
+                            if (renderer?.compileAsync && camera) {
+                                await renderer.compileAsync(builder.scene, camera);
+                            }
+                        } catch { /* prewarm is best-effort */ }
+                    }
                 }
                 const buildMs = Math.round(performance.now() - t1);
 

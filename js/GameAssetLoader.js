@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
+import { getSceneManager } from './GameBridge.js';
+import { TIER_PRESETS } from './HardwareTier.js';
+
 /**
  * Progressive Asset Loader for SEO performance optimization
  * Prioritizes critical game assets and defers non-critical ones using requestIdleCallback
@@ -23,19 +26,15 @@ export class GameAssetLoader {
      * Define critical assets that must load first for core gameplay
      */
     defineCriticalAssets() {
+        // Cycle 91 Phase 5: only what the first playable frame actually
+        // needs gates isInitialized - the default dog, the dominant tree,
+        // the near rock. Sally/Pip/Shiloh moved to deferred (the dog picker
+        // loads the chosen GLB at Play commit; the deferred warm just makes
+        // that a cache hit), the dead PolyArt_Dogs_color.png preload is gone
+        // (no live material references it), and audio rides deferred where
+        // it never gated init anyway.
         return [
-            // Essential dog models (optimized)
             'assets/models/Jep.glb',
-            'assets/models/Sally.glb',
-            'assets/models/Pip.glb',
-            'assets/models/Shiloh.glb',
-
-            // Core sheep and terrain (first priority)
-            'assets/LP_BorderCollie_Blend_v01/texture/PolyArt_Dogs_color.png',
-
-            // Essential UI sounds
-            'assets/sounds_compressed/ui_click.mp3',
-            'assets/sounds_compressed/dog_bark_jep.mp3',
 
             // Critical terrain models
             'assets/models/trees/tree1.glb',
@@ -47,8 +46,17 @@ export class GameAssetLoader {
      * Define deferred assets that can load during idle time
      */
     defineDeferredAssets() {
+        // Cycle 91 Phase 5: LOD1 tree GLBs warm the cache only on tiers that
+        // place them (usesLod1ForFoliage = low). TerrainBuilder.loadModels
+        // carries the matching gate, so on desktop neither path fetches them.
+        const tier = getSceneManager()?.getTier?.() ?? 'med';
+        const wantsLod1 = (TIER_PRESETS[tier] ?? TIER_PRESETS.med).usesLod1ForFoliage === true;
         return [
-            // Additional dog model
+            // Remaining dog models (the picker's choice loads at Play commit;
+            // this idle warm makes it a cache hit)
+            'assets/models/Sally.glb',
+            'assets/models/Pip.glb',
+            'assets/models/Shiloh.glb',
             'assets/models/George_Washington.glb',
 
             // Fence and gate kit (one shared-texture GLB for all four pieces)
@@ -62,12 +70,19 @@ export class GameAssetLoader {
             'assets/models/rocks/rock2.glb',
             'assets/models/rocks/rock3.glb',
 
-            // Cycle 22 Phase A: meshopt-baked LOD1 (geometry-simplified, same
-            // leaf count as LOD0). Loaded eagerly so InstancedMesh2.addLOD
-            // wires them in on first scene build.
-            'assets/models/trees/tree1_lod1.glb',
-            'assets/models/trees/tree2_lod1.glb',
-            
+            // Cycle 22 Phase A / Cycle 91 Phase 5: meshopt-baked LOD1,
+            // tier-gated (see above).
+            ...(wantsLod1 ? [
+                'assets/models/trees/tree1_lod1.glb',
+                'assets/models/trees/tree2_lod1.glb',
+            ] : []),
+
+            // Essential UI sounds (deferred since Cycle 91 Phase 5 - they
+            // never gated init and the click sound loads in well under the
+            // first interaction)
+            'assets/sounds_compressed/ui_click.mp3',
+            'assets/sounds_compressed/dog_bark_jep.mp3',
+
             // Additional audio files
             'assets/sounds_compressed/music_start.mp3',
             'assets/sounds_compressed/music_gameplay_1.mp3',
@@ -108,7 +123,6 @@ export class GameAssetLoader {
             const loadPromises = this.criticalAssets.map(async (assetPath) => {
                 try {
                     await this.loadSingleAsset(assetPath, true);
-                    this.loadedAssets.add(assetPath);
                     console.log(`[ASSET] Critical asset loaded: ${assetPath}`);
                 } catch (error) {
                     console.warn(`[WARN] Failed to load critical asset: ${assetPath}`, error);
@@ -175,7 +189,6 @@ export class GameAssetLoader {
                 // Start loading this asset (don't await to keep it non-blocking)
                 this.loadSingleAsset(assetPath, false)
                     .then(() => {
-                        this.loadedAssets.add(assetPath);
                         console.log(`[ASSET] Deferred asset loaded: ${assetPath}`);
                     })
                     .catch((error) => {
@@ -274,6 +287,12 @@ export class GameAssetLoader {
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 }
                 
+                // Cycle 91 Phase 5: record the load BEFORE reporting.
+                // reportAssetLoaded compares loadedAssets.size against the
+                // critical count; the callers used to add() after the await,
+                // so the final critical asset reported size-1 and the
+                // critical-assets-complete mark never fired on time.
+                this.loadedAssets.add(assetPath);
                 this.reportAssetLoaded(assetPath, isCritical);
                 resolve();
                 

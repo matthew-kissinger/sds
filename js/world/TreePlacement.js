@@ -333,6 +333,17 @@ export function enableConsolidatedFarImpostors(builder, atlasByType, materialsBy
                 if (Array.isArray(builder.trees)) builder.trees.push(far.mesh);
                 entry.far = far;
                 for (const slot of entry.lod0) slot.controller.setLodEnabled(true);
+                // Best-effort pipeline prewarm for the one new mesh so its
+                // first visible frame doesn't pay the compile stall.
+                try {
+                    const renderer = builder._resolveComputeRenderer?.()
+                        ?? getSceneManager()?.getRenderer?.()
+                        ?? null;
+                    const camera = getSceneManager()?.getCamera?.() ?? null;
+                    if (renderer?.compileAsync && camera) {
+                        renderer.compileAsync(builder.scene, camera).catch(() => { /* best-effort */ });
+                    }
+                } catch { /* best-effort */ }
                 console.log(`[FOLIAGE] far-impostor LOD active for ${treeType}: `
                     + `${entry.used} instances, LOD0 within ${CONSOLIDATED_FAR_SWITCH_DISTANCE}m`);
             } catch (err) {

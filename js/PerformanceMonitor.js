@@ -23,6 +23,12 @@ export class PerformanceMonitor {
         this.stats = null;
         this.customStats = null;
         this.isEnabled = false;
+        // Cycle 91 Phase 4: heavy bookkeeping (per-system triangle sums,
+        // sheep filters, panel innerHTML) runs only while the overlay is
+        // visible or a perf harness (?perfMode=1) is attached. The frame-time
+        // core always runs - QualityGovernor consumes lastFrameTime.
+        this.overlayVisible = false;
+        this.harnessActive = false;
         this.frameCount = 0;
         this.lastFrameTime = performance.now();
         this.frameTimeHistory = [];
@@ -182,41 +188,60 @@ export class PerformanceMonitor {
         this.metrics.minFrameTime = Math.min(this.metrics.minFrameTime, frameTime);
         this.metrics.maxFrameTime = Math.max(this.metrics.maxFrameTime, frameTime);
         
+        // Cycle 91 Phase 4: the blocks below are display/telemetry detail
+        // (per-frame sheep filter over up to 5,000 entries, a Map -> sorted
+        // array triangle sum, hidden-panel innerHTML). With the overlay
+        // hidden and no harness attached, nothing consumes them.
+        const detailActive = this.shouldTrackRenderCost();
+
         // Update simulation metrics
         if (gameState) {
             const sheep = gameState.getSheep();
             this.metrics.sheepCount = sheep ? sheep.length : 0;
             // Count sheep that haven't passed the gate and aren't retiring (active sheep)
-            this.metrics.activeSheepCount = sheep ? sheep.filter(s => !s.hasPassedGate && !s.isRetiring).length : 0;
+            if (detailActive) {
+                this.metrics.activeSheepCount = sheep ? sheep.filter(s => !s.hasPassedGate && !s.isRetiring).length : 0;
+            }
         }
-        
+
         // Update renderer metrics
         if (renderer && renderer.info) {
             this.rendererMode = inferRendererMode(renderer);
-            this.metrics.drawCalls = isWebGpuRenderer(renderer) && this.estimatedDrawCalls > 0
-                ? this.estimatedDrawCalls
-                : renderer.info.render.calls;
-            const estimatedTriangles = sumSystemTriangles(this.getSystemBreakdown());
-            this.metrics.estimatedTriangles = estimatedTriangles;
-            this.metrics.triangles = isWebGpuRenderer(renderer)
-                ? estimatedTriangles
-                : (renderer.info.render.triangles || estimatedTriangles);
-            this.metrics.geometries = renderer.info.memory.geometries;
-            this.metrics.textures = renderer.info.memory.textures;
-            this.metrics.programs = renderer.info.programs ? renderer.info.programs.length : 0;
+            if (detailActive) {
+                this.metrics.drawCalls = isWebGpuRenderer(renderer) && this.estimatedDrawCalls > 0
+                    ? this.estimatedDrawCalls
+                    : renderer.info.render.calls;
+                const estimatedTriangles = sumSystemTriangles(this.getSystemBreakdown());
+                this.metrics.estimatedTriangles = estimatedTriangles;
+                this.metrics.triangles = isWebGpuRenderer(renderer)
+                    ? estimatedTriangles
+                    : (renderer.info.render.triangles || estimatedTriangles);
+                this.metrics.geometries = renderer.info.memory.geometries;
+                this.metrics.textures = renderer.info.memory.textures;
+                this.metrics.programs = renderer.info.programs ? renderer.info.programs.length : 0;
+            }
         }
-        
+
         this.frameCount++;
-        
-        // Update displays
-        if (this.stats) {
+
+        // Update displays (Stats.js draws to its canvases - skip while hidden)
+        if (this.stats && this.overlayVisible) {
             this.stats.update();
         }
-        
+
         // Update custom stats every 10 frames to reduce overhead
-        if (this.frameCount % 10 === 0) {
+        if (this.overlayVisible && this.frameCount % 10 === 0) {
             this.updateCustomStats();
         }
+    }
+
+    /**
+     * Cycle 91 Phase 4: true when render-cost bookkeeping has a consumer -
+     * the visible overlay or an attached perf harness (?perfMode=1, used by
+     * the probes and the perf:check budget gates).
+     */
+    shouldTrackRenderCost() {
+        return this.overlayVisible || this.harnessActive;
     }
     
     /**
@@ -368,16 +393,18 @@ export class PerformanceMonitor {
      */
     toggle() {
         if (!this.isEnabled) return;
-        
-        const isVisible = this.stats ? this.stats.dom.style.display !== 'none' : 
+
+        const isVisible = this.stats ? this.stats.dom.style.display !== 'none' :
                          this.customStats.style.display !== 'none';
-        
+
         if (this.stats) {
             this.stats.dom.style.display = isVisible ? 'none' : 'block';
         }
         if (this.customStats) {
             this.customStats.style.display = isVisible ? 'none' : 'block';
         }
+        this.overlayVisible = !isVisible;
+        if (this.overlayVisible) this.updateCustomStats();
     }
     
     /**
@@ -385,13 +412,15 @@ export class PerformanceMonitor {
      */
     show() {
         if (!this.isEnabled) return;
-        
+
         if (this.stats) {
             this.stats.dom.style.display = 'block';
         }
         if (this.customStats) {
             this.customStats.style.display = 'block';
         }
+        this.overlayVisible = true;
+        this.updateCustomStats();
     }
     
     /**
@@ -399,13 +428,14 @@ export class PerformanceMonitor {
      */
     hide() {
         if (!this.isEnabled) return;
-        
+
         if (this.stats) {
             this.stats.dom.style.display = 'none';
         }
         if (this.customStats) {
             this.customStats.style.display = 'none';
         }
+        this.overlayVisible = false;
     }
     
     /**

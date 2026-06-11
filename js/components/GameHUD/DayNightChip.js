@@ -92,6 +92,12 @@ export function mountDayNightChip() {
 
     (document.body || document.documentElement).appendChild(el);
     _el = el;
+    // Fresh elements: invalidate the change-detection caches so the first
+    // update writes everything.
+    _lastPhaseText = '';
+    _lastMarkerLeft = '';
+    _lastHomeText = '';
+    _lastColorState = '';
 }
 
 /**
@@ -100,39 +106,72 @@ export function mountDayNightChip() {
  * threat. Falls back to the Cycle 65 home/total readout for non-survival scenes.
  * @param {{day:number, phase:string, t?:number, sheepHome:number, totalSheep:number, duskWarning:boolean, flock?:number}} s
  */
+let _lastPhaseText = '';
+let _lastMarkerLeft = '';
+let _lastHomeText = '';
+let _lastColorState = '';
+
 export function updateDayNightChip(s) {
     if (!_el || !s) return;
     const phaseLabel = PHASE_LABEL[s.phase] || '';
-    _phaseEl.textContent = `DAY ${s.day}  ·  ${phaseLabel}`;
+    const phaseText = `DAY ${s.day}  ·  ${phaseLabel}`;
     // Marker rides 4%..96% across the rail for t in [0,1).
     const t = ((((s.t ?? 0) % 1) + 1) % 1);
-    _markerEl.style.left = (4 + t * 92).toFixed(1) + '%';
+    const markerLeft = (4 + t * 92).toFixed(1) + '%';
 
     const isSurvival = typeof s.flock === 'number';
     const inPen = s.sheepHome | 0;
 
+    let colorState, homeText;
     if (s.phase === 'night') {
         // Night: the threat is live - the wolves are out.
-        _phaseEl.style.color = AMBER;
-        _markerEl.style.background = '#9fb6d8';
-        _homeEl.style.color = '#f0a35a';
-        _homeEl.textContent = isSurvival
+        colorState = 'night';
+        homeText = isSurvival
             ? `WOLVES OUT  ·  ${inPen} SAFE IN PEN`
             : `${inPen} / ${s.totalSheep} HOME`;
     } else if (s.duskWarning) {
-        _phaseEl.style.color = AMBER;
-        _markerEl.style.background = AMBER;
-        _homeEl.style.color = AMBER;
-        _homeEl.textContent = isSurvival
+        colorState = 'dusk';
+        homeText = isSurvival
             ? `HERD THEM IN  ·  ${inPen} / ${s.flock} SAFE`
             : `HERD THEM IN  ·  ${inPen} / ${s.totalSheep} HOME`;
     } else {
-        _phaseEl.style.color = CREAM;
-        _markerEl.style.background = AMBER;
-        _homeEl.style.color = CREAM;
-        _homeEl.textContent = isSurvival
+        colorState = 'day';
+        homeText = isSurvival
             ? `FLOCK ${s.flock}  ·  ${inPen} IN PEN`
             : (s.totalSheep > 0 ? `${inPen} / ${s.totalSheep} HOME` : '');
+    }
+
+    // Cycle 91 Phase 4: write only what changed. The marker string quantizes
+    // to 0.1% (one step every ~0.4s on the 6-minute day); the texts change on
+    // phase/count boundaries. Driven per-frame from the main loop, so the
+    // unconditional textContent/style writes were daily-constant DOM churn.
+    if (phaseText !== _lastPhaseText) {
+        _phaseEl.textContent = phaseText;
+        _lastPhaseText = phaseText;
+    }
+    if (markerLeft !== _lastMarkerLeft) {
+        _markerEl.style.left = markerLeft;
+        _lastMarkerLeft = markerLeft;
+    }
+    if (homeText !== _lastHomeText) {
+        _homeEl.textContent = homeText;
+        _lastHomeText = homeText;
+    }
+    if (colorState !== _lastColorState) {
+        if (colorState === 'night') {
+            _phaseEl.style.color = AMBER;
+            _markerEl.style.background = '#9fb6d8';
+            _homeEl.style.color = '#f0a35a';
+        } else if (colorState === 'dusk') {
+            _phaseEl.style.color = AMBER;
+            _markerEl.style.background = AMBER;
+            _homeEl.style.color = AMBER;
+        } else {
+            _phaseEl.style.color = CREAM;
+            _markerEl.style.background = AMBER;
+            _homeEl.style.color = CREAM;
+        }
+        _lastColorState = colorState;
     }
 }
 

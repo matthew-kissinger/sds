@@ -412,7 +412,10 @@ describe('webgpu impostor material adapter', () => {
     try {
       expect(() => {
         setImpostorTint(
-          { _impostorMaterials: [material] },
+          // Cycle 91 Phase 4: the window debug tap is gated on the builder
+          // _probeRender flag (per-frame probe rebuilds were production GC
+          // churn); opt in here to exercise the reporting path.
+          { _impostorMaterials: [material], _probeRender: true },
           new THREE.Color(1, 0.5, 0.25),
           new THREE.Vector3(0.1, 0.9, 0.2).normalize(),
           new THREE.Color(0.2, 0.3, 0.4),

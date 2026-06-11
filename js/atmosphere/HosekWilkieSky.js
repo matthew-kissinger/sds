@@ -256,9 +256,17 @@ export class HosekWilkieSky {
    * (turbidity, rayleigh, exposure, groundAlbedo) may be supplied; each
    * supplied field is pushed to the matching uniform and marks the LUT
    * dirty so the next sample matches.
+   *
+   * Cycle 91 Phase 4: dirty only on actual change. applyDayNightSample calls
+   * this every frame on day-loop scenes; the unconditional lutDirty defeated
+   * setSunDirection's 0.5deg re-bake threshold and forced a full CPU LUT
+   * bake per frame. Keyframe holds (most of the NSL day) supply identical
+   * values for thousands of consecutive frames.
    * @param {{ turbidity?: number, rayleigh?: number, exposure?: number, groundAlbedo?: THREE.Color }} t
    */
   setTunables(t) {
+    // Always track the latest values + push the (cheap) shader uniforms, so
+    // the WebGL dome stays per-frame smooth regardless of LUT cadence.
     if (t.turbidity !== undefined) {
       this.turbidity = t.turbidity;
       if (this.material) {
@@ -280,6 +288,33 @@ export class HosekWilkieSky {
     if (t.groundAlbedo) {
       this.groundAlbedo.copy(t.groundAlbedo);
     }
+    // Quantized re-bake threshold, mirroring the 0.5deg sun threshold: the
+    // day-loop lerps tunables by sub-visible deltas every frame, and the old
+    // unconditional lutDirty forced a full CPU LUT bake per frame for the
+    // whole transition. Dirty only when the accumulated drift since the last
+    // bake is past per-field epsilons (chosen well under one perceptible
+    // step of the LUT-derived fog/horizon tint). Keyframe holds bake zero.
+    if (!this._lutBakedTunables) {
+      this._lutBakedTunables = {
+        turbidity: NaN, rayleigh: NaN, exposure: NaN,
+        albedoR: NaN, albedoG: NaN, albedoB: NaN,
+      };
+    }
+    const baked = this._lutBakedTunables;
+    const drifted =
+      Math.abs(this.turbidity - baked.turbidity) > 0.05
+      || Math.abs(this.rayleigh - baked.rayleigh) > 0.05
+      || Math.abs(this.exposure - baked.exposure) > 0.01
+      || Math.abs(this.groundAlbedo.r - baked.albedoR) > 0.02
+      || Math.abs(this.groundAlbedo.g - baked.albedoG) > 0.02
+      || Math.abs(this.groundAlbedo.b - baked.albedoB) > 0.02;
+    if (!drifted) return;
+    baked.turbidity = this.turbidity;
+    baked.rayleigh = this.rayleigh;
+    baked.exposure = this.exposure;
+    baked.albedoR = this.groundAlbedo.r;
+    baked.albedoG = this.groundAlbedo.g;
+    baked.albedoB = this.groundAlbedo.b;
     this.lutDirty = true;
     this.syncWebGpuMaterial();
   }
@@ -360,6 +395,9 @@ export class HosekWilkieSky {
    * runs when sun direction changes.
    */
   bakeLUT() {
+    // Cycle 91 Phase 4 acceptance counter: NSL steady-state should bake at
+    // most ~1 per 5s (sun crossing the 0.5deg threshold), not per frame.
+    this.lutBakeCount = (this.lutBakeCount ?? 0) + 1;
     for (let row = 0; row < LUT_ELEVATION_BINS; row++) {
       const elevT = (row + 0.5) / LUT_ELEVATION_BINS;
       const elev = elevT * Math.PI - Math.PI / 2;

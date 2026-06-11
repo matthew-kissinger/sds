@@ -20,6 +20,30 @@ import { Sheepdog } from '../Sheepdog.js';
 import { resolveAssetUrl } from '../utils/assetUrl.js';
 import { log as probeLog } from '../diagnostics/glProbe.js';
 
+/**
+ * Cycle 91 Phase 5: client-side heightfield cache, keyed by resolved URL.
+ * The parsed data is read-only at runtime (heightfield contract), so
+ * same-scene restarts and revisits share one instance and skip the fetch +
+ * parse. A failed load is evicted so the next attempt retries. The fetch
+ * counter is probe-checkable (acceptance: a same-scene restart re-fetches 0
+ * times).
+ */
+const _heightfieldCache = new Map();
+export const heightfieldCacheDiag = { fetches: 0, hits: 0 };
+function loadHeightfieldCached(url) {
+    let promise = _heightfieldCache.get(url);
+    if (promise) {
+        heightfieldCacheDiag.hits += 1;
+        return promise;
+    }
+    heightfieldCacheDiag.fetches += 1;
+    promise = Heightfield.load(url);
+    promise.catch(() => _heightfieldCache.delete(url));
+    _heightfieldCache.set(url, promise);
+    return promise;
+}
+if (typeof window !== 'undefined') window.__sdsHeightfieldCache = heightfieldCacheDiag;
+
 /** Maps the existing logStep boundary labels to friendly per-stage keys. */
 const STAGE_KEYS = {
     'Loading 3D models': 'models',
@@ -127,6 +151,17 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
     };
     if (game?.terrainBuilder) game.terrainBuilder._sdsImpostorMs = 0;
     try {
+        // Cycle 91 Phase 5: kick the heightfield fetch off FIRST so it rides
+        // in parallel with the model loads instead of serializing after them.
+        // Scene defs use absolute-root paths; resolveAssetUrl rebases them
+        // under Vite's BASE_URL so itch.io builds (where the game runs from a
+        // /html/<build-id>/ subpath) fetch from the build root instead of the
+        // CDN root. Cached per URL: the parsed Float32Array is read-only at
+        // runtime (heightfield contract), so same-scene restarts and revisits
+        // skip the fetch + parse entirely.
+        const heightmapUrl = resolveAssetUrl(game.currentScene.terrain?.heightmapUrl);
+        const heightfieldPromise = heightmapUrl ? loadHeightfieldCached(heightmapUrl) : null;
+
         // Load all 3D models first (idempotent — cached after first run).
         logStep('Loading 3D models');
         await game.terrainBuilder.loadModels();
@@ -145,17 +180,13 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             throw new Error('No animal models loaded! Check model paths and network.');
         }
 
-        // Load heightfield (if scene declares one) BEFORE building terrain so
-        // displacement and downstream y-clamps share the same instance.
-        // Scene defs use absolute-root paths; resolveAssetUrl rebases
-        // them under Vite's BASE_URL so itch.io builds (where the game
-        // runs from a /html/<build-id>/ subpath) fetch from the build
-        // root instead of the CDN root.
-        const heightmapUrl = resolveAssetUrl(game.currentScene.terrain?.heightmapUrl);
+        // Await the heightfield (fetch started at the top of this build, in
+        // parallel with the models) BEFORE building terrain so displacement
+        // and downstream y-clamps share the same instance.
         if (heightmapUrl) {
             logStep('Loading heightfield', heightmapUrl);
             try {
-                game.heightfield = await Heightfield.load(heightmapUrl);
+                game.heightfield = await heightfieldPromise;
                 console.log(`[TERRAIN] Heightfield loaded: ${game.heightfield.width}x${game.heightfield.height}, peakHeight=${game.heightfield.peakHeight}m`);
             } catch (err) {
                 console.warn('[TERRAIN] Heightfield load failed; falling back to flat terrain:', err);
@@ -697,10 +728,12 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         game.gameState.createSheepFlock(game.sceneManager.getScene());
 
         // Cycle 88 Phase 2: settle the cold impostor coverage before the
-        // scene reads as complete. By now its chunked scatter has been
-        // interleaving with the stages above, so this await typically pays
-        // only the remainder; the stage mark makes the real cost visible in
-        // the load breakdown (hard stop #1 evidence).
+        // scene reads as complete. Stage-attribution reality (comment fixed
+        // Cycle 91 Phase 5): the scatter is ONE synchronous chunk that runs
+        // when the dynamic import above settles - its CPU cost lands inside
+        // whichever awaited stage is active at that moment, not here. This
+        // 'Cold impostor coverage' mark therefore measures only the
+        // remainder still outstanding at scene-body end.
         if (coldCoveragePromise) {
             logStep('Cold impostor coverage');
             await coldCoveragePromise;

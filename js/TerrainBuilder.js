@@ -32,7 +32,7 @@ import {
     sumObjectTreeTriangles
 } from './utils/TriangleCount.js';
 import { placeEnvironmentDetails } from './world/RockPlacement.js';
-import { placeTrees, bakeTreeImpostor, createCrossBillboardGeometry } from './world/TreePlacement.js';
+import { placeTrees, bakeTreeImpostor, createCrossBillboardGeometry, resolveWebGpuNativeTreeImpostorRoute } from './world/TreePlacement.js';
 import {
     patchTreeWindMaterial as runPatchTreeWind,
     setupTreeWind as runSetupTreeWind,
@@ -48,6 +48,7 @@ import {
     regenerateGrass as runRegenerateGrass
 } from './world/sandbox.js';
 import { createWebGpuTerrainMaterial } from './world/webgpuTerrainMaterialAdapter.js';
+import { TIER_PRESETS } from './HardwareTier.js';
 import { shouldApplyWebGpuRendererFlag } from './rendering/webgpuRuntimeMode.js';
 
 // Dog (animal) rig GLBs, keyed by dogType. Only `jep` — the pre-game default
@@ -507,7 +508,17 @@ export class TerrainBuilder {
         // consumes. We don't need the modelBaseYOffset / bbox bookkeeping
         // here — the LOD0 model's offset already drives placement; the LOD1
         // child geometry just gets swapped in at distance > 80m.
-        for (const model of modelPaths.treesLod1) {
+        //
+        // Cycle 91 Phase 5: tier-gated. Only `usesLod1ForFoliage` tiers (low)
+        // ever PLACE these meshes; desktop med/high was fetching + parsing
+        // both GLBs on every load for nothing. createTrees already falls back
+        // to the LOD0-only chain when no sibling exists.
+        const lod1Tier = getSceneManager()?.getTier?.() ?? (this.isMobile ? 'low' : 'med');
+        const wantsLod1 = (TIER_PRESETS[lod1Tier] ?? TIER_PRESETS.med).usesLod1ForFoliage === true
+            // The explicit ?webgpuNativeTreeImpostors= route builds a desktop
+            // mid-LOD1 band and keeps the full chain.
+            || resolveWebGpuNativeTreeImpostorRoute().active;
+        for (const model of (wantsLod1 ? modelPaths.treesLod1 : [])) {
             loadPromises.push(
                 this.loader.loadAsync(model.path).then(gltf => {
                     const root = gltf.scene;
@@ -1243,9 +1254,16 @@ export class TerrainBuilder {
             occluderStrength: occluder?.uOccluderStrength?.value,
             occluderPeak: occluder?.uOccluderPeak?.value,
         };
+        // Cycle 91 Phase 4: dedupe by material. Tree meshes share a handful
+        // of node materials (GLB cache + consolidation); writing the same
+        // uniform objects once per MESH per frame was redundant work that
+        // scaled with mesh count, not material count.
+        const seen = this._treeNodeControlSeenScratch ?? (this._treeNodeControlSeenScratch = new Set());
+        seen.clear();
         const updateMaterial = (material) => {
             const controls = material?.userData?.webgpuTreeNodeMaterialControls;
-            if (!controls) return;
+            if (!controls || seen.has(material)) return;
+            seen.add(material);
             controls.setWind?.({
                 strength: state.windStrength,
                 direction: state.windDirection,
@@ -1265,6 +1283,7 @@ export class TerrainBuilder {
                 updateMaterial(material);
             }
         }
+        seen.clear();
     }
 
     /**
@@ -1462,6 +1481,9 @@ export class TerrainBuilder {
     }
 
     getVisibleTriangleBreakdown(camera = null) {
+        // Cycle 91 Phase 4 acceptance counter: with the perf overlay hidden
+        // and no harness attached this must not advance (probe-checkable).
+        this._visibleBreakdownCalls = (this._visibleBreakdownCalls ?? 0) + 1;
         const visibleObjects = (objects) => {
             if (!Array.isArray(objects)) return [];
             if (!camera) return objects.filter(obj => obj?.visible !== false);

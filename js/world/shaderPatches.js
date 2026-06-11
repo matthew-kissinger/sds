@@ -234,24 +234,27 @@ export function setRockRimColor(builder, color) {
  * @param {number} [sunIntensity]
  * @param {number} [ambientIntensity]
  */
+// Cycle 91 Phase 4: hoisted per-frame scratch (setImpostorTint runs every
+// frame; the two Color allocations per call were measurable GC churn).
+const _tintScratch = new THREE.Color();
+// Cycle 20 v4: ground-bounce hemi term. Foliage research recipe
+// (Megascans / IceFall / NedMakesGames URP): shadow side of canopy must
+// pick up SOME chromatic bounce, not flat-grey ambient, or impostor reads
+// desaturated vs LOD0. Synthesize the bounce color by tilting the current
+// ambient toward a warm earth tone — half-strength of the sky-side fill.
+const GROUND_BOUNCE_TILT = new THREE.Color(0.85, 0.70, 0.55);
+const GROUND_BOUNCE_SCALE = 0.5;
+
 export function setImpostorTint(builder, sunColor, sunDirWorld = null, ambientColor = null, sunIntensity = 1, ambientIntensity = 1) {
     if (!sunColor || !builder._impostorMaterials) return;
 
     // Cross-billboard fallback path — kiln impostors do proper relighting and
     // need no pre-multiplied tint hack.
     const BLEND = 0.35;
-    const tmp = new THREE.Color(0xffffff).lerp(sunColor, BLEND);
+    const tmp = _tintScratch.set(0xffffff).lerp(sunColor, BLEND);
     const lum = 0.299 * sunColor.r + 0.587 * sunColor.g + 0.114 * sunColor.b;
     const boost = 1.0 + 0.20 * Math.max(0, Math.min(1, lum));
     tmp.multiplyScalar(boost);
-
-    // Cycle 20 v4: drive the ground-bounce hemi term. Foliage research recipe
-    // (Megascans / IceFall / NedMakesGames URP): shadow side of canopy must
-    // pick up SOME chromatic bounce, not flat-grey ambient, or impostor reads
-    // desaturated vs LOD0. Synthesize the bounce color by tilting the current
-    // ambient toward a warm earth tone — half-strength of the sky-side fill.
-    const GROUND_BOUNCE_TILT = new THREE.Color(0.85, 0.70, 0.55);
-    const GROUND_BOUNCE_SCALE = 0.5;
 
     for (const mat of builder._impostorMaterials) {
         if (mat.userData?.isKilnImpostor) {
@@ -303,8 +306,10 @@ export function setImpostorTint(builder, sunColor, sunDirWorld = null, ambientCo
 
     // Cycle 20 v4 debug tap: surface the latest input + first impostor
     // material's uniforms via window so the LOD-color-match sandbox /
-    // playwright_evaluate can introspect the live values.
-    if (typeof window !== 'undefined') {
+    // playwright_evaluate can introspect the live values. Cycle 91 Phase 4:
+    // gated on ?probeRender=1 - rebuilding this object (toArray allocations,
+    // a filter pass) every frame in production fed the GC for no consumer.
+    if (builder._probeRender && typeof window !== 'undefined') {
         const firstKiln = builder._impostorMaterials.find(m => m.userData?.isKilnImpostor);
         window.__sdsImpostorProbe = {
             input: {

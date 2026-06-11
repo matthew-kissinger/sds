@@ -273,6 +273,12 @@ export async function initReactUI() {
                     }
                 } catch (err) {
                     console.error('[UI] scene build for Play failed:', err);
+                    // Cycle 91 Phase 5: surface the failure instead of
+                    // stranding the player on the loading screen (init()
+                    // rejections now propagate through waitForInitialization).
+                    try { window.__sdsBootLoading = false; } catch { /* ignore */ }
+                    setScreen('entrance');
+                    alert('The game failed to load. Please refresh the page to try again.');
                 }
             }, []);
 

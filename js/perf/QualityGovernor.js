@@ -117,7 +117,16 @@ export class QualityGovernor {
         if (this.samples.length > 240) this.samples.shift();
         if (!this.windowStartedAt) this.windowStartedAt = now;
         if (now - this.windowStartedAt < this.sampleWindowMs) {
-            this.state = this._makeState(null);
+            // Cycle 91 Phase 4: re-mint the state object only when its fields
+            // would differ from the cached one. The old unconditional
+            // _makeState(null) allocated a fresh object every frame of every
+            // accumulation window for identical content.
+            if (this.state.lastWindow !== null
+                || this.state.qualityIndex !== this.qualityIndex
+                || this.state.fallbackReason !== this.fallbackReason
+                || this.state.deviceTier !== this.deviceTier) {
+                this.state = this._makeState(null);
+            }
             return this.state;
         }
 

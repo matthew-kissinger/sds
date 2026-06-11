@@ -100,7 +100,7 @@ export class GameTimer {
     
     updateTimerDisplay() {
         let timeToDisplay, formattedTime;
-        
+
         if (this.isCountdown && this.timerRunning) {
             // Countdown mode - show remaining time
             const remaining = this.getTimeRemaining();
@@ -115,7 +115,17 @@ export class GameTimer {
             const seconds = Math.floor(timeToDisplay % 60);
             formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
-        
+
+        // Cycle 91 Phase 4: the displayed string only changes on whole-second
+        // boundaries (and on pause-state flips); skip the per-frame DOM
+        // lookups + textContent/style writes in between.
+        const pausedNow = this.isPaused && this.timerRunning;
+        if (formattedTime === this._lastDisplayedTime && pausedNow === this._lastDisplayedPaused) {
+            return;
+        }
+        this._lastDisplayedTime = formattedTime;
+        this._lastDisplayedPaused = pausedNow;
+
         // Update desktop timer
         const timerElement = document.getElementById('timer-display');
         if (timerElement) {

@@ -256,6 +256,9 @@ class SheepDogSimulation {
         // layered on later by widening PerformanceMonitor.
         if (urlParams.get('perfMode') === '1') {
             const perfMon = this.performanceMonitor;
+            // Cycle 91 Phase 4: keep render-cost bookkeeping live for the
+            // harness even while the P-key overlay stays hidden.
+            perfMon.harnessActive = true;
             const gameStateRef = this.gameState;
             // Cycle 15 Phase 3: expose renderer so the perf harness can read
             // WebGLRenderer.info per-system without depending on cinematic=1
@@ -807,6 +810,11 @@ class SheepDogSimulation {
                     }
                 }).catch((error) => {
                     console.error('[GAME] Game initialization failed:', error);
+                    // Cycle 91 Phase 5: record the failure so
+                    // waitForInitialization rejects instead of polling
+                    // forever - the Play handler surfaces the error rather
+                    // than stranding the loading screen.
+                    this.initializationError = error;
                 });
             this.animate();
             this.startFrameWatchdog();
@@ -829,9 +837,16 @@ class SheepDogSimulation {
      * Critical for iOS Safari where asset loading is slower
      */
     waitForInitialization() {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             if (this.isInitialized) {
                 resolve();
+                return;
+            }
+            // Cycle 91 Phase 5: a failed init() used to leave this polling
+            // forever (the loading screen never resolved). Reject with the
+            // recorded init error so callers can surface it.
+            if (this.initializationError) {
+                reject(this.initializationError);
                 return;
             }
 
@@ -841,6 +856,9 @@ class SheepDogSimulation {
                     clearInterval(checkInterval);
                     console.log('[GAME] Initialization complete, proceeding with game start');
                     resolve();
+                } else if (this.initializationError) {
+                    clearInterval(checkInterval);
+                    reject(this.initializationError);
                 }
             }, 100);
         });
@@ -1640,6 +1658,10 @@ class SheepDogSimulation {
 
     updatePerformanceVisibleCounts(forceRefresh = false) {
         try {
+            // Cycle 91 Phase 4: this whole pass (visible-triangle frustum walk,
+            // per-system counts) only feeds the overlay panel and the perf
+            // harness's cost report. Skip it when neither consumer exists.
+            if (!this.performanceMonitor?.shouldTrackRenderCost?.()) return;
             const tb = this.terrainBuilder;
             const gs = tb.grassSystem?.getStats?.() ?? {};
             const visibleBreakdown = tb.getVisibleTriangleBreakdown?.(this.sceneManager?.camera) ?? null;
