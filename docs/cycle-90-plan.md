@@ -119,9 +119,22 @@ Root cause (`tools/probe-nsl-cull-controllers.mjs`, live count): Cycle 87's per-
 
 **Acceptance (EARS):**
 
-- When Phase 7 ships, then `cycle90-validation/jitter-after-nsl-survival.json` shall exist and this plan shall contain a before/after table.
-- If the after-numbers meet 1%-low >= 55 and worst delta <= 45ms, then the entrance shall render Newsheepdogland without the Experimental (WIP) pill.
-- If the bar is not met, then the pill shall remain and BACKLOG shall record the measured gap.
+- [x] When Phase 7 ships, then `cycle90-validation/jitter-after-nsl-survival.json` shall exist and this plan shall contain a before/after table.
+- [x] If the after-numbers meet 1%-low >= 55 and worst delta <= 45ms, then the entrance shall render Newsheepdogland without the Experimental (WIP) pill. (Bar NOT met with shadows on; pill kept per the next line.)
+- [x] If the bar is not met, then the pill shall remain and BACKLOG shall record the measured gap.
+
+**Status: DONE 2026-06-11.** Before/after (driven survival, RTX 3070, 143Hz panel):
+
+| Metric | Before (Phase 1) | After cull fix only | Shipped (cull fix + Phase 8 shadows) |
+|---|---|---|---|
+| Median FPS | 36.0 (quality floor 3) | 144.9 (quality 0) | 71.9-72.5 locked, one run rode 138.9 (quality 0) |
+| Min 1%-low FPS | 16.0 | 70.3 | 45.3 |
+| Worst frame | 104.2ms | 20.8ms | 34.7ms |
+| Steady hitches/30s | n/a (throughput-bound) | ~13 | 4.5-49.5 |
+
+**Pill decision: stays.** With shadows on, NSL sits right at the 6.94ms vsync budget: it locks a clean 72.5 at full quality (vs 36 at the quality floor before the cycle), but 1%-low 45-47 misses the >= 55 bar and one run flapped across the budget edge (1,513 hitches/30s at median 138.9). The gap and the next lever (shadow depth-pass cost: per-instance shadow culling for the consolidated tree meshes) are recorded in BACKLOG. The `perf:jitter -- --check` field rail passes better than its Cycle 89 derivation (median 144.9, 1%-low 137.5, 1 hitch/30s).
+
+Rails at close: `npm test` 1518 passed; main bundle 610.2 KiB <= 611 (deliberate ratchet bump 609 -> 611 main / 548 -> 549 other for the Phase 8 features); `npm run perf:check` 0 regressed; field jitter rail PASS.
 
 ## Phase 8 - NSL visual pass: shadows, ground color, water, lighting (mid-cycle directive, ~3hr)
 
@@ -135,9 +148,16 @@ Root cause (`tools/probe-nsl-cull-controllers.mjs`, live count): Cycle 87's per-
 
 **Acceptance (EARS):**
 
-- When Phase 8 ships, then `cycle90-validation/` shall hold before/after NSL screenshots covering ground, water, and shadows.
-- When Phase 8 ships, then a shadow caster near the dog shall produce a visible shadow on NSL terrain wherever the dog is on the island.
-- If a visual knob changes a non-NSL scene, then the change shall be gated to NSL (or shown identical on the other scenes' differential cells).
+- [x] When Phase 8 ships, then `cycle90-validation/` shall hold before/after NSL screenshots covering ground, water, and shadows. (`visual-survey/before3` vs `visual-survey/after-final` + `bridge-shadow-check.png`.)
+- [x] When Phase 8 ships, then a shadow caster near the dog shall produce a visible shadow on NSL terrain wherever the dog is on the island. (Tree silhouette + dog shadow captured; frustum verified centered on the dog at (585,-1000).)
+- [x] If a visual knob changes a non-NSL scene, then the change shall be gated to NSL (or shown identical on the other scenes' differential cells). (Terrain palette: SceneDef-gated, only NSL declares one. Water depth floor: coastline-gated. Shadows: day-loop-gated after the global config measured field at 48 FPS median. Day-night keyframes: NSL is the only day-night scene. Field jitter rail re-verified PASS.)
+
+**Status: SHIPPED 2026-06-11.** What the survey found and what shipped:
+
+1. **Shadows.** Root cause was deeper than the planned frustum-recenter: on the WebGPU path NO scene light ever cast shadows - the production lighting bridge (`productionWebGpuBoot.js`) ships a fixed directional with no shadow camera, and the `SunSystem`/`SceneManager` shadow lights are never attached on WebGPU. (Also, NSL's world origin is open water, so even an attached origin-pinned frustum would never land on the island.) Shipped: the bridge directional carries a 1024px +-70m shadow camera, OFF by default; day-loop scenes flip it on and recenter it on the dog every frame with texel snapping (`initWorld._tickDayLoop`); teardown flips it back off. Grass never casts (a global-shadows experiment measured field at 48 FPS median / 687ms worst frames with per-chunk blade casters). `SunSystem` keeps its follow-target + texel-snap improvements for any future attached-sun path.
+2. **Ground color.** The terrain shader's palette was tuned for small dense-grass pastures; NSL's sparse streamed-annulus grass exposes bare terrain that read near-black at noon. Shipped: optional `terrain.colors` SceneDef field (schema cheap-case: additive optional, default preserves every scene; consumer `TerrainBuilder` WebGL uniforms + WebGPU factory context); NSL declares a lifted coastal palette.
+3. **Water.** The shallow-to-deep gradient was floor-clamped at 0.82 (tuned for radial-boundary islands), flattening NSL's water to one blue. Shipped: `minDepthT` plumbed through `createAnimeWater` -> node material; coastline scenes pass 0.45 so a real shallow band reads along the shore; radial islands keep 0.82.
+4. **Lighting cadence.** A 6-minute survival day spent most of its daylight in low-sun pink light (keyframes slid toward golden hour right after noon). Shipped: a t=0.60 pastoral-noon keyframe holds proper daylight through most of the day phase.
 
 ## Dependencies
 
@@ -148,6 +168,11 @@ Phase 1 -> Phase 2 (gate) -> armed fixes among 3/4/5/6 (serial, re-measure after
 ## Frozen files (cycle-specific additions)
 
 - `shared/**` - any sim-core edit requires stop-and-surface even if Phase 6 data points there. Sim-baselines stay byte-identical this cycle.
+
+**Fence-frozen files touched (Phase 8, schema cheap-case):**
+
+- `shared/scenes/types.js` - added optional `TerrainDef.colors` (+ `TerrainColors` typedef). Additive optional field with a default; absent means the long-standing palette, byte-identical for every existing scene. Render-only (the Worker ignores `terrain`). Consumer updated in the same commit: `js/TerrainBuilder.js` (WebGL uniforms + WebGPU factory context already mapped `baseColor1/2/3`). Alternative considered: hardcoded scene-id branch in TerrainBuilder - rejected per the scene-as-data rule.
+- `shared/scenes/newsheepdogland.js` - declares the new optional field (data-only; no sim consumer reads `terrain`). Sim-baselines verified byte-identical by `npm test`.
 
 ## Hard stops
 

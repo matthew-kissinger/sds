@@ -47,7 +47,11 @@ export function createWebGpuAnimeWaterNodeMaterial(
   const boundaryDistance = abs(radialDistance.sub(water.shoreline.radius));
   const depthFromBoundary = smoothstep(0.0, Math.max(water.shoreline.falloff, 0.001), boundaryDistance);
   const depthFromHeightfield = smoothstep(0.2, Math.max(water.shoreline.falloff * 0.45, 0.25), terrainDepth);
-  const depthT = max(mix(depthFromBoundary, depthFromHeightfield, hasHeightfield), 0.82);
+  // The depth floor keeps radial-boundary islands from showing a turquoise
+  // disc; coastline scenes (NSL) pass a lower floor so a real shallow band
+  // reads along the shore (Cycle 90). Default preserves the tuned look.
+  const minDepthT = water.minDepthT ?? 0.82;
+  const depthT = max(mix(depthFromBoundary, depthFromHeightfield, hasHeightfield), minDepthT);
   const rippleUv = waterWorld.mul(0.035).add(vec2(time.mul(0.18), time.mul(0.08)));
   const rippleA = valueNoise(rippleUv);
   const rippleB = valueNoise(rippleUv.mul(2.35).add(vec2(time.mul(0.05), time.mul(-0.03))));
@@ -125,7 +129,7 @@ export function createWebGpuAnimeWaterNodeMaterial(
   material.userData.webgpuWaterColorScale = water.colorScale;
   material.userData.webgpuWaterFoamScale = water.foamScale;
   material.userData.webgpuWaterSparkleScale = water.sparkleScale;
-  material.userData.webgpuWaterMinDepthT = 0.82;
+  material.userData.webgpuWaterMinDepthT = minDepthT;
   material.userData.webgpuWaterWorldSpaceHeightfield = true;
   material.userData.webgpuWaterSunCameraGlint = true;
   material.userData.webgpuWaterGlintMode = 'masked-flat-normal-broad-sun-path-plus-ripple-v4';

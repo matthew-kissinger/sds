@@ -102,6 +102,11 @@ export const newsheepdogland = {
             farField: { minX: -1400, maxX: 1500, minZ: -1600, maxZ: 1500 },
             horizon: { minX: -1700, maxX: 1700, minZ: -1700, maxZ: 1700 },
         },
+        // Cycle 90: lifted ground palette. The default terrain greens were
+        // tuned for small pastures where dense grass hides the ground; NSL's
+        // streamed-annulus grass is sparse, so the bare terrain shows through
+        // and the default palette read as near-black patches at noon.
+        colors: { base: '#4f7038', mid: '#6e8c4e', high: '#5c7c46', dirt: '#7d6f58' },
     },
 
     grass: {

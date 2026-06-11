@@ -249,9 +249,46 @@ export function installProductionWebGpuLightingBridge(sceneManager, state = null
 
     const ambient = new AmbientLight(0xffffff, 0.75 * Math.PI);
     const directional = new DirectionalLight(0xffffff, 1.1 * Math.PI);
-    directional.position.set(1.5, 2.2, 3.0);
+    // Cycle 90: same light direction as always (zero shading change), but
+    // positioned far enough out to carry a shadow camera. The WebGL scene
+    // light has cast shadows since the beginning; the WebGPU bridge never
+    // did, which is why every WebGPU desktop scene shipped shadow-less.
+    const SHADOW_DISTANCE = 260;
+    const dirLen = Math.hypot(1.5, 2.2, 3.0);
+    directional.position.set(
+        (1.5 / dirLen) * SHADOW_DISTANCE,
+        (2.2 / dirLen) * SHADOW_DISTANCE,
+        (3.0 / dirLen) * SHADOW_DISTANCE,
+    );
+    if (!sceneManager.isMobile) {
+        // Shadow camera is configured here but DISABLED by default: the
+        // depth pass measured field/practice down from 144 to 48 FPS median
+        // (hundreds of per-chunk casters for shadows a fully-grassed pasture
+        // barely shows). Day-loop scenes (initWorld._tickDayLoop) flip
+        // castShadow on and recenter the box on the dog - sparse island
+        // grass makes terrain the receiver there, so the shadows actually
+        // read, at a cost NSL absorbs (72 FPS median at full quality,
+        // cycle90-validation/jitter-after-*.json).
+        // Tight box + 1024 map: +-120m/2048 measured 2x worse on NSL.
+        directional.castShadow = false;
+        directional.shadow.mapSize.set(1024, 1024);
+        directional.shadow.camera.near = 0.5;
+        directional.shadow.camera.far = 600;
+        directional.shadow.camera.left = -70;
+        directional.shadow.camera.right = 70;
+        directional.shadow.camera.top = 70;
+        directional.shadow.camera.bottom = -70;
+        directional.shadow.bias = -0.0005;
+        directional.shadow.normalBias = 0.04;
+        directional.userData.shadowConfigured = true;
+    }
     sceneManager.getScene().add(ambient);
     sceneManager.getScene().add(directional);
+    sceneManager.getScene().add(directional.target);
+    // Day-loop scenes recenter the shadow frustum on the dog each frame
+    // (initWorld._tickDayLoop); everything else keeps the origin-centered
+    // box, mirroring the WebGL light's behavior.
+    sceneManager.webgpuSunLight = directional;
     const proof = {
         source: 'production-webgpu-lighting-bridge',
         proofOnlyBridge: true,

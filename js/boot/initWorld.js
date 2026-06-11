@@ -366,6 +366,39 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             game._tickDayLoop = (dt) => {
                 const dn = game.atmosphere?.dayNight;
                 if (!dn) return;
+                // Cycle 90: recenter the scene light's shadow frustum on the
+                // dog. Day-loop islands are far larger than the +-120m shadow
+                // box and the world origin sits in open water, so an
+                // origin-pinned frustum means no shadows anywhere on land.
+                // The light is the WebGPU lighting bridge's directional
+                // (productionWebGpuBoot); x/z snap to the shadow-map texel
+                // grid so the moving frustum doesn't shimmer the whole map.
+                const sunLight = game.sceneManager?.webgpuSunLight ?? null;
+                if (sunLight?.userData?.shadowConfigured) {
+                    const dog = game.gameState?.getSheepdog?.();
+                    if (dog?.position) {
+                        if (!game._sunShadowFollowOffset) {
+                            // First tick of a day-loop run: shadows on. The
+                            // bridge ships them off because small grassed
+                            // scenes pay the depth pass for shadows they
+                            // can't show; teardown flips them back off.
+                            sunLight.castShadow = true;
+                            game._sunShadowFollowOffset = {
+                                x: sunLight.position.x - sunLight.target.position.x,
+                                y: sunLight.position.y - sunLight.target.position.y,
+                                z: sunLight.position.z - sunLight.target.position.z,
+                            };
+                        }
+                        const off = game._sunShadowFollowOffset;
+                        const texel = (sunLight.shadow.camera.right - sunLight.shadow.camera.left)
+                            / (sunLight.shadow.mapSize.x || 2048);
+                        const tx = Math.round(dog.position.x / texel) * texel;
+                        const tz = Math.round(dog.position.z / texel) * texel;
+                        sunLight.position.set(tx + off.x, off.y, tz + off.z);
+                        sunLight.target.position.set(tx, 0, tz);
+                        sunLight.target.updateMatrixWorld();
+                    }
+                }
                 const t = dn.getT();
                 // Cycle 66 P2: the pen containment authoritatively tracks who has
                 // been herded through the gate and retired inside; prefer its
@@ -604,6 +637,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                     size: game.sceneManager.isMobile ? 3200 : 4000,
                     y: -0.05,
                     segments: game.sceneManager.isMobile ? 32 : 64,
+                    // Cycle 90: coastline scenes get a real shallow band along
+                    // the shore; radial-boundary islands keep the tuned 0.82
+                    // depth floor (a lower floor there reads as a turquoise
+                    // disc around the whole island).
+                    minDepthT: game.currentScene.boundary?.kind === 'coastline' ? 0.45 : undefined,
                 });
                 scene.add(water.mesh);
                 game.sceneManager.setWater({

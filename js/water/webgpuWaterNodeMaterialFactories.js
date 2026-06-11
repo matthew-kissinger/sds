@@ -45,6 +45,7 @@ export function createWebGpuWaterNodeMaterialFactories(webGpuModules, options = 
         foamScale: context.foamScale ?? waterDefaults.foamScale ?? options.foamScale ?? 1,
         foamThickness: context.foamThickness ?? waterDefaults.foamThickness ?? options.foamThickness ?? 2.5,
         sparkleScale: context.sparkleScale ?? waterDefaults.sparkleScale ?? options.sparkleScale ?? 1,
+        minDepthT: context.minDepthT ?? waterDefaults.minDepthT ?? options.minDepthT,
         shoreline: {
           center: toArray(context.shoreline?.center ?? waterDefaults.shoreline?.center, [0, 0]),
           radius: context.shoreline?.radius ?? waterDefaults.shoreline?.radius ?? 1,

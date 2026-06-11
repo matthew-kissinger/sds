@@ -256,6 +256,7 @@ export function createAnimeWaterMaterial({
     boundary,
     heightfield = null,
     waterY = -0.05,
+    minDepthT,
     search,
     webgpuWaterFactories,
 }) {
@@ -319,6 +320,7 @@ export function createAnimeWaterMaterial({
                 falloff: shoreline.falloff,
             },
             waterY,
+            minDepthT,
             hasHeightfield: !!heightfield,
             heightTexture: heightTex,
             heightfield: heightfield ? {
@@ -347,8 +349,8 @@ export function createAnimeWaterMaterial({
     return material;
 }
 
-export function createAnimeWater({ boundary, heightfield = null, size = 4000, y = -0.05, segments = 64, search, webgpuWaterFactories }) {
-    const material = createAnimeWaterMaterial({ boundary, heightfield, waterY: y, search, webgpuWaterFactories });
+export function createAnimeWater({ boundary, heightfield = null, size = 4000, y = -0.05, segments = 64, minDepthT, search, webgpuWaterFactories }) {
+    const material = createAnimeWaterMaterial({ boundary, heightfield, waterY: y, minDepthT, search, webgpuWaterFactories });
     const waterControls = material.userData?.webgpuWaterMaterialControls ?? null;
     const baseSparkleStrength = material.uniforms?.uSparkleStrength?.value ?? 0.7;
     let qualitySparkleScale = 1;

@@ -41,9 +41,14 @@ const DEFAULT_KEYFRAMES = [
   // Sunrise: dawn preset proper.
   { t: 0.25, preset: 'dawn',          elevation: 7 * DEG,   azimuth: 0.12 * Math.PI },
   // Mid-morning blends toward pastoral noon.
-  { t: 0.40, preset: 'pastoral-noon', elevation: 50 * DEG,  azimuth: 0.20 * Math.PI },
+  { t: 0.40, preset: 'pastoral-noon', elevation: 55 * DEG,  azimuth: 0.20 * Math.PI },
   // Noon.
   { t: 0.50, preset: 'pastoral-noon', elevation: 70 * DEG,  azimuth: 0.25 * Math.PI },
+  // Cycle 90: hold proper daylight through most of the day phase. Without
+  // this keyframe the 0.50->0.65 segment starts sliding toward golden hour
+  // right after noon, so a 6-minute survival day spends most of its
+  // daylight in low-sun pink light.
+  { t: 0.60, preset: 'pastoral-noon', elevation: 58 * DEG,  azimuth: 0.42 * Math.PI },
   // Late afternoon -> golden hour.
   { t: 0.65, preset: 'golden-hour',   elevation: 30 * DEG,  azimuth: 0.62 * Math.PI },
   // Sunset.

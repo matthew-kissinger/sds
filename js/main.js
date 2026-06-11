@@ -1416,6 +1416,18 @@ class SheepDogSimulation {
             this._tickDayLoop = this.dayLoop = this._wolfPack = this._survivalRun =
                 this._penContainment = this._unmountDayNightChip = this._unmountMinimap =
                 this._updateMinimap = null;
+            // Cycle 90: recenter the scene light's shadow frustum back on the
+            // origin when a day-loop run tears down; small scenes expect the
+            // WebGL-era origin-centered box.
+            const sunLight = this.sceneManager?.webgpuSunLight ?? null;
+            if (sunLight && this._sunShadowFollowOffset) {
+                const off = this._sunShadowFollowOffset;
+                sunLight.castShadow = false;
+                sunLight.position.set(off.x, off.y, off.z);
+                sunLight.target.position.set(0, 0, 0);
+                sunLight.target.updateMatrixWorld();
+                this._sunShadowFollowOffset = null;
+            }
 
             // Reset gameplay flags — but NOT gameMode/competitiveGates,
             // which the menu wants to remember for "Play Again" UX.

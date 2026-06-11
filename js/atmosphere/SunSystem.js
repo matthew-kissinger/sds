@@ -63,6 +63,11 @@ export class SunSystem {
       this.light.shadow.bias = -0.0005;
       this.light.shadow.normalBias = 0.04;
     }
+
+    // World units per shadow-map texel; the follow target snaps to this grid
+    // so a moving target doesn't shimmer the whole map every step (Cycle 90).
+    /** @private */
+    this.shadowTexelWorld = castShadow ? (2 * halfExtent) / shadowMapSize : 0;
   }
 
   /**
@@ -158,11 +163,19 @@ export class SunSystem {
     let targetZ = 0;
 
     if (this.shadowFollowTarget) {
+      // Only x/z are read, so a 2D sim entity (position {x, z}) works as a
+      // follow target directly - no render-object dependency (Cycle 90).
       const t = this.shadowFollowTarget.position;
-      posX += t.x;
-      posZ += t.z;
-      targetX = t.x;
-      targetZ = t.z;
+      let tx = Number.isFinite(t.x) ? t.x : 0;
+      let tz = Number.isFinite(t.z) ? t.z : 0;
+      if (this.shadowTexelWorld > 0) {
+        tx = Math.round(tx / this.shadowTexelWorld) * this.shadowTexelWorld;
+        tz = Math.round(tz / this.shadowTexelWorld) * this.shadowTexelWorld;
+      }
+      posX += tx;
+      posZ += tz;
+      targetX = tx;
+      targetZ = tz;
     }
 
     this.light.position.set(posX, posY, posZ);

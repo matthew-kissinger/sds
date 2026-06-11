@@ -905,11 +905,17 @@ export class TerrainBuilder {
         // color per-frame, is the single source of truth for terrain fade.
         // Without this, terrain faded to a fixed warm-grey-green while the
         // skybox showed sky color — a visible cutoff line where the two met.
+        // Cycle 90: scene-as-data palette override (terrain.colors on the
+        // SceneDef). Defaults preserve the long-standing look on every scene
+        // that doesn't declare one; NSL lifts its floor because its sparse
+        // streamed-annulus grass leaves far more bare terrain visible than
+        // the small pastures do.
+        const paletteOverride = this.sceneDef?.terrain?.colors ?? null;
         const terrainColors = {
-            baseColor1: new THREE.Color(0x3d5c2e),
-            baseColor2: new THREE.Color(0x5a7a42),
-            baseColor3: new THREE.Color(0x4a6838),
-            dirtColor: new THREE.Color(0x6b5d4a),
+            baseColor1: new THREE.Color(paletteOverride?.base ?? 0x3d5c2e),
+            baseColor2: new THREE.Color(paletteOverride?.mid ?? 0x5a7a42),
+            baseColor3: new THREE.Color(paletteOverride?.high ?? 0x4a6838),
+            dirtColor: new THREE.Color(paletteOverride?.dirt ?? 0x6b5d4a),
         };
         const uniforms = THREE.UniformsUtils.merge([
             THREE.UniformsLib.fog,

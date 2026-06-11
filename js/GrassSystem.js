@@ -1574,7 +1574,12 @@ export class GrassSystem {
         }
         instancedMesh.instanceMatrix.needsUpdate = true;
         instancedMesh.frustumCulled = false; // We handle culling per-chunk
-        instancedMesh.castShadow = !this.isMobile;
+        // Cycle 90: grass never casts shadows. With a shadow-casting scene
+        // light live on WebGPU, per-chunk blade geometry in the depth pass
+        // measured field/practice at 48 FPS median with 687ms worst frames
+        // (cycle90-validation) for shadows no one can see. The consolidated
+        // compute-cull grass path has always shipped castShadow = false.
+        instancedMesh.castShadow = false;
         instancedMesh.receiveShadow = true;
 
         // Calculate chunk bounding sphere for frustum culling

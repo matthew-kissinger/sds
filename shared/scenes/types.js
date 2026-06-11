@@ -141,6 +141,19 @@
  *   Absent => no streaming (byte-identical for every existing scene).
  *   Consumers: js/world/foliageStreaming.js, shared/TreePlacement.js (zones
  *   override opts), tests/foliage-streaming.spec.js.
+ * @property {TerrainColors} [colors] Cycle 90 — optional ground-palette
+ *   override for the terrain shader (base/mid/high greens + dirt). Absent =>
+ *   the long-standing default palette (byte-identical for every existing
+ *   scene). Render-only; the Worker ignores `terrain`. Consumer:
+ *   js/TerrainBuilder.js (WebGL uniforms + WebGPU node-material context).
+ */
+
+/**
+ * @typedef {Object} TerrainColors
+ * @property {string} [base] Hex color, e.g. '#4f7038'. Noise-blend low green.
+ * @property {string} [mid]  Hex color. Noise-blend mid green.
+ * @property {string} [high] Hex color. Noise-blend third green.
+ * @property {string} [dirt] Hex color. Dirt-patch tint.
  */
 
 /**
