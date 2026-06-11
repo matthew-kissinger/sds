@@ -292,7 +292,15 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
                 im.instanceMatrix.needsUpdate = true;
                 im.computeBoundingBox?.();
                 im.computeBoundingSphere?.();
-                im.frustumCulled = true;
+                // Cycle 89: desktop tree chunks stay pinned in the render list.
+                // A culled chunk re-entering the WebGPU render list re-triggers
+                // GPU-process pipeline/bind-group setup (three.js #33685), which
+                // the driven jitter probe measured as 70-160ms multi-frame
+                // stalls while turning; pinning lifted 1%-low from 24 to 67 FPS
+                // at no median cost (cycle89-validation/jitter-attribution-cull-
+                // driven.json). Mobile keeps frustum culling: fewer, larger
+                // chunks and a tighter GPU budget, and the repro is desktop data.
+                im.frustumCulled = builder.isMobile;
                 im.castShadow = !builder.isMobile;
                 im.receiveShadow = true;
 
@@ -343,7 +351,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
         source: 'THREE.InstancedMesh',
         route: 'webgpu-production-scene-body',
         lod: useProductionNativeImpostor ? impostorRoute.lod : (useMobileNativeLod1 ? 'low-tier-lod1-native' : 'lod0-only'),
-        culling: 'chunked-instanced-bounds',
+        culling: builder.isMobile ? 'chunked-instanced-bounds' : 'render-list-pinned',
         chunkSize,
         impostor: {
             active: useProductionNativeImpostor,
