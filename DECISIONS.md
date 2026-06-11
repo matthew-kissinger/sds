@@ -1402,3 +1402,15 @@ The Cycle 88 draft above shipped same-day, all five phases. The decisions that o
 - **Every scene declares its loading shape** in `tests/scene-loading-stages.spec.js` (all-cold or streamed, with a cold tree budget); a new scene without a declaration fails the completeness guard. Durable rule: `.claude/rules/scene-and-render.md` "Scene loading stages".
 
 Evidence: `cycle88-validation/` (first-frame + steady-state screenshots, production probe JSONs), `docs/cycle-88-plan.md` per-phase status blocks.
+
+---
+
+## Cycle 89 - WebGPU render-list churn is the small-scene stutter; tree chunks stay pinned on desktop (2026-06-10)
+
+Matt reported unstable frames on Home Field with 3 sheep (RTX 3070, 144Hz) and corrected the methodology mid-cycle: idle-camera probes do not reproduce it; the probe must drive the dog (move, weave, sprint, zoom) for the whole window. Driven capture: 207 hitches/30s, 1%-low 20-24 FPS, deep stalls of 69-160ms in exact multiples of the 6.94ms refresh, zero JS longtasks.
+
+- **Attribution chain** (all JSONs in `cycle89-validation/`): every isolation that hides scenery is smooth; trees-only reproduces the stall depth alone; tree shadows and alphaHash are innocent; the WebGL renderer differential shows no deep stalls (Cycle 87 made webgpu-production the every-scene default, which is why "it wasn't like this"); pinning tree chunk meshes in the render list eliminates the deep stalls (1%-low 24 -> 67) at no median cost.
+- **Diagnosis:** a frustum-culled tree chunk re-entering the WebGPU render list re-triggers GPU-process pipeline/bind-group setup (three.js #33685 signature). Turning and zooming cycles chunks continuously. Every other major system (sheep, grass, terrain, sky, clouds, water) already ships `frustumCulled = false`; per-chunk trees were the outlier.
+- **Decision: desktop tree chunks on the WebGPU-native path ship `frustumCulled = builder.isMobile`** (pinned on desktop, culled on mobile - the repro and the win are desktop data; mobile has fewer, larger chunks and a tighter GPU budget). The streamed-wave WebGL fallback keeps culling. Shipped result: worst frame delta 20.9ms (was 160ms), 1%-low 70+ across 5 driven runs.
+- **Durable rail:** `npm run perf:jitter -- --check` gates driven field/practice against `cycle89-validation/jitter-budgets.json` (1%-low >= 55, worst delta <= 45ms, hitch rate <= 300/30s).
+- **R&D spike outcomes:** ez-tree 1.1.0 is current (asset exonerated, ~3.8k tris/tree); unreleased ez-tree main improvements are generation-time only (backlog: next re-bake via Pixel Forge); long-term impostor shape is TSL instancedArray + compute (the dgreenheck webgpu skill pattern, installed locally as webgpu-threejs-tsl); alpha-to-coverage A/B and tight-fit impostor outlines recorded as backlog candidates.
