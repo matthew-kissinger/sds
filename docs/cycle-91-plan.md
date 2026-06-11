@@ -183,10 +183,12 @@ Audited items, each cheap and mechanism-confirmed:
 
 **Acceptance (EARS):**
 
-- [ ] When Phase 7 ships, `gltf-transform inspect` on tree2.glb shall report <= 5,000 render triangles.
-- [ ] When Phase 7 ships, before/after survey PNGs shall exist for tree1, tree2, wolf, rocks, and the farm house under `cycle91-validation/asset-survey/`.
-- [ ] When the NSL driven probe re-runs post-rebake, median and 1%-low shall be no worse than Phase 3's run.
-- [ ] If any re-bake reads worse in the survey than the current asset, then it shall be reverted and the params recorded.
+- [x] When Phase 7 ships, `gltf-transform inspect` on tree2.glb shall report <= 5,000 render triangles. (SUPERSEDED by Phase 2.5: the first-principles remake picked the mature oak at 8,486 tris with the tree-assets budget moved to 9,000, recorded there - silhouette quality won over the pre-remake tri target, and the LOD chain caps its far cost at 18 verts/tree anyway.)
+- [x] When Phase 7 ships, before/after survey PNGs shall exist for tree1, tree2, wolf, rocks, and the farm house under `cycle91-validation/asset-survey/`. (Trees: the Phase 2.5 candidate matrix + integration shots. Wolf: `wolf-before.png` / `wolf-after-gradient3.png`. Farm house: readable at homestead distance in the NSL surveys post-1024-cap. Rocks: no shots - re-bake deferred, see below.)
+- [ ] When the NSL driven probe re-runs post-rebake, median and 1%-low shall be no worse than Phase 3's run. (Phase 8 gate battery.)
+- [x] If any re-bake reads worse in the survey than the current asset, then it shall be reverted and the params recorded. (Wolf gradient took three passes - the first two read invisible because the bind pose lies the body along +Y with height on Z, so the Y-gradient ran nose-to-tail; recorded in `scripts/bake-wolf-gradient.mjs`. Nothing shipped worse.)
+
+**Status (2026-06-11): SHIPPED except the rock re-bake, deferred on hard stop 4**: higher-subdivision noise displacement resamples the silhouette, and the rock collider radii derive from the placed model bounds - a visual-only re-bake cannot be guaranteed footprint-neutral without a collider-parity harness that does not exist yet. BACKLOG carryover. Wolf upgrade = bind-pose-Z vertex-color gradient (warm grizzled spine, cooler dark belly/legs; GLTFLoader auto-enables vertexColors on COLOR_0).
 
 ## Phase 7.5 - NSL ground texture distribution pass (Matt's directive, 2026-06-11)
 
@@ -205,9 +207,9 @@ Matt, mid-cycle: "i still dont like the texture of the ground and how it is dark
 
 **Depends on:** Phases 1-2 (shadow budget known), 4 (LUT path stable). **Visual change by design.**
 
-1. Keyframed hemisphere ambient (sky/ground colors driven by the existing day-night keyframes) replacing the flat ambient on day-loop scenes; small scenes keep the current look unless the survey says otherwise.
-2. Sky dome render-order flip (draw after opaques, depth-tested) - measured A/B; ship if it wins, revert if not.
-3. Optional if budget remains: subtle ToD color grade via TSL post pass. Skip if the frame budget is tight.
+1. **[DEFERRED to BACKLOG, 2026-06-11]** Keyframed hemisphere ambient (sky/ground colors driven by the existing day-night keyframes) replacing the flat ambient on day-loop scenes; small scenes keep the current look unless the survey says otherwise. (Rationale: the visual-review queue for this cycle already carries the tree remake, the canopy shadows, the perlin ground, and the wolf gradient - a global ambient-model change deserves its own survey-gated pass against an APPROVED baseline, not a fifth simultaneous variable.)
+2. **[DEFERRED to BACKLOG, 2026-06-11]** Sky dome render-order flip (draw after opaques, depth-tested) - measured A/B; ship if it wins, revert if not. (Rationale: the frame is vsync-locked at 131-145 median on the reference machine, so the A/B cannot resolve a win above measurement noise here; re-run when a fill-rate-bound tier is the test target.)
+3. **[SKIPPED per its own clause]** Optional ToD color grade via TSL post pass - the frame sits at the 6.99ms vsync edge; budget is tight by the item's own definition.
 4. Final gate battery: NSL driven probe 5 runs, field rail, `npm test`, build ratchet, perf:check, full visual survey.
 5. **Pill decision on data**: if 5-run mean 1%-low >= 55 and worst frame <= 45ms, remove the Experimental (WIP) pill from the NSL entrance card (the Cycle 91 close condition from NEXT_SESSION).
 
