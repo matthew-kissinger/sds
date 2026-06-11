@@ -1,121 +1,209 @@
-# Cycle 91 - nsl-budget-headroom
+# Cycle 91 - lighting-perf-optimization (nsl-budget-headroom)
 
-> Drafted 2026-06-11 after Cycle 90 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
+> Drafted 2026-06-11 after Cycle 90 closed; authored same-day from a shadow-cost spike, four research passes, and three engine audits (Matt's directive: "consider the next a lighting and perf and optimization pass... report back on what we did and where we benefitted and decisions to make on scaling back or optimizing certain things all the way down to the assets"). Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
 
 ## Goal
 
-One paragraph. What's this cycle for? What's the **user-visible** difference between "before" and "after"? If you can't write this paragraph clearly, the cycle isn't ready to start.
+One pass over lighting, runtime perf, load sequencing, and assets, every fix gated on measurement. Before: NSL ships 72.5 FPS locked with shadows (the Experimental pill stays because 1%-low 45-47 misses the 55 bar), the whole shadow cost is alpha-hashed leaf cards drawing into the depth pass, the engine carries audited per-frame waste (per-frame sky LUT bakes, ungated perf bookkeeping, ~108 cull controllers where ~6 would do), the load path serializes its largest fetch behind all GLBs, and several assets are visibly low-fidelity (wolf, dogs) or wasteful (5x duplicated dog animations, dead GLBs in dist). After: NSL runs at the display rate with shadows intact (canopy included), the pill comes off on data, scene loads and restarts are measurably faster, and the asset base is slimmer with the worst-looking hero assets improved. Everything lands with before/after numbers for Matt's scale-back decisions.
 
-## How to read this plan
+## Evidence base (all 2026-06-11, this cycle's intake)
 
-This doc fixes the *shape* of the changes (data contracts, where new code slots into the existing module map, acceptance criteria), **not the implementation choices**. Where it suggests a specific technique, treat it as a starting point for research, not the final answer.
-
-Each agent picking up a phase should:
-
-- **Research current best practice** for the specific sub-problem before writing code. The ecosystem evolves; what was "the" solution last cycle may not be optimal now.
-- **Measure on the actual hardware target** (RTX 3070 desktop, mid-tier mobile) before committing to a technique. Use `PerformanceMonitor` and the per-system triangle breakdown.
-- **Pick the simplest thing that meets the budget** rather than the most impressive. If the simple version reads correctly, ship it; escalate only on demonstrated need.
+- **Shadow spike** [`../cycle91-validation/shadow-spike-main.json`](../cycle91-validation/shadow-spike-main.json), NSL survival driven, 2 runs/config: full 71.9 median / 44.6 1%-low; shadow-off 142.9 / 66; **shadow-trees-cast-off 142.9 / 69**; **shadow-leaves-cast-off (trunks keep casting) 142.9 / 64.8**. The tree leaf-card depth pass is the entire shadow cost; resolution/frustum variants skipped as moot (cost is caster-side).
+- **three.js r184 ground truth** (verified in node_modules): per-light `shadow.autoUpdate=false` + `needsUpdate=true` render-on-demand works (ShadowNode.updateBefore); the shadow pass honors a non-default `shadow.camera.layers` mask (ShadowNode.updateShadow); `material.castShadowNode`/`maskShadowNode`/`castShadowPositionNode` allow cheap shadow-pass materials; **alphaHash is NOT applied in the shadow pass** (hashed leaves cast solid cards today while still paying their colorNode texture fetch per depth fragment); upstream issue #33730 (instanced receivers go black when the shadow camera uses a non-default layer) is fixed by PR #33737, milestone r185, **not yet on npm** (latest published = 0.184.0). Adopt r185 the moment it publishes; until then the layer pattern requires a local repro check.
+- **Research** (spawn.co changelog - their engine is a three.js WebGPU fork; frontier survey): caster culling + cheap caster proxies + threshold re-render are the industry moves at our scale; texel-proportional bias law; never toggle `castShadow` per-frame (pipeline rebuild hitches); virtual shadow maps explicitly rejected (wrong scale).
+- **Engine audits** (frame loop, load sequencing, render path) - findings inline in the phases below; key items get re-measured in [`../cycle91-validation/`](../cycle91-validation/) as their phases run.
+- **Tree LOD findings (Matt's mid-cycle question, 2026-06-11):** `tree1_lod1.glb` + `tree2_lod1.glb` (336 KB + parse) load on every platform via the deferred list but are only placed on low tier; desktop fetches them for nothing (Phase 5 item 6). And steady-state NSL has no runtime distance LOD at all - the consolidated path renders LOD0 (3,783 / 7,700 tris) to the island edge once cold impostors retire (Phase 3 items 4-5).
 
 ## Open questions to resolve before writing code
 
-(Prefix with **Q1**, **Q2**, ... so phases can refer to them.)
-
-1. **Q1: <Question>?** Author lean: <answer>.
-2. **Q2: <Question>?** Author lean: <answer>.
-
-These don't block scaffolding (Phase 1) but should be resolved before scene-specific or content-specific phases.
+1. **Q1: Does the shadow-camera-layer caster pattern work on r184 in our scene (issue #33730 repro)?** Author lean: test first thing in Phase 2 with a minimal in-game probe; if sheep/grass receivers break, fall back to `onBeforeShadow`/`onAfterShadow` indirect-buffer swap (no layers involved), and adopt r185 when published.
+2. **Q2: Do trunk-only tree shadows read acceptably at NSL's camera distances, or is canopy coverage required?** Author lean: canopy matters at golden hour (long shadows are the look); Phase 2 restores it with impostor-quad casters; trunk-only is the measured stopgap only if Phase 2's pattern is blocked.
 
 ## Architecture / shared changes
 
-(If the cycle introduces a primitive or schema change shared across phases, describe it here. Otherwise delete this section.)
+- No `shared/` deterministic-core edits anywhere in this cycle. Sim-baselines stay byte-identical.
+- `tests/refactor-baseline/__fixtures__/bundle-sizes.json` bumps must be deliberate and recorded per the ratchet convention.
+- The sim tick-rate finding (sim ticks at display refresh, 2.4x the work at 143Hz vs 60Hz) is **explicitly deferred** - it changes sim-visible behavior and needs the full sim-change ritual. Recorded in BACKLOG carryover, not a phase here.
 
-## Phase shape rules
+## Phase 1 - Shadow caster scope: leaf cards out of the depth pass (~2hr)
 
-A cycle has **≤ 8 phases**. If you find yourself drafting a 9th, the work is two cycles, not one.
+**Independently testable.** The spike's decisive result, shipped smallest-first.
 
-Each phase is either **fully autonomous** (the agent ships without Matt's pairing) or **fully paired** (Matt's hands on the keyboard for it). **Don't mix modes within a phase** - "I'll do steps 1–3 autonomously and pause for Matt at step 4" produces stale handoffs and partial commits. "Matt pickup" work (taste, real-device, design, marketing voice) scopes as a paired-track cycle, not appended to an autonomous cycle.
-
-A phase has a **single sharp goal** (one new file, one extraction, one decision codified) and **≤ 4 hours** of work. Larger means split.
-
-## Acceptance criteria - EARS format
-
-Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/specs/) so the lines are testable by construction:
-
-- **Event-driven**: `When [trigger], the [system] shall [response].`
-- **State-driven**: `While [precondition], the [system] shall [response].`
-- **Unwanted-event**: `If [unwanted], then the [system] shall [response].`
-
-Each line should be **grep-testable** - the response should be something a script can verify (`wc -l`, `grep`, `npm test`, a build artifact's existence). The `/cycle-close` reconciliation hook walks every Acceptance line and tries to grep its predicate against shipped commits + test output.
-
-Example: `When Stream B1 ships, then `wc -l js/main.js` shall return ≤ 2,200.`
-
-## Phase 1 - <name> (~Xhr)
-
-**Independently testable.** <Why this phase comes first.>
-
-1. **Step.** Description + [`file path`](path).
-2. **Step.** Description.
+1. Build-time flag on the consolidated tree compute-cull meshes: alpha-material child meshes (leaf cards) get `castShadow = false`; opaque trunk/branch meshes keep casting. [`js/world/TreePlacement.js`](../js/world/TreePlacement.js), [`js/world/treeComputeCull.js`](../js/world/treeComputeCull.js).
+2. Texel-proportional bias law on the bridge light (`bias = baseBias * texelWorld / referenceTexelWorld`) so bias stays correct if map size or extent ever changes per tier. [`js/rendering/productionWebGpuBoot.js`](../js/rendering/productionWebGpuBoot.js).
+3. Skip the day-loop shadow-follow writes when the texel-snapped position is unchanged. [`js/boot/initWorld.js`](../js/boot/initWorld.js).
+4. Re-run the NSL driven probe (5 runs) + field rail.
 
 **Acceptance (EARS):**
 
-- When Phase 1 ships, then `<system>` shall `<response>`.
-- While `<precondition>`, the `<system>` shall `<response>`.
+- [ ] When Phase 1 ships, the NSL driven survival probe shall report median FPS >= 130 and mean 1%-low >= 55.
+- [ ] While the dog stands still, the day loop shall not write sun light position/target (guarded by last-texel comparison).
+- [ ] When `npm run perf:jitter -- --check` runs, the field rail shall pass unchanged.
 
-## Phase 2 - <name> (~Xhr)
+## Phase 2 - Canopy shadows via cheap casters + on-demand updates (~4hr)
 
-**Depends on:** <Phase 1 / nothing / etc.>
+**Depends on:** Phase 1, Q1.
 
-1. ...
+1. Probe #33730 on r184: minimal layer-gated caster + instanced receiver check in the live scene. Record the result either way.
+2. Canopy casters: one shadow-only InstancedMesh per tree type using the existing kiln cross-billboard geometry (18 verts/tree, alphaTest material with plain map fetch - no colorNode graph), instances never retired, on a dedicated layer the main camera ignores; `shadow.camera.layers` enables it + the default layer. If Q1 says blocked: `onBeforeShadow` indirect swap fallback, or trunk-only ships and canopy defers to the r185 bump.
+3. Shadow cadence: `shadow.autoUpdate = false`; `needsUpdate = true` when the texel-snapped frustum origin steps or the sun has moved past a small angle threshold. Never toggles `castShadow` at runtime (pipeline rebuild hitch).
+4. Visual survey before/after (canopy shadow presence at golden hour) + NSL probe re-run.
 
-**Acceptance (EARS):** ...
+**Acceptance (EARS):**
 
-## Phase N - Polish (optional, ~Xhr)
+- [ ] When Phase 2 ships, a visual survey shot at NSL golden hour shall show tree canopy shadows on the ground (not trunk-sticks only).
+- [ ] When Phase 2 ships, the NSL driven probe shall hold median >= 130 and 1%-low >= 55.
+- [ ] If the layer pattern breaks instanced receivers on r184, then the phase shall record the repro in the plan and ship the fallback instead.
 
-Nice-to-haves once Phases 1..N-1 land. Skip any that don't move the needle in playtest.
+## Phase 3 - Tree cull controller consolidation: ~108 -> one per type x child-mesh (~4hr)
+
+**Depends on:** nothing (parallel-safe with Phase 2, but lands after it to keep probe attribution clean).
+
+1. `buildAdditiveTreeMeshes` currently creates one compute-cull controller per wave x type x child-mesh (~108 on NSL): ~650 uniform writes, ~216 dispatches, ~27x duplicated geometry buffers, ~110 indirect draws per pass, every frame. Restructure to one controller per type x child-mesh (~6 on NSL) with capacity for the full island; waves append instances into the consolidated source buffers instead of minting controllers. [`js/world/foliageStreaming.js`](../js/world/foliageStreaming.js), [`js/world/TreePlacement.js`](../js/world/TreePlacement.js), [`js/world/treeComputeCull.js`](../js/world/treeComputeCull.js).
+2. Cold-corridor meshes fold into the same controllers (corridor trees are wave zero).
+3. Loading-stage contract unchanged: impostor-first coverage, wave retirement, low-tier behavior identical. [`tests/scene-loading-stages.spec.js`](../tests/scene-loading-stages.spec.js) stays green.
+4. **Runtime distance LOD via impostor selection in the cull pass** (folded in 2026-06-11; steady-state NSL currently renders LOD0 to the island edge): per tree type, one additional compute-cull controller renders far instances as kiln cross-billboards. Both controller kinds read the same per-type source offset buffer; the LOD0 controllers' cull condition gains a `distance(cameraPos, offset) < FAR_SWITCH` term, the impostor controller keeps the complement. Reuses the cold-coverage cross-billboard geometry/material path (minimal kiln artifacts - sidecar + albedo atlas - already fetched on NSL, zero new network). Impostor controllers never cast shadows (durable far-impostor rule). Target: ~6 LOD0 + 2 impostor = 8 controllers. The camera-relative threshold is safe on this path, unlike the WebGL billboard rule's distance-from-origin requirement: the compute pass re-evaluates every frame with no mesh/render-list switching (data-compaction only changes instance counts; meshes stay pinned), so the per-frame mesh-swap cost that rule guards against does not exist here.
+5. **Survey-gated**: before/after far-canopy silhouette shots into `cycle91-validation/asset-survey/`; if the billboard ring reads worse than LOD0-everywhere, push the threshold out or revert. Matt reviews; nothing ships as "better" without the shots.
+
+**Acceptance (EARS):**
+
+- [ ] When Phase 3 ships, `gameInstance.terrainBuilder._treeCullControllers.length` on fully-streamed NSL shall be <= 8.
+- [ ] When `npm test` runs, the scene-loading-stages spec shall pass unchanged.
+- [ ] When Phase 3 ships, the NSL driven probe shall show median and 1%-low no worse than Phase 2's run.
+- [ ] When Phase 3 ships, trees beyond the far-switch distance on NSL shall render as kiln cross-billboard impostors (verified via controller instance counts in a probe snapshot).
+- [ ] When Phase 3 ships, before/after far-silhouette survey shots shall exist under `cycle91-validation/asset-survey/` for Matt's review.
+
+## Phase 4 - Per-frame CPU and GC waste batch (~3hr)
+
+**Depends on:** nothing. Zero visual change, zero sim change.
+
+Audited items, each cheap and mechanism-confirmed:
+
+1. Sky LUT: `applyDayNightSample` re-bakes every frame because `setTunables` sets `lutDirty` unconditionally - restore the 0.5-degree sun threshold (re-bake on tunable change only when it actually changed). [`js/atmosphere/Atmosphere.js`](../js/atmosphere/Atmosphere.js), [`js/atmosphere/HosekWilkieSky.js`](../js/atmosphere/HosekWilkieSky.js).
+2. Perf bookkeeping gated on visibility: `getVisibleTriangleBreakdown` (fresh Matrix4/Frustum/Sphere + three `.filter` passes per frame) and `PerformanceMonitor.updateMetrics` extras (5,000-entry `sheep.filter` for `.length`, `getSystemBreakdown` Map sort, hidden-panel innerHTML) run only when the overlay is visible; QualityGovernor keeps consuming `lastFrameTime`. [`js/main.js`](../js/main.js), [`js/PerformanceMonitor.js`](../js/PerformanceMonitor.js), [`js/TerrainBuilder.js`](../js/TerrainBuilder.js).
+3. `setImpostorTint` debug probe (`window.__sdsImpostorProbe` rebuilt + Color allocations per frame in production) behind the debug flag. [`js/world/shaderPatches.js`](../js/world/shaderPatches.js).
+4. `_syncWebGpuTreeNodeControls` dedupes by material (Set) and change-gates static wind params. [`js/TerrainBuilder.js`](../js/TerrainBuilder.js).
+5. DOM writes gated on change: game timer (write on whole-second change), day/night chip (write on state change). [`js/GameTimer.js`](../js/GameTimer.js), [`js/components/GameHUD/DayNightChip.js`](../js/components/GameHUD/DayNightChip.js).
+6. QualityGovernor cached state object; useGameState snapshot dirty-flag (skip the per-frame JSON.stringify when version counters unchanged). [`js/perf/QualityGovernor.js`](../js/perf/QualityGovernor.js), [`js/components/hooks/useGameState.js`](../js/components/hooks/useGameState.js).
+
+**Acceptance (EARS):**
+
+- [ ] When Phase 4 ships, a counter in `bakeLUT` shall report <= 1 bake per 5 seconds on NSL steady-state (vs 1 per frame before).
+- [ ] While the perf overlay is hidden, `getVisibleTriangleBreakdown` shall not execute.
+- [ ] When Phase 4 ships, the NSL driven probe's mean heap-drop count shall be <= 60% of the Phase 1 run's.
+- [ ] When `npm run validation:screenshots -- --diff` runs, SSIM shall be >= 0.95 on all goldens (NSL goldens excluded while intentionally changed, per cycle-90 carryover).
+
+## Phase 5 - Load and boot sequencing (~4hr)
+
+**Depends on:** nothing.
+
+1. **Hang fix (bug):** `waitForInitialization` polls forever if `init()` throws - propagate the failure (reject with the init error) so the Play handler can surface it instead of stranding the loading screen. [`js/main.js`](../js/main.js), [`js/components/App.js`](../js/components/App.js).
+2. Heightfield fetch starts at swap entry (parallel with GLB warm + teardown) instead of after the models stage; cache the parsed heightfield keyed by scene so same-scene restarts skip fetch + re-parse (dispose drops the mesh, keeps the data). [`js/boot/initWorld.js`](../js/boot/initWorld.js); the cache lives client-side, not in `shared/`.
+3. Critical-asset slim: only jep + tree1 + rock1 gate `isInitialized`; other dogs and audio move to deferred (audio drops `oncanplaythrough` gating); the dead `PolyArt_Dogs_color.png` preload goes away. Selected dog GLB load starts at Play commit, not in `startGame`. [`js/GameAssetLoader.js`](../js/GameAssetLoader.js), [`js/main.js`](../js/main.js).
+4. Wave streaming: per-wave `compileAsync` scoped to the wave's new meshes (not the whole scene); `refreshObstacles` goes incremental (append the wave's trees instead of remapping all). [`js/world/foliageStreaming.js`](../js/world/foliageStreaming.js).
+5. Fix the stale cold-scatter stage attribution comment + the `reportAssetLoaded` completion-mark race while in there. [`js/boot/initWorld.js`](../js/boot/initWorld.js), [`js/GameAssetLoader.js`](../js/GameAssetLoader.js).
+6. **Tier-gated LOD1 fetch** (folded in 2026-06-11): `tree1_lod1.glb` + `tree2_lod1.glb` load only when the hardware tier will place them (low tier); the desktop deferred list drops them. [`js/GameAssetLoader.js`](../js/GameAssetLoader.js) `defineDeferredAssets`, tier source [`js/HardwareTier.js`](../js/HardwareTier.js).
+
+**Acceptance (EARS):**
+
+- [ ] If `init()` rejects, then the entrance Play path shall surface an error state within 5 seconds instead of polling forever.
+- [ ] While the hardware tier is medium or above, the deferred asset loader shall not fetch `tree1_lod1.glb` or `tree2_lod1.glb`; while the tier is low, LOD1 shall still load and place.
+- [ ] When a same-scene restart runs on NSL, the heightfield shall not be re-fetched (verified via a fetch counter or network log).
+- [ ] When Phase 5 ships, the NSL cold-load `[LOAD]` total on a local preview shall be <= 85% of the pre-phase capture.
+- [ ] When the e2e smoke specs run, entrance -> Play -> first-interactive shall pass on all scenes.
+
+## Phase 6 - Asset slimming: dead weight and duplication (~3hr)
+
+**Depends on:** nothing. Zero visual change.
+
+1. Dead assets out: `Mountain_Group_*` leave `modelPaths` + deferred lists (runtime no-op since the heightfield mountain shipped); `scatter/*.glb` (system removed Cycle 19) and `LP_BorderCollie_Blend_v01` screenshots stop shipping; `viteStaticCopy` globs exclude `marketing/` (42 MB) and source `images/` (14 MB) from dist. [`js/TerrainBuilder.js`](../js/TerrainBuilder.js), [`vite.config.js`](../vite.config.js).
+2. Dog animation dedup: the 5 dog GLBs each embed the identical 19-clip set (~800 KB x5). Bake one shared animation GLB + per-dog mesh/material GLBs (gltf-transform, already a dep); loader composes at runtime. ~6.5 MB -> ~1.4 MB network. [`js/GameAssetLoader.js`](../js/GameAssetLoader.js), [`js/TerrainBuilder.js`](../js/TerrainBuilder.js) loadAnimal, new `scripts/` bake step.
+3. Wolf duplicate clips stripped (12 of 24 are exact duplicates); farm house texture capped at 1024 via `TEXTURE_CAPS`. [`scripts/compress-glbs.mjs`](../scripts/compress-glbs.mjs).
+4. KTX2 evaluation for the two kiln albedo atlases (~33 MB GPU today): measure decode + quality on the WebGPU path; ship if clean, record if not.
+
+**Acceptance (EARS):**
+
+- [ ] When Phase 6 ships, `dist/` total size shall be <= 50% of the pre-phase build.
+- [ ] When Phase 6 ships, the five dog assets' combined network weight shall be <= 2.5 MB (from ~6.5 MB).
+- [ ] When `npm test` and the e2e dog-selection spec run, all five dogs shall load and animate.
+- [ ] If KTX2 atlases regress visuals or decode time, then the phase shall ship without them and record the measurement.
+
+## Phase 7 - Asset quality: trees, wolf, rocks, farm house (~4hr)
+
+**Depends on:** Phase 6 (bake pipeline touched once). **Visual change by design** - every change captured as before/after survey shots for Matt's review; nothing player-facing is announced by the agent.
+
+1. **tree2 cost re-bake**: 7,700 tris (2x tree1) for 30% of NSL placements - re-bake with reduced leaf recursion targeting <= 5,000 tris at matched silhouette (meshopt recipe: `lockBorder: false, error: 0.05`). [`tools/bake-trees.mjs`](../tools/bake-trees.mjs).
+2. **tree1 quality re-bake**: leaf size/variance + bark tint pass on the EZ-Tree params (70% of all NSL trees; Matt: "our trees are probably not great"). Same tri budget.
+3. **Wolf texture/material pass**: the night antagonist is 4 flat colors - bake a simple palette+gradient texture or vertex-color upgrade in the existing pipeline; no external 3D services without Matt's confirmation (standing preference).
+4. **Rock re-bake** at higher subdivision for the near-pen formations; **farm house** gets the 1024 cap from Phase 6 verified up close.
+5. Survey captures: before/after per asset into `cycle91-validation/asset-survey/`.
+
+**Acceptance (EARS):**
+
+- [ ] When Phase 7 ships, `gltf-transform inspect` on tree2.glb shall report <= 5,000 render triangles.
+- [ ] When Phase 7 ships, before/after survey PNGs shall exist for tree1, tree2, wolf, rocks, and the farm house under `cycle91-validation/asset-survey/`.
+- [ ] When the NSL driven probe re-runs post-rebake, median and 1%-low shall be no worse than Phase 3's run.
+- [ ] If any re-bake reads worse in the survey than the current asset, then it shall be reverted and the params recorded.
+
+## Phase 8 - Lighting uplift + final gates + pill decision (~3hr)
+
+**Depends on:** Phases 1-2 (shadow budget known), 4 (LUT path stable). **Visual change by design.**
+
+1. Keyframed hemisphere ambient (sky/ground colors driven by the existing day-night keyframes) replacing the flat ambient on day-loop scenes; small scenes keep the current look unless the survey says otherwise.
+2. Sky dome render-order flip (draw after opaques, depth-tested) - measured A/B; ship if it wins, revert if not.
+3. Optional if budget remains: subtle ToD color grade via TSL post pass. Skip if the frame budget is tight.
+4. Final gate battery: NSL driven probe 5 runs, field rail, `npm test`, build ratchet, perf:check, full visual survey.
+5. **Pill decision on data**: if 5-run mean 1%-low >= 55 and worst frame <= 45ms, remove the Experimental (WIP) pill from the NSL entrance card (the Cycle 91 close condition from NEXT_SESSION).
+
+**Acceptance (EARS):**
+
+- [ ] When Phase 8 ships, the NSL driven probe (5 runs) shall report mean 1%-low >= 55 and worst frame <= 45ms.
+- [ ] If the gate passes, then the NSL entrance card shall no longer render the Experimental (WIP) pill.
+- [ ] When `npm run build` runs at phase close, the bundle ratchet shall pass (any bump deliberate and recorded here).
+- [ ] When the lighting changes ship, before/after survey shots (noon, golden hour, night) shall exist under `cycle91-validation/lighting-survey/`.
 
 ## Dependencies
 
-Prose ordering. Mostly serial, occasional parallelism:
-
 ```
-Phase 1 → Phase 1.5 → Phase 2 + Phase 3 (parallel) → Phase 4 (optional)
+Phase 1 -> Phase 2 -> Phase 3 (probe attribution order)
+Phase 4, Phase 5 independent (interleave between probe runs)
+Phase 6 -> Phase 7 (bake pipeline)
+Phase 8 last (final gates + pill decision)
 ```
-
-When two phases can run in parallel, say so. When one depends on another's specific output, say what.
 
 ## Frozen files (cycle-specific additions)
 
-These files require explicit task-brief authorization to modify within this cycle. The durable fence list is in [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md); add cycle-specific freezes here only if the work pattern requires extra discipline.
-
-- (Cycle-specific additions, if any. Often empty - the durable fence is enough.)
+- None beyond the durable fence. `shared/scenes/types.js` is not touched this cycle; no wire, sim, or SceneDef schema changes.
 
 ## Hard stops
 
-Durable hard stops apply on every cycle - see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md). The list below adds **cycle-specific** stops that aren't covered by the durable list:
+Durable stops per [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md), plus:
 
-1. (Cycle-specific addition - e.g. "Phase A beacon shows zero pageviews after 1hr - pull the hook.")
-2. (Cycle-specific addition.)
+1. Any sim-baseline fixture diff at any phase: abort the phase, the change was not sim-neutral.
+2. NSL or field probe regresses below its prior phase's numbers after a "perf" fix: revert the fix, record the measurement.
+3. The #33730 layer probe shows broken instanced receivers AND the indirect-swap fallback also fails: ship Phase 1 trunk-only, defer canopy to the r185 bump, record in BACKLOG.
+4. Asset re-bake changes any collision/obstacle footprint (tree radius, rock bounds): abort that re-bake - visual-only means visual-only.
 
 ## What NOT to do during this cycle
 
-(Cycle-specific list - things that look like next-cycle scope creep, refactors that should wait, ideas that have been decided against.)
+- No sim tick-rate change (deferred; needs the sim-change ritual and its own cycle).
+- No three.js fork or vendored patch unless the #33730 repro forces a one-file tracked patch (and then: documented, removed on the r185 bump).
+- No external AI 3D-generation services for assets (standing preference; in-repo bakes only).
+- No decomposition of OptimizedSheep.js / GrassSystem.js (durable decision).
+- No new postprocessing stack beyond the optional single color-grade pass.
+- No entrance default change (Rolling Hills stays; Matt's call only).
 
 ## Success criteria (cycle close)
 
-`/cycle-close` reads this section and asks the user to confirm each item. Don't pre-check. Each item should be EARS-form so the cycle-close reconciliation hook can grep its predicate against shipped commits + test output.
-
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
+- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
 - [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean.
+- [ ] When `npm run build` runs at cycle close, production build shall be clean and the ratchet shall pass.
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] (Cycle-specific qualitative criteria - e.g. "When Cycle 5 closes, Rolling Hills shall feel meaningfully different from Field per playtest.")
+- [ ] When the cycle closes, the NSL driven probe shall report median >= 130 FPS and mean 1%-low >= 55 with shadows intact.
+- [ ] When the cycle closes, a consolidated before/after report (perf numbers, load times, dist size, asset surveys) shall exist for Matt's scale-back decisions.
 
 ## References
 
-- [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) - this template
-- [`docs/INTERFACE_FENCE.md`](INTERFACE_FENCE.md) - durable frozen files
-- [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) - durable hard-stop list
-- [`docs/NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md) - pickup-state contract
-- [`docs/BACKLOG.md`](BACKLOG.md) - closed cycles + deferred items
-- [`docs/archive/cycles/`](archive/cycles/) - past cycle plans
-- [EARS notation](https://kiro.dev/docs/specs/) - testable acceptance lines
+- [`../cycle91-validation/shadow-spike-main.json`](../cycle91-validation/shadow-spike-main.json) - the spike data this plan is built on
+- [`archive/cycles/cycle-90-plan.md`](archive/cycles/cycle-90-plan.md) - prior cycle (220-submit fix + first shadows)
+- [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md), [`BACKLOG.md`](BACKLOG.md)

@@ -278,8 +278,16 @@ export function installProductionWebGpuLightingBridge(sceneManager, state = null
         directional.shadow.camera.right = 70;
         directional.shadow.camera.top = 70;
         directional.shadow.camera.bottom = -70;
-        directional.shadow.bias = -0.0005;
-        directional.shadow.normalBias = 0.04;
+        // Cycle 91 P1: bias scales with the world size of one shadow texel,
+        // so a future per-tier map size or extent change keeps acne and
+        // peter-panning balanced instead of inheriting magic constants tuned
+        // for 1024px / +-70m (texelWorld 140/1024 ~ 0.137).
+        const texelWorld = (directional.shadow.camera.right - directional.shadow.camera.left)
+            / directional.shadow.mapSize.x;
+        const REFERENCE_TEXEL_WORLD = 140 / 1024;
+        const biasScale = texelWorld / REFERENCE_TEXEL_WORLD;
+        directional.shadow.bias = -0.0005 * biasScale;
+        directional.shadow.normalBias = 0.04 * biasScale;
         directional.userData.shadowConfigured = true;
     }
     sceneManager.getScene().add(ambient);

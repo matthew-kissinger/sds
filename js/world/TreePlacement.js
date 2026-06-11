@@ -35,6 +35,18 @@ const HYBRID_TREE_LOD1_SWITCH_DISTANCE = 56;
 const HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE = 144;
 let treeImpostorRuntimePromise = null;
 
+// Cycle 91 P1: alpha-carded leaf meshes are the entire tree shadow cost.
+// The r184 WebGPU shadow pass does not apply alphaHash, so hashed leaf
+// cards cast solid quads anyway while still paying their color-texture
+// fetch per depth fragment. Opaque trunk/branch meshes keep casting:
+// NSL driven probe measured 142.9 median / 64.8 1%-low with leaf casters
+// off vs 71.9 / 44.6 with them on (cycle91-validation/shadow-spike-main
+// .json). Far impostors never cast (durable rule).
+function materialCastsShadow(material) {
+    const mats = Array.isArray(material) ? material : [material];
+    return !mats.some(m => m && (m.alphaHash === true || m.alphaTest > 0 || m.transparent === true));
+}
+
 export function resolveWebGpuNativeTreeImpostorRoute(search = (typeof window === 'undefined' ? '' : window.location.search)) {
     const params = new URLSearchParams(search);
     const mode = params.get('webgpuNativeTreeImpostors');
@@ -201,7 +213,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
                     matrices,
                     offsets,
                     count: instances.length,
-                    castShadow: !builder.isMobile,
+                    castShadow: !builder.isMobile && materialCastsShadow(meshDef.material),
                 });
                 const im = controller.mesh;
                 // clearTrees removes it from the scene; the controller owns the cloned
@@ -301,7 +313,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
                 // driven.json). Mobile keeps frustum culling: fewer, larger
                 // chunks and a tighter GPU budget, and the repro is desktop data.
                 im.frustumCulled = builder.isMobile;
-                im.castShadow = !builder.isMobile;
+                im.castShadow = !builder.isMobile && materialCastsShadow(meshDef.material);
                 im.receiveShadow = true;
 
                 builder.scene.add(im);
@@ -507,7 +519,7 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {})
                     matrices,
                     offsets,
                     count: instances.length,
-                    castShadow: !builder.isMobile,
+                    castShadow: !builder.isMobile && materialCastsShadow(meshDef.material),
                 });
                 const im = controller.mesh;
                 im.userData.sharedFromGlbCache = true;
@@ -540,7 +552,7 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, opts = {})
                 im.computeBoundingBox?.();
                 im.computeBoundingSphere?.();
                 im.frustumCulled = true;
-                im.castShadow = !builder.isMobile;
+                im.castShadow = !builder.isMobile && materialCastsShadow(meshDef.material);
                 im.receiveShadow = true;
                 builder.scene.add(im);
                 builder.trees.push(im);

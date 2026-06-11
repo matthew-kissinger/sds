@@ -394,9 +394,17 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                             / (sunLight.shadow.mapSize.x || 2048);
                         const tx = Math.round(dog.position.x / texel) * texel;
                         const tz = Math.round(dog.position.z / texel) * texel;
-                        sunLight.position.set(tx + off.x, off.y, tz + off.z);
-                        sunLight.target.position.set(tx, 0, tz);
-                        sunLight.target.updateMatrixWorld();
+                        // Cycle 91 P1: the snap quantizes to ~0.14m steps, so a
+                        // standing or slow dog produces the same (tx, tz) for many
+                        // frames; skip the light/target writes (and the matrix
+                        // update they force) until the snapped cell changes.
+                        if (tx !== off.lastTx || tz !== off.lastTz) {
+                            off.lastTx = tx;
+                            off.lastTz = tz;
+                            sunLight.position.set(tx + off.x, off.y, tz + off.z);
+                            sunLight.target.position.set(tx, 0, tz);
+                            sunLight.target.updateMatrixWorld();
+                        }
                     }
                 }
                 const t = dn.getT();

@@ -65,6 +65,12 @@ const MATRIX_CONFIGS = [
     { id: 'perfmon-off', toggle: 'perfmon-off' },
     { id: 'governor-off', toggle: 'governor-off' },
     { id: 'collision-profile', collisionProbe: true },
+    // Cycle 91 shadow spike: attribute the NSL shadow depth-pass cost.
+    { id: 'shadow-off', toggle: 'shadow-off' },
+    { id: 'shadow-trees-cast-off', toggle: 'shadow-trees-cast-off' },
+    { id: 'shadow-leaves-cast-off', toggle: 'shadow-leaves-cast-off' },
+    { id: 'shadow-mapsize-512', toggle: 'shadow-mapsize-512' },
+    { id: 'shadow-frustum-40', toggle: 'shadow-frustum-40' },
 ];
 
 function parseArgs(argv) {
@@ -292,6 +298,70 @@ function applyToggle(toggleId) {
         }
         if (count === 0) return { applied: false, reason: 'no hybrid runtimes' };
         return { applied: true, count };
+    }
+    // -----------------------------------------------------------------------
+    // Cycle 91 shadow spike toggles. All run post-warmup on a day-loop scene,
+    // after _tickDayLoop has already flipped the bridge light's castShadow on
+    // (game._sunShadowFollowOffset exists), so a one-shot castShadow write
+    // sticks - the day loop only sets castShadow inside its first-tick branch.
+    if (toggleId === 'shadow-off') {
+        const sun = gi.sceneManager?.webgpuSunLight;
+        if (!sun?.castShadow) return { applied: false, reason: 'no shadow-casting sun light' };
+        sun.castShadow = false;
+        return { applied: true };
+    }
+    if (toggleId === 'shadow-trees-cast-off') {
+        // All consolidated compute-cull tree meshes stop casting; terrain,
+        // rocks, structures, sheep, dog keep their shadows.
+        const ctrls = gi.terrainBuilder?._treeCullControllers ?? [];
+        let count = 0;
+        for (const c of ctrls) {
+            if (c?.mesh?.castShadow) { c.mesh.castShadow = false; count++; }
+        }
+        // Chunked (non-consolidated) tree meshes too, if the scene has any.
+        const trees = gi.terrainBuilder?.trees ?? [];
+        for (const t of trees) {
+            t.traverse?.((o) => {
+                if (o.castShadow && !o.userData?.webgpuTreeComputeCull) { o.castShadow = false; count++; }
+            });
+        }
+        if (count === 0) return { applied: false, reason: 'no casting tree meshes' };
+        return { applied: true, count };
+    }
+    if (toggleId === 'shadow-leaves-cast-off') {
+        // Trunk/branch (opaque) meshes keep casting; alpha-tested/hashed leaf
+        // card meshes stop. Tests whether the depth-pass cost is dominated by
+        // alpha-evaluated leaf fragments rather than caster count per se.
+        const ctrls = gi.terrainBuilder?._treeCullControllers ?? [];
+        let count = 0;
+        let kept = 0;
+        const isAlphaMat = (m) => !!m && (m.alphaHash === true || m.alphaTest > 0 || m.transparent === true);
+        for (const c of ctrls) {
+            const mesh = c?.mesh;
+            if (!mesh?.castShadow) continue;
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            if (mats.some(isAlphaMat)) { mesh.castShadow = false; count++; } else { kept++; }
+        }
+        if (count === 0) return { applied: false, reason: 'no alpha-material casting tree meshes' };
+        return { applied: true, count, kept };
+    }
+    if (toggleId === 'shadow-mapsize-512') {
+        const sun = gi.sceneManager?.webgpuSunLight;
+        if (!sun?.castShadow) return { applied: false, reason: 'no shadow-casting sun light' };
+        try { sun.shadow.map?.dispose?.(); } catch { /* ignore */ }
+        sun.shadow.map = null;
+        sun.shadow.mapSize.set(512, 512);
+        sun.shadow.needsUpdate = true;
+        return { applied: true };
+    }
+    if (toggleId === 'shadow-frustum-40') {
+        const sun = gi.sceneManager?.webgpuSunLight;
+        if (!sun?.castShadow) return { applied: false, reason: 'no shadow-casting sun light' };
+        const cam = sun.shadow.camera;
+        cam.left = -40; cam.right = 40; cam.top = 40; cam.bottom = -40;
+        cam.updateProjectionMatrix();
+        sun.shadow.needsUpdate = true;
+        return { applied: true };
     }
     if (toggleId === 'perfmon-off') {
         if (gi.performanceMonitor) gi.performanceMonitor.updateMetrics = () => {};
@@ -676,7 +746,20 @@ async function runMatrix(args) {
         const runs = [];
         for (let i = 1; i <= args.matrixRuns; i++) {
             console.log(`[C89-JITTER] matrix ${config.id} run ${i}/${args.matrixRuns}`);
-            const result = await captureRun(args, { scene: args.scene, mode: args.mode, config, runIndex: i });
+            let result;
+            try {
+                result = await captureRun(args, { scene: args.scene, mode: args.mode, config, runIndex: i });
+            } catch (e) {
+                // A page/GPU-process crash on one run must not lose the whole
+                // batch - record it and keep going (NSL loads are heavy enough
+                // that back-to-back contexts occasionally take the GPU process
+                // down with them).
+                result = {
+                    config: config.id, run: i, scene: args.scene, mode: args.mode,
+                    crashed: String(e?.message || e).slice(0, 200), ok: false,
+                };
+                console.log(`[C89-JITTER] run crashed: ${result.crashed}`);
+            }
             runs.push(result);
             if (result.skipped) break;
         }
