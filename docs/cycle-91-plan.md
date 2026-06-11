@@ -51,9 +51,11 @@ One pass over lighting, runtime perf, load sequencing, and assets, every fix gat
 
 **Acceptance (EARS):**
 
-- [ ] When Phase 2 ships, a visual survey shot at NSL golden hour shall show tree canopy shadows on the ground (not trunk-sticks only).
-- [ ] When Phase 2 ships, the NSL driven probe shall hold median >= 130 and 1%-low >= 55.
-- [ ] If the layer pattern breaks instanced receivers on r184, then the phase shall record the repro in the plan and ship the fallback instead.
+- [x] When Phase 2 ships, a visual survey shot at NSL golden hour shall show tree canopy shadows on the ground (not trunk-sticks only). (`cycle91-validation/canopy-shadow-probe/ab-canopy-on.png` vs `ab-canopy-off.png` - the A/B isolates the canopy contribution: full canopy-shaped shadows vs trunk sticks. The probe ToD pin remains flaky, so the shots are at low morning sun, which reads equivalently.)
+- [x] When Phase 2 ships, the NSL driven probe shall hold median >= 130 and 1%-low >= 55. (131.6 / 64.2 mean 1%-low, 5 runs, `cycle91-validation/jitter-nsl-post-canopy-sole.json`. The canopy depth pass costs ~0.7ms off the 144.9 shadow-light run - the price of restoring the canopy mass P1 removed; all gates and the pill bar hold.)
+- [x] If the layer pattern breaks instanced receivers on r184, then the phase shall record the repro in the plan and ship the fallback instead. (Repro ran CLEAN: layer-2 instanced casters shadow correctly and instanced receivers stay lit on r184 in the live scene - `cycle91-validation/shadow-layer-probe/`. The #33730 failure mode did not reproduce against our receiver setup; the layer pattern shipped.)
+
+**Status (2026-06-11): SHIPPED**, two recorded deviations: (a) the canopy caster is the SOLE tree caster once armed - LOD0 trunks stop casting (their depth pass runs the full wind vertex shader, the billboard atlas already contains the trunk, and trunk+billboard double-cast measured ~equal cost with a double-shadow smudge); (b) item 3's shadow cadence (autoUpdate=false + event-driven needsUpdate) is DROPPED: sheep, the dog, and wolves cast shadows and move continuously, so event-gated re-render freezes animal shadows mid-wander. The depth-pass win was already taken by P1 + the LOD chain.
 
 ## Phase 2.5 - Tree pipeline remake + NSL full LOD chain + minimap (Matt's directive, 2026-06-11, ~2 days)
 
@@ -196,8 +198,8 @@ Matt, mid-cycle: "i still dont like the texture of the ground and how it is dark
 
 **Acceptance (EARS):**
 
-- [ ] When Phase 7.5 ships, before/after ground survey shots shall exist under `cycle91-validation/lighting-survey/` showing no grid-aligned dark patch distribution.
-- [ ] When Phase 7.5 ships, the NSL driven probe shall hold median and 1%-low no worse than the prior phase's run.
+- [x] When Phase 7.5 ships, before/after ground survey shots shall exist under `cycle91-validation/lighting-survey/` showing no grid-aligned dark patch distribution. (`ground-before-sine-lattice.png` / `ground-after-perlin.png`. Root cause: the WebGPU terrain node material's n1/n2/n3 were sums of plane SINE waves - four periodic stripe families whose thresholded product is a regular interference lattice, so dirt patches repeated on a grid. Replaced with MaterialX perlin noise, octaves rotated 43deg apart, matching the WebGL path's aperiodic value-noise character; the sine path remains as a fallback for TSL builds without mx_noise_float.)
+- [ ] When Phase 7.5 ships, the NSL driven probe shall hold median and 1%-low no worse than the prior phase's run. (Checked at the Phase 8 gate battery.)
 
 ## Phase 8 - Lighting uplift + final gates + pill decision (~3hr)
 

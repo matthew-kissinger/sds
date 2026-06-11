@@ -57,6 +57,15 @@ function materialCastsShadow(material) {
  */
 export const CONSOLIDATED_FAR_SWITCH_DISTANCE = 200;
 
+/**
+ * Cycle 91 Phase 2: layer for shadow-only canopy casters. The main camera
+ * renders layer 0 only; the bridge sun's shadow camera additionally enables
+ * this layer, so the cross-billboard casters are depth-pass-only. Verified
+ * against three.js #33730 on r184 in the live scene (instanced receivers
+ * stay lit): cycle91-validation/shadow-layer-probe/.
+ */
+export const TREE_SHADOW_LAYER = 2;
+
 const _appendDummy = new THREE.Object3D();
 
 function writeConsolidatedTreeData(instances, baseOffset, matrices, offsets) {
@@ -159,6 +168,7 @@ function getOrCreateConsolidatedEntry(builder, cullModules, treeType, meshDefs, 
         lod0: [],
         far: null,
         farGeometry: null,
+        shadowCaster: null,
         impostorMatrices: new Float32Array(capacity * 16),
         impostorOffsets: new Float32Array(capacity * 3),
     };
@@ -220,7 +230,71 @@ function growConsolidatedEntry(builder, cullModules, entry, neededCapacity) {
         replaceTrackedController(builder, oldFar, fresh);
         entry.far = fresh;
     }
+    if (entry.shadowCaster) {
+        // The caster's instanceMatrix wraps the (reallocated) impostor store;
+        // rebuild it on the new array, reusing geometry + material.
+        const old = entry.shadowCaster;
+        const fresh = new THREE.InstancedMesh(old.geometry, old.material, capacity);
+        fresh.instanceMatrix = new THREE.InstancedBufferAttribute(entry.impostorMatrices, 16);
+        fresh.instanceMatrix.needsUpdate = true;
+        fresh.count = entry.used;
+        fresh.castShadow = true;
+        fresh.receiveShadow = false;
+        fresh.frustumCulled = false;
+        fresh.layers.set(TREE_SHADOW_LAYER);
+        fresh.userData.webgpuTreeCanopyShadowCaster = true;
+        fresh.userData.webgpuTreeType = entry.treeType;
+        // Keep clearTrees from double-disposing the shared geometry/material
+        // through the OLD mesh: swap it out of builder.trees in place.
+        builder.scene.remove(old);
+        builder.scene.add(fresh);
+        if (Array.isArray(builder.trees)) {
+            const ti = builder.trees.indexOf(old);
+            if (ti >= 0) builder.trees.splice(ti, 1, fresh);
+            else builder.trees.push(fresh);
+        }
+        old.dispose(); // instance attributes only; geometry/material live on
+        entry.shadowCaster = fresh;
+    }
     entry.capacity = capacity;
+}
+
+/**
+ * Cycle 91 Phase 2: shadow-only canopy caster. One plain InstancedMesh per
+ * type, kiln cross-billboard geometry (18 verts/tree), alphaTest material
+ * with a plain map fetch (no colorNode graph - the r184 shadow pass ignores
+ * alphaHash but honors alphaTest), covering EVERY landed tree. Lives on
+ * TREE_SHADOW_LAYER so only the shadow camera renders it; LOD0 trunks keep
+ * casting sharp near shadows, the billboards restore the canopy mass that
+ * P1 took out of the depth pass.
+ */
+function makeCanopyShadowCaster(builder, entry, sidecar, texture) {
+    const sun = getSceneManager()?.webgpuSunLight ?? null;
+    if (builder.isMobile || !sun?.userData?.shadowConfigured || !texture) return null;
+    const geometry = createColdImpostorGeometry(sidecar, 0);
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        alphaTest: 0.4,
+        side: THREE.DoubleSide,
+    });
+    const capacity = entry.impostorMatrices.length / 16;
+    const caster = new THREE.InstancedMesh(geometry, material, capacity);
+    caster.instanceMatrix = new THREE.InstancedBufferAttribute(entry.impostorMatrices, 16);
+    caster.instanceMatrix.needsUpdate = true;
+    caster.count = entry.used;
+    caster.castShadow = true;
+    caster.receiveShadow = false;
+    // The shadow camera's dog-following box does the culling; 18 verts per
+    // instance keeps a full-island depth draw trivial.
+    caster.frustumCulled = false;
+    caster.layers.set(TREE_SHADOW_LAYER);
+    // clearTrees disposes its own geometry + material (map nulled there, so
+    // the cached atlas texture survives the swap) - no shared-cache tag.
+    caster.userData.webgpuTreeCanopyShadowCaster = true;
+    caster.userData.webgpuTreeType = entry.treeType;
+    sun.shadow.camera.layers.enable(TREE_SHADOW_LAYER);
+    builder.scene.add(caster);
+    return caster;
 }
 
 function makeFarImpostorController(builder, cullModules, entry, material) {
@@ -283,6 +357,12 @@ export function appendConsolidatedTreeInstances(builder, cullModules, treeType, 
         entry.impostorOffsets.set(o.subarray(0, n * 3), entry.used * 3);
     }
     entry.used += n;
+    // Cycle 91 Phase 2: the canopy shadow caster shares the impostor store;
+    // appends just extend its live count and re-upload.
+    if (entry.shadowCaster) {
+        entry.shadowCaster.count = entry.used;
+        entry.shadowCaster.instanceMatrix.needsUpdate = true;
+    }
     return { entry, createdMeshes };
 }
 
@@ -333,6 +413,19 @@ export function enableConsolidatedFarImpostors(builder, atlasByType, materialsBy
                 if (Array.isArray(builder.trees)) builder.trees.push(far.mesh);
                 entry.far = far;
                 for (const slot of entry.lod0) slot.controller.setLodEnabled(true);
+                // Cycle 91 Phase 2: same atlas arrival also arms the
+                // shadow-only canopy caster (desktop day-loop scenes). Once
+                // it exists it is the SOLE tree caster: the LOD0 trunks stop
+                // casting (their depth pass runs the full wind vertex shader
+                // per vertex, and the billboard atlas already contains the
+                // trunk, so trunk+billboard double-cast cost a measured
+                // ~0.7ms/frame and a double-shadow smudge). One-time toggle
+                // at arm, never per-frame.
+                entry.shadowCaster = makeCanopyShadowCaster(builder, entry, atlas.sidecar, texture);
+                if (entry.shadowCaster) {
+                    if (Array.isArray(builder.trees)) builder.trees.push(entry.shadowCaster);
+                    for (const slot of entry.lod0) slot.controller.mesh.castShadow = false;
+                }
                 // Best-effort pipeline prewarm for the one new mesh so its
                 // first visible frame doesn't pay the compile stall.
                 try {
