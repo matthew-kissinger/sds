@@ -4,6 +4,22 @@
 
 ## Recently Completed
 
+### Cycle 90 - `nsl-runtime-perf` (closed 2026-06-11)
+
+Plan archived at [`docs/archive/cycles/cycle-90-plan.md`](archive/cycles/cycle-90-plan.md). Scoped from NEXT_SESSION's proposed NSL-runtime-perf goal plus Matt's mid-cycle visual directive (water, lighting, shadows, ground color), executed fully autonomously after `/cycle-start "complete cycle autonomously"`. **SHIPPED: Phases 1, 2, 3, 7, 8; Phases 4, 5, 6 NOT ARMED by the attribution gate.** Direct-to-main commits `77c0337` (batched compute-cull + probe extensions), `ddb9b40` (visual pass). Deploy run `27336393613`.
+
+- **The perf fix (P3).** NSL ran 36 FPS median at the QualityGovernor floor; every isolation/toggle sat at the same 36 (content-independent) while WebGL ran 144.9. Root cause: Cycle 87's per-wave streaming created compute-cull controllers per wave per type per child-mesh - 108 tree + 2 grass controllers x 2 `renderer.compute()` calls = 220 `queue.submit()`s per frame (~21ms fixed). `_driveComputeCull` now batches every controller's passes into ONE `renderer.compute(array)` call: 36 -> 144.9 median at full quality, zero visual change proven by SSIM differential + abs-diff heatmaps (all deltas localized to wall-clock sky/water).
+- **The visual pass (P8, Matt's mid-cycle directive).** WebGPU scenes had NO shadows anywhere (the lighting-bridge directional never carried a shadow camera) and NSL's world origin is open water. The bridge directional now has a 1024px +-70m shadow camera, day-loop-gated: NSL enables it and recenters it on the dog each frame (texel-snapped); small grassed scenes keep it off (a global config measured field at 48 FPS median; grass casters alone produced 687ms worst frames - grass never casts now). Ground: optional `TerrainDef.colors` SceneDef override, NSL lifts its near-black palette. Water: `minDepthT` floor 0.45 on coastline scenes restores the shallow band + shoreline foam. Day-night: t=0.60 keyframe holds daylight through the day phase.
+- **Probe extensions.** `--waitFoliage` gate, `computecull-off`/`grasscull-off`/`treecull-compute-off` toggles, `--configs` triage filter, controller-count probe, NSL visual differential + survey tools.
+- **Shipped numbers.** NSL driven survival: 72.5 FPS median locked at full quality with shadows (was 36 at quality floor, no shadows); field rail PASS at 144.9 median / 137.5 1%-low / 1 hitch per 30s. `npm test` 1518; `perf:check` 0 regressed; bundle ratchet deliberately bumped main 609 -> 611 / other 548 -> 549 KiB.
+- **Experimental (WIP) pill stays.** With shadows on, NSL misses the pill bar (1%-low 45-47 vs >= 55; one run flapped across the 6.94ms vsync edge at 1,513 hitches/30s). Next lever: shadow depth-pass cost.
+
+Deferred / carryover:
+
+- **NSL budget headroom (Cycle 91 candidate, scaffolded as `nsl-budget-headroom`):** get NSL under the 6.94ms 143Hz budget with shadows on - per-instance shadow culling for the consolidated tree meshes, shadow-pass draw-cost reduction, TSL instancedArray impostor selection (R&D spike shape from Cycle 89), then remove the pill on data.
+- **Matt feel-check:** NSL shadows/ground/water/daylight on the live site (visual surveys in `cycle90-validation/visual-survey/before3` vs `after-final`), Home Field 144.9 rail, and whether 72 locked + shadows beats 144 + no shadows on feel.
+- Standing carryover unchanged: S24+ device pass (now also confirms mobile keeps shadows off and the mobile tree-cull path), screenshot-golden re-capture (goldens stale since 2026-05-16; Phase 8 intentionally changed NSL looks, so re-capture AFTER Matt approves them), launch posting from `docs/launch/`, Q4 staging (optional).
+
 ### Cycle 89 - `frame-stability` (closed 2026-06-10)
 
 Plan archived at [`docs/archive/cycles/cycle-89-plan.md`](archive/cycles/cycle-89-plan.md). Scoped from Matt's two reports (NSL laggy while moving; Home Field unstable with 3 sheep), executed same-day fully autonomously after "complete and commit push and deploy". **SHIPPED: measurement phases + the reshape fix + close rails; the four originally planned fix phases measured NOT ARMED and were skipped on data** - direct-to-main commits `a63e0a9` (entrance pre-phase), `78ad541` (probe), `20aefdc` (the fix), `c010f41` (trailer tools), `3afb100` (docs), `f45c585` (e2e fix). Final Deploy run `27315742590` green.
