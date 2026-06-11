@@ -1,44 +1,40 @@
-# Next Session - Cycle 91 in flight (lighting-perf-optimization)
+# Next Session - Cycle 92 intake (nsl-frame-floor)
 
 > **Updated:** 2026-06-11
-> **For:** Cycle 91 (`docs/cycle-91-plan.md`, active - P1 + most of Phase 2.5 shipped)
-> **Pickup priority:** Phase 2.5 item 4 - wire the NSL consolidated cull pass for the full LOD chain (LOD0 / LOD1 / kiln impostor by camera distance). It is the structural fix for Matt's open observation: small trees at distance render full LOD0 and their alphaHash leaf cards dissolve to near-invisible at sub-pixel coverage.
+> **For:** Cycle 92 (`docs/cycle-92-plan.md`, scaffolded - needs Goal + Phases)
+> **Pickup priority:** Matt reviews the Cycle 91 visual queue (tree remake, canopy shadows, ground noise, wolf gradient - surveys in `cycle91-validation/`, report in `cycle91-validation/REPORT.md`), then fill the Cycle 92 plan and run `/cycle-start`.
 
 ## Cold-Start Orientation
 
-Read in order: this file -> [`docs/cycle-91-plan.md`](docs/cycle-91-plan.md) (Goal, Evidence base, Phase 2.5 Status block) -> `git log --oneline -8`.
+Read in order: this file -> [`docs/cycle-92-plan.md`](docs/cycle-92-plan.md) (scaffold + intake candidates) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) Cycle 91 entry -> `git log --oneline -10`.
 
 ## Where It Stands
 
-**Cycle 91 is mid-flight.** Shipped so far (commits on main):
+**Cycle 91 closed 2026-06-11** (plan archived at `docs/archive/cycles/cycle-91-plan.md`). Shipped autonomously end-to-end: tree pipeline remake on ez-tree main, runtime LOD chain (LOD0 within 200m / kiln impostors beyond, ~108 controllers -> appendable per-type), first WebGPU canopy shadows (sole-caster cross-billboards), per-frame waste batch (LUT bakes 132/s -> ~2/s), load/boot fixes, dist 121 -> 58.7 MB, dog/wolf/farmhouse re-bakes, and the gridded-ground fix (sine lattice -> rotated hash value noise, after the first perlin fix regressed the field rail and was bisected + replaced per hard stop 2).
 
-1. **P1 shadow caster scope** (`eaa4e3c`): alpha-material leaf cards out of the shadow depth pass, opaque trunks keep casting. NSL driven probe 71.9 -> 142.9 median, 44.6 -> 65.7 mean 1%-low (gates 130/55 pass); field rail unchanged. Plus texel-proportional shadow bias, last-texel guard on the day-loop shadow follow.
-2. **Phase 2.5 tree pipeline remake** (Matt's directive, pre-empts other phases): trees re-baked from ez-tree GitHub main (sibling clone `../ez-tree` @48dc193 - stratified sampling, rounded leaf normals, externalized textures), preset-pure structure, real PBR bark (Bark014/Bark015 after the preset defaults washed white in-game), green ash-leaf swap on the tree1 aspen (kills the garish yellow island). LOD1s meshopt-baked at ratio 0.25; kiln impostor atlases re-baked via the compiled pixelforge CLI; tree GLB textures WebP-converted (8.3 -> 1.9 MB). White-trunk root cause fixed properly: transform-free GLBs (V-repeat baked into UVs) + `webgpuTreeBranchNodeMaterial` now samples source map/normal/AO instead of a flat tint.
-3. **Minimap/timer overlap fixed** (`--sds-topright-reserve` CSS variable; layout assert now includes the timer).
+**Numbers at close:** NSL driven survival median 144.9 at full quality with shadows; field rail 77.4 mean 1%-low / 20.9ms worst, PASS. 1518 vitest green, ratchet at main 620 / other 551 KiB (deliberate bumps recorded).
 
-**Open items, in order:**
+**The Experimental (WIP) pill STAYS on NSL.** The gate (5-run mean 1%-low >= 55, worst <= 45ms) passed one battery (70.5 / 16.8ms) and failed the shipping-build re-run (54.2 / 145.9ms); an A/A control proved the gap is box-state drift, not code. Cycle 92's center of gravity: find what moves NSL 1%-low between 54 and 70 on identical code (GC suspect - heap-drop hitch fraction 0.37-0.44, intermittent ~146-160ms stall), fix it, re-run the gate on a controlled box state.
 
-1. **Phase 2.5 item 4 (the pickup):** cull-pass LOD selection on NSL - per-type impostor controllers sharing the source offset buffers, LOD0 near / impostor far (LOD1 mid-band tier-tunable). Design notes in the plan's Phase 3 item 4 (absorbed) + Phase 2.5. Probe gates: median/1%-low no worse than 142.9/65.7. Survey shots before/after.
-2. After item 4: re-check Matt's distant-leaf complaint; if a mid-band still reads thin, bump tree1 leaf size/count (new bake has ~900 leaf quads vs the old 2,310).
-3. Verify the WebGPU leaf node material handles the new rounded leaf normals (WebGL backface-flip skip shipped in `shaderPatches.js`; WebGPU equivalent unverified).
-4. Then the remaining plan phases: P2 canopy shadows (impostor casters + cadence), P3 controller consolidation, P4 per-frame waste, P5 load/boot (+ tier-gated LOD1 fetch), P6 asset slimming, P7 remaining assets (wolf, rocks, farm house), P8 lighting uplift + pill decision.
+## Cycle 92 intake candidates (from BACKLOG carryover)
 
-**Matt review queue:** tree survey shots in `cycle91-validation/asset-survey/` (staging candidates + `nsl-noon-new-trees.png`); swap any pick via `tools/asset-gallery/picks.json` + `node tools/asset-gen/integrate.mjs --compress`.
+1. NSL frame floor: 1%-low variance + intermittent stall + heap-drop growth investigation, then the pill decision re-run.
+2. P8 lighting items: keyframed hemisphere ambient (survey-gated, own pass), sky-dome render-order A/B (needs a fill-rate-bound target).
+3. Rock re-bake behind a collider-parity harness; KTX2 textures pending visual approval.
+4. Golden re-capture (stale since 2026-05-16) - AFTER Matt approves the Cycle 91 look.
 
-## Carryover (recorded in BACKLOG)
+## Matt review queue
 
-- Matt feel-check of the new NSL look + new trees on the live site.
-- S24+ device pass (mobile shadows off, mobile tree-cull path, now also new tree assets on low tier).
-- Screenshot golden re-capture (stale since 2026-05-16; NSL + trees intentionally changed - re-capture after Matt approves).
+- New NSL look on the live site: tree remake, canopy shadows, value-noise ground, wolf gradient, far-impostor silhouette ring. Surveys: `cycle91-validation/asset-survey/`, `cycle91-validation/lighting-survey/`; numbers: `cycle91-validation/REPORT.md` (scale-back levers listed, canopy shadows cost ~10 median FPS and are one toggle).
 - Launch posting from `docs/launch/` (drafts ready, Matt's voice).
-- three.js r185 adoption when it publishes (issue #33730 fix unblocks shadow-camera-layer caster patterns).
+- S24+ device pass (standing).
 
 ## Working Contract
 
-- No `shared/` deterministic-core edits; sim-baselines stay byte-identical.
+- No `shared/` deterministic-core edits without the sim-change ritual; sim-baselines stay byte-identical.
 - Matt publishes every player-facing artifact.
 - Agent-launched Vite/Playwright sets `SDS_SUPPRESS_BROWSER_OPEN=1`; close every probe page/listener after use.
-- Perf probes drive input; idle-camera numbers must not gate.
+- Perf probes drive input; idle-camera numbers must not gate. GPU probes never run concurrently.
 - `renderer.compute()` is a `queue.submit()` - batch compute passes into one call per frame.
 - Tree bakes need the sibling clones: `../ez-tree` (pinned 48dc193, `npm run build:lib`) and `../pixel-forge` (compiled CLI at `packages/cli/dist/index.js`).
 - CI e2e runs with `--grep-invert='@local-only'`. NSL e2e specs arm the world via the carousel before every Play.
@@ -47,10 +43,10 @@ Read in order: this file -> [`docs/cycle-91-plan.md`](docs/cycle-91-plan.md) (Go
 
 | Area | Source of truth |
 |---|---|
-| Active cycle plan | [`docs/cycle-91-plan.md`](docs/cycle-91-plan.md) |
+| Active cycle plan | [`docs/cycle-92-plan.md`](docs/cycle-92-plan.md) (scaffold) |
 | Jitter probe + rail | `tools/cycle89-jitter-probe.mjs`, `npm run perf:jitter [-- --check]` |
-| Tree bake pipeline | `tools/bake-trees.mjs` (+ `bake-trees/bake.html`), `tools/bake-tree-lod1.mjs`, `tools/bake-tree-impostors.mjs`, `tools/capture-tree-candidates.mjs` |
-| Cycle 91 evidence | `cycle91-validation/` (local, gitignored) |
+| Cycle 91 evidence | `cycle91-validation/` (local, gitignored) incl. `REPORT.md` |
+| Tree bake pipeline | `tools/bake-trees.mjs` (+ `bake-trees/bake.html`), `tools/bake-tree-lod1.mjs`, `tools/bake-tree-impostors.mjs` |
 | Closed cycles | [`docs/BACKLOG.md`](docs/BACKLOG.md) + [`docs/archive/cycles/`](docs/archive/cycles/) |
 | Launch drafts (Matt to post) | [`docs/launch/`](docs/launch/) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |

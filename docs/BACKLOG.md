@@ -4,6 +4,27 @@
 
 ## Recently Completed
 
+### Cycle 91 - `lighting-perf-optimization` / `nsl-budget-headroom` (closed 2026-06-11)
+
+Plan archived at [`docs/archive/cycles/cycle-91-plan.md`](archive/cycles/cycle-91-plan.md). Executed fully autonomously after "complete all of cycle then commit and push". **SHIPPED: P1, P2, P2.5 (Matt's tree-remake directive), P3, P4, P5, P6, P7, P7.5 (Matt's ground-texture directive); P8 lighting items deferred on rationale, gates run.** Direct-to-main commits `eaa4e3c` (P1 caster scope), `9687c4b` (P2.5 tree remake), `869bc08` (LOD chain + controller consolidation), `b4ef8b3` (P4/P5 waste + boot), `91adef4` (P2 canopy + ground noise), `b5f9d66` (ratchet), `62ea1b5` (P6 assets), `cf78aee` (statuses), `2d875a0` (terrain value-noise fix). Consolidated before/after report: `cycle91-validation/REPORT.md` (local).
+
+- **Tree pipeline remake (P2.5) + runtime LOD chain (P3).** Full first-principles re-bake on ez-tree GitHub main (real PBR bark, green ash leaves, WebP textures 8.3 -> 1.9 MB); the consolidated compute-cull path went from ~108 per-wave controllers to one appendable capacity-sized controller per tree type, with per-instance distance LOD in the cull pass: LOD0 within 200m of the camera, kiln cross-billboard impostors beyond. Fixes Matt's distant-leaf dissolve (sub-pixel alphaHash cards) with a held silhouette.
+- **First WebGPU canopy shadows (P2).** Layer-2 static cross-billboard casters per tree type (sole-caster: trunks stop double-casting); costs ~10 median FPS on NSL, one-toggle scale-back lever.
+- **Per-frame waste (P4).** Sky LUT bakes 132/s -> ~2/s (epsilon change-gate), zero overlay-hidden breakdown calls, heightfield warm-restart cache, change-gated HUD/timer/governor paths.
+- **Load/boot (P5).** Critical set slimmed to Jep+tree1+rock1; LOD1 tree GLBs tier-gated (no fetch on medium+); boot failure surfaces an entrance alert. Cold load 2476 -> 2332ms local, 14475 -> 14234ms at 20Mbps (85% target NOT met - bandwidth-bound, recorded).
+- **Assets (P6/P7).** dist 121 -> 58.7 MB; dogs 6.4 -> 2.1 MB (Jep's 19 clips shared at runtime); wolf 882 -> 364 KB + bind-pose gradient; farmhouse 1065 -> 646 KB; bake scripts committed.
+- **Ground texture (P7.5, Matt's directive).** Gridded dirt patches root-caused to summed plane sine waves (thresholded product = interference lattice); shipped rotated-octave hash value noise after the first fix (mx_noise perlin) regressed the field rail 71 -> ~31 FPS 1%-low and was caught by the gate battery + bisect (hard stop 2 honored; A/A control proved NSL parity).
+- **Shipped numbers.** NSL driven survival: median 144.9 at full quality with shadows (gate battery 13:33Z: 139.6 / 70.5 1%-low / worst 16.8ms). Field rail PASS: 77.4 mean 1%-low / worst 20.9ms. 1518 vitest green; ratchet deliberately bumped main 611 -> 620 / other 549 -> 551 KiB.
+- **Experimental (WIP) pill STAYS.** Gate (5-run mean 1%-low >= 55, worst <= 45ms) passed one battery (70.5/16.8) and failed the shipping-build re-run (54.2/145.9) with an A/A control proving the gap is box-state, not code. Not robustly met; conservative call. Floor still moved: 45-47 (Cycle 90) -> 54-70.
+
+Deferred / carryover:
+
+- **NSL frame floor (Cycle 92 candidate, scaffolded as `nsl-frame-floor`):** chase the 1%-low battery-to-battery variance (70.5 vs 54.2 on identical code), the intermittent ~146-160ms stall, and the heap-drop hitch fraction 0.37-0.44 (GC suspect; heap drops rose 8.4 -> 13.4-16 across the tree-pipeline remake); re-run the pill gate on a controlled box state.
+- **P8 lighting items:** keyframed hemisphere ambient (own survey-gated pass vs an approved baseline), sky-dome render-order A/B (needs a fill-rate-bound tier to resolve).
+- **Rock re-bake** behind a collider-parity harness (hard stop 4: visual-only must not move collision footprints). **KTX2** pending visual approval.
+- **Matt review queue:** new NSL look + tree remake + wolf gradient + canopy shadows (surveys in `cycle91-validation/`), then the golden re-capture (stale since 2026-05-16, every scene's trees intentionally changed).
+- Standing: S24+ device pass, launch posting from `docs/launch/`, three.js r185 adoption (#33730 fix).
+
 ### Cycle 90 - `nsl-runtime-perf` (closed 2026-06-11)
 
 Plan archived at [`docs/archive/cycles/cycle-90-plan.md`](archive/cycles/cycle-90-plan.md). Scoped from NEXT_SESSION's proposed NSL-runtime-perf goal plus Matt's mid-cycle visual directive (water, lighting, shadows, ground color), executed fully autonomously after `/cycle-start "complete cycle autonomously"`. **SHIPPED: Phases 1, 2, 3, 7, 8; Phases 4, 5, 6 NOT ARMED by the attribution gate.** Direct-to-main commits `77c0337` (batched compute-cull + probe extensions), `ddb9b40` (visual pass). Deploy run `27336393613`.
