@@ -13,7 +13,7 @@
  * compass paths can be exercised with synthetic state.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { fireEvent, render, cleanup, screen } from '@testing-library/react';
+import { act, fireEvent, render, cleanup, screen } from '@testing-library/react';
 import * as THREE from 'three';
 
 vi.mock('react-i18next', () => ({
@@ -183,6 +183,20 @@ describe('BarkHint (smoke)', () => {
         fireEvent.keyDown(window, { code: 'Space' });
         expect(localStorage.getItem('sds-bark-hint-used')).toBe('1');
         expect(screen.queryByText('Bark')).toBeNull();
+    });
+
+    it('auto-dismisses without recording bark use', () => {
+        vi.useFakeTimers();
+        try {
+            render(<BarkHint active={true} deferUntilGameSurface={false} />);
+            act(() => {
+                vi.advanceTimersByTime(9000);
+            });
+            expect(localStorage.getItem('sds-bark-hint-used')).toBeNull();
+            expect(screen.queryByText('Bark')).toBeNull();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });
 

@@ -4,6 +4,16 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.3.3] - 2026-06-12
+
+### Fixed
+
+- The desktop bark cue auto-dismiss timer no longer calls stale React state after the loading-handoff refactor, keeping first-run gameplay and CI smoke navigation crash-free.
+
+### Validation
+
+- `npm test`, `npm run lint`, `npm run build`, and `npm run test:e2e -- --project=chromium tests/e2e/smoke.spec.ts` passed.
+
 ## [2.3.2] - 2026-06-12
 
 ### Fixed

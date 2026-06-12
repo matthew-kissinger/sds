@@ -78,7 +78,7 @@ export function BarkHint({ active = false, deferUntilGameSurface = true }) {
             const nextKey = event.detail?.bark || readBarkBinding();
             setBarkKey(nextKey);
         };
-        const timer = setTimeout(() => setVisible(false), AUTO_DISMISS_MS);
+        const timer = setTimeout(() => setDismissed(true), AUTO_DISMISS_MS);
 
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('sds-bark', dismissForUse);
