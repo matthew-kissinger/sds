@@ -4,6 +4,17 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.3.2] - 2026-06-12
+
+### Fixed
+
+- Desktop bark cue timing now waits until the loading handoff is complete before starting its 9 second dismiss timer, so slow first loads cannot hide the PC bark hint behind the loading surface.
+
+### Validation
+
+- `npm test`, `npm run lint`, and `npm run build` passed.
+- Production-local Chromium proof showed desktop `Bark Space` with `loading:false`, bark-key dismissal persisted, mobile kept one visible Bark button, and the desktop cue stayed suppressed on mobile.
+
 ## [2.3.1] - 2026-06-12
 
 ### Changed
@@ -17,7 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Validation
 
 - `npm test`, `npm run lint`, `npm run build`, and `npm run test:integration` passed.
-- Production-preview probes verified desktop bark discoverability after the loading handoff, bark cue dismissal, mobile bark discoverability, and live sheep speed remaining under the normal cap after bark.
+- Production-preview probes verified desktop bark discoverability, bark cue dismissal, mobile bark discoverability, and live sheep speed remaining under the normal cap after bark.
 
 ## [2.3.0] - 2026-06-09
 
