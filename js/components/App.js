@@ -77,6 +77,7 @@ export async function initReactUI() {
             { CorralCompass },
             { ObjectiveBanner },
             { PracticeHint },
+            { BarkHint },
             { MobileHUD },
             { MobileControls },
             { HudLayout },
@@ -116,6 +117,7 @@ export async function initReactUI() {
             import('./GameHUD/CorralCompass.js'),
             import('./GameHUD/ObjectiveBanner.js'),
             import('./GameHUD/PracticeHint.js'),
+            import('./GameHUD/BarkHint.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
             import('./GameHUD/HudLayout.js'),
@@ -950,6 +952,10 @@ export async function initReactUI() {
                 createElement(PracticeHint, {
                     key: 'practice-hint',
                     active: !isMultiplayer && gameData.singlePlayerMode === 'practice'
+                }),
+                createElement(BarkHint, {
+                    key: 'bark-hint',
+                    active: isDesktop
                 })
             ];
 

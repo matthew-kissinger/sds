@@ -13,7 +13,7 @@
  * compass paths can be exercised with synthetic state.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, cleanup, screen } from '@testing-library/react';
+import { fireEvent, render, cleanup, screen } from '@testing-library/react';
 import * as THREE from 'three';
 
 vi.mock('react-i18next', () => ({
@@ -44,10 +44,13 @@ import { ObjectiveBanner } from '../../js/components/GameHUD/ObjectiveBanner';
 import { CameraModeIndicator } from '../../js/components/GameHUD/CameraModeIndicator';
 import { CorralCompass } from '../../js/components/GameHUD/CorralCompass';
 import { PracticeHint } from '../../js/components/GameHUD/PracticeHint';
+import { BarkHint } from '../../js/components/GameHUD/BarkHint';
 import { HudLayout } from '../../js/components/GameHUD/HudLayout';
 
 afterEach(() => {
     cleanup();
+    localStorage.removeItem('sds-bark-hint-used');
+    localStorage.removeItem('sds-settings');
     bridge.gameState = null;
     bridge.sceneManager = null;
     bridge.frameHandler = null;
@@ -152,6 +155,34 @@ describe('PracticeHint (smoke)', () => {
     it('renders nothing when inactive', () => {
         const { container } = render(<PracticeHint active={false} />);
         expect(container.firstChild).toBeNull();
+    });
+});
+
+describe('BarkHint (smoke)', () => {
+    it('renders the current bark binding when active', () => {
+        render(<BarkHint active={true} />);
+        expect(screen.getByText('Bark')).toBeTruthy();
+        expect(screen.getByText('Space')).toBeTruthy();
+    });
+
+    it('uses a custom bark binding from settings', () => {
+        localStorage.setItem('sds-settings', JSON.stringify({
+            keyBindings: { bark: 'KeyB' },
+        }));
+        render(<BarkHint active={true} />);
+        expect(screen.getByText('B')).toBeTruthy();
+    });
+
+    it('renders nothing when inactive', () => {
+        const { container } = render(<BarkHint active={false} />);
+        expect(container.firstChild).toBeNull();
+    });
+
+    it('dismisses and records first keyboard bark use', () => {
+        render(<BarkHint active={true} />);
+        fireEvent.keyDown(window, { code: 'Space' });
+        expect(localStorage.getItem('sds-bark-hint-used')).toBe('1');
+        expect(screen.queryByText('Bark')).toBeNull();
     });
 });
 

@@ -40,7 +40,8 @@ import {
     resolveDogSheepCollisions,
     createSheepCollisionScratch,
     resolveSheepSheepCollisions,
-    applyBarkImpulse,
+    startBarkSteering,
+    tickBarkSteering,
     DEFAULT_BARK_CONFIG
 } from '../../shared/index.js';
 import { mulberry32 } from '../../shared/Random.js';
@@ -471,10 +472,8 @@ export class GameSimulation {
                 lastInputTime: 0,
                 pendingInputs: [],
 
-                // Cycle 61 P5: bark state. barkForward latches the facing unit
-                // vector (velocity-normalized, no trig) for the deterministic
-                // impulse; lastBarkTime gates the server-side bark cooldown
-                // (anti-spam trust boundary, authoritative over the client).
+                // Bark state: a latched facing vector plus the authoritative
+                // server-side cooldown gate.
                 barkForward: { x: 0, z: 1 },
                 lastBarkTime: 0
             };
@@ -745,12 +744,9 @@ export class GameSimulation {
         sheepdog.stamina = staminaResult.current;
         sheepdog.isSprinting = staminaResult.isConsuming;
 
-        // Cycle 61 P5: server-authoritative bark. The optional `bark` edge drives
-        // the deterministic forward impulse on the flock, cooldown-gated
-        // server-side (anti-spam; authoritative over the client's own predicted
-        // cooldown). Forward is derived trig-free: the live velocity direction
-        // when moving, else the freshly-sent input direction, else the latched
-        // facing - matching the shared bark module's determinism contract.
+        // Server-authoritative bark. The optional `bark` edge starts deterministic
+        // forward steering on the flock. Forward is derived trig-free: live
+        // velocity when moving, freshly-sent input direction, then latched facing.
         if (input.bark === true) {
             const nowMs = Date.now();
             if (nowMs - sheepdog.lastBarkTime >= DEFAULT_BARK_CONFIG.cooldownMs) {
@@ -764,7 +760,7 @@ export class GameSimulation {
                     sheepdog.barkForward.x = targetVelocity.x / t;
                     sheepdog.barkForward.z = targetVelocity.z / t;
                 }
-                applyBarkImpulse(this.gameState.sheep, sheepdog.position, sheepdog.barkForward, DEFAULT_BARK_CONFIG);
+                startBarkSteering(this.gameState.sheep, sheepdog.position, sheepdog.barkForward, DEFAULT_BARK_CONFIG);
                 // Cycle 67 P3: in survival, the same bark edge scares wolves at a
                 // longer radial range (breaks pursuit), authoritative + reflected
                 // to all clients via the broadcast. Mirrors the solo main.js path.
@@ -942,6 +938,8 @@ export class GameSimulation {
                     sheep.acceleration.add(fleeForce);
                 }
             }
+
+            tickBarkSteering(sheep);
 
             // Gate attraction logic (if sheep is being herded toward gate).
             // Skip for survival: the gate is the pen gate, handled by the pen

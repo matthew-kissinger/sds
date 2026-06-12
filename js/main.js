@@ -23,7 +23,7 @@ import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
 import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
 import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
-import { applyBarkImpulse, DEFAULT_BARK_CONFIG } from '../shared/BarkImpulse.js';
+import { startBarkSteering, DEFAULT_BARK_CONFIG } from '../shared/BarkImpulse.js';
 import { Atmosphere } from './atmosphere/index.js';
 import { updateSceneMetadata } from './utils/seo.js';
 // Cycle 17 Phase 7: local-multiplayer modules dynamic-imported in
@@ -2404,24 +2404,18 @@ class SheepDogSimulation {
             let wantsSprint = this.inputHandler.isSprinting();
             const sheepdog = this.gameState.getSheepdog();
 
-            // Cycle 61 P3/P4: player bark command. Space + the mobile button feed
-            // consumeBark(); gamepad RB is edge-polled like the Cycle 60 buttons.
-            // triggerPlayerBark() is cooldown-gated (the single bark gate) and
-            // returns true only when it actually fires. On a fired bark we drive
-            // the deterministic sheep impulse locally for solo; multiplayer sends
-            // the bark edge to the authoritative DO instead (P5 reads
-            // _barkFiredThisFrame into the next playerInput payload).
+            // Player bark command. Space, mobile, and gamepad RB all queue one
+            // edge. Solo handles sheep steering locally; multiplayer carries
+            // the bark edge in the next authoritative input payload.
             const barkPressed = this.inputHandler.consumeBark() || gamepad.wasJustPressed('RB');
             const barkFired = barkPressed && !!sheepdog && sheepdog.triggerPlayerBark();
             if (barkFired && !(this.isMultiplayer && this.networkManager)) {
-                applyBarkImpulse(this.gameState.getSheep(), sheepdog.position,
+                startBarkSteering(this.gameState.getSheep(), sheepdog.position,
                     sheepdog.getBarkForward(), DEFAULT_BARK_CONFIG);
             }
-            // Cycle 66 P5: the bark also scares wolves - a radial repel with a
+            // The bark also scares wolves - a radial repel with a
             // longer reach than the forward sheep cone, breaking their pursuit.
-            // Client-only (survival is solo); it never touches the deterministic
-            // sheep-cone math in shared/BarkImpulse.js, so sim-baselines stay
-            // byte-identical.
+            // Client-only survival path; sheep steering remains in shared math.
             if (barkFired && this._wolfPack) {
                 this._wolfPack.repel(sheepdog.position.x, sheepdog.position.z);
             }
@@ -2478,9 +2472,8 @@ class SheepDogSimulation {
                     payload.direction.z = movementDirection.z;
                     payload.sprint = wantsSprint;
                     payload.timestamp = performance.now();
-                    // Cycle 61 P5: carry the one-shot bark edge to the authoritative
-                    // DO, which applies the impulse + broadcasts. A standing bark
-                    // forces this send even when the dog is not moving.
+                    // Carry the one-shot bark edge to the authoritative DO. A
+                    // standing bark forces this send even when the dog is not moving.
                     payload.bark = this._barkFiredThisFrame;
                     // Send client position when stopping for server reconciliation
                     if (!isMovingNow && this.playerWasMoving) {

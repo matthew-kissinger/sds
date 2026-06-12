@@ -40,6 +40,7 @@ import {
     createGameState,
     createBoidConfig,
     createMovementConfig,
+    tickBarkSteering,
     loadScene,
     createObjective,
     tickObjective,
@@ -281,6 +282,8 @@ export function tickSheepIslandCoop(sheepArray, sheepdogs, gameState, deltaTime,
             }
         }
 
+        tickBarkSteering(sheep);
+
         // Island scenes have no gate, so always run boundary avoidance.
         const boundaryForce = calculateBoundaryAvoidanceWithGate(
             sheep,
@@ -393,6 +396,8 @@ export function tickSheepCoop(sheepArray, sheepdogs, gameState, deltaTime) {
                 sheep.acceleration.add(fleeForce);
             }
         }
+
+        tickBarkSteering(sheep);
 
         // Gate-passage-zone check - skip boundary force if in passage.
         const zone = gameState.gate.passageZone;
@@ -553,6 +558,8 @@ export function tickSheepCompetitive(sheepArray, sheepdogs, gameState, deltaTime
                 sheep.acceleration.add(fleeForce);
             }
         }
+
+        tickBarkSteering(sheep);
 
         // Multi-gate passage-zone check: skip boundary force while a sheep
         // is inside ANY gate's passage zone (mirrors GameSim).

@@ -12,6 +12,7 @@ import { getExtremeBoidSystem } from './ExtremeBoidSystem.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { createWebGpuSheepMaterial } from './webgpuSheepMaterialAdapter.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
+import { tickBarkSteering } from '../shared/BarkImpulse.js';
 import {
     createSheepCollisionScratch,
     resolveDogSheepCollision,
@@ -1841,6 +1842,8 @@ export class OptimizedSheepInstance extends Boid {
         } else {
             this.wasBeingChased = false;
         }
+
+        tickBarkSteering(this);
         
         // Gate attraction logic (only if sheepdog and gate exist - game is active)
         // For local 2-player mode, check attraction based on closest dog

@@ -4,6 +4,21 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.3.1] - 2026-06-12
+
+### Changed
+
+- Bark now steers affected sheep through a short, decaying acceleration intent instead of directly injecting velocity. The response keeps sheep under their ordinary movement speed envelope while still biasing them along the dog's facing direction.
+
+### Added
+
+- Desktop play now shows a lightweight, dismissible bark cue using the current bark keybinding. Mobile keeps the existing visible bark button and does not render the desktop cue.
+
+### Validation
+
+- `npm test`, `npm run lint`, `npm run build`, and `npm run test:integration` passed.
+- Production-preview probes verified desktop bark discoverability, bark cue dismissal, mobile bark discoverability, and live sheep speed remaining under the normal cap after bark.
+
 ## [2.3.0] - 2026-06-09
 
 The release where the hardening program becomes player-visible: the game

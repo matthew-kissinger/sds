@@ -116,9 +116,8 @@ export class Sheepdog {
         this.velocity = new Vector2D(0, 0);
         this.targetVelocity = new Vector2D(0, 0);
 
-        // Cycle 61 P4: latched facing unit vector for the bark impulse. Updated
-        // from velocity while moving (sqrt-normalize, no trig) and held when the
-        // dog stops, so a standing bark still drives sheep where the dog points.
+        // Latched facing unit vector for bark steering. Updated from velocity
+        // while moving and held when the dog stops.
         this._barkForward = { x: 0, z: 1 };
         // Per-frame scratch reused inside move() to compute the velocity
         // delta in place (targetVelocity - velocity) * (accel * dt). Avoids
@@ -179,9 +178,8 @@ export class Sheepdog {
         this.barkCooldown = 3000;
         this.nearSheep = false;
 
-        // Cycle 61 P3: player-triggered bark command. Separate cooldown from the
-        // passive near-sheep audio above; this gate is the single bark limiter
-        // (Q2) and also fronts the deterministic sheep impulse added in P4.
+        // Player-triggered bark command. Separate cooldown from the passive
+        // near-sheep audio above; this gate is the single bark limiter.
         this.lastPlayerBarkTime = 0;
         this.playerBarkCooldown = DEFAULT_BARK_CONFIG.cooldownMs;
         
@@ -618,11 +616,9 @@ export class Sheepdog {
     }
 
     /**
-     * Cycle 61 P3: player bark command. Plays the bark animation + sound on
+     * Player bark command. Plays the bark animation + sound on
      * demand, gated by playerBarkCooldown so it cannot be spammed. Returns true
-     * only when it actually fired (cooldown elapsed) so the caller can apply the
-     * deterministic sheep impulse (P4) and send the MP bark edge (P5); false
-     * while still cooling down.
+     * only when it actually fired; false while still cooling down.
      */
     triggerPlayerBark() {
         const now = Date.now();
@@ -634,10 +630,10 @@ export class Sheepdog {
     }
 
     /**
-     * Cycle 61 P4: unit vector of the dog's facing for the bark impulse. Tracks
-     * the live velocity direction while moving and latches the last facing when
-     * stopped. Pure sqrt-normalize (no trig), matching the deterministic bark
-     * module's contract. Returns a reused object - do not retain it.
+     * Unit vector of the dog's facing for bark steering. Tracks the live
+     * velocity direction while moving and latches the last facing when stopped.
+     * Pure sqrt-normalize (no trig), matching the deterministic bark module's
+     * contract. Returns a reused object - do not retain it.
      */
     getBarkForward() {
         const vx = this.velocity.x;

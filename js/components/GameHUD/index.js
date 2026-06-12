@@ -12,3 +12,4 @@ export { ExtremeTuningPanel } from './ExtremeTuningPanel.js';
 export { CorralCompass } from './CorralCompass.js';
 export { ObjectiveBanner } from './ObjectiveBanner.js';
 export { PracticeHint } from './PracticeHint.js';
+export { BarkHint } from './BarkHint.js';

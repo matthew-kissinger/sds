@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Cycle 61 Phase 5: bark over the wire (DO authority + optional-field migration).
+ * Bark over the wire (DO authority + optional-field migration).
  *
  * Exercises the real worker GameSimulation through applyPlayerInput / the
  * pending-input queue:
- *   - input.bark === true drives the deterministic forward impulse on the flock
- *     authoritatively (sheep in the dog's forward cone gain forward velocity).
+ *   - input.bark === true starts deterministic forward steering on the flock
+ *     authoritatively. The next sheep update accelerates in-cone sheep forward.
  *   - an input with NO bark field (an old client on the pre-bark protocol) is
  *     handled as no-bark and does not error - the additive-optional migration.
  *   - a second bark within the cooldown is gated server-side (anti-spam).
@@ -51,18 +51,26 @@ function parkSheep(s, x, z) {
     s.position.set(x, z);
     s.velocity.set(0, 0);
     s.acceleration.set(0, 0);
+    s.fleeRadius = 0;
     s.hasPassedGate = false;
     s.isRetiring = false;
     s.state = 0;
+    s.barkSteerTicks = 0;
+    s.barkSteerDurationTicks = 0;
+    s.barkSteerForce = 0;
 }
 
-describe('Cycle 61 P5: bark over the wire', () => {
+function speed(s) {
+    return Math.sqrt(s.velocity.x * s.velocity.x + s.velocity.z * s.velocity.z);
+}
+
+describe('bark over the wire', () => {
     function fieldSim() {
-        return new GameSimulation(makeRoomAdapter('field', 50, ['p1']));
+        return new GameSimulation(makeRoomAdapter('field', 3, ['p1']));
     }
 
-    // Position the auto-created (bark-state-initialized) dog and give it a +z
-    // facing velocity so the bark cone points along +z.
+    // Position the auto-created dog and give it a +z facing velocity so the
+    // bark cone points along +z.
     function dogFacingForward(sim) {
         const dog = sim.sheepdogs.get('p1');
         dog.position.set(0, 0);
@@ -70,22 +78,29 @@ describe('Cycle 61 P5: bark over the wire', () => {
         return dog;
     }
 
-    it('applies the bark impulse authoritatively when input.bark === true', () => {
+    it('starts bark steering authoritatively when input.bark === true', () => {
         const sim = fieldSim();
         try {
             dogFacingForward(sim);
             const ahead = sim.gameState.sheep[0]; parkSheep(ahead, 0, 4);   // in cone + range
             const behind = sim.gameState.sheep[1]; parkSheep(behind, 0, -4); // behind => out of cone
             const medium = sim.gameState.sheep[2]; parkSheep(medium, 0, 20);
-            const beforeAhead = ahead.velocity.z;
             const beforeBehind = behind.velocity.z;
-            const beforeMedium = medium.velocity.z;
 
             sim.applyPlayerInput('p1', { direction: { x: 0, z: 1 }, sprint: false, inputSequence: 1, bark: true });
 
-            expect(ahead.velocity.z).toBeGreaterThan(beforeAhead); // driven forward
-            expect(behind.velocity.z).toBe(beforeBehind);          // untouched (behind)
-            expect(medium.velocity.z).toBeGreaterThan(beforeMedium);
+            expect(ahead.velocity.z).toBe(0);
+            expect(ahead.barkSteerTicks).toBeGreaterThan(0);
+            expect(behind.barkSteerTicks).toBe(0);
+            expect(medium.barkSteerTicks).toBeGreaterThan(0);
+
+            sim.updateSheep();
+
+            expect(ahead.velocity.z).toBeGreaterThan(0);
+            expect(speed(ahead)).toBeLessThanOrEqual(sim.sheepConfig.maxSpeed);
+            expect(behind.velocity.z).toBe(beforeBehind);
+            expect(medium.velocity.z).toBeGreaterThan(0);
+            expect(speed(medium)).toBeLessThanOrEqual(sim.sheepConfig.maxSpeed);
         } finally { sim.cleanup?.(); }
     });
 
@@ -101,24 +116,27 @@ describe('Cycle 61 P5: bark over the wire', () => {
                 direction: { x: 0, z: 1 }, sprint: false, inputSequence: 1
             })).not.toThrow();
 
-            expect(ahead.velocity.z).toBe(before); // no bark applied
+            expect(ahead.velocity.z).toBe(before);
+            expect(ahead.barkSteerTicks).toBe(0);
         } finally { sim.cleanup?.(); }
     });
 
-    it('gates a second bark within the cooldown (no double impulse)', () => {
+    it('gates a second bark within the cooldown without extending steering', () => {
         const sim = fieldSim();
         try {
             dogFacingForward(sim);
             const ahead = sim.gameState.sheep[0]; parkSheep(ahead, 0, 4);
 
             sim.applyPlayerInput('p1', { direction: { x: 0, z: 1 }, sprint: false, inputSequence: 1, bark: true });
-            const afterFirst = ahead.velocity.z;
-            expect(afterFirst).toBeGreaterThan(0);
+            const firstTicks = ahead.barkSteerTicks;
+            const firstForce = ahead.barkSteerForce;
+            expect(firstTicks).toBeGreaterThan(0);
 
             // Immediate second bark: a fresh sequence (so it is not dropped as
-            // stale) but inside the cooldown window, so the impulse is gated.
+            // stale) but inside the cooldown window, so the edge is gated.
             sim.applyPlayerInput('p1', { direction: { x: 0, z: 1 }, sprint: false, inputSequence: 2, bark: true });
-            expect(ahead.velocity.z).toBe(afterFirst); // no second push
+            expect(ahead.barkSteerTicks).toBe(firstTicks);
+            expect(ahead.barkSteerForce).toBe(firstForce);
         } finally { sim.cleanup?.(); }
     });
 
@@ -130,6 +148,7 @@ describe('Cycle 61 P5: bark over the wire', () => {
             const before = ahead.velocity.z;
             sim.applyPlayerInput('p1', { direction: { x: 0, z: 1 }, sprint: false, inputSequence: 1, bark: false });
             expect(ahead.velocity.z).toBe(before);
+            expect(ahead.barkSteerTicks).toBe(0);
         } finally { sim.cleanup?.(); }
     });
 

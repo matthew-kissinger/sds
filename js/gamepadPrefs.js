@@ -26,7 +26,7 @@ export const DEADZONE_DEFAULT = 0.15;
 // Remappable button actions -> default standard-mapping button index.
 // The action names line up with the consumers: zoomIn/zoomOut (SceneManager
 // zoom), bank (Counting Sheep), cameraCycle (camera mode), bark (sheep
-// impulse), sprint (movement), note (playtest note box), pause.
+// steering), sprint (movement), note (playtest note box), pause.
 export const DEFAULT_GAMEPAD_BUTTONS = Object.freeze({
     sprint: 7,       // RT
     bark: 5,         // RB
