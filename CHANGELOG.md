@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Validation
 
 - `npm test`, `npm run lint`, `npm run build`, and `npm run test:integration` passed.
-- Production-preview probes verified desktop bark discoverability, bark cue dismissal, mobile bark discoverability, and live sheep speed remaining under the normal cap after bark.
+- Production-preview probes verified desktop bark discoverability after the loading handoff, bark cue dismissal, mobile bark discoverability, and live sheep speed remaining under the normal cap after bark.
 
 ## [2.3.0] - 2026-06-09
 

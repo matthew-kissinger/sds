@@ -6,6 +6,12 @@ import { getKeyBindings, getKeyDisplayName } from '../shared/settings.js';
 const STORAGE_KEY = 'sds-bark-hint-used';
 const AUTO_DISMISS_MS = 9000;
 
+function isGameSurfaceReady() {
+    const canvas = document.querySelector('#canvas-container canvas');
+    const loading = document.querySelector('[data-sds-loading-screen="true"]');
+    return !loading && canvas && canvas.width > 100 && canvas.height > 100;
+}
+
 function hasUsedBark() {
     try {
         return localStorage.getItem(STORAGE_KEY) === '1';
@@ -24,22 +30,46 @@ function readBarkBinding() {
     return getKeyBindings().bark || 'Space';
 }
 
-export function BarkHint({ active = false }) {
-    const [visible, setVisible] = useState(() => active && !hasUsedBark());
+export function BarkHint({ active = false, deferUntilGameSurface = true }) {
+    const [surfaceReady, setSurfaceReady] = useState(() => !deferUntilGameSurface);
+    const [dismissed, setDismissed] = useState(hasUsedBark);
     const [barkKey, setBarkKey] = useState(readBarkBinding);
 
     useEffect(() => {
         if (!active || hasUsedBark()) {
-            setVisible(false);
+            setSurfaceReady(false);
+            setDismissed(hasUsedBark());
             return;
         }
 
-        setVisible(true);
+        if (!deferUntilGameSurface) {
+            setSurfaceReady(true);
+            return;
+        }
+
+        setSurfaceReady(false);
+        let frame = 0;
+        const checkSurface = () => {
+            if (isGameSurfaceReady()) {
+                setSurfaceReady(true);
+                return;
+            }
+            frame = requestAnimationFrame(checkSurface);
+        };
+        frame = requestAnimationFrame(checkSurface);
+        return () => cancelAnimationFrame(frame);
+    }, [active, deferUntilGameSurface]);
+
+    const visible = active && surfaceReady && !dismissed;
+
+    useEffect(() => {
+        if (!visible) return undefined;
+
         setBarkKey(readBarkBinding());
 
         const dismissForUse = () => {
             rememberBarkUsed();
-            setVisible(false);
+            setDismissed(true);
         };
         const onKeyDown = (event) => {
             if (event.code === barkKey) dismissForUse();
@@ -59,9 +89,9 @@ export function BarkHint({ active = false }) {
             window.removeEventListener('sds-bark', dismissForUse);
             window.removeEventListener('keybindings-changed', onBindingsChanged);
         };
-    }, [active, barkKey]);
+    }, [barkKey, visible]);
 
-    if (!active || !visible) return null;
+    if (!visible) return null;
 
     const keyLabel = getKeyDisplayName(barkKey);
     const style = {

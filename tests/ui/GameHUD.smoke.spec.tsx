@@ -160,7 +160,7 @@ describe('PracticeHint (smoke)', () => {
 
 describe('BarkHint (smoke)', () => {
     it('renders the current bark binding when active', () => {
-        render(<BarkHint active={true} />);
+        render(<BarkHint active={true} deferUntilGameSurface={false} />);
         expect(screen.getByText('Bark')).toBeTruthy();
         expect(screen.getByText('Space')).toBeTruthy();
     });
@@ -169,7 +169,7 @@ describe('BarkHint (smoke)', () => {
         localStorage.setItem('sds-settings', JSON.stringify({
             keyBindings: { bark: 'KeyB' },
         }));
-        render(<BarkHint active={true} />);
+        render(<BarkHint active={true} deferUntilGameSurface={false} />);
         expect(screen.getByText('B')).toBeTruthy();
     });
 
@@ -179,7 +179,7 @@ describe('BarkHint (smoke)', () => {
     });
 
     it('dismisses and records first keyboard bark use', () => {
-        render(<BarkHint active={true} />);
+        render(<BarkHint active={true} deferUntilGameSurface={false} />);
         fireEvent.keyDown(window, { code: 'Space' });
         expect(localStorage.getItem('sds-bark-hint-used')).toBe('1');
         expect(screen.queryByText('Bark')).toBeNull();
