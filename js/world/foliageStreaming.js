@@ -441,8 +441,11 @@ export function armFoliageStreaming(game, opts = {}) {
                     const byType = toTreeInstancesByType(builder, streamed);
                     meshes = buildAdditiveTreeMeshes(builder, byType, { label: wave.name });
                     builder.treeInstances = existing.concat(streamed);
-                    // Prewarm new meshes' pipelines inside the idle slot so
-                    // their first visible frame doesn't pay the compile stall.
+                    // Prewarm new WebGPU meshes' pipelines inside the idle slot
+                    // so their first visible frame doesn't pay the compile stall.
+                    // Three's WebGL compileAsync polls through a timer that can
+                    // outlive scene swaps and throw after teardown; WebGL accepts
+                    // lazy compile here.
                     // Cycle 91 Phase 5: with the consolidated appendable
                     // controllers a wave normally creates NO new meshes
                     // (meshes === 0) - skip the whole-scene compileAsync that
@@ -453,7 +456,7 @@ export function armFoliageStreaming(game, opts = {}) {
                                 ?? getSceneManager()?.getRenderer?.()
                                 ?? null;
                             const camera = getSceneManager()?.getCamera?.() ?? null;
-                            if (renderer?.compileAsync && camera) {
+                            if (renderer?.isWebGPURenderer && renderer.compileAsync && camera) {
                                 await renderer.compileAsync(builder.scene, camera);
                             }
                         } catch { /* prewarm is best-effort */ }

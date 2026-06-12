@@ -435,14 +435,15 @@ export function enableConsolidatedFarImpostors(builder, atlasByType, materialsBy
                     if (Array.isArray(builder.trees)) builder.trees.push(entry.shadowCaster);
                     for (const slot of entry.lod0) slot.controller.mesh.castShadow = false;
                 }
-                // Best-effort pipeline prewarm for the one new mesh so its
-                // first visible frame doesn't pay the compile stall.
+                // Best-effort WebGPU pipeline prewarm for the one new mesh.
+                // WebGL compileAsync can keep polling after teardown, so WebGL
+                // takes the normal lazy compile path.
                 try {
                     const renderer = builder._resolveComputeRenderer?.()
                         ?? getSceneManager()?.getRenderer?.()
                         ?? null;
                     const camera = getSceneManager()?.getCamera?.() ?? null;
-                    if (renderer?.compileAsync && camera) {
+                    if (renderer?.isWebGPURenderer && renderer.compileAsync && camera) {
                         renderer.compileAsync(builder.scene, camera).catch(() => { /* best-effort */ });
                     }
                 } catch { /* best-effort */ }

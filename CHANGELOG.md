@@ -4,6 +4,16 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.3.4] - 2026-06-12
+
+### Fixed
+
+- Newsheepdogland streamed-foliage prewarm now skips Three's WebGL `compileAsync`, avoiding a teardown race where the CI smoke loop could hit `currentProgram.isReady` after a menu return and same-scene restart. WebGPU still keeps the async prewarm path.
+
+### Validation
+
+- `npm test -- tests/foliage-streaming.spec.js tests/ui/GameHUD.smoke.spec.tsx`, `npm test`, `npm run lint`, `npm run build`, and `npm run test:e2e -- --project=chromium --grep-invert='@local-only'` passed.
+
 ## [2.3.3] - 2026-06-12
 
 ### Fixed
