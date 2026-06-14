@@ -4,6 +4,21 @@
 
 ## Recently Completed
 
+### Cycle 96 - `visual-queue-and-polish` (closed 2026-06-14)
+
+Plan archived at [`docs/archive/cycles/cycle-96-plan.md`](archive/cycles/cycle-96-plan.md). Adopted the authored cycle-93 queue-drain content at the live number (the dead "93" file was removed). The cycle is paired-gated by design (Phase 1 visual review, Phase 8 launch), so the autonomous run shipped the slice that needs no gate and deferred the paired remainder to Cycle 97. Slice committed `a987105b`; 1541 vitest / build / lint green; no version bump (still 2.3.4); nothing player-visible.
+
+- **NSL jitter rail (Phase 4).** `tools/cycle89-jitter-probe.mjs` gained a `--budgets=<path>` override; `npm run perf:jitter:nsl -- --check=1` gates Newsheepdogland survival against `cycle89-validation/jitter-budgets-nsl.json` (minOnePercentLowFps 100 / maxWorstDeltaMs 45 / maxHitchRatePer30s 30). Proven both ways: the warm shipping build passes (1%-low 135 / 27.9ms / 1.3, matching the Cycle 92 post-fix floor); disabling the shadow churn fix fails it (1%-low 10.9 / 257ms / 547.5, 84% GC-correlated). Cold-build caveat documented: the first battery after a fresh build measures cold and can spuriously fail (1%-low 7.6); run twice and gate on the warm rerun. The budget file is local per the `cycle*-validation/` gitignore, like the field rail; values + provenance live in the archived plan.
+- **Rock collider-parity harness (Phase 5 harness-first).** `tests/rock-collider-parity.spec.js` + `tests/helpers/rockColliderFootprints.mjs` + committed baseline `tests/refactor-baseline/__fixtures__/rock-collider-footprints.json` snapshot per-scene rock collision footprints under a fixed seed (field 334/277, rolling-hills 9/8, NSL 24/21, open-country 0) so a future geometry re-bake cannot silently move collision. The re-bake itself is deferred (needs Phase 1 direction).
+- **three r185 readiness (Phase 3).** Blocked upstream: r185 is not on npm (latest 0.184.0). Verdict + when-it-lands checklist recorded; no bump. The instance-level shadow-churn fix stays regardless.
+- **Doc sweep (Phase 7 partial).** AGENTS documents both jitter rails + the current spec count (1541); ARCHITECTURE corrects the far-tree LOD section (consolidated compute-cull, 200m camera-relative), adds the shadow-override churn fix, and updates three biomes to four (NSL + streamed loading).
+
+Deferred / carryover to Cycle 97 (the paired remainder of the queue-drain):
+
+- **Paired Phase 1 visual review + decision gate.** Look approval, NSL-as-default (Q1), rock re-bake direction + KTX2 go/no-go, `tools/trailer/` disposition, P8 lighting appetite. Matt's open Cycle 95 prod validation (A/B/C/E/D/F) feeds the look-approval. Prep pack at `cycle96-validation/phase1-prep.md` (local).
+- **Phase 2 golden re-capture**, **Phase 5 rock re-bake**, **Phase 6 KTX2**, **Phase 8 launch + S24+ device pass** all unblock from Phase 1.
+- **Phase 3 r185 bump** stays blocked until r185 publishes.
+
 ### Cycle 95 - `newsheepdogland-fixes` (closed 2026-06-14)
 
 Plan archived at [`docs/archive/cycles/cycle-95-plan.md`](archive/cycles/cycle-95-plan.md). Scoped from a Newsheepdogland playtest (six bugs) and run autonomously end-to-end, then shipped to prod (`5f4d357c`, deploy green) for Matt's live validation; no version bump. Phases 1-5 shipped in code; Phase 6 is the prod-validation pass. The "Replay tutorial" Settings control the plan called for already existed and was left as-is.
