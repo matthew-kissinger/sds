@@ -4,6 +4,25 @@
 
 ## Recently Completed
 
+### Cycle 95 - `newsheepdogland-fixes` (closed 2026-06-14)
+
+Plan archived at [`docs/archive/cycles/cycle-95-plan.md`](archive/cycles/cycle-95-plan.md). Scoped from a Newsheepdogland playtest (six bugs) and run autonomously end-to-end, then shipped to prod (`5f4d357c`, deploy green) for Matt's live validation; no version bump. Phases 1-5 shipped in code; Phase 6 is the prod-validation pass. The "Replay tutorial" Settings control the plan called for already existed and was left as-is.
+
+- **Bug A - impostor stall on re-entry.** `QualityGovernor` is a session singleton whose one-shot `warmupCompleted` / `onWarmupComplete` never reset across scene swaps, so the foliage streamer (which subscribes inside `buildSceneBody`) armed synchronously on a second NSL load and stalled the island on cold impostors. `QualityGovernor.resetWarmup()` re-arms the warmup window (preserves `qualityIndex`), called at the TOP of `rebuildScene` before `buildSceneBody`. Unit-covered in `tests/quality-governor.spec.js`.
+- **Bug B - foliage blanks facing one way.** The cold-coverage impostor meshes were the lone whole-mesh `frustumCulled=true` batch on the far-offset island, so the all-or-nothing bounding-sphere test blanked them when the homestead camera faced away from the tree mass. `buildColdImpostorMeshes` now sets `frustumCulled=false`, matching the per-instance cull the consolidated trees and grass already use.
+- **Bug D - bark audio/visual desync.** `AudioManager.playSheepdogBark(dogType, { force })` bypasses the redundant cooldown and restarts the one-shot so the SFX can't be swallowed; `triggerPlayerBark` calls with `force:true`; the passive herding bark now triggers the animation too, cadence held above the 4.58s bark clip.
+- **Bug E - leaf grazing white.** Direct-sun dielectric Fresnel on the `MeshStandardNodeMaterial` leaf (no env map). Roughness-first per Q2: leaf `roughnessNode` default 0.92 -> 1.0 spreads the GGX lobe so the grazing rim reads as colored foliage. The A/B at NSL dusk and any escalation to `MeshPhysicalNodeMaterial` (perf-gated) are a fast-follow on Matt's prod look.
+- **Bug F - Survival onboarding.** New first-run `js/components/GameHUD/SurvivalIntro.js` explainer (inline copy in Matt's voice, localStorage `sds-survival-intro-seen`, surface-deferred, button + 22s dismiss), gated via two new `useGameState` snapshot fields (`survival`, live `sceneId` from `window.__currentSceneId`, since `GameState.survival` is sticky). Copy matches the inline survival-HUD siblings (DayNightChip, run summary) instead of the locale, so it sidesteps the zero-allowlist parity ratchet and is not yet machine-translated.
+- **Validation gates.** 1535 vitest green (added `quality-governor.spec.js` + two `useGameState.store.spec.ts` cases); `npm run lint` green; `npm run build` green. Bundle ratchets bumped deliberately for the new component + App wiring: `App` 26 -> 27, `other` 552 -> 555 KiB. No `shared/` edits; sim-baselines unchanged; the authorized optional `treeLeaf` SceneDef field was not needed, so no frozen file was touched.
+
+Deferred / carryover:
+
+- Matt's prod validation of A/B/C (NSL streams to LOD0 on re-entry, foliage holds facing any direction, camera after a swap), the leaf look at dusk, bark cadence, and the Survival copy. Any residual is a fast-follow.
+- Bug E escalation to `MeshPhysicalNodeMaterial` + grazing-faded `specularIntensityNode` if roughness alone leaves visible white (run the Cycle 92 bracketed NSL perf gate first).
+- Survival onboarding copy translation into es/ja/pt/zh-CN once the English is locked (inline now; moving it to the locale would re-grow the zero parity allowlist).
+- The authored `cycle-93-plan.md` (`visual-queue-and-polish`) is the candidate content for Cycle 96; fold in or renumber at `/cycle-start`.
+- Everything in the Cycle 92 / 91 carryover below still stands (Matt review queue, P8 lighting, rock re-bake, KTX2, golden re-capture, NSL jitter rail, NSL-as-default decision, S24+, launch posting).
+
 ### Cycle 94 - `bark-steering-and-discoverability` (closed 2026-06-12)
 
 Plan archived at [`docs/archive/cycles/cycle-94-plan.md`](archive/cycles/cycle-94-plan.md). Scoped from Matt's mobile/PC bark playtest feedback and shipped as `v2.3.1` plus `v2.3.2`/`v2.3.3` cue follow-ups and `v2.3.4` WebGL streaming-prewarm hardening: bark now steers active sheep through bounded acceleration instead of directly injecting velocity, desktop play has a lightweight bark cue that waits for the loading handoff without stale timer crashes, and the existing mobile bark button remains the mobile discoverability path. The separate 2026-06-12 owner-intake note for NPC sheepdogs remains preserved under Distant ideas as a near-term candidate requiring an approach proposal before dispatch.

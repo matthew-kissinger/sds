@@ -1,39 +1,32 @@
-# Next Session - Cycle 95 active (newsheepdogland-fixes)
+# Next Session - Cycle 96 scaffolded (visual-queue-and-polish)
 
 > **Updated:** 2026-06-14
-> **For:** Cycle 95 (`docs/cycle-95-plan.md`)
-> **Pickup priority:** Phases 1-5 are shipped in code (validation green); only the PAIRED Phase 6 remains. Run the real-Chromium WebGPU probes for A/B/C with Matt, get his sign-off on the leaf look, bark cadence, and Survival onboarding copy, then `/validate` + `/cycle-close`.
+> **For:** Cycle 96 (`docs/cycle-96-plan.md`)
+> **Pickup priority:** Fill the Cycle 96 plan's Goal + Phases (candidate content is the authored `docs/cycle-93-plan.md`), then run `/cycle-start`. First, eyeball the just-deployed Cycle 95 fixes on prod and file any residual as a fast-follow.
 
 ## Cold-Start Orientation
 
-Read in order: this file -> [`docs/cycle-95-plan.md`](docs/cycle-95-plan.md) -> `git log --oneline -10` -> [`docs/BACKLOG.md`](docs/BACKLOG.md). Cycle 95 came from a 2026-06-14 Newsheepdogland playtest (six issues). Decisions are recorded in the cycle plan's Decisions section.
+Read in order: this file -> [`docs/cycle-96-plan.md`](docs/cycle-96-plan.md) -> `git log --oneline -10` -> [`docs/BACKLOG.md`](docs/BACKLOG.md). Cycle 95 (`newsheepdogland-fixes`) just closed and shipped to prod; its entry is at the top of BACKLOG.
 
-## Where It Stands (Cycle 95)
+## Where It Stands
 
-Came from a playtest: NSL stalled on impostors on re-entry, foliage blanked when facing one way, bark sound lagged the action, leaves blew out white, onboarding was weak.
+**Cycle 95 closed and deployed** (`5f4d357c`, deploy green). Six NSL playtest bugs fixed: impostor stall on re-entry (A), foliage blanking facing one way (B), bark audio/visual sync (D), leaf grazing white (E, roughness-first), and a first-run Survival explainer (F). 1535 vitest / build / lint green. No version bump (still 2.3.4); cut a release explicitly if the prod look is good.
 
-**Shipped this cycle (code only, UNCOMMITTED on `main` - branch before committing):**
-- **Bug A** (NSL stuck on impostors after a scene cycle/refresh): `QualityGovernor.resetWarmup()` added (`js/perf/QualityGovernor.js`), called at the TOP of `rebuildScene` before `buildSceneBody` (`js/main.js`). The streamer arms inside `buildSceneBody`, so the reset must precede it. `qualityIndex` preserved.
-- **Bug B** (foliage vanishes facing one way): cold-impostor meshes set `frustumCulled = false` (`js/world/TreePlacement.js` `buildColdImpostorMeshes`). They were the lone whole-mesh frustum cull on the far-offset island.
-- **Bug D** (bark audio/visual desync): `AudioManager.playSheepdogBark(dogType, { force })` forces the player bark's SFX (`js/AudioManager.js`); `triggerPlayerBark` calls with `force:true`; passive herding bark now plays the animation too, cadence held above the 4.58s bark clip (`js/Sheepdog.js`).
-- **Bug E** (leaf white) Phase 4 roughness-first: leaf `roughnessNode` default 0.92 -> 1.0 (`js/world/webgpuTreeLeafNodeMaterial.js`). One line; the A/B and the escalation decision are Phase 6.
-- **Bug F** (onboarding) Phase 5: new first-run Survival explainer `js/components/GameHUD/SurvivalIntro.js` (inline copy, localStorage `sds-survival-intro-seen`), gated via two new `useGameState` snapshot fields (`survival`, live `sceneId`), mounted in `js/components/App.js` bottomSafe. The "Replay tutorial" Settings control already existed (`SettingsPanel.js`, calls `startTutorial()`) - left as-is.
-- Added `tests/quality-governor.spec.js` and two `useGameState.store.spec.ts` cases. Bundle ratchets bumped deliberately (`App` 26->27, `other` 552->555 KiB). **Validation green: 1535 vitest pass, build clean, lint clean.**
+**Matt's prod validation is the open loop on Cycle 95.** On the live NSL build, confirm:
+- A: refresh NSL and cycle scenes - trees stream to LOD0, no permanent-impostor stall.
+- B: face all four directions at the homestead - foliage holds (no whole-mesh blank).
+- C: after a scene swap into gameplay - camera is seated on the dog (only a concern if it looks stale; no code change shipped for C).
+- E: dusk canopy - leaves read as colored foliage, not white. If white persists, escalate to `MeshPhysicalNodeMaterial` + grazing-faded specular (perf-gated) per the archived plan Phase 4.
+- D: bark animation + sound fire together; passive herding bark animates.
+- F: first Survival run on NSL shows the loop explainer once; the copy in `js/components/GameHUD/SurvivalIntro.js` is inline for easy editing.
 
-**Remaining - the PAIRED Phase 6 (needs Matt + a real WebGPU session):**
-- **A/B/C runtime probes.** Headless WebGPU is unreliable and NSL is the WebGPU flagship, so confirm in a real Chromium: refresh NSL and cycle scenes (A: streams to LOD0, `window.__sdsFoliageStreaming.wavesDone === planned`), face all four directions at the homestead (B: foliage holds), and check whether the camera is stale after a swap-into-gameplay (C: `swapScene` does not touch the camera and game-start already calls `resetCameraToDefault`, so only add a reset if the probe shows staleness - a reset in `rebuildScene` could disturb the start-screen preview).
-- **Bug E leaf look.** A/B the roughness-1.0 leaf at the NSL dusk grazing angle; capture before/after to `cycle95-validation/`. If white persists, escalate to `MeshPhysicalNodeMaterial` + grazing-faded `specularIntensityNode` (spec in cycle plan Phase 4) and pass the Cycle 92 bracketed NSL perf gate (it changes every tree on every island). Matt owns the final color call.
-- **Bug D bark cadence** and **Bug F onboarding copy** sign-off (the 4.58s passive-bark cadence reads okay; the Survival explainer copy is inline in `SurvivalIntro.js` for Matt's review).
-- Then `/validate` + `/cycle-close`.
+## Cycle 96 pickup
 
-## Process notes
-
-- The authored **Cycle 93** (visual-queue-and-polish: golden re-capture, three r185, NSL jitter rail, rock re-bake, KTX2, launch) is UNCHANGED and stays QUEUED behind Cycle 95. `docs/cycle-93-plan.md` is intact.
-- `/cycle-start` has not been run for 95; the plan doc is authored and work began. Run it to formalize if desired.
-- Bug D is the audio/visual-sync issue, distinct from the Cycle 94 bark-steering hotfix; do not reopen steering.
+`docs/cycle-96-plan.md` is a scaffold stub. The authored `docs/cycle-93-plan.md` (`visual-queue-and-polish`: golden re-capture, three r185, NSL jitter rail at the 120-140 floor, rock re-bake w/ collider parity, KTX2, launch) is the leading candidate. At `/cycle-start`, decide: fold that draft into Cycle 96, or renumber it. The "93" number was authored ahead and skipped (94 and 95 ran first), so it is not a live cycle number.
 
 ## Standing carryover (do not drop during cleanup)
 
-- **Owner intake (2026-06-12):** `docs/BACKLOG.md` Distant ideas holds Matt's owner-interest note for NPC sheepdogs as a near-term cycle candidate. Do not remove it; it needs an approach proposal for Matt before any dispatch.
+- **Owner intake (2026-06-12):** `docs/BACKLOG.md` Distant ideas holds Matt's owner-interest note for NPC sheepdogs as a near-term cycle candidate. It needs an approach proposal for Matt before any dispatch.
 - **Matt review queue:** impostor trunk-split A/B (`cycle92-validation/impostor-ab.png`); new NSL look on the live site (Cycle 91/92 surveys); launch posting from `docs/launch/` (Matt's voice); S24+ device pass (standing).
 - **NSL-as-default-world** product decision is still open (pill is off; default is still Rolling Hills).
+- **Survival onboarding translation** (es/ja/pt/zh-CN) once the English copy is locked.

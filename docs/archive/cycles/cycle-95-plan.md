@@ -146,11 +146,11 @@ Durable hard stops apply (see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)). Cycle
 
 `/cycle-close` reads this section and asks Matt to confirm each. Don't pre-check.
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, the production build shall be clean.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Cycle 95 closes, Newsheepdogland shall stream to LOD0 on re-entry and hold foliage in all camera directions per Matt's playtest.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover. (Phases 1-5 shipped in `5f4d357c`; Phase 6 = ship + Matt prod validation.)
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass. (1535 pass.)
+- [x] When `npm run build` runs at cycle close, the production build shall be clean.
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions. (Deploy run for `5f4d357c` green.)
+- [ ] When Cycle 95 closes, Newsheepdogland shall stream to LOD0 on re-entry and hold foliage in all camera directions per Matt's playtest. (Validated by Matt on prod; any residual issue is a fast-follow.)
 
 ## References
 
