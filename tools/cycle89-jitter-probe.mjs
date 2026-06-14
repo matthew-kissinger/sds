@@ -100,6 +100,7 @@ function parseArgs(argv) {
         headless: '0',
         boxState: '0',
         heapProfile: '0',
+        budgets: '',
     };
     const parsed = { ...defaults };
     for (const arg of argv.slice(2)) {
@@ -969,12 +970,16 @@ async function runMatrix(args) {
 }
 
 async function runCheck(args) {
-    const budgetPath = resolve(ROOT, 'cycle89-validation/jitter-budgets.json');
+    // --budgets overrides the default field-rail budgets so the same probe can
+    // gate a second scene (Cycle 96: the NSL survival rail passes
+    // --budgets=cycle89-validation/jitter-budgets-nsl.json alongside
+    // --scene=newsheepdogland --mode=survival --waitFoliage=1).
+    const budgetPath = resolve(ROOT, args.budgets || 'cycle89-validation/jitter-budgets.json');
     let budgets;
     try {
         budgets = JSON.parse(await readFile(budgetPath, 'utf8'));
     } catch {
-        console.error('[C89-JITTER] no budgets recorded yet - run Phase 7 first (cycle89-validation/jitter-budgets.json missing)');
+        console.error(`[C89-JITTER] no budgets at ${budgetPath} - derive them from a baseline run first`);
         process.exit(1);
     }
     const runs = [];

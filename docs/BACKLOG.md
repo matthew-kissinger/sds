@@ -20,7 +20,7 @@ Deferred / carryover:
 - Matt's prod validation of A/B/C (NSL streams to LOD0 on re-entry, foliage holds facing any direction, camera after a swap), the leaf look at dusk, bark cadence, and the Survival copy. Any residual is a fast-follow.
 - Bug E escalation to `MeshPhysicalNodeMaterial` + grazing-faded `specularIntensityNode` if roughness alone leaves visible white (run the Cycle 92 bracketed NSL perf gate first).
 - Survival onboarding copy translation into es/ja/pt/zh-CN once the English is locked (inline now; moving it to the locale would re-grow the zero parity allowlist).
-- The authored `cycle-93-plan.md` (`visual-queue-and-polish`) is the candidate content for Cycle 96; fold in or renumber at `/cycle-start`.
+- Cycle 96 (`visual-queue-and-polish`) adopted the authored cycle-93 content at the live number (the dead "93" file was removed). Its autonomous slice (NSL jitter rail, rock collider-parity harness, ARCHITECTURE/AGENTS freshness sweep, r185 readiness verdict) ran ahead of the paired Phase 1; golden re-capture, r185 bump (r185 not yet on npm), rock re-bake, KTX2, and launch wait on Matt's paired review.
 - Everything in the Cycle 92 / 91 carryover below still stands (Matt review queue, P8 lighting, rock re-bake, KTX2, golden re-capture, NSL jitter rail, NSL-as-default decision, S24+, launch posting).
 
 ### Cycle 94 - `bark-steering-and-discoverability` (closed 2026-06-12)

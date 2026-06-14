@@ -1,8 +1,8 @@
-# Next Session - Cycle 96 scaffolded (visual-queue-and-polish)
+# Next Session - Cycle 96 open (visual-queue-and-polish)
 
 > **Updated:** 2026-06-14
 > **For:** Cycle 96 (`docs/cycle-96-plan.md`)
-> **Pickup priority:** Fill the Cycle 96 plan's Goal + Phases (candidate content is the authored `docs/cycle-93-plan.md`), then run `/cycle-start`. First, eyeball the just-deployed Cycle 95 fixes on prod and file any residual as a fast-follow.
+> **Pickup priority:** Run the paired Phase 1 (review the shipped NSL look, folding in your open Cycle 95 prod validation, then record the gating decisions in `DECISIONS.md`). The autonomous slice already landed; Phase 1 unblocks the rest.
 
 ## Cold-Start Orientation
 
@@ -22,7 +22,9 @@ Read in order: this file -> [`docs/cycle-96-plan.md`](docs/cycle-96-plan.md) -> 
 
 ## Cycle 96 pickup
 
-`docs/cycle-96-plan.md` is a scaffold stub. The authored `docs/cycle-93-plan.md` (`visual-queue-and-polish`: golden re-capture, three r185, NSL jitter rail at the 120-140 floor, rock re-bake w/ collider parity, KTX2, launch) is the leading candidate. At `/cycle-start`, decide: fold that draft into Cycle 96, or renumber it. The "93" number was authored ahead and skipped (94 and 95 ran first), so it is not a live cycle number.
+`docs/cycle-96-plan.md` now holds the adopted `visual-queue-and-polish` content (the authored cycle-93 draft folded in at this number; the dead "93" file was removed). The autonomous slice ran ahead of the paired gate: NSL jitter rail, rock collider-parity harness, ARCHITECTURE/AGENTS freshness sweep, and the three r185 readiness verdict (r185 is not on npm yet - latest 0.184.0, so Phase 3 is blocked upstream).
+
+**The gate is the paired Phase 1** (see the plan): review the shipped NSL look (folding in your open Cycle 95 prod validation), then record in `DECISIONS.md` the look-approval, NSL-as-default verdict (Q1), rock/KTX2 verdicts, and trailer disposition. Those unblock golden re-capture (Phase 2), rock re-bake (Phase 5), KTX2 (Phase 6), and the trailer (Phase 7). The prep pack is in `cycle96-validation/phase1-prep.md`.
 
 ## Standing carryover (do not drop during cleanup)
 
