@@ -4,6 +4,21 @@
 
 ## Recently Completed
 
+### Cycle 97 - `visual-queue-and-polish` paired remainder, run autonomously (closed 2026-06-14)
+
+Plan archived at [`docs/archive/cycles/cycle-97-plan.md`](archive/cycles/cycle-97-plan.md). Matt re-scoped the Cycle 96 paired remainder with "complete autonomously and ship - no need for human visual check - I will test in prod", which lifted the paired visual-review gate. The autonomous-completable slice shipped; the product, paired, and upstream-blocked items carry forward. Slice committed `50ee362e`; 1541 vitest / lint / build green; no version bump (still 2.3.4); nothing player-visible (the one code change is a golden-capture-only grass guard, byte-identical in production).
+
+- **Golden suite re-baselined (Phase 2).** The 12-cell suite (`tools/validation/golden/`, field/rolling-hills/open-country × 2 ToD × 2 camera) was stale since 2026-05-16 and diffed near-zero SSIM (the Cycle 91 camera/tree rework reframed the follow shots, Cycle 92 changed impostors). Re-pinned to the current shipped look after inspecting the captures for health. Removed the dead `konveyorRocks` codename from the harness URL (no `js/`/`shared/` consumer since the Cycle 87 retirement), so the goldens reflect the default production rock path. Added a `visualGolden` grass-wind/LOD clock freeze in `GrassSystem.js` (production byte-identical) so full-frame aerial grass cells are deterministic: the suite was intermittently flaking one all-grass cell to ~0.67 SSIM on wall-clock wind phase, and with the clock frozen two consecutive `--diff` runs pass clean (mean 0.995, 0 fails). `tools/validation/golden/MANIFEST.md` records the re-pin. NSL is not in the matrix yet (streamed foliage + 14s cold load make a single-frame headless capture non-deterministic); a streaming-aware NSL capture is the follow-up.
+- **KTX2 measured go/no-go + spec (Phase 3).** Analytical spike (`cycle97-validation/ktx2-census.mjs` + `ktx2-readiness.md`, local): GO on the merits. The addressable set is entirely the tree impostor atlases (12 files at 2048²; dog portraits + PWA icons are DOM images, not GPU textures); prize ~192 MB VRAM and ~10.6 MB net wire after the transcoder. Not blind-landed (greenfield transcoder pipeline on Basis's three worst cases - alpha foliage, normal, depth - with no measured VRAM bottleneck creating urgency); the bounded integration spec is ready. Recorded in `DECISIONS.md`.
+
+Deferred / carryover to Cycle 98 (`launch-and-ktx2`):
+
+- **KTX2 integration** (greenlit follow-up; spec in `cycle97-validation/ktx2-readiness.md`): UASTC-only encoder pass on `bake-tree-impostors`, KTX2Loader + vendored basis transcoder, gated on the golden suite + cold-load delta + the NSL jitter rail.
+- **Paired product + launch session** (Matt's hands): NSL-as-default-world (Q1, still Rolling Hills), the version bump, launch posting (itch + devlog + social, Matt's voice), and the S24+ device pass.
+- **three r185** bump stays blocked until r185 publishes (latest 0.184.0); checklist `cycle96-validation/r185-readiness.md`.
+- **Rock re-bake** needs a design direction (the Cycle 96 collider-parity harness gates it; any footprint drift = the bake does not ship).
+- Everything in the Cycle 95 / 92 / 91 carryover below still stands (Matt review queue, P8 lighting, NPC-sheepdogs owner intake, Survival-copy translation).
+
 ### Cycle 96 - `visual-queue-and-polish` (closed 2026-06-14)
 
 Plan archived at [`docs/archive/cycles/cycle-96-plan.md`](archive/cycles/cycle-96-plan.md). Adopted the authored cycle-93 queue-drain content at the live number (the dead "93" file was removed). The cycle is paired-gated by design (Phase 1 visual review, Phase 8 launch), so the autonomous run shipped the slice that needs no gate and deferred the paired remainder to Cycle 97. Slice committed `a987105b`; 1541 vitest / build / lint green; no version bump (still 2.3.4); nothing player-visible.
