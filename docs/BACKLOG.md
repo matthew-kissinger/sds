@@ -4,6 +4,21 @@
 
 ## Recently Completed
 
+### Cycle 98 - `launch-and-ktx2` (KTX2 impostor pipeline) (closed 2026-06-14)
+
+Plan archived at [`docs/archive/cycles/cycle-98-plan.md`](archive/cycles/cycle-98-plan.md). Matt picked KTX2 from the Cycle 97 carryover, ran it with "run phase 1-3" + "fold your recommendations in", and at close chose "ship now, I test in prod." 4/6 phases shipped; the win-realizing Phase 5 and the paired launch carry forward. Slice committed `2cd9690a`; 1543 vitest / lint / build green; no version bump (still 2.3.4).
+
+- **KTX2 impostor pipeline (P1-4).** Encode is a PNG -> KTX2 wasm post-process (`tools/encode-impostors-ktx2.mjs`, `ktx2-encoder` + sharp; KTX-Software is not in winget so no native toktx). 6 live atlases 7.32 -> 2.59 MB (35%). Runtime: `js/rendering/ktx2Loader.js` is a lazy `KTX2Loader` singleton (its own 59 KiB chunk, off `main`) + a `loadImpostorTexture` helper that prefers `.ktx2` with a `.png` fallback; both load sites use it; `detectSupport` warms at renderer-ready as a detached side-effect; the decode-only basis transcoder is vendored to `assets/vendor/basis/` (lazy). Bundle budgets bumped for the deliberate growth (recorded in `DECISIONS.md`). Shipped unvalidated per "I test in prod"; the `.png` fallback is the safety net.
+- **Dead octahedral set dropped from dist (free win).** `assets/models/trees/octahedral/` is reachable only via the `?webgpuNativeTreeImpostors=1` debug route, never on the prod path - ~9 MB that shipped dead. `vite.config.js` drops it from dist. dist 63 -> 54 MB.
+- **Asset-weighting analysis (durable, in `DECISIONS.md`).** Asset size drives LOADING, not rendering/perf (rendering is foliage instance counts + shaders + overdraw; perf/jitter is streaming-wave mesh builds + shadow churn). Ranked levers: octahedral [done], KTX2 [done], compress terrain `.bin` (16 MB uncompressed float32, per-scene-load), human-in-the-loop impostor bake re-pass (unbenchmarked tool). The last two seed Cycle 99.
+
+Deferred / carryover to Cycle 99 (`asset-diet`):
+
+- **KTX2 Phase 5** (the win realization): the dusk-canopy A/B (orientation/`isYFlip` + depth/normal transcode quality are the top checks) + dropping the impostor PNGs from dist (dist currently ships both `.png` and `.ktx2`, so the dist-shrink/VRAM win is not yet realized). Acceptance item "dist smaller + golden green" was explicitly deferred here per Matt's "ship now" close.
+- **Terrain `.bin` compression** (16 MB uncompressed float32, 4 MB x 4 scenes, per-scene-load) and the **human-in-the-loop impostor bake re-pass** (atlas resolution, normal-vs-depth necessity, the unbenchmarked Kiln tool) - the asset-diet theme.
+- **Paired launch session** (NSL-as-default-world, version bump, itch/devlog/social posting in Matt's voice, S24+ device pass) - the unstarted other half of "launch-and-ktx2".
+- **three r185** (upstream-blocked, latest 0.184.0) and the **rock re-bake** (needs a design direction) still stand, plus the Cycle 95/92/91 carryover below (Matt review queue, NPC-sheepdogs owner intake, Survival-copy translation).
+
 ### Cycle 97 - `visual-queue-and-polish` paired remainder, run autonomously (closed 2026-06-14)
 
 Plan archived at [`docs/archive/cycles/cycle-97-plan.md`](archive/cycles/cycle-97-plan.md). Matt re-scoped the Cycle 96 paired remainder with "complete autonomously and ship - no need for human visual check - I will test in prod", which lifted the paired visual-review gate. The autonomous-completable slice shipped; the product, paired, and upstream-blocked items carry forward. Slice committed `50ee362e`; 1541 vitest / lint / build green; no version bump (still 2.3.4); nothing player-visible (the one code change is a golden-capture-only grass guard, byte-identical in production).

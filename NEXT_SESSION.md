@@ -1,29 +1,32 @@
-# Next Session - Cycle 98 (launch-and-ktx2)
+# Next Session - Cycle 99 (asset-diet)
 
 > **Updated:** 2026-06-14
-> **For:** Cycle 98 (`docs/cycle-98-plan.md`)
-> **Pickup priority:** Two concrete teed-up tracks: the greenlit KTX2 integration (spec ready at `cycle97-validation/ktx2-readiness.md`) and the paired product + launch session (NSL-as-default, version bump, posting, S24+ pass). Pick the cycle's coherent goal at `/cycle-start`, or pivot to the NPC-sheepdogs intake.
+> **For:** Cycle 99 (`docs/cycle-99-plan.md`)
+> **Pickup priority:** FIRST validate the KTX2 impostors in prod (Cycle 98 shipped them unvalidated per "I test in prod"); then pick the asset-diet goal at `/cycle-start` (KTX2 P5 win-realization, terrain `.bin` compression, impostor bake re-pass).
+
+## First action: validate the KTX2 deploy in prod
+
+Cycle 98 shipped + deployed the KTX2 impostor pipeline UNVALIDATED (slice `2cd9690a`; the Phase 5 A/B was GPU-contended and deferred). Load sheepdogsim.com on a KTX2-capable browser and check the tree impostors (distant trees): orientation right (not flipped/upside-down), no obvious transcode artifacts on the canopy. The `.png` fallback covers non-KTX2 browsers. **If the impostors look wrong: `git revert 2cd9690a` (the feature slice is a clean standalone commit) and redeploy.** If they look right, KTX2 Phase 5 (drop the PNGs from dist to realize the dist-shrink/VRAM win) is safe to do in this cycle.
 
 ## Cold-Start Orientation
 
-Read in order: this file -> [`docs/cycle-98-plan.md`](docs/cycle-98-plan.md) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 97 entry at the top) -> `git log --oneline -10`. The visual-queue (Cycles 96-97) is drained to its product, paired, and upstream-blocked remainder; Cycle 98 is where those land.
+Read in order: this file -> [`docs/cycle-99-plan.md`](docs/cycle-99-plan.md) -> `DECISIONS.md` "Cycle 98" (KTX2 record + asset-weighting analysis) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 98 entry at the top) -> `git log --oneline -6`.
 
-## Where It Stands
+## Where it stands
 
-**Cycle 97 closed and shipped its autonomous slice** (`50ee362e`): the golden suite re-baselined to the current shipped look (with a `GrassSystem` capture-determinism fix so the suite no longer flakes), and a measured KTX2 go/no-go (GO on merits, integration spec ready). 1541 vitest / lint / build green. No version bump (still 2.3.4); nothing player-visible. Matt's directive was "complete autonomously and ship - I test in prod", which lifted the paired visual-review gate.
+**Cycle 98 (`launch-and-ktx2`) closed + shipped.** KTX2 impostor pipeline P1-4 (encode -> lazy loader -> load-site swap -> offline gates) + the dead octahedral set dropped from dist (63 -> 54 MB). Slice `2cd9690a` + the close commit; 1543 vitest / lint / build green; no version bump. The dist-shrink/VRAM win is NOT yet realized - both `.png` and `.ktx2` ship until Phase 5 drops the PNGs.
 
-**Cycle 98 (`launch-and-ktx2`) is the drained remainder.** The scaffold lists the candidates; the two most concrete:
+**Cycle 99 (`asset-diet`) is scaffolded.** Goal candidates (fill at `/cycle-start`):
 
-1. **KTX2 integration (greenlit).** Cycle 97 measured ~192 MB VRAM + ~10.6 MB net wire on the tree impostor atlases and wrote the integration spec (`cycle97-validation/ktx2-readiness.md`, local): UASTC-only encoder pass on `bake-tree-impostors`, KTX2Loader + vendored basis transcoder, per-texture format choice, gated on the golden suite + the 20Mbps cold-load delta + the NSL jitter rail. Bounded and prod-testable.
-2. **Paired product + launch session (Matt's hands).** NSL-as-default-world (Q1, still Rolling Hills), the version bump, the launch posting (itch + devlog + social, Matt's voice), and the S24+ device pass.
+1. **KTX2 Phase 5** - dusk-canopy A/B (orientation + depth/normal quality) then drop impostor PNGs from dist (realizes the win). Bounded.
+2. **Terrain `.bin` compression** - 16 MB uncompressed float32 (4 MB x 4 scenes), per-scene-load. int16 quantize / packed format; respect `shared/terrain/Heightfield.js` + the sim-baseline terrain hashes.
+3. **Impostor bake re-pass (paired)** - atlas resolution, normal-vs-depth necessity, the unbenchmarked Kiln tool. Matt's taste + a paired track.
 
-Or pivot to a new theme: the **NPC-sheepdogs** owner-intake candidate (needs an approach proposal first).
+## Standing carryover (do not drop)
 
-## Standing carryover (do not drop during cleanup)
-
-- **Matt's Cycle 95 prod validation** - A: streams to LOD0 on re-entry; B: foliage holds facing any direction; C: camera after a swap; E: no dusk leaf-white; D: bark cadence; F: Survival explainer. Any residual is a fast-follow (E can escalate to `MeshPhysicalNodeMaterial` + grazing-faded specular, perf-gated). This was the look-approval backstop for the Cycle 97 golden re-baseline; if prod shows a rejected element, re-capture the affected goldens against the corrected look.
-- **three r185** stays blocked until it publishes (latest 0.184.0); checklist `cycle96-validation/r185-readiness.md`. The instance-level shadow-churn fix stays regardless.
+- **Paired launch session** - NSL-as-default-world (still Rolling Hills), version bump, itch/devlog/social posting (Matt's voice), S24+ device pass. The unstarted other half of "launch-and-ktx2".
+- **three r185** blocked until it publishes (latest 0.184.0); checklist `cycle96-validation/r185-readiness.md`.
 - **Rock re-bake** behind the Cycle 96 collider-parity harness; needs a design direction.
-- **Owner intake (2026-06-12):** NPC sheepdogs as a near-term cycle candidate (needs an approach proposal before dispatch) - `docs/BACKLOG.md` Distant ideas.
-- **Survival onboarding translation** (es/ja/pt/zh-CN) once the English copy is locked.
-- **NSL-as-default-world** product decision still open (pill off; default still Rolling Hills).
+- **Matt's Cycle 95 prod validation** (A/B/C/E/D/F) - if prod shows a rejected element, re-capture the affected goldens.
+- **Survival onboarding translation** (es/ja/pt/zh-CN) once the English copy locks.
+- **NPC-sheepdogs** owner intake - needs an approach proposal before dispatch.
