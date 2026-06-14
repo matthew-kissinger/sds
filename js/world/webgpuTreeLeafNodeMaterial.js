@@ -74,7 +74,13 @@ export function createWebGpuTreeLeafNodeMaterial({ MeshStandardNodeMaterial, Dou
     ? sampled.a.mul(alphaScale).mul(float(1.0).sub(occluderFade.mul(occluderPeak).mul(mix(0.65, 1.0, screenHash))))
     : alpha.mul(alphaScale);
   material.positionNode = positionLocal.add(vec3(windDisp.x, 0.0, windDisp.y));
-  material.roughnessNode = float(treeLeaf.roughness ?? 0.92);
+  // Cycle 95 (Bug E): leaves blew out white at grazing dusk angles. The leaf is a
+  // MeshStandardNodeMaterial (dielectric F0 ~0.04 -> ~1.0 Fresnel at grazing), and
+  // there is no env map, so the white is direct-sun specular. Fully-rough leaves
+  // spread the GGX lobe so the grazing highlight reads as colored foliage, not a
+  // blown-out rim. specularIntensityNode would be the sharper lever but it is
+  // MeshPhysicalNodeMaterial-only; that escalation is perf-gated (see cycle-95-plan).
+  material.roughnessNode = float(treeLeaf.roughness ?? 1.0);
   material.metalnessNode = float(treeLeaf.metalness ?? 0.0);
   material.userData.webgpuUsesSourceMap = !!sampled;
   material.userData.webgpuUsesSourceTint = treeLeaf.tintColorLinear === true;

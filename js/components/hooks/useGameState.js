@@ -56,6 +56,12 @@ function makeInitialSnapshot() {
         roundBased: false,
         round: 0,
         counted: 0,
+        // Cycle 95 (Bug F): drives the first-run Survival explainer. survival is
+        // GameState.survival (set on any solo start on a survival scene); sceneId
+        // is the live scene (window.__currentSceneId) so the gate is NSL-specific
+        // and not fooled by GameState.survival being sticky across scene swaps.
+        survival: false,
+        sceneId: 'field',
     };
 }
 
@@ -127,6 +133,8 @@ function readGameState() {
         roundBased,
         round: gameState.countingState?.round ?? 0,
         counted: roundBased ? (gameState.sheepRetired || 0) : 0,
+        survival: !!gameState.survival,
+        sceneId: (typeof window !== 'undefined' && window.__currentSceneId) || 'field',
     };
 
     if (networkManager?.currentRoom) {
@@ -190,6 +198,8 @@ function hudEqual(a, b) {
         a.roundBased === b.roundBased &&
         a.round === b.round &&
         a.counted === b.counted &&
+        a.survival === b.survival &&
+        a.sceneId === b.sceneId &&
         mpCollectionsEqual(a, b)
     );
 }

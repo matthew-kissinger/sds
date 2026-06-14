@@ -194,6 +194,26 @@ export class QualityGovernor {
         }
     }
 
+    /**
+     * Re-arm the cold-load warmup window for a fresh scene. A scene swap pays
+     * the same one-time pipeline-compile + texture-upload spike as
+     * first-interactive, so the window legitimately re-arms per scene. Without
+     * this, the one-shot warmupCompleted set on the first scene fires every
+     * later onWarmupComplete subscriber synchronously, collapsing the
+     * separation the foliage streamer relies on (a re-entered Newsheepdogland
+     * would arm its waves during the build and stall on impostors). Preserves
+     * qualityIndex and the applied pixel ratio - those are session-sticky perf
+     * decisions, not warmup state.
+     */
+    resetWarmup() {
+        this.warmupUntil = null;
+        this.warmupCompleted = false;
+        this.lastSampleAt = null;
+        this.samples = [];
+        this.windowStartedAt = 0;
+        this._warmupListeners = [];
+    }
+
     _budget() {
         // Desktop is always classified 'high'; give it its own discrete-GPU
         // budget instead of the mobile-high bar. Mobile keeps the per-tier

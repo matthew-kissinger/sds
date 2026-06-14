@@ -540,15 +540,26 @@ export class AudioManager {
      * Play dog bark sound with cooldown based on dog type
      * @param {string} dogType - Type of dog ('jep', 'pip', 'shiloh')
      */
-    playSheepdogBark(dogType = 'jep') {
+    playSheepdogBark(dogType = 'jep', { force = false } = {}) {
         const now = Date.now();
-        if (now - this.lastPlayTimes.dogBarks < this.cooldowns.dogBarks) {
+        // A forced (player-commanded) bark bypasses the AudioManager's own
+        // cooldown so the SFX always lands with the bark animation; the caller
+        // (Sheepdog.triggerPlayerBark) owns the real rate limit. Passive barks
+        // keep this cooldown as a throttle.
+        if (!force && now - this.lastPlayTimes.dogBarks < this.cooldowns.dogBarks) {
             return; // Still in cooldown
         }
 
         const playLoadedBark = () => {
             const dogBark = this.sounds.dogBarks[dogType] || this.sounds.dogBarks.jep;
-            if (!dogBark || dogBark.isPlaying || typeof dogBark.play !== 'function') return;
+            if (!dogBark || typeof dogBark.play !== 'function') return;
+            if (dogBark.isPlaying) {
+                // Forced bark restarts the one-shot so it can't be swallowed
+                // while a previous sample is still playing; a passive bark keeps
+                // the old drop-if-busy behavior.
+                if (!force || typeof dogBark.stop !== 'function') return;
+                dogBark.stop();
+            }
             dogBark.play();
             this.lastPlayTimes.dogBarks = Date.now();
             console.log(`[AUDIO] ${dogType} barked`);

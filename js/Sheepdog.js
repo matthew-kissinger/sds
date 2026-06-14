@@ -175,7 +175,10 @@ export class Sheepdog {
         // Audio and behavior
         this.audioManager = null;
         this.lastBarkTime = 0;
-        this.barkCooldown = 3000;
+        // Passive herding bark cadence. Held above the bark animation length so
+        // a passive bark (which now plays the animation too, not just audio)
+        // never restarts mid-animation. Tunable; flagged for visual review.
+        this.barkCooldown = Math.max(3000, Math.round(ANIMATION_STATES.BARKING.duration * 1000) + 1000);
         this.nearSheep = false;
 
         // Player-triggered bark command. Separate cooldown from the passive
@@ -625,7 +628,10 @@ export class Sheepdog {
         if (now - this.lastPlayerBarkTime < this.playerBarkCooldown) return false;
         this.lastPlayerBarkTime = now;
         this.triggerBark();
-        if (this.audioManager) this.audioManager.playSheepdogBark(this.dogType);
+        // force: the player commanded this bark, so the SFX must land with the
+        // animation - never swallowed by the AudioManager cooldown or a
+        // still-playing previous bark sample.
+        if (this.audioManager) this.audioManager.playSheepdogBark(this.dogType, { force: true });
         return true;
     }
 
@@ -809,10 +815,16 @@ export class Sheepdog {
         // Update movement state
         this.isMoving = this.velocity.magnitude() > 0.5;
         
-        // Removed barking animation - audio only
+        // Passive herding bark: while moving near sheep, bark periodically.
+        // Cycle 95: this now plays the bark animation alongside the audio (it
+        // was audio-only, which read as a barking sound with no open mouth).
+        // The cadence (barkCooldown) sits above the animation length so it never
+        // restarts mid-animation; triggerBark self-guards on its own timer, so
+        // the visual and audio stay in lockstep.
         if (this.audioManager && this.isMoving && this.nearSheep) {
             const now = Date.now();
             if (now - this.lastBarkTime > this.barkCooldown) {
+                this.triggerBark();
                 this.audioManager.playSheepdogBark(this.dogType);
                 this.lastBarkTime = now;
             }

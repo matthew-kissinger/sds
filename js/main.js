@@ -1119,6 +1119,16 @@ class SheepDogSimulation {
         if (!sceneDef) throw new Error('rebuildScene called with null sceneDef');
         console.log(`[SWAP] rebuildScene(${sceneDef.id}) — building`);
 
+        // Re-arm the quality-governor warmup for the new scene BEFORE
+        // buildSceneBody runs. The foliage streamer arms inside buildSceneBody
+        // (js/boot/initWorld.js) and subscribes to onWarmupComplete; if the
+        // prior scene already completed warmup, that callback fires
+        // synchronously during the build and collapses the warmup separation the
+        // streamer relies on, so a re-entered Newsheepdogland stalls on
+        // impostors. qualityIndex (the sticky perf decision) is preserved; only
+        // the warmup window re-arms.
+        this.qualityGovernor?.resetWarmup?.();
+
         // 1. Currentscene side-effects (mirror constructor lines 180-213).
         this.currentScene = sceneDef;
         this.gameState.sceneId = sceneDef.id;

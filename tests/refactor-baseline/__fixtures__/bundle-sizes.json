@@ -6,10 +6,10 @@
     "three": 605,
     "client": 177,
     "ui": 127,
-    "App": 26,
+    "App": 27,
     "i18n": 140,
     "vendor": 60,
     "webgpuDiagnostic": 85,
-    "other": 552
+    "other": 555
   }
 }

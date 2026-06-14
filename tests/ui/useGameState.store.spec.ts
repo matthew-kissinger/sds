@@ -106,4 +106,37 @@ describe('useGameState store change-gate', () => {
         expect(Math.floor(180 - snap.gameTime)).toBe(175);
         unsub();
     });
+
+    // Cycle 95 (Bug F): the Survival explainer gate rides the snapshot.
+    it('exposes the survival flag and mints a new reference when it changes', () => {
+        const unsub = gameStateStore.subscribe(() => {});
+        const first = gameStateStore.getSnapshot() as { survival: boolean };
+        expect(first.survival).toBe(false);
+
+        h.state!.survival = { startFlock: 10 }; // a live survival run
+        h.frameHandler?.();
+        const next = gameStateStore.getSnapshot() as { survival: boolean };
+        expect(next).not.toBe(first);
+        expect(next.survival).toBe(true);
+        unsub();
+    });
+
+    it('tracks the live scene id from window.__currentSceneId', () => {
+        // Node env: no DOM. The store reads window defensively
+        // (typeof window !== 'undefined'), so shim a global window to exercise
+        // the scene-id path and clean it up after.
+        const g = globalThis as unknown as { window?: { __currentSceneId?: string } };
+        const hadWindow = 'window' in g;
+        g.window = { __currentSceneId: 'newsheepdogland' };
+        try {
+            const unsub = gameStateStore.subscribe(() => {});
+            h.state!.sheepRetired = 7; // force a re-read past the change-gate
+            h.frameHandler?.();
+            const next = gameStateStore.getSnapshot() as { sceneId: string };
+            expect(next.sceneId).toBe('newsheepdogland');
+            unsub();
+        } finally {
+            if (!hadWindow) delete g.window;
+        }
+    });
 });

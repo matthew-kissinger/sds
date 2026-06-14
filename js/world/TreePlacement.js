@@ -1142,7 +1142,17 @@ export function buildColdImpostorMeshes(builder, waves, atlasByType) {
         mesh.instanceMatrix.needsUpdate = true;
         mesh.computeBoundingBox?.();
         mesh.computeBoundingSphere?.();
-        mesh.frustumCulled = true;
+        // frustumCulled=false: cold coverage is the whole-island silhouette,
+        // batched per (type, azTile) across every wave. A single per-batch
+        // bounding sphere spans the island, so on a far-offset scene
+        // (Newsheepdogland's mass sits ~1.7km off origin) the all-or-nothing
+        // Frustum.intersectsSphere test rejects the entire batch the moment the
+        // homestead camera faces away from the centroid - every impostor blinks
+        // out at once. The consolidated trees (treeComputeCull) and grass
+        // (grassComputeCull) already cull per-instance for exactly this reason;
+        // these billboards are cheap (18 verts/instance) and transient (retired
+        // per wave), so a full-island depth/color pass is trivial.
+        mesh.frustumCulled = false;
         mesh.castShadow = false; // durable far-impostor rule
         mesh.receiveShadow = false;
         mesh.visible = false; // shown when the albedo texture binds

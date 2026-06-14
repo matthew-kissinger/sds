@@ -78,6 +78,7 @@ export async function initReactUI() {
             { ObjectiveBanner },
             { PracticeHint },
             { BarkHint },
+            { SurvivalIntro },
             { MobileHUD },
             { MobileControls },
             { HudLayout },
@@ -118,6 +119,7 @@ export async function initReactUI() {
             import('./GameHUD/ObjectiveBanner.js'),
             import('./GameHUD/PracticeHint.js'),
             import('./GameHUD/BarkHint.js'),
+            import('./GameHUD/SurvivalIntro.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
             import('./GameHUD/HudLayout.js'),
@@ -956,6 +958,14 @@ export async function initReactUI() {
                 createElement(BarkHint, {
                     key: 'bark-hint',
                     active: isDesktop
+                }),
+                // Cycle 95 (Bug F): first-run Survival loop explainer. Solo
+                // survival on Newsheepdogland only (gameData.survival is sticky,
+                // so the live sceneId pins it to NSL). Self-gates to first run
+                // via localStorage; stacks with the bark chip in this flex slot.
+                createElement(SurvivalIntro, {
+                    key: 'survival-intro',
+                    active: !isMultiplayer && gameData.survival && gameData.sceneId === 'newsheepdogland'
                 })
             ];
 
