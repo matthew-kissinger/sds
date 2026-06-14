@@ -36,8 +36,14 @@ describe('production cache policy', () => {
         expect(headerSection('/assets/scenes/entrance/*')).toContain(
             'Cache-Control: public, max-age=300, s-maxage=300, must-revalidate',
         );
-        expect(headerSection('/terrain/*')).toContain(
+        // Cycle 100: /terrain/* split into the JSON manifest (cache only) and the
+        // brotli-pre-compressed .bin (cache + no-transform + Content-Encoding: br).
+        expect(headerSection('/terrain/*.json')).toContain(
             'Cache-Control: public, max-age=300, s-maxage=300, must-revalidate',
         );
+        expect(headerSection('/terrain/*.bin')).toContain(
+            'Cache-Control: public, max-age=300, s-maxage=300, must-revalidate, no-transform',
+        );
+        expect(headerSection('/terrain/*.bin')).toContain('Content-Encoding: br');
     });
 });

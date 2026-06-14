@@ -12,5 +12,14 @@
 /assets/scenes/entrance/*
   Cache-Control: public, max-age=300, s-maxage=300, must-revalidate
 
-/terrain/*
+# Heightfield manifests (small JSON): keep the short revalidating TTL.
+/terrain/*.json
   Cache-Control: public, max-age=300, s-maxage=300, must-revalidate
+
+# Cycle 100: heightfield binaries ship brotli-pre-compressed (vite
+# precompress-terrain plugin). Declare the encoding and stop the edge from
+# re-transforming it; the browser decodes transparently below fetch(), so
+# Heightfield.load reads byte-identical float32 (lossless, no baseline moves).
+/terrain/*.bin
+  Cache-Control: public, max-age=300, s-maxage=300, must-revalidate, no-transform
+  Content-Encoding: br

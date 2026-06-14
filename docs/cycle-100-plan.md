@@ -1,38 +1,66 @@
 # Cycle 100 — terrain-compression
 
-> Drafted 2026-06-14 after Cycle 99 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
->
-> **Scaffold stub.** Cycle 99 realized the KTX2 dist win (dist 54 -> 46 MB). The asset-weighting analysis (`DECISIONS.md` Cycle 98) named terrain `.bin` as the single biggest remaining per-scene-load asset. Fill the Goal + Phases at `/cycle-start`.
+> Drafted 2026-06-14 after Cycle 99 closed; Goal + Phases filled 2026-06-14 at `/cycle-start` after the Q1/Q2 measurement. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/).
 
 ## Goal
 
-(Fill at `/cycle-start`.) Compress the baked terrain heightfields. Each scene ships a `public/terrain/<scene>.bin` of uncompressed float32 (4 MB x 4 scenes = ~16 MB), downloaded per scene-load - the largest single per-scene-load asset now that impostors are KTX2. Candidate approaches: int16 quantization (2x), a packed/normalized integer format, or gzip/br at the CDN layer (Cloudflare may already br-compress; measure the wire reality before quantizing). The user-visible win is faster scene-load (less to download), with zero change to terrain shape.
+Stop shipping the baked terrain heightfields uncompressed. Each scene's `public/terrain/<scene>.bin` is 4 MiB of raw float32, served by Cloudflare with no `content-encoding` (measured: `application/octet-stream` is outside CF's default-compressible set), so a full asset load pulls 16 MiB of terrain over the wire. Ship brotli-pre-compressed `.bin` on the Cloudflare Pages build and declare it with `Content-Encoding: br` + `Cache-Control: no-transform` in `_headers`, so the browser transparently decodes the byte-identical float32. The win is a smaller per-scene-load download (rolling-hills 4 MiB -> ~1.3 MiB, NSL 4 MiB -> ~0.9 MiB; 16 MiB -> ~3.94 MiB across all four) with zero change to terrain shape, zero precision loss, and no baseline moves. Lossless only; int16 quantization is explicitly out of scope (see Q2).
 
 ## How to read this plan
 
-The hard constraint is determinism + the heightfield single source of truth. The terrain mesh and every entity that sits on the ground read the same Y at every (x, z) via `shared/terrain/Heightfield.js` -> `TerrainBuilder._groundY`. Any change to the baked values (quantization rounding included) changes that Y, which:
+The decisive constraint was determinism + the heightfield single source of truth, and the measurement retired it: the terrain `.bin` is a **client-only** asset (the Worker sim loads no heightfield; grep of `worker/` finds zero `Heightfield` usage). `Content-Encoding: br` decodes in the browser network stack **below** `fetch()`, so `Heightfield.load`'s `arrayBuffer()` returns the byte-identical original float32. Therefore:
 
-- Moves the visible terrain mesh and every grounded entity (trees, rocks, dog, sheep, camera ridge clamp).
-- Changes the deterministic sim if slope-modulated speed reads a different height -> MP desync risk + sim-baseline drift.
-- Trips the refactor-baseline terrain-mesh-hash and any sim-baseline terrain hash.
+- `shared/terrain/Heightfield.js` (fence-frozen) is **not touched**.
+- No sim-baseline or refactor-baseline fixture moves (bytes are byte-identical after decode).
+- No MP-desync risk (no Worker consumer; the wire format the Worker speaks is unchanged).
+- The change is purely client-side transport on the Cloudflare Pages target.
 
-So the cycle must decide: is the compression **lossless** (gzip/br, packed-but-exact) - in which case no baseline moves - or **lossy** (int16 quantize) - in which case the quantization is a deliberate, recorded sim/refactor-baseline regeneration with the decision in this plan's Acceptance, and the quantization step must be small enough that gameplay/visuals are unaffected. Prefer lossless first; reach for quantization only if the wire measurement shows lossless is not enough.
+## Open questions — RESOLVED at /cycle-start (2026-06-14)
 
-Read before authoring: [`shared-sim.md`](../.claude/rules/shared-sim.md) (deterministic-sim contract + sim-baseline discipline), [`scene-and-render.md`](../.claude/rules/scene-and-render.md) (heightfield single-source-of-truth), `scripts/bake-heightmap.mjs` (the baker that writes the `.bin`), `shared/terrain/Heightfield.js` (the runtime reader, fence-frozen).
+1. **Q1: What does the wire cost today?** RESOLVED: 16 MiB, fully uncompressed. `curl` against sheepdogsim.com returned no `content-encoding` and the full 4,194,304 B for all four scenes. CF does not compress `application/octet-stream` by default. A real win exists. (`cycle100-validation/q1-q2-measurement.md`.)
+2. **Q2: Lossless or lossy?** RESOLVED: **lossless.** Brotli (q11) on the existing float32 bytes takes 16 MiB -> 3.94 MiB (-76%) with zero precision loss and no baseline moves. int16 quantization would reach ~1.34 MiB but saves only ~1.7 MiB more in exchange for a recorded sim+refactor baseline regeneration and a Worker/client lockstep concern - a bad trade. Vindicates the plan's lean. int16 is dropped from scope.
 
-## Open questions to resolve before writing code
+## Delivery decision (resolved)
 
-1. **Q1: What does the wire actually cost today?** Author lean: measure the deployed `.bin` transfer size (Cloudflare may already serve br/gzip). If the wire is already ~4 MB compressed, int16 quantization buys little and the determinism risk is not worth it - pivot to the bake re-pass instead.
-2. **Q2: Lossless or lossy?** Author lean: lossless (a content-encoding or exact packed format) keeps every baseline pinned and is the safe default. Lossy int16 only if Q1 shows lossless is insufficient, and only with a recorded sim-baseline + refactor-baseline regeneration.
+Three lossless delivery mechanisms were weighed (CF Compression Rule; pre-compress + `Content-Encoding`; pre-compress + explicit client decode). Chosen: **pre-compress + `Content-Encoding: br` via Pages `_headers`** (the documented CF Pages end-to-end-compression path, gated by `Cache-Control: no-transform` so the edge does not re-transform). Rationale:
+
+- A CF Compression Rule needs a **Pro plan** and a dashboard/API step; the `_headers` path is repo-only and needs no manual Cloudflare step.
+- Transparent decode means no client decode code and no touch to the frozen loader.
+- Build-target isolation: only the default web (CF Pages) build pre-compresses. The `itchio` and `native` builds keep raw `.bin` (itch ignores `_headers`; native loads off disk where `Content-Encoding` does not apply).
+
+## Phases
+
+### Phase 1 — Build-time pre-compression + headers + preview parity (autonomous)
+
+Brotli-compress `dist/terrain/*.bin` in place during the web build, declare it in `_headers`, keep `vite preview` working (preview does not read `_headers`), and lock losslessness with a test.
+
+- Files: `vite.config.js` (new `precompressTerrainPlugin`: `closeBundle` compresses, `configurePreviewServer` sets `Content-Encoding: br` for `/terrain/*.bin`), `public/_headers` (split `/terrain/*` into `/terrain/*.json` cache-only and `/terrain/*.bin` with `Content-Encoding: br` + `no-transform`), `tests/terrain-precompress.spec.js` (new).
+- Acceptance (EARS):
+  - When `npm run build` runs with no `BUILD_TARGET`, then every `dist/terrain/*.bin` shall be brotli-encoded and shall brotli-decode byte-identical to its `public/terrain/*.bin` source.
+  - When `BUILD_TARGET=itchio` or a native target builds, then `dist/terrain/*.bin` shall remain raw float32 (byte-identical to source).
+  - While `vite preview` serves a web build, the `/terrain/*.bin` responses shall carry `Content-Encoding: br` and the `/terrain/*.bin.json` responses shall not.
+  - When `npm test` runs, a spec shall assert brotli round-trip losslessness and that `public/_headers` declares `Content-Encoding: br` and `no-transform` for `/terrain/*.bin`.
+  - When the web build completes, no `tests/sim-baseline/*.json`, `tests/refactor-baseline/*`, or `bundle-sizes.json` fixture shall change.
+
+### Phase 2 — Deploy + live wire verification (autonomous; gated on commit/push approval)
+
+Land on `main`, let CI deploy to Cloudflare Pages, and prove the wire win on the live origin.
+
+- Files: none beyond Phase 1 (deploy is CI). Verification via `curl` + a browser spot-check.
+- Acceptance (EARS):
+  - When the change deploys to sheepdogsim.com, then `curl -H 'Accept-Encoding: br'` on `/terrain/rolling-hills.bin` shall return `content-encoding: br` and a transfer size near the brotli artifact (about 1.3 MiB, down from 4 MiB).
+  - When a browser loads a scene on sheepdogsim.com, then the heightfield shall decode and terrain shall render with no console error.
+  - If the live response has no `content-encoding: br` (CF stripped the header), then stop and surface; fall back to a CF Compression Rule via the CF API token (or a dashboard notepad) as the contingency.
 
 ## Frozen files (cycle-specific)
 
-- `shared/terrain/Heightfield.js` - deterministic-sim core + heightfield SSOT ([`INTERFACE_FENCE.md`](INTERFACE_FENCE.md)). A runtime-decode change here needs a migration story (does it change MP for in-flight sessions? does any baseline move?) per the fence protocol.
-- `tests/sim-baseline/*.json` and `tests/refactor-baseline/__fixtures__/*` (terrain-mesh-hash) - regenerate only with a recorded decision (durable emergency stop).
+- `shared/terrain/Heightfield.js` — deterministic-sim core + heightfield SSOT ([`INTERFACE_FENCE.md`](INTERFACE_FENCE.md)). **Not touched this cycle** (transparent decode below `fetch`). Listed so the fence is explicit.
+- `tests/sim-baseline/*.json`, `tests/refactor-baseline/__fixtures__/*` — must not move (lossless = byte-identical). If any moves, a non-lossless bug crept in: stop.
 
 ## Hard stops
 
-- If a lossy step moves a sim-baseline trace, stop and surface before regenerating (durable sim-baseline drift stop). A lossy terrain change is a deliberate, recorded act, not a shortcut to green tests.
+- If any sim-baseline or refactor-baseline fixture differs at build/test, stop and surface: lossless must not move a baseline, so a diff means the round-trip is not byte-identical. Do not regenerate to go green.
+- If the live origin does not return `content-encoding: br` after deploy, stop and surface before further changes (Phase 2 contingency).
 - Union with [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md).
 
 ## Success criteria (cycle close)
@@ -40,13 +68,14 @@ Read before authoring: [`shared-sim.md`](../.claude/rules/shared-sim.md) (determ
 `/cycle-close` reads this section and asks the user to confirm each item. Don't pre-check.
 
 - [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean.
-- [ ] When the terrain compression is lossy, the sim-baseline + refactor-baseline regeneration shall be recorded in this plan's Acceptance with the explicit decision; when lossless, no baseline shall move.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
+- [ ] When `npm test` runs at cycle close, all vitest specs shall pass (including the new `terrain-precompress` spec).
+- [ ] When `npm run build` runs at cycle close, the production build shall be clean and `dist/terrain/*.bin` shall be brotli-compressed and lossless.
+- [ ] When the cycle closes, no sim-baseline or refactor-baseline fixture shall have moved (lossless invariant).
+- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed and `curl -H 'Accept-Encoding: br'` on a terrain `.bin` shall return `content-encoding: br`.
 
 ## Carryover (not necessarily this cycle's scope)
 
+- **itch/native wire win** - this cycle scopes the win to Cloudflare Pages. If itch's CDN also serves terrain uncompressed and it matters, an explicit-decode (`DecompressionStream`) path would cover all targets; deferred unless measured worth it.
 - **Impostor bake re-pass (paired)** - atlas resolution, normal-vs-depth necessity, the unbenchmarked Pixel Forge Kiln tool.
 - **Golden harness staleness (test-infra)** - `tools/validation/golden/` no longer reproduces against the current capture environment (surfaced Cycle 99 Phase 1; not KTX2-related). Re-baseline or gate the capture on a deterministic scene-settled signal.
 - **Paired launch session** - NSL-as-default-world, version bump, itch/devlog/social posting, S24+ device pass.
@@ -54,9 +83,10 @@ Read before authoring: [`shared-sim.md`](../.claude/rules/shared-sim.md) (determ
 
 ## References
 
+- `cycle100-validation/q1-q2-measurement.md` — the wire measurement + compressibility matrix (Q1/Q2 evidence)
+- `tools/terrain-compress-probe.mjs` — the reusable compressibility spike
 - `DECISIONS.md` "Cycle 98" — the asset-weighting analysis (terrain `.bin` named as the biggest remaining load lever)
-- [`docs/archive/cycles/cycle-99-plan.md`](archive/cycles/cycle-99-plan.md) — the KTX2 Phase 5 plan
-- [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) — template
+- [`docs/archive/cycles/cycle-99-plan.md`](archive/cycles/cycle-99-plan.md) — the KTX2 Phase 5 plan (the prior asset-diet win)
 - [`docs/INTERFACE_FENCE.md`](INTERFACE_FENCE.md) — durable frozen files
 - [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) — durable hard-stop list
 - [`docs/BACKLOG.md`](BACKLOG.md) — closed cycles + deferred items

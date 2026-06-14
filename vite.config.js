@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { readFileSync, writeFileSync, readdirSync, unlinkSync, statSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
+import { brotliCompressSync, constants as zlibConstants } from 'node:zlib'
 
 const buildTarget = process.env.BUILD_TARGET || 'web'
 const nativeTargets = new Set(['native', 'desktop', 'electron', 'tauri', 'capacitor', 'ios', 'android'])
@@ -59,6 +60,45 @@ function excludeBlendFilesPlugin() {
           }
         }
       } catch {}
+    }
+  }
+}
+
+// Cycle 100: ship the baked terrain heightfields brotli-pre-compressed on the
+// web (Cloudflare Pages) build. CF leaves application/octet-stream uncompressed
+// (measured: 4 MiB raw on the wire per scene), so we compress dist/terrain/*.bin
+// in place at q11 and declare Content-Encoding: br + no-transform in
+// public/_headers. The browser decodes below fetch(), so Heightfield.load reads
+// byte-identical float32 - lossless, no baseline moves, frozen Heightfield.js
+// untouched. Registered for the web build only; itchio ignores _headers and
+// native loads off disk, so both keep raw .bin. configurePreviewServer mirrors
+// the header so `vite preview` (which does not read _headers) still decodes.
+function precompressTerrainPlugin() {
+  const TERRAIN_BIN = /^\/terrain\/[^/]+\.bin(\?.*)?$/
+  return {
+    name: 'precompress-terrain',
+    closeBundle() {
+      const dir = resolve(__dirname, 'dist/terrain')
+      let names
+      try { names = readdirSync(dir) } catch { return }
+      for (const name of names) {
+        if (!name.endsWith('.bin')) continue
+        const p = join(dir, name)
+        const raw = readFileSync(p)
+        const compressed = brotliCompressSync(raw, {
+          params: {
+            [zlibConstants.BROTLI_PARAM_QUALITY]: 11,
+            [zlibConstants.BROTLI_PARAM_SIZE_HINT]: raw.length
+          }
+        })
+        writeFileSync(p, compressed)
+      }
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url && TERRAIN_BIN.test(req.url)) res.setHeader('Content-Encoding', 'br')
+        next()
+      })
     }
   }
 }
@@ -206,7 +246,9 @@ export default defineConfig({
     excludeBlendFilesPlugin(),
     // Absolute /assets/ hrefs assume the web base ('/'); itchio/native use './'.
     ...((!isItchio && !isNative) ? [entranceModulePreloadPlugin()] : []),
-    ...(!isNative ? [serviceWorkerPlugin()] : [])
+    ...(!isNative ? [serviceWorkerPlugin()] : []),
+    // Cycle 100: brotli-pre-compress dist/terrain/*.bin (web/CF build only).
+    ...((!isItchio && !isNative) ? [precompressTerrainPlugin()] : [])
   ],
   build: {
     outDir: 'dist',
