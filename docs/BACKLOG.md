@@ -4,6 +4,21 @@
 
 ## Recently Completed
 
+### Cycle 99 - `asset-diet` (KTX2 Phase 5: realize the win) (closed 2026-06-14)
+
+Plan archived at [`docs/archive/cycles/cycle-99-plan.md`](archive/cycles/cycle-99-plan.md). Matt picked the KTX2 Phase 5 win-realization from the Cycle 98 carryover ("implement as you recommended"), then ran `/cycle-close`. 3/3 phases shipped. Feature slice committed `e0989956`, deploy `27512380746` green; 1543 vitest / lint / build green; no version bump (still 2.3.4). dist 54 -> 46 MB (the KTX2 dist/CDN win is now realized).
+
+- **KTX2 vs PNG parity proven (Phase 1).** The golden `--diff` harness turned out to be the wrong gate: it failed 7/12 cells (down to 0.55) but **run-to-run stable** - a consistent delta from the stale Cycle 97 goldens, and the differing trees include LOD0 trees which use the GLB leaf texture and never touch the impostor atlas, so KTX2 cannot be the cause. The honest gate is a seeded KTX2-vs-PNG A/B (`tools/ktx2-impostor-probe.mjs`, new): same scene/seed/camera/settle, only the texture source differs - **SSIM 0.99029**, visually indistinguishable, orientation + color + quality correct (a flip or color-space bug tanks SSIM, not 0.99). Load path confirmed end-to-end: 6/6 `.ktx2` fetched, basis transcoder fetched, 0 PNG fallbacks, 0 decode errors.
+- **Impostor PNGs dropped from dist (Phase 2).** A KTX2-sibling-guarded `closeBundle` pass in `vite.config.js` drops each `*.imposter*.png` whose `.ktx2` sibling is present (mirrors the Cycle 98 octahedral drop). dist ships 6 `.ktx2` + 2 `.json` sidecars, 0 impostor PNGs; source `assets/` keeps the PNGs (the KTX2 encoder + the `objects-impostor-parity` hashes read them). ~7.5 MB off dist/CDN. The VRAM win was already live from Cycle 98 (KTX2 was already the load path); this realizes the dist/CDN shrink.
+- **Validate + ship + close (Phase 3).** Tests/lint/build green; feature deployed green before close.
+
+Deferred / carryover to Cycle 100 (`terrain-compression`):
+
+- **Terrain `.bin` compression** (the chosen Cycle 100 goal): 16 MB uncompressed float32 (4 MB x 4 scenes), the single biggest per-scene-load asset. int16 quantize / packed format; must respect `shared/terrain/Heightfield.js` (deterministic-sim core) + the sim-baseline terrain hashes + the refactor-baseline terrain-mesh-hash.
+- **Impostor bake re-pass (paired)**: atlas resolution, normal-vs-depth necessity, the unbenchmarked Pixel Forge Kiln tool. Matt's taste + a paired track.
+- **Golden harness staleness (test-infra)**: `tools/validation/golden/` no longer reproduces against the current capture environment (7/12 below 0.95, run-to-run stable, LOD0-tree deltas unrelated to any recent render change). Re-baseline under the canonical environment or gate the capture on a deterministic scene-settled signal. Not KTX2-related; surfaced in Cycle 99 Phase 1.
+- **Paired launch session** (NSL-as-default-world, version bump, itch/devlog/social posting in Matt's voice, S24+ device pass), **three r185** (upstream-blocked, latest 0.184.0), **rock re-bake** (needs design direction), and the Cycle 95 prod-validation / NPC-sheepdogs intake / Survival-copy translation carryover all still stand.
+
 ### Cycle 98 - `launch-and-ktx2` (KTX2 impostor pipeline) (closed 2026-06-14)
 
 Plan archived at [`docs/archive/cycles/cycle-98-plan.md`](archive/cycles/cycle-98-plan.md). Matt picked KTX2 from the Cycle 97 carryover, ran it with "run phase 1-3" + "fold your recommendations in", and at close chose "ship now, I test in prod." 4/6 phases shipped; the win-realizing Phase 5 and the paired launch carry forward. Slice committed `2cd9690a`; 1543 vitest / lint / build green; no version bump (still 2.3.4).
