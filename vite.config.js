@@ -43,6 +43,22 @@ function excludeBlendFilesPlugin() {
       // loads on the default prod path - ~9 MB of albedo/normal/depth PNGs that
       // shipped dead. Drop from dist; source stays for the lab tool + regen.
       try { rmSync(resolve(dist, 'assets/models/trees/octahedral'), { recursive: true, force: true }) } catch {}
+      // Cycle 99: the 6 live impostor atlases ship as both .png and .ktx2. A
+      // KTX2-capable browser loads the .ktx2 (Cycle 99 probe: 6/6 ktx2, 0 png
+      // fallback, SSIM 0.99 vs png - cycle99-validation/), so the .png set is
+      // dead weight on disk/CDN. Drop each impostor .png whose .ktx2 sibling
+      // is present (the guard keeps a future png-without-ktx2 fallback intact).
+      // Saves ~7.5 MB. Source assets/ keeps the .png - the KTX2 encoder and the
+      // objects-impostor-parity hashes both read it.
+      try {
+        const treesDir = resolve(dist, 'assets/models/trees')
+        const names = new Set(readdirSync(treesDir))
+        for (const name of names) {
+          if (/\.imposter(\.\w+)?\.png$/.test(name) && names.has(name.replace(/\.png$/, '.ktx2'))) {
+            unlinkSync(join(treesDir, name))
+          }
+        }
+      } catch {}
     }
   }
 }
