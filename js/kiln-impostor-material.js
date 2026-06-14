@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
 import { createWebGpuImpostorMaterial } from './webgpuImpostorMaterialAdapter.js';
+import { loadImpostorTexture } from './rendering/ktx2Loader.js';
 
 /**
  * Cycle 20 Phase 2 — Kiln impostor material (replaces octahedral-impostor-material.js).
@@ -771,9 +772,6 @@ export async function loadKilnImpostor(basePath, options = {}) {
 
   const promise = (async () => {
     const sidecarUrl = `${basePath}.json`;
-    const albedoUrl  = `${basePath}.png`;
-    const normalUrl  = `${basePath}.normal.png`;
-    const depthUrl   = `${basePath}.depth.png`;
 
     let sidecar;
     try {
@@ -785,48 +783,15 @@ export async function loadKilnImpostor(basePath, options = {}) {
       return null;
     }
 
-    const loader = new THREE.TextureLoader();
-    const loadTex = (url, colorSpace = THREE.SRGBColorSpace) => new Promise((resolve, reject) => {
-      loader.load(
-        url,
-        (tex) => {
-          tex.colorSpace = colorSpace;
-          // Cycle 20 v5 (2026-05-04): NO mipmaps but KEEP anisotropy.
-          // Adjacent tiles in the 4x4 lat/lon atlas are completely
-          // different views (azimuth/elevation neighbours); the box-mip
-          // generator averaged across these boundaries → "glinted
-          // reflective" sparkle at distance. Disabling mips fixes that.
-          // Anisotropy stays at 8 because at high camera pitch the
-          // impostor quad is foreshortened along its azimuth-tile axis,
-          // and aniso is what keeps the texture sharp under that
-          // foreshortening — without it, distant impostors read as
-          // washed-out grey ghosts. The two evils are NOT equivalent:
-          // aniso reads ~8 texels along ONE axis (mostly within the same
-          // tile if the camera-yaw axis aligns with the texel grid),
-          // while mip generation averages 2x2 across BOTH axes including
-          // tile boundaries.
-          tex.minFilter = THREE.LinearFilter;
-          tex.magFilter = THREE.LinearFilter;
-          tex.anisotropy = 8;
-          tex.wrapS = THREE.ClampToEdgeWrapping;
-          tex.wrapT = THREE.ClampToEdgeWrapping;
-          tex.generateMipmaps = false;
-          tex.needsUpdate = true;
-          resolve(tex);
-        },
-        undefined,
-        (err) => reject(err),
-      );
-    });
-
     let albedoAtlas, normalAtlas, depthAtlas;
     try {
-      // Albedo is sRGB color data. Normal + depth are linear data — load
-      // as NoColorSpace so Three doesn't gamma-correct them on sample.
+      // Albedo is sRGB color data. Normal + depth are linear data — load as
+      // NoColorSpace so Three doesn't gamma-correct them on sample. Each prefers
+      // the UASTC .ktx2 and falls back to the legacy .png (see ktx2Loader.js).
       [albedoAtlas, normalAtlas, depthAtlas] = await Promise.all([
-        loadTex(albedoUrl, THREE.SRGBColorSpace),
-        loadTex(normalUrl, THREE.NoColorSpace),
-        loadTex(depthUrl, THREE.NoColorSpace),
+        loadImpostorTexture(basePath, '', THREE.SRGBColorSpace),
+        loadImpostorTexture(basePath, '.normal', THREE.NoColorSpace),
+        loadImpostorTexture(basePath, '.depth', THREE.NoColorSpace),
       ]);
     } catch (err) {
       console.warn(`[KILN] atlas load failed for ${basePath}:`, err);

@@ -6,6 +6,7 @@ import { detectTier } from './HardwareTier.js';
 import { initGlProbe, captureContext, captureFramebufferSample, captureWaterSample } from './diagnostics/glProbe.js';
 import { configureProductionRenderer, createProductionWebGLRenderer } from './rendering/sceneRendererSetup.js';
 import { isMobileClient } from './utils/isMobileClient.js';
+import { initKtx2Loader } from './rendering/ktx2Loader.js';
 
 /**
  * SceneManager - Three.js scene/lighting/renderer lifecycle plus competitive
@@ -84,6 +85,11 @@ export class SceneManager {
         
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         this.rendererReady = this.createRendererReadyPromise(options.rendererReady);
+        // Warm the KTX2 transcoder once the renderer is ready - a DETACHED
+        // side-effect so it never alters rendererReady's identity or timing
+        // (render-flow tests assert on the exact tick it resolves). detectSupport
+        // needs the initialized renderer; the load sites await getKtx2Loader().
+        this.rendererReady.then((ok) => { if (ok) initKtx2Loader(this.renderer); });
 
         // Cycle 9 Phase 4: capture WebGL context info into window.__sdsDiag
         // when ?debug=gl is set. macOS Safari smoke harvests this.

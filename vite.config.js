@@ -38,6 +38,11 @@ function excludeBlendFilesPlugin() {
       const dist = resolve(__dirname, 'dist')
       try { walk(dist) } catch {}
       try { rmSync(resolve(dist, 'assets/models/scatter'), { recursive: true, force: true }) } catch {}
+      // Cycle 98: the octahedral impostor set is lab-gated (TreePlacement's
+      // useOctahedral, the ?webgpuNativeTreeImpostors=1 debug route) and never
+      // loads on the default prod path - ~9 MB of albedo/normal/depth PNGs that
+      // shipped dead. Drop from dist; source stays for the lab tool + regen.
+      try { rmSync(resolve(dist, 'assets/models/trees/octahedral'), { recursive: true, force: true }) } catch {}
     }
   }
 }
@@ -168,6 +173,17 @@ export default defineConfig({
         {
           src: 'node_modules/three/examples/jsm/libs/meshopt_decoder.module.js',
           dest: 'assets/vendor/three/examples/jsm/libs'
+        },
+        // Cycle 98: basis transcoder for the KTX2 tree-impostor atlases.
+        // Decode-only (~0.9 MB wasm); KTX2Loader fetches it lazily on first
+        // decode, so it never enters the main chunk. See js/rendering/ktx2Loader.js.
+        {
+          src: 'node_modules/three/examples/jsm/libs/basis/basis_transcoder.js',
+          dest: 'assets/vendor/basis'
+        },
+        {
+          src: 'node_modules/three/examples/jsm/libs/basis/basis_transcoder.wasm',
+          dest: 'assets/vendor/basis'
         }
       ]
     }),

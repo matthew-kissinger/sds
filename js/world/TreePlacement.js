@@ -31,6 +31,7 @@ import { TIER_PRESETS } from '../HardwareTier.js';
 import { shouldUseWebGpuProductionNativeInstancing } from '../rendering/webgpuRuntimeMode.js';
 import { suppressShadowOverrideVersionChurn } from '../rendering/shadowOverrideMaterialFix.js';
 import { resolveImpostorBase } from './objectImpostorManifest.js';
+import { loadImpostorTexture } from '../rendering/ktx2Loader.js';
 
 const HYBRID_TREE_LOD1_SWITCH_DISTANCE = 56;
 const HYBRID_TREE_IMPOSTOR_SWITCH_DISTANCE = 144;
@@ -944,24 +945,11 @@ export async function loadColdImpostorAtlas(treeType) {
             const res = await fetch(`${base}.json`);
             if (!res.ok) throw new Error(`sidecar HTTP ${res.status}`);
             const sidecar = await res.json();
-            const texturePromise = new Promise((resolve, reject) => {
-                new THREE.TextureLoader().load(`${base}.png`, resolve, undefined, reject);
-            }).then((texture) => {
-                texture.colorSpace = THREE.SRGBColorSpace;
-                // Match loadKilnImpostor: no mips (bilinear across 4x4 tile
-                // borders glints), keep aniso for foreshortened quads.
-                texture.minFilter = THREE.LinearFilter;
-                texture.magFilter = THREE.LinearFilter;
-                texture.anisotropy = 8;
-                texture.wrapS = THREE.ClampToEdgeWrapping;
-                texture.wrapT = THREE.ClampToEdgeWrapping;
-                texture.generateMipmaps = false;
-                texture.needsUpdate = true;
-                return texture;
-            }).catch((err) => {
-                console.warn(`[FOLIAGE] cold impostor albedo load failed for ${treeType}:`, err);
-                return null;
-            });
+            const texturePromise = loadImpostorTexture(base, '', THREE.SRGBColorSpace)
+                .catch((err) => {
+                    console.warn(`[FOLIAGE] cold impostor albedo load failed for ${treeType}:`, err);
+                    return null;
+                });
             return { sidecar, texturePromise };
         } catch (err) {
             console.warn(`[FOLIAGE] cold impostor sidecar load failed for ${treeType}:`, err);
