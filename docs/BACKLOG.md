@@ -4,6 +4,21 @@
 
 ## Recently Completed
 
+### Cycle 100 - `terrain-compression` (brotli-pre-compress terrain heightfields) (closed 2026-06-14)
+
+Plan archived at [`docs/archive/cycles/cycle-100-plan.md`](archive/cycles/cycle-100-plan.md). Matt picked the terrain-compression goal, ran the Q1/Q2 wire measurement at `/cycle-start` ("yes start q1"), chose lossless delivery via `Content-Encoding`, then `/cycle-close`. 2/2 phases shipped. Feature slice `17d1ebf0`; deploy `27514489101` green; 1552 vitest / lint / build green; no version bump (still 2.3.4). Terrain wire 16 MiB -> 3.85 MiB realized, lossless, zero baseline moves.
+
+- **Measure-first (Q1/Q2).** Q1: Cloudflare served all four terrain `.bin` fully uncompressed (no `content-encoding`, the full 4,194,304 B each) - `application/octet-stream` is outside CF's default-compressible set, so a real 16 MiB wire win existed. Q2: lossless brotli (q11) takes 16 MiB -> 3.94 MiB (-76%) with zero precision loss; int16 quantization would reach ~1.34 MiB but saves only ~1.7 MiB more in exchange for a recorded sim+refactor baseline regen and a Worker/client lockstep concern - a bad trade, dropped from scope. Evidence in `cycle100-validation/q1-q2-measurement.md` + the reusable `tools/terrain-compress-probe.mjs`.
+- **The fence dissolved by measurement.** The terrain `.bin` is a **client-only** asset (the Worker sim loads no heightfield; grep of `worker/` finds zero `Heightfield` usage). `Content-Encoding: br` decodes in the browser network stack below `fetch()`, so `Heightfield.load`'s `arrayBuffer()` returns byte-identical float32. `shared/terrain/Heightfield.js` (fence-frozen) untouched; no baseline moved; no MP-desync.
+- **Build-time pre-compress + headers (P1).** A `precompressTerrainPlugin` in `vite.config.js` (`closeBundle` brotli-compresses `dist/terrain/*.bin` in place at q11; `configurePreviewServer` sets `Content-Encoding: br` so `vite preview` mirrors CF, which does not read `_headers`). `public/_headers` split `/terrain/*` into `/terrain/*.json` (cache-only) and `/terrain/*.bin` (cache + `no-transform` + `Content-Encoding: br`). Scoped to the default web (CF Pages) build; `itchio` / `native` keep raw `.bin`. `tests/terrain-precompress.spec.js` locks brotli round-trip losslessness + the headers; `tests/cache-policy.spec.js` updated for the split.
+- **Deploy + live verify (P2).** Live curl confirmed `content-encoding: br` + ~1.33 MiB on rolling-hills (and all four scenes); a cache-bypassing browser fetch returned `arrayBufferBytes: 4194304` (definitive br-decode), scene rendered with 0 console errors.
+
+Deferred / carryover to Cycle 101 (`impostor-bake-repass`):
+
+- **Impostor bake re-pass (now THE cycle).** The production far-tree impostor is a flat single-angle cross-billboard (`createColdImpostorGeometry(atlas.sidecar, 0)` + `MeshBasicMaterial`); the sophisticated kiln relighting material ships on no default path (debug route only). Cycle 101 implements view-dependent + relit impostors on NSL (consolidated cull) AND the per-chunk islands (Rolling Hills + Open Country, LOD0-only today), re-baked with pixel-forge v0.2.0 Kiln, validated by a settled SSIM A/B.
+- **itch/native terrain wire win** - this cycle scoped the win to CF Pages; an explicit-decode (`DecompressionStream`) path would cover itch/native if measured worth it.
+- **Golden harness staleness (test-infra)**, **paired launch session** (NSL-as-default, version bump, itch/devlog/social, S24+ device pass), **three r185** (upstream-blocked, 0.184.0), **rock re-bake** (needs design direction), Cycle 95 prod-validation, NPC-sheepdogs intake, Survival-copy translation all still stand.
+
 ### Cycle 99 - `asset-diet` (KTX2 Phase 5: realize the win) (closed 2026-06-14)
 
 Plan archived at [`docs/archive/cycles/cycle-99-plan.md`](archive/cycles/cycle-99-plan.md). Matt picked the KTX2 Phase 5 win-realization from the Cycle 98 carryover ("implement as you recommended"), then ran `/cycle-close`. 3/3 phases shipped. Feature slice committed `e0989956`, deploy `27512380746` green; 1543 vitest / lint / build green; no version bump (still 2.3.4). dist 54 -> 46 MB (the KTX2 dist/CDN win is now realized).

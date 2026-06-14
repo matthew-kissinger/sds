@@ -1,30 +1,38 @@
-# Next Session - Cycle 100 (terrain-compression)
+# Next Session - Cycle 101 (impostor-bake-repass)
 
 > **Updated:** 2026-06-14
-> **For:** Cycle 100 (`docs/cycle-100-plan.md`)
-> **Pickup priority:** Measure the deployed terrain `.bin` wire cost FIRST (Cloudflare may already br/gzip it), then pick lossless-vs-lossy at `/cycle-start`. Lossless (content-encoding / exact packed) keeps every baseline pinned; lossy int16 quantize only if the wire measurement proves lossless is not enough, and only as a recorded sim/refactor-baseline regeneration.
+> **For:** Cycle 101 (`docs/cycle-101-plan.md`)
+> **Pickup priority:** Start with Phase 1 (the spike). Prove a view-dependent relit impostor on a single tree in the orbit lab and pick latlon-vs-octahedral + channels + resolution + the per-chunk-extension approach WITH NUMBERS before the bake. The plan is fully authored (not a stub).
 
-## First action: measure before quantizing
+## First action: the spike
 
-Cycle 100 targets the ~16 MB of baked terrain heightfields (`public/terrain/<scene>.bin`, 4 MB float32 x 4 scenes), the biggest remaining per-scene-load asset. Before any code, measure what the CDN actually serves (`curl -sI -H 'Accept-Encoding: br,gzip' https://sheepdogsim.com/terrain/rolling-hills.bin` and check `content-encoding` + transfer size). If it is already ~4 MB compressed, int16 quantization buys little and is not worth the determinism risk - pivot to the impostor bake re-pass instead. The cycle-100 plan's Q1/Q2 frame this.
+Cycle 101 implements proper impostors. The plan is authored end-to-end, but the representation is deliberately unresolved: Phase 1 is a risky-primitive spike that answers Q1-Q4 (octahedral vs latlon-hemi, depth channel kept or dropped, atlas resolution, and how to give the per-chunk islands a far band) with measured numbers, saved to `cycle101-validation/`. Use `js/impostors/impostorOrbitLab.js` + the `?webgpuNativeTreeImpostors` debug route. Do not start the bake (Phase 2) until Q1-Q4 are RESOLVED in the plan.
 
-The hard constraint: terrain `.bin` feeds `shared/terrain/Heightfield.js` (fence-frozen, deterministic-sim core + the heightfield single source of truth). Any value change moves every grounded entity AND can desync MP / drift the sim-baseline. Lossless = no baseline moves; lossy = a deliberate, recorded baseline regeneration. See `docs/cycle-100-plan.md` "How to read this plan".
+## The decisive finding (why this cycle exists)
+
+Four research agents (SDS-current, pixel-forge, terror-in-the-jungle, vegetation-research/ez-tree) converged on one fact: **the far-tree impostor players see is a flat single-angle cross-billboard.** On the only default path that renders far-tree impostors (NSL / coastline consolidated compute-cull), far trees are `createColdImpostorGeometry(atlas.sidecar, 0)` - a static 3-quad cross-billboard sampling ONE azimuth tile (column 0) with a plain `MeshBasicMaterial` (no view-dependent tile select, no normal relight, no depth). The sophisticated kiln material (`js/kiln-impostor-material.js` WebGL + `js/webgpuKilnImpostorNodeMaterial.js` TSL: camera-driven 3-tile blend + per-fragment relight) ships on NO default path - debug route only. SDS already owns ~80% of the pieces; this cycle wires them onto production + re-bakes to feed them properly, and extends the far band to Rolling Hills + Open Country (LOD0-only today).
+
+## References to borrow from
+
+- **pixel-forge v0.2.0** (`../pixel-forge`): the mature Kiln BAKER. Full octahedral 8x8, baseColor-unlit + capture-view normal + depth, `bleedTransparentRgb` edge-bleed, ortho pole-flip capture. Runtime shader NOT included.
+- **Fable5 demo** (vendored in TIJ at `../terror-in-the-jungle/examples/fable5-world-demo`): the gold-standard RUNTIME. `src/vegetation/Impostors.ts` (bake) + `src/render/ImpostorRuntime.ts` (4-tile bilinear blend + normal relight via `transformNormalToView` rotated by instance yaw, depth-in-normal-alpha, BFS dilation, `specularIntensity 0.25`).
+- Gotchas already paid for: skinny-trunk double-image on azimuth blend (pin stable azimuth / enough angles); transparent-black dark halo (dilation); night ambient multiply INSIDE albedo; far impostors must NOT cast shadows (SDS durable rule - Fable5's crown-proxy far shadows stay OUT unless Matt authorizes).
 
 ## Cold-Start Orientation
 
-Read in order: this file -> [`docs/cycle-100-plan.md`](docs/cycle-100-plan.md) -> `.claude/rules/shared-sim.md` (sim-baseline discipline) + `.claude/rules/scene-and-render.md` (heightfield SSOT) -> `DECISIONS.md` "Cycle 98" (asset-weighting analysis) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 99 entry at the top) -> `git log --oneline -6`.
+Read in order: this file -> [`docs/cycle-101-plan.md`](docs/cycle-101-plan.md) -> `.claude/rules/scene-and-render.md` (foliage LOD, far-tree impostors, no-far-impostor-shadow, scene-def-flag rule) -> `docs/archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md` (prior octahedral spike) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 100 + 99 entries) -> `git log --oneline -6`.
 
 ## Where it stands
 
-**Cycle 99 (`asset-diet`) closed + shipped + deployed.** KTX2 Phase 5: the impostor PNGs are dropped from dist (KTX2 is the only impostor ship), realizing the dist/CDN win - **dist 54 -> 46 MB**. Parity proven by a seeded KTX2-vs-PNG A/B at **SSIM 0.99029** (`tools/ktx2-impostor-probe.mjs`), not the golden harness (which turned out stale, carried below). Feature slice `e0989956`, deploy `27512380746` green; 1543 vitest / lint / build green; no version bump (still 2.3.4).
+**Cycle 100 (`terrain-compression`) closed + shipped + deployed.** Brotli-pre-compress terrain heightfields on the CF Pages build: 16 MiB -> 3.85 MiB on the wire, lossless (`Content-Encoding: br` decodes below `fetch()`, byte-identical float32), zero baseline moves. Feature `17d1ebf0`, deploy `27514489101` green; 1552 vitest / lint / build green; no version bump (still 2.3.4). The fence dissolved by measurement: terrain `.bin` is a client-only asset (Worker sim loads no heightfield), so `shared/terrain/Heightfield.js` was untouched.
 
-**Cycle 100 (`terrain-compression`) is scaffolded.** Goal stub + the lossless-vs-lossy decision framing + the determinism constraints are in `docs/cycle-100-plan.md`. Fill the Goal + Phases at `/cycle-start` after the wire measurement.
+**Cycle 101 (`impostor-bake-repass`) is fully authored.** 7 phases (spike -> bake -> material -> NSL wire -> per-chunk band -> validation -> paired close). Atlas/sidecar/`objects.manifest.json` are not fence-frozen (re-bake allowed); `shared/` untouched.
 
 ## Standing carryover (do not drop)
 
-- **Golden harness staleness (test-infra, NEW).** `tools/validation/golden/` no longer reproduces against the current capture environment: 7/12 cells below 0.95 but run-to-run stable (a consistent delta from the Cycle 97 goldens), including LOD0-tree deltas that have nothing to do with the impostor atlas. Not KTX2-related. Either re-baseline (`--baseline`) under the canonical environment or gate the capture on a deterministic scene-settled signal. Surfaced in Cycle 99 Phase 1.
-- **Impostor bake re-pass (paired)** - atlas resolution, normal-vs-depth necessity, the unbenchmarked Pixel Forge Kiln tool. The asset-diet alternative if terrain compression measures as not-worth-it.
-- **Paired launch session** - NSL-as-default-world (still Rolling Hills), version bump, itch/devlog/social posting (Matt's voice), S24+ device pass. The unstarted other half of "launch-and-ktx2".
+- **itch/native terrain wire win** - Cycle 100 scoped the win to Cloudflare Pages; an explicit-decode (`DecompressionStream`) path would cover itch/native if measured worth it.
+- **Golden harness staleness (test-infra)** - `tools/validation/golden/` no longer reproduces against the current capture environment (7/12 below 0.95, run-to-run stable, LOD0-tree deltas unrelated to any recent render change). Re-baseline under the canonical environment or gate the capture on a deterministic scene-settled signal. Cycle 101 explicitly does NOT use it as the impostor gate.
+- **Paired launch session** - NSL-as-default-world (still Rolling Hills), version bump, itch/devlog/social posting (Matt's voice), S24+ device pass.
 - **three r185** blocked until it publishes (latest 0.184.0); checklist `cycle96-validation/r185-readiness.md`.
 - **Rock re-bake** behind the Cycle 96 collider-parity harness; needs a design direction.
 - **Matt's Cycle 95 prod validation** (A/B/C/E/D/F) - if prod shows a rejected element, re-capture the affected goldens.
