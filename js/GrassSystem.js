@@ -288,6 +288,11 @@ export class GrassSystem {
         this.noiseTexture = null;
         this.grassMaterial = null;
         this.time = 0;
+        // Golden capture: freeze the wind/LOD clock so full-frame grass renders
+        // deterministically run-to-run (matches the existing visualGolden streaming
+        // + scatter-RNG opt-outs). Production (no flag) advances time as normal.
+        this._visualGoldenFreezeTime = (typeof window !== 'undefined') &&
+            new URLSearchParams(window.location.search).get('visualGolden') === '1';
         this.interactorPositions = new Float32Array(this.config.maxInteractors * 3);
         this.interactorData = new Float32Array(this.config.maxInteractors); // 0=player/dog, 1=sheep
         // Per-entity facing direction (unit vec2 in XZ). Used by the shader
@@ -1977,7 +1982,11 @@ export class GrassSystem {
             return;
         }
 
-        this.time += deltaTime;
+        // Frozen during golden capture so wind phase + autoLod density are
+        // deterministic; advances normally in production.
+        if (!this._visualGoldenFreezeTime) {
+            this.time += deltaTime;
+        }
 
         // Cycle 22 Phase D: tick rolling frame-time avg + adjust _autoLodFactor.
         // 60-sample ring (~1s at 60fps); we only act once we have at least 30

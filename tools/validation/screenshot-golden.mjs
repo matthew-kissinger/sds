@@ -164,7 +164,6 @@ async function captureCell(page, cell) {
   url.searchParams.set('probeRender', '1');
   url.searchParams.set('cinematic', '1');
   url.searchParams.set('renderer', 'webgpu');
-  url.searchParams.set('konveyorRocks', '1');
   url.searchParams.set('visualGolden', '1');
   url.searchParams.set('scene', cell.scene);
   url.searchParams.set('sun', String(cell.sun));
