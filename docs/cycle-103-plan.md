@@ -1,12 +1,12 @@
-# Cycle 102 - impostor-ktx2-and-polish
+# Cycle 103 - golden-harness-rebaseline
 
-> Drafted 2026-06-15 after Cycle 101 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/). **This plan is a stub** - author the Goal + Phases at `/cycle-start`.
+> Drafted 2026-06-15 after Cycle 102 closed. Cold-start agents: read [`../NEXT_SESSION.md`](../NEXT_SESSION.md) first, then this doc top-to-bottom. Prior cycle plans live in [`archive/cycles/`](archive/cycles/). **This plan is a stub** - author the Goal + Phases at `/cycle-start`.
 
 ## Goal
 
 One paragraph. What's this cycle for? What's the **user-visible** difference between "before" and "after"?
 
-Seed (from the Cycle 101 carryover, refine at `/cycle-start`): the Cycle 101 octahedral far-impostor atlas ships as lossless `.png`; KTX2 wire-encoding it was deferred from Phase 4 so the UASTC transcode would not be conflated with the new material as an unvalidated variable. This cycle realizes that wire win (extend `tools/encode-impostors-ktx2.mjs` past `LIVE_LAYOUT`, make `MAPS` aux-layer-aware for albedo + normal, extend the dist `.png` dedup into the octahedral subdir), folds in any far-impostor polish surfaced during the paired review, and runs the carried-over GPU-bound Cycle 101 validation (the settled SSIM A/B + the warm jitter rails on NSL + Rolling Hills + Open Country - runbook in `cycle101-validation/phase6-validation-notes.md`). The octahedral selector fold-seam note (54/64 round-trip, off-by-one at the steep-down seam) is the one thing to confirm in the paired A/B.
+Seed (from the standing carryover, refine at `/cycle-start`): the golden suite (`tools/validation/golden/`) is stale. It diffs near-zero SSIM against the current capture environment (Cycle 91 reframed the follow camera, Cycles 92/101 changed the impostors), so it no longer reproduces and cannot gate a render change. Cycles 99 and 101 both had to fall back to seeded same-build A/Bs because the committed goldens add a confound rather than a signal. This cycle makes the harness a trustworthy render gate again: re-baseline the 12-cell suite under the canonical capture environment (or gate the capture on a deterministic scene-settled signal so a single headless frame is reproducible), add NSL to the matrix if its streamed foliage can be settled deterministically, and fold in the paired impostor validation carried from Cycles 101-102 (the octahedral ktx2-vs-png SSIM A/B, the impostor-vs-LOD0 A/B on NSL + Rolling Hills + Open Country, and the warm jitter rails) - so the impostor work finally gets its settled visual gate on Matt's WebGPU box. There is no player-visible change; this is test-infra trust.
 
 ## How to read this plan
 
@@ -25,7 +25,7 @@ Each agent picking up a phase should:
 
 ## Phase shape rules
 
-A cycle has **≤ 8 phases**, each fully autonomous or fully paired (no mixed mode), each a single sharp goal of ≤ 4 hours.
+A cycle has **<= 8 phases**, each fully autonomous or fully paired (no mixed mode), each a single sharp goal of <= 4 hours.
 
 ## Acceptance criteria - EARS format
 
@@ -46,12 +46,12 @@ Every phase's Acceptance section uses [EARS notation](https://kiro.dev/docs/spec
 ## Dependencies
 
 ```
-Phase 1 → Phase 2 → ...
+Phase 1 -> Phase 2 -> ...
 ```
 
 ## Frozen files (cycle-specific additions)
 
-- The impostor atlas, sidecar, and `assets/objects.manifest.json` are not fence-frozen (the encode is the authorized change). `tests/refactor-baseline/__fixtures__/bundle-sizes.json` (fence-frozen) - bump only with a recorded decision if the encode shifts a JS chunk.
+- (Cycle-specific additions, if any. The golden captures + manifest under `tools/validation/golden/` are the authorized change; `tests/refactor-baseline/__fixtures__/*` and the sim-baseline fixtures stay fence-frozen unless a recorded decision says otherwise.)
 
 ## Hard stops
 
@@ -77,5 +77,5 @@ Durable hard stops apply on every cycle - see [`EMERGENCY_STOPS.md`](EMERGENCY_S
 - [`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) - this template
 - [`docs/INTERFACE_FENCE.md`](INTERFACE_FENCE.md) - durable frozen files
 - [`docs/EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) - durable hard-stop list
-- [`docs/BACKLOG.md`](BACKLOG.md) - closed cycles + deferred items (Cycle 101 carryover seeds this cycle)
-- [`cycle101-validation/phase6-validation-notes.md`] - the GPU-bound validation runbook carried into this cycle
+- [`docs/BACKLOG.md`](BACKLOG.md) - closed cycles + deferred items (Cycle 102 carryover seeds this cycle)
+- [`cycle101-validation/phase6-validation-notes.md`] - the GPU-bound impostor validation runbook carried into this cycle

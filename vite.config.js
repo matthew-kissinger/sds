@@ -41,27 +41,29 @@ function excludeBlendFilesPlugin() {
       try { rmSync(resolve(dist, 'assets/models/scatter'), { recursive: true, force: true }) } catch {}
       // Cycle 98 dropped the octahedral set from dist as lab-only. Cycle 101 P4
       // makes it the production far-impostor atlas on the consolidated path
-      // (NSL), so it ships again - now a lean 1024^2 albedo + normal (~1.8 MB for
-      // both trees, no depth) instead of the old 2048^2 triple. It ships as .png
-      // for now (lossless); KTX2 wire-encoding the octahedral set is deferred
-      // until the Phase 7 paired visual gate confirms the look, so the UASTC
-      // transcode is not conflated with the new material as an unvalidated
-      // variable. The latlon set still ships for cold coverage + the shadow caster.
-      // Cycle 99: the 6 live impostor atlases ship as both .png and .ktx2. A
+      // (NSL + the islands), now a lean 1024^2 albedo + normal (no depth). Cycle
+      // 102 KTX2-encodes it (tools/encode-impostors-ktx2.mjs) like the latlon set,
+      // so it ships as .ktx2 and its .png is dropped below. The latlon set still
+      // ships for cold coverage + the canopy shadow caster.
+      // Cycle 99: the live impostor atlases ship as both .png and .ktx2. A
       // KTX2-capable browser loads the .ktx2 (Cycle 99 probe: 6/6 ktx2, 0 png
-      // fallback, SSIM 0.99 vs png - cycle99-validation/), so the .png set is
-      // dead weight on disk/CDN. Drop each impostor .png whose .ktx2 sibling
-      // is present (the guard keeps a future png-without-ktx2 fallback intact).
-      // Saves ~7.5 MB. Source assets/ keeps the .png - the KTX2 encoder and the
-      // objects-impostor-parity hashes both read it.
-      try {
-        const treesDir = resolve(dist, 'assets/models/trees')
-        const names = new Set(readdirSync(treesDir))
+      // fallback, SSIM 0.99 vs png - cycle99-validation/), so the .png set is dead
+      // weight on disk/CDN. Drop each impostor .png whose .ktx2 sibling is present,
+      // in both the latlon dir and the octahedral subdir (the guard keeps a future
+      // png-without-ktx2 fallback intact). Source assets/ keeps the .png - the KTX2
+      // encoder and the objects-impostor-parity hashes both read it.
+      const dropPngWithKtx2Sibling = (dir) => {
+        const names = new Set(readdirSync(dir))
         for (const name of names) {
           if (/\.imposter(\.\w+)?\.png$/.test(name) && names.has(name.replace(/\.png$/, '.ktx2'))) {
-            unlinkSync(join(treesDir, name))
+            unlinkSync(join(dir, name))
           }
         }
+      }
+      try {
+        const treesDir = resolve(dist, 'assets/models/trees')
+        dropPngWithKtx2Sibling(treesDir)
+        dropPngWithKtx2Sibling(join(treesDir, 'octahedral'))
       } catch {}
     }
   }

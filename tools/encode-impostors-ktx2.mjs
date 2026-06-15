@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Cycle 98 - encode the LIVE tree-impostor atlases to UASTC .ktx2.
+ * Cycle 98 - encode the tree-impostor atlases to UASTC .ktx2.
+ * Cycle 102 - extended past the latlon-only filter to also encode the octahedral
+ * far-impostor atlas (the consolidated-cull production path since Cycle 101).
  *
  * A PNG -> KTX2 post-process over the committed Kiln atlases. It does NOT
  * re-render: it reuses the bake matrix exported by bake-tree-impostors.mjs
- * (enabledImpostorTargets) so the two never drift, filters to the live
- * latlon-hemi-y layout (the octahedral set is dead in prod), and encodes each
- * atlas to UASTC + zstd via the dependency-free ktx2-encoder wasm - no native
- * toktx / KTX-Software install needed. PNG decode is via sharp (already a devDep).
+ * (enabledImpostorTargets) so the two never drift, encodes every impostor-enabled
+ * target, and derives each target's map set from its layout preset's auxLayers so
+ * the encode matrix tracks the bake matrix (latlon: albedo + normal + depth;
+ * octahedral: albedo + normal, no depth per the Cycle 101 drop). Encoding is
+ * UASTC + zstd via the dependency-free ktx2-encoder wasm - no native toktx /
+ * KTX-Software install needed. PNG decode is via sharp (already a devDep).
  *
  * Per map:
  *   - albedo  -> UASTC + zstd, perceptual / sRGB transfer (alpha preserved)
- *   - normal  -> UASTC + zstd, linear (faithful RGB; NOT normal-map mode - the
- *                atlas stores capture-view-space RGB, not a tangent normal)
- *   - depth   -> UASTC + zstd, linear
+ *   - aux (normal/depth) -> UASTC + zstd, linear (faithful RGB; normal is NOT
+ *                normal-map mode - the atlas stores capture-view-space RGB, not a
+ *                tangent normal)
  *
  * No mipmaps (atlas tiles are distinct azimuth/elevation views; mips glint
  * across borders). Y-flipped at encode so the KTX2 (compressed, flipY ignored
@@ -30,9 +34,6 @@ import { encodeToKTX2 } from 'ktx2-encoder';
 import sharp from 'sharp';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { loadManifest, enabledImpostorTargets } from './bake-tree-impostors.mjs';
-
-// Production render layout; the octahedral layout is lab-gated, not loaded in prod.
-const LIVE_LAYOUT = 'latlon-hemi-y';
 
 // sharp PNG -> top-down RGBA raster (basis wants R,G,B,A, first texel top-left).
 const imageDecoder = async (buffer) => {
@@ -52,10 +53,13 @@ const BASE = {
 const COLOR = { ...BASE, isPerceptual: true, isSetKTX2SRGBTransferFunc: true };
 const DATA = { ...BASE, isPerceptual: false, isSetKTX2SRGBTransferFunc: false };
 
-const MAPS = [
+// The map set per target is preset-derived (albedo + each declared aux layer),
+// the same single source of truth tests/objects-impostor-parity.spec.js uses, so
+// the encode matrix can never drift from the bake matrix. Albedo is sRGB; aux
+// layers (normal, depth) are linear data.
+const mapsForTarget = (t) => [
     { suffix: '', opts: COLOR },
-    { suffix: '.normal', opts: DATA },
-    { suffix: '.depth', opts: DATA },
+    ...(t.preset.auxLayers ?? []).map((layer) => ({ suffix: `.${layer}`, opts: DATA })),
 ];
 
 async function encodeMap(pngPath, ktx2Path, opts) {
@@ -67,14 +71,14 @@ async function encodeMap(pngPath, ktx2Path, opts) {
 
 async function main() {
     const manifest = loadManifest();
-    const targets = [...enabledImpostorTargets(manifest)].filter((t) => t.layoutId === LIVE_LAYOUT);
-    if (targets.length === 0) throw new Error(`no live (${LIVE_LAYOUT}) impostor targets in manifest`);
+    const targets = [...enabledImpostorTargets(manifest)];
+    if (targets.length === 0) throw new Error('no impostor-enabled targets in manifest');
 
     let totalIn = 0, totalOut = 0, count = 0;
     for (const t of targets) {
         // atlasPath is an absolute <id>.imposter.png; base drops the .png.
         const base = t.atlasPath.replace(/\.png$/, '');
-        for (const { suffix, opts } of MAPS) {
+        for (const { suffix, opts } of mapsForTarget(t)) {
             const pngPath = `${base}${suffix}.png`;
             const ktx2Path = `${base}${suffix}.ktx2`;
             if (!existsSync(pngPath)) {
