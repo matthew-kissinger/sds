@@ -1,36 +1,34 @@
-# Next Session - Cycle 103 (golden-harness-rebaseline)
+# Next Session - Cycle 104 (golden-determinism-and-launch-prep)
 
 > **Updated:** 2026-06-15
-> **For:** Cycle 103 (`docs/cycle-103-plan.md`)
-> **Pickup priority:** The cycle-103 plan is a stub. Author Goal + Phases at `/cycle-start`. The thread is set: re-baseline the stale golden suite so it is a trustworthy render gate again, and fold in the paired impostor validation carried from Cycles 101-102 (the settled SSIM A/Bs + the warm jitter rails on Matt's WebGPU box).
+> **For:** Cycle 104 (`docs/cycle-104-plan.md`)
+> **Pickup priority:** Cycle 104 is scaffolded as a stub (Goal + Phases empty; the slug is a placeholder, rename to the chosen focus). Decide the focus and run `/cycle-start`. Top candidates from the Cycle 103 carryover: (1) a **deterministic fixed-dt sim-step affordance** to restore the follow-cell goldens (the gate is classic-only until then); (2) the carried **paired impostor validation** (impostor-vs-LOD0 SSIM A/B + jitter rails), now tractable on-device via the new WebGPU harness + the `FOLIAGE_RIG.directWrap` knob; (3) the standing **launch session** (NSL-as-default, version bump, itch/devlog/social, S24+ device pass); (4) the **tree1 256px octahedral bake fix** in pixel-forge.
 
-## First action: author the plan, then run the carried impostor validation
+## First action
 
-Cycle 102 shipped the octahedral KTX2 wire-encode (Phases 1-3, autonomous). Two threads seed Cycle 103:
+Fill in `docs/cycle-104-plan.md` (Goal + Phases) for the chosen focus, then run `/cycle-start`.
 
-1. **Re-baseline the golden harness** (the headline). `tools/validation/golden/` is stale - it diffs near-zero SSIM against the current capture environment (Cycle 91 reframed the follow camera, Cycles 92/101 changed the impostors), so it no longer reproduces and cannot gate a render change. Cycles 99 and 101 both fell back to seeded same-build A/Bs because the committed goldens add a confound, not a signal. Re-pin the 12-cell suite under the canonical environment (or gate capture on a deterministic scene-settled signal so a single headless frame is reproducible). Add NSL to the matrix only if its streamed foliage can be settled deterministically (Cycle 97 left it out for exactly this reason).
-2. **The paired impostor validation** (carried from Cycles 101-102, paired/on-device - this box has no headless WebGPU, measured `cycle101-validation/webgpu-availability-check.mjs` reads `hasGpu:false`). On Matt's box: (a) the octahedral **ktx2-vs-png** SSIM A/B (force-png arm = move the octahedral `.ktx2` aside in dist so `loadImpostorTexture` falls back; bar = the Cycle 99 latlon ~0.99); (b) the carried Cycle 101 **impostor-vs-LOD0** A/B across a yaw sweep on NSL + Rolling Hills + Open Country (add a `?forceTreeLod0=1` reference toggle first - a small render-code add); (c) the **warm jitter rails** (`npm run perf:jitter:nsl -- --check=1` within the Cycle 96 budget, plus RH/OC via `perf:jitter --scene=`); (d) confirm the 54/64 octahedral fold-seam reads clean. Runbook + the cycle90 noise-floor method: `cycle101-validation/phase6-validation-notes.md`.
+## What Cycle 103 shipped (just closed)
 
-## What Cycle 102 left in place (the octahedral KTX2 path)
+Proper impostors + a WebGPU-capturing golden harness. Five phases landed autonomously:
 
-- **The encode:** `tools/encode-impostors-ktx2.mjs` transcodes every impostor-enabled target (no more latlon-only filter), deriving the map set from each layout's `auxLayers` (latlon: albedo + normal + depth; octahedral: albedo + normal, no depth). Re-running it is byte-stable on the latlon set.
-- **The wire:** `vite.config.js` drops each impostor `.png` whose `.ktx2` sibling exists, now in both the latlon dir and the `octahedral/` subdir. Dist ships the octahedral `.ktx2` + sidecar `.json`, 0 octahedral `.png`. -1.10 MiB off the wire (ktx2 at 36% of png) + the VRAM win.
-- **The guard:** `tests/impostor-ktx2-parity.spec.js` fails if any enabled target is missing its full `.ktx2` set (albedo + each `auxLayers` layer) - shares the preset-derived layer list with `objects-impostor-parity.spec.js` so they can't drift.
-- **The runtime needed no change:** `loadOctahedralImpostorAtlas` already loads via `loadImpostorTexture` (prefers `.ktx2`, falls back to `.png`). Revert path if the paired A/B ever regresses: revert the `vite.config.js` octahedral-drop hunk (PNGs back in dist).
+- **P3 fold-seam:** `selectOctahedralImpostorTiles` + its in-shader mirror fixed from vertex- to cell-centering; 64/64 round-trip (was 54/64). Gate: `tests/impostor-octahedral-roundtrip.spec.js`.
+- **P2 shared lighting rig:** `js/world/foliageLightingRig.js` is the single foliage-lighting authority; the impostor is calibrated to the LOD0 PBR leaf (wrap/fresnel/subsurface/floor magic retired); both impostor relight paths collapse to one builder; the LOD0 leaf look is unchanged. Gate: `tests/foliage-lighting-rig-parity.spec.js` (1e-9 parity). The one reserved canopy knob is `FOLIAGE_RIG.directWrap` (0 = PBR match).
+- **P1 WebGPU harness:** `tools/validation/screenshot-golden.mjs` now captures the real WebGPU path (installed Chrome, headed) and fails closed on WebGL demotion (`assertWebGpuEngaged`). The prior "WebGPU" goldens were silently WebGL.
+- **P4 resolution:** keep 128px - the 256px re-bake breaks (tree1 bakes blank, a pixel-forge bug).
+- **P5 rebaseline:** genuine-WebGPU classic-only deterministic gate, `--diff` 6/6 (mean 0.988); follow cells dropped (non-deterministic - see carryover #1).
 
 ## Cold-Start Orientation
 
-Read in order: this file -> [`docs/cycle-103-plan.md`](docs/cycle-103-plan.md) -> `cycle101-validation/phase6-validation-notes.md` (the carried impostor-validation runbook) -> `tools/validation/golden/MANIFEST.md` (the golden suite's last re-pin, Cycle 97) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 102 + 101 + 99 entries) -> `git log --oneline -6`.
-
-## Where it stands
-
-**Cycle 102 (`impostor-ktx2-and-polish`) closed.** Phases 1-3 shipped (octahedral KTX2 encode + dist drop + parity guard); Phase 4 (the paired SSIM A/B + jitter rails) carries forward, GPU-bound. 1562 vitest / lint / build green; no version bump (still 2.3.4). The octahedral far-impostor atlas now ships as UASTC `.ktx2`, -1.10 MiB off the wire. Details in `docs/BACKLOG.md`.
+Read in order: this file -> [`docs/cycle-104-plan.md`](docs/cycle-104-plan.md) (once its Goal is filled) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 103 + prior entries) -> `git log --oneline -6` -> [`AGENTS.md`](AGENTS.md) + [`CLAUDE.md`](CLAUDE.md).
 
 ## Standing carryover (do not drop)
 
-- **The paired impostor validation** - the headline carryover above. It has been open since Cycle 101 because this box has no headless WebGPU.
-- **itch/native terrain wire win** - Cycle 100 scoped the terrain compression win to Cloudflare Pages; an explicit-decode (`DecompressionStream`) path would cover itch/native if measured worth it.
+- **Deterministic fixed-dt sim-step affordance** - restore the follow-cell goldens (Cycle 103 P5; the gate is classic-only without it).
+- **tree1 256px octahedral bake fix** in pixel-forge (ortho/scale at 256px tiles) if 256 is ever wanted.
+- **Paired impostor validation** (carried Cycle 101/102) - impostor-vs-LOD0 SSIM A/B across a yaw sweep on NSL/RH/OC + warm jitter rails within the Cycle 96 budget; now tractable on-device with the WebGPU harness.
 - **Paired launch session** - NSL-as-default-world (still Rolling Hills), version bump, itch/devlog/social posting (Matt's voice), S24+ device pass.
+- **itch/native terrain wire win** - Cycle 100 scoped the terrain compression to Cloudflare Pages; an explicit-decode (`DecompressionStream`) path would cover itch/native if measured worth it.
 - **three r185** blocked until it publishes (latest 0.184.0); checklist `cycle96-validation/r185-readiness.md`.
 - **Rock re-bake** behind the Cycle 96 collider-parity harness; needs a design direction.
 - **Matt's Cycle 95 prod validation** (A/B/C/E/D/F) - if prod shows a rejected element, re-capture the affected goldens.

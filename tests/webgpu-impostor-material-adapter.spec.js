@@ -240,10 +240,12 @@ describe('webgpu impostor material adapter', () => {
         mode: 'dynamic-uniform-lab',
         layout: 'latlon-hemi-y',
       });
+      // Cycle 103 P2: the foliage lighting floor retired with the shared rig - the
+      // impostor now matches the LOD0 PBR leaf, with no magic floor. The summary
+      // keeps the scene-level controls.
       expect(material.userData.webgpuImpostorMaterialControlsSummary).toMatchObject({
         colorScale: 1,
         fogStrength: 0.62,
-        foliageLightingFloor: [0.42, 0.46, 0.32],
       });
       expect(material.userData.webgpuImpostorMaterialControls?.setTileBlend).toBeTypeOf('function');
       expect(material.userData.isKilnImpostor).toBe(true);

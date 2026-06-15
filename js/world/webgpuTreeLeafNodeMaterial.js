@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2 as ThreeVector2, Vector3 as ThreeVector3 } from 'three';
+import { FOLIAGE_RIG } from './foliageLightingRig.js';
 
 export function createWebGpuTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf) {
   const { abs, clamp, dot, float, floor, fract, length, max, mix, normalize, positionLocal, positionView, positionWorld, screenCoordinate, sin, smoothstep, texture, time, uniform, uv, vec2, vec3 } = TSL;
@@ -80,8 +81,12 @@ export function createWebGpuTreeLeafNodeMaterial({ MeshStandardNodeMaterial, Dou
   // spread the GGX lobe so the grazing highlight reads as colored foliage, not a
   // blown-out rim. specularIntensityNode would be the sharper lever but it is
   // MeshPhysicalNodeMaterial-only; that escalation is perf-gated (see cycle-95-plan).
-  material.roughnessNode = float(treeLeaf.roughness ?? 1.0);
-  material.metalnessNode = float(treeLeaf.metalness ?? 0.0);
+  // Cycle 103 P2: the impostor is calibrated to reproduce THIS leaf's response, so
+  // the leaf and the shared rig draw the PBR constants from one source. Same values
+  // as before (roughness 1 / metalness 0 -> Lambert diffuse), so the LOD0 look is
+  // unchanged (hard-stop: the leaf is the match reference, not a thing to retune).
+  material.roughnessNode = float(treeLeaf.roughness ?? FOLIAGE_RIG.pbrRoughness);
+  material.metalnessNode = float(treeLeaf.metalness ?? FOLIAGE_RIG.pbrMetalness);
   material.userData.webgpuUsesSourceMap = !!sampled;
   material.userData.webgpuUsesSourceTint = treeLeaf.tintColorLinear === true;
   material.userData.webgpuUsesDistanceFog = true;

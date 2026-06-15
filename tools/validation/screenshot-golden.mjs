@@ -36,24 +36,40 @@ const CAPTURE_DIR = resolve(ROOT, 'cycle25-validation', 'phaseA', 'screenshots')
 const BASE_URL = 'http://localhost:3000/';
 const VIEWPORT = { width: 1280, height: 720 };
 const COMPARE_VIEWPORT = { width: 320, height: 180 };
-const CHROMIUM_GPU_ARGS = process.platform === 'win32'
-  ? ['--use-angle=d3d11', '--enable-gpu']
-  : [];
+// Cycle 103 P1: the production render path is WebGPU, but headless bundled
+// Chromium has no navigator.gpu, so it silently demotes to WebGL (main.js sets
+// productionWebGpu.ok=false, rendererMode.effective='webgl') and every golden it
+// writes is a WebGL frame - the impostor material under test never renders. So
+// capture on the installed Chrome channel, headed, with WebGPU enabled: the same
+// proven pattern as tools/cycle90-nsl-visual-differential.mjs and cycle91-canopy-ab.mjs.
+// assertWebGpuEngaged then fails closed so a WebGL frame can never be re-pinned.
+const WEBGPU_LAUNCH_ARGS = ['--use-angle=d3d11', '--enable-gpu', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'];
 
-// 12-cell smoke matrix. Expand by adding entries; cells are independent.
+function launchWebGpuBrowser() {
+  if (process.env.SDS_GOLDEN_FORCE_HEADLESS === '1') {
+    // Cycle 103 P1 negative-path check: headless bundled Chromium has no
+    // navigator.gpu, so the session demotes to WebGL and assertWebGpuEngaged must
+    // fail closed. Temporary verification toggle; the production path is headed Chrome.
+    return chromium.launch({ headless: true, args: WEBGPU_LAUNCH_ARGS });
+  }
+  return chromium.launch({ channel: 'chrome', headless: false, args: WEBGPU_LAUNCH_ARGS });
+}
+
+// Cycle 103 P5: classic-only deterministic gate. The follow (close-up) cells were
+// dropped from the durable golden matrix because the follow camera tracks the dog
+// and the sim settles via wall-clock, so their framing is not reproducible
+// run-to-run (the rebaseline self-check put OC follow cells below 0.95 SSIM; see
+// docs/cycle-103-plan.md P5). The classic (world-axis) cells are deterministic and
+// cover the >200m impostor band (Rolling Hills ~61, Open Country ~204 octahedral
+// impostors, per the coverage log below). Re-adding follow cells needs a
+// deterministic fixed-dt sim-step affordance (BACKLOG).
 const MATRIX = [
-  { scene: 'field', sun: 0.5, camera: 'follow', zoom: 25 },
   { scene: 'field', sun: 0.85, camera: 'classic', zoom: 60 },
   { scene: 'field', sun: 0.5, camera: 'classic', zoom: 60 },
-  { scene: 'field', sun: 0.85, camera: 'follow', zoom: 25 },
-  { scene: 'rolling-hills', sun: 0.5, camera: 'follow', zoom: 25 },
   { scene: 'rolling-hills', sun: 0.85, camera: 'classic', zoom: 60 },
   { scene: 'rolling-hills', sun: 0.5, camera: 'classic', zoom: 60 },
-  { scene: 'rolling-hills', sun: 0.85, camera: 'follow', zoom: 25 },
-  { scene: 'open-country', sun: 0.5, camera: 'follow', zoom: 25 },
   { scene: 'open-country', sun: 0.85, camera: 'classic', zoom: 60 },
   { scene: 'open-country', sun: 0.5, camera: 'classic', zoom: 60 },
-  { scene: 'open-country', sun: 0.85, camera: 'follow', zoom: 25 },
 ];
 
 function cellId(c) {
@@ -157,6 +173,29 @@ function ssimLuma(a, b, width, height) {
     ((muA * muA + muB * muB + C1) * (sigA2 + sigB2 + C2));
 }
 
+// Cycle 103 P1: fail closed if the session is not on the production WebGPU path.
+// main.js sets productionWebGpu.ok=false and rendererMode.effective='webgl' on any
+// WebGPU boot/preflight failure (the headless-demotion case), so a WebGL frame can
+// never be silently re-pinned as a WebGPU golden. The renderer-instance check is
+// advisory in the message; ok + effective are the definitely-set hard signals.
+async function assertWebGpuEngaged(page, id) {
+  const r = await page.evaluate(() => ({
+    ok: window.__sdsG?.productionWebGpu?.ok === true,
+    effective: window.__sdsRendererMode?.effective ?? null,
+    isWebGpuRenderer: window.__sds?.sceneManager?.renderer?.isWebGPURenderer === true
+      || window.gameInstance?.sceneManager?.renderer?.isWebGPURenderer === true,
+    reason: window.__sdsG?.productionWebGpu?.error
+      ?? window.__sdsRendererMode?.fallbackReason ?? null,
+  }));
+  if (!r.ok || r.effective === 'webgl') {
+    throw new Error(
+      `[GOLDEN] WebGPU did not engage for ${id} `
+      + `(ok=${r.ok}, effective=${r.effective}, isWebGPURenderer=${r.isWebGpuRenderer}, reason=${r.reason}). `
+      + 'Refusing to write a WebGL golden - run against installed Chrome with WebGPU.',
+    );
+  }
+}
+
 async function captureCell(page, cell) {
   const id = cellId(cell);
   const url = new URL(BASE_URL);
@@ -178,6 +217,29 @@ async function captureCell(page, cell) {
     window.__sdsCinema.startSolo('jep', 'classic');
   }, { seed: cellSeed(`${id}__gameplay`) });
   await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 90_000 });
+  // Cycle 103 P1: refuse to capture unless this session is actually on WebGPU.
+  await assertWebGpuEngaged(page, id);
+  // Cycle 103 P5: record far-impostor coverage so far-view golden cells are
+  // confirmed to exercise the >200m impostor band, not just LOD0 trees.
+  let coverage = null;
+  try {
+    coverage = await page.evaluate(() => {
+      try {
+        const tb = window.gameInstance?.terrainBuilder ?? window.__sds?.sceneManager?.terrainBuilder;
+        const reg = tb?._treeCullRegistry;
+        if (!reg || !reg.size) return { registry: 0, lodEnabled: 0, farInstances: 0 };
+        let lodEnabled = 0;
+        let farInstances = 0;
+        for (const e of reg.values()) {
+          if (e?.lodEnabled) lodEnabled += 1;
+          const fm = e?.far?.mesh ?? e?.farController?.mesh ?? e?.farMesh ?? null;
+          farInstances += Number(fm?.count ?? fm?.instanceCount ?? 0) || 0;
+        }
+        return { registry: reg.size, lodEnabled, farInstances };
+      } catch (err) { return { error: String(err?.message || err) }; }
+    });
+  } catch { /* coverage logging is best-effort; never block a capture */ }
+  console.log(`[GOLDEN]   ${id} coverage=${JSON.stringify(coverage)}`);
 
   await page.evaluate(({ camera, zoom, sun }) => {
     const cinema = window.__sdsCinema;
@@ -218,7 +280,7 @@ async function decodePngFromBuffer(buf) {
 
 async function modeCapture(targetDir) {
   await mkdir(targetDir, { recursive: true });
-  const browser = await chromium.launch({ args: CHROMIUM_GPU_ARGS });
+  const browser = await launchWebGpuBrowser();
 
   const captured = [];
   for (const cell of MATRIX) {
@@ -244,7 +306,7 @@ async function modeDiff() {
     process.exit(1);
   }
   await mkdir(CAPTURE_DIR, { recursive: true });
-  const browser = await chromium.launch({ args: CHROMIUM_GPU_ARGS });
+  const browser = await launchWebGpuBrowser();
 
   const results = [];
   const missing = [];

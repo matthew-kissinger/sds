@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2 as ThreeVector2, Vector3 as ThreeVector3, Color as ThreeColor } from 'three';
-
-const RECIPROCAL_PI = 1 / Math.PI;
+import { FOLIAGE_RIG, buildFoliageImpostorColorNode } from './world/foliageLightingRig.js';
 
 /**
  * Cycle 101 Phase 3: production consolidated octahedral tree impostor material.
@@ -33,10 +32,8 @@ const RECIPROCAL_PI = 1 / Math.PI;
  * hemispheric ambient + Schlick fresnel foliage model.
  *
  * Octahedral tile selection mirrors selectOctahedralImpostorTiles (the tested JS
- * selector); it round-trips the bake layout exactly for the upper hemisphere and
- * equator (the gameplay-relevant far-tree views) and is off-by-one only at the
- * steep downward fold seam - a neighbouring-tile shift inside a 4-tile bilinear
- * blend, never a wrong view.
+ * selector) in lockstep: both use the cell-centered inverse, so every baked tile
+ * center round-trips to its own tile (64/64), including the steep-down fold seam.
  *
  * @param {object} webGpuModules { MeshBasicNodeMaterial, DoubleSide, Vector3, TSL }
  * @param {object} opts
@@ -51,7 +48,9 @@ const RECIPROCAL_PI = 1 / Math.PI;
  *        texel i = the captured world direction for tile i (row-major), Nearest.
  * @param {object} [opts.lighting] { sunDirection, sunColor, ambientColor, groundBounceColor }
  * @param {object} [opts.fog] { color, near, far, strength }
- * @param {object} [opts.tunables] { alphaTest, wrapPower, fresnelStrength, subsurfaceLift }
+ * @param {object} [opts.tunables] { alphaTest } - the relight comes from the shared
+ *        foliage rig (foliageLightingRig.js); the old wrap/fresnel/subsurface
+ *        tunables retired in Cycle 103 P2.
  * @returns {THREE.Material} a MeshBasicNodeMaterial with userData controls for setImpostorTint.
  */
 export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts) {
@@ -64,7 +63,7 @@ export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts
     storage, instanceIndex, varying, uniform, texture, uv,
     vec2, vec3, vec4, float,
     cameraPosition, cameraProjectionMatrix, cameraViewMatrix, positionGeometry,
-    normalize, cross, dot, max, min, clamp, mix, abs, floor, sign, length, pow, smoothstep,
+    normalize, cross, dot, max, min, clamp, mix, abs, floor, sign, length, smoothstep,
   } = TSL;
 
   const tilesX = sidecar.tilesX ?? 8;
@@ -91,9 +90,11 @@ export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts
   const fogNear = fog.near ?? 60;
   const fogFar = fog.far ?? 400;
   const fogStrength = fog.strength ?? 0.5;
-  const wrapPow = tunables.wrapPower ?? 1.2;
-  const fresnelStrength = tunables.fresnelStrength ?? 0.04;
-  const subsurface = tunables.subsurfaceLift ?? 0.0;
+  // Cycle 103 P2: relight is the shared foliage rig, calibrated to reproduce the
+  // LOD0 PBR leaf (Lambert + PI-consistent hemispheric ambient). The old per-call
+  // wrap/fresnel/subsurface magic is retired; FOLIAGE_RIG is the single source and
+  // FOLIAGE_RIG.directWrap is the one canopy-softening knob (default 0 = PBR match).
+  const lightingRig = FOLIAGE_RIG;
   const alphaTest = tunables.alphaTest ?? 0.3;
 
   // --- per-instance transform from the cull's compacted storage buffer ---
@@ -124,8 +125,11 @@ export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts
   const lower = dirObj.y.lessThan(0);
   const ox = lower.select(float(1).sub(abs(oyRaw)).mul(sign(oxRaw)), oxRaw);
   const oy = lower.select(float(1).sub(abs(oxRaw)).mul(sign(oyRaw)), oyRaw);
-  const gridX = clamp(ox.mul(0.5).add(0.5).mul(tilesX - 1), float(0), float(tilesX - 1));
-  const gridY = clamp(float(0.5).sub(oy.mul(0.5)).mul(tilesY - 1), float(0), float(tilesY - 1));
+  // Cell-centered inverse, in lockstep with selectOctahedralImpostorTiles: tiles
+  // bake at u = ((i + 0.5) / tilesX) * 2 - 1, so invert with `* tilesX - 0.5`. The
+  // old `* (tilesX - 1)` vertex centering mis-picked at the steep-down fold seam.
+  const gridX = clamp(ox.mul(0.5).add(0.5).mul(tilesX).sub(0.5), float(0), float(tilesX - 1));
+  const gridY = clamp(float(0.5).sub(oy.mul(0.5)).mul(tilesY).sub(0.5), float(0), float(tilesY - 1));
   const x0 = floor(gridX);
   const y0 = floor(gridY);
   const fx = gridX.sub(x0);
@@ -209,19 +213,18 @@ export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts
     .add(captureToObj(tileDir(gx1, gy1), n11).mul(w11));
   const nObj = normalize(nObjSum);
 
-  // Foliage relight (ported from the WebGL kiln material): half-Lambert wrap,
-  // hemispheric ambient (sky vs albedo-tinted ground bounce), Schlick fresnel
-  // rim, subsurface floor. Energy via RECIPROCAL_PI BRDF so ambient (in
-  // irradiance units) flows through albedo and keeps chroma.
-  const dotNL = dot(nObj, vSunObj);
-  const wrap = pow(clamp(dotNL.mul(0.5).add(0.5), float(0), float(1)), wrapPow);
-  const directIrr = sunColorNode.mul(wrap);
-  const hemi = nObj.y.mul(0.5).add(0.5);
-  const indirectIrr = mix(groundBounceNode, ambientNode, hemi);
-  const reflected = directIrr.add(indirectIrr).mul(albedo.mul(RECIPROCAL_PI)).add(albedo.mul(subsurface));
-  const dotNV = max(dot(nObj, normalize(vDirObj)), float(0));
-  const fres = pow(float(1).sub(dotNV), float(5)).mul(fresnelStrength);
-  const lit = reflected.add(sunColorNode.mul(fres));
+  // Cycle 103 P2: one shared foliage relight path (foliageLightingRig.js),
+  // calibrated to reproduce the LOD0 PBR leaf. nObj / vSunObj / vDirObj are
+  // object-space; ambient and ground bounce are PI-pre-multiplied irradiance.
+  const lit = buildFoliageImpostorColorNode(TSL, {
+    albedo,
+    normal: nObj,
+    sunDirObj: vSunObj,
+    sunColor: sunColorNode,
+    skyIrradiance: ambientNode,
+    groundIrradiance: groundBounceNode,
+    viewDirObj: vDirObj,
+  }, lightingRig);
   const fogBlend = smoothstep(fogNear, fogFar, vViewDist).mul(fogStrength);
 
   const material = new MeshBasicNodeMaterial();
@@ -333,7 +336,6 @@ export function createWebGpuKilnImpostorNodeMaterial(
   const sunDirectionNode = uniform(vector3(kilnImpostor.sunDirection));
   const sunColorNode = uniform(vector3(kilnImpostor.sunColor));
   const ambientColorNode = uniform(vector3(kilnImpostor.ambientColor));
-  const foliageLightingFloor = vec3(...(kilnImpostor.foliageLightingFloor ?? [0.42, 0.46, 0.32]));
   const colorScale = kilnImpostor.colorScale ?? 1;
   const fogStrength = kilnImpostor.fogStrength ?? 0.62;
   const tileUv = (tileOffsetNode) => tileLocalUv.mul(tileScale).add(tileOffsetNode);
@@ -361,11 +363,19 @@ export function createWebGpuKilnImpostorNodeMaterial(
   const depthShade = mix(float(0.98), float(1.02), smoothstep(0.05, 0.95, depthBlend));
   const relightNormal = normalize(normal0.mul(tileWeights[0]).add(normal1.mul(tileWeights[1])).add(normal2.mul(tileWeights[2])));
   const sunDirection = normalize(sunDirectionNode);
-  const wrappedSun = max(dot(relightNormal, sunDirection), 0.0).mul(0.65).add(0.35);
-  const relitColor = atlasRgb.mul(max(
-    ambientColorNode.add(sunColorNode.mul(wrappedSun.mul(0.42))),
-    foliageLightingFloor
-  ));
+  // Cycle 103 P2: one shared foliage relight path (foliageLightingRig.js),
+  // calibrated to the LOD0 PBR leaf. The latlon path historically fed raw (non-PI)
+  // ambient; pre-multiply by PI so the shared PI-consistent rig preserves its
+  // dominant ambient brightness while the sun term becomes PBR-correct. Ground
+  // bounce = 50% of sky (the rig's hemispheric default).
+  const relitColor = buildFoliageImpostorColorNode(TSL, {
+    albedo: atlasRgb,
+    normal: relightNormal,
+    sunDirObj: sunDirection,
+    sunColor: sunColorNode,
+    skyIrradiance: ambientColorNode.mul(Math.PI),
+    groundIrradiance: ambientColorNode.mul(Math.PI * 0.5),
+  }, FOLIAGE_RIG);
   const viewDistance = length(positionView);
   const fogBlend = smoothstep(kilnImpostor.fogNear, kilnImpostor.fogFar, viewDistance).mul(fogStrength);
 
@@ -390,7 +400,6 @@ export function createWebGpuKilnImpostorNodeMaterial(
   material.userData.webgpuImpostorMaterialControlsSummary = {
     colorScale,
     fogStrength,
-    foliageLightingFloor: kilnImpostor.foliageLightingFloor ?? [0.42, 0.46, 0.32],
   };
   material.userData.webgpuImpostorMaterialControls = createWebGpuKilnImpostorNodeMaterialControls({
     tileOffsets,
@@ -446,9 +455,6 @@ function createWebGpuKilnImpostorNodeMaterialControls({
       if (state.ambientColor && tintNodes?.ambientColor?.value?.copy) {
         tintNodes.ambientColor.value.copy(state.ambientColor)
           .multiplyScalar(Number.isFinite(state.ambientIntensity) ? state.ambientIntensity : 1);
-        tintNodes.ambientColor.value.r = Math.max(tintNodes.ambientColor.value.r, 0.42);
-        tintNodes.ambientColor.value.g = Math.max(tintNodes.ambientColor.value.g, 0.46);
-        tintNodes.ambientColor.value.b = Math.max(tintNodes.ambientColor.value.b, 0.32);
       }
     },
   };

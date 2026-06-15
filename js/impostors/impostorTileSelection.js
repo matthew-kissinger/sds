@@ -90,8 +90,12 @@ export function selectOctahedralImpostorTiles(direction, sidecar = {}) {
         ox = (1 - Math.abs(oy)) * Math.sign(oldX || 1);
         oy = (1 - Math.abs(oldX)) * Math.sign(oy || 1);
     }
-    const gridX = clamp((ox * 0.5 + 0.5) * (tilesX - 1), 0, tilesX - 1);
-    const gridY = clamp((0.5 - oy * 0.5) * (tilesY - 1), 0, tilesY - 1);
+    // Tiles bake at cell centers (pixel-forge enumerateOctahedralTiles uses
+    // u = ((i + 0.5) / tilesX) * 2 - 1), so the inverse is `* tilesX - 0.5`, not
+    // `* (tilesX - 1)`. Vertex centering shifted the pick up to half a tile and
+    // broke the round-trip at the steep-down fold seam (was 54/64, now 64/64).
+    const gridX = clamp((ox * 0.5 + 0.5) * tilesX - 0.5, 0, tilesX - 1);
+    const gridY = clamp((0.5 - oy * 0.5) * tilesY - 0.5, 0, tilesY - 1);
     const x0 = Math.floor(gridX);
     const y0 = Math.floor(gridY);
     const x1 = Math.min(tilesX - 1, x0 + 1);
