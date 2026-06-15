@@ -16,12 +16,14 @@ This doc fixes the shape (data contracts, where new code slots in, acceptance), 
 
 The load-bearing constraint that dissolved: the impostor atlas format, sidecar, and `assets/objects.manifest.json` are **not** fence-frozen, and `shared/` is untouched (no sim-baseline, refactor-baseline, or wire-protocol impact). A re-bake is a non-fence change.
 
-## Open questions to resolve before writing code (the Phase 1 spike answers these)
+## Open questions - Phase 1 spike status (2026-06-14)
 
-1. **Q1: Octahedral re-bake vs keep latlon-hemi-y?** Author lean: spike both in the orbit lab, pick with numbers. Octahedral gives ~2x tile efficiency + even angular coverage (pixel-forge + Fable5 both favor it); latlon-hemi is already wired and the skinny-trunk double-image risk under azimuth blend is lower. The honest answer is whichever holds silhouette + relight at the orbit for the lower atlas weight.
-2. **Q2: Do we ship the depth channel?** Author lean: probably drop it. Depth is parallax-polish-only per all three references; albedo (baseColor, unlit) + capture-view normal carry the relight win. Dropping depth saves a third of the atlas weight. Confirm no visible loss in the spike.
-3. **Q3: Cheapest correct way to give Rolling Hills + Open Country a far-impostor band?** Author lean: spike decides - either extend the consolidated compute-cull gate (today `sceneDef.boundary.kind === 'coastline'` only) to those scenes, or add a far-impostor band to the per-chunk path. The consolidated path is the modern one (Cycle 90/91); extending it is likely cleaner than bolting impostors onto the older per-chunk fan-out. If it is an architectural forklift, that is a Hard stop (defer the per-chunk band, do not expand scope mid-cycle).
-4. **Q4: Atlas resolution.** Author lean: 4x4 @ 512 (2048^2) is the current shape; the spike measures SSIM-vs-LOD0 against atlas weight and confirms or revises tile count / tile size.
+The renderless half of the spike is done (`cycle101-validation/spike-findings.md` + `spike-representation.json`, reproducible via `tools/spike-impostor-representation.mjs`). All four Qs are RESOLVED. Q2 + Q3 from numbers + code; Q1 + Q4 on the numeric lean per Matt's "Option A" call (2026-06-14): build on the measured case, then judge the real re-baked artifact in the Phase 6 settled SSIM A/B + Phase 7 paired sign-off (the visual A/B against a stale debug atlas would test the wrong thing - the production material and the new bake do not exist yet). Headless WebGPU is unreliable on this machine, so the visual call is paired regardless.
+
+1. **Q1: Octahedral vs latlon-hemi-y?** RESOLVED - OCTAHEDRAL. 4x angular coverage (64 vs 16 views), perfect orbit discrimination (12/12 vs 8/12 dominant tiles over the 12 orbit poses), identical VRAM/wire at 2048^2, and it dodges latlon's skinny-trunk double-image on azimuth blend. pixel-forge + Fable5 both ship octahedral. The one thing numbers cannot settle (does the per-tile resolution hold the silhouette at the 200 m transition) is the Q4 fallback lever, validated in Phase 6.
+2. **Q2: Ship the depth channel?** RESOLVED - DROP IT. Read only by the debug kiln material (`js/kiln-impostor-material.js:794`); the production far path loads albedo only (`js/world/TreePlacement.js:948`); all three references defer parallax. Saves 929 KB wire + 8 MiB VRAM. Phase 3 relights from albedo + capture-view normal. (Phase 2 drops depth from the octahedral bake only; the vestigial latlon depth atlas is removed in Phase 4 when production leaves the latlon path.)
+3. **Q3: How to give Rolling Hills + Open Country a far band?** RESOLVED - broaden the consolidated-cull gate from `boundary.kind === 'coastline'` (`js/world/TreePlacement.js:520`) to `coastline || island` so RH + OC (both `kind: 'island'`) inherit the Phase 3/4 impostor. Not a scene-id branch (gates on a structural boundary kind), no `SceneDef`/`shared/scenes/types.js` fence touch. Home Field (`rect`) stays per-chunk. Phase 5 = the gate change + a perf pass; verify the consolidated path is loading-strategy-agnostic (it serves NSL's streamed loading, RH/OC are all-cold) - Hard stop #1 if entangled.
+4. **Q4: Atlas resolution?** RESOLVED - OCTAHEDRAL 1024^2 (8x8@128, pixel-forge's shipped tree size, a 4x VRAM cut to 4 MiB) as the shipping primary. 2048^2 (256^2/tile, VRAM-parity with latlon) is the one-flag fallback if Phase 6's SSIM shows 128^2/tile reads mushy at far distance; Phase 2 stashes a 2048^2 bake in `cycle101-validation/` so Phase 6 can A/B both without a re-bake round-trip.
 
 ## Architecture / shared changes
 
@@ -57,9 +59,9 @@ Re-bake tree1 + tree2 with pixel-forge latest per the Phase 1 decision; port the
 
 **Acceptance (EARS):**
 
-- When the re-bake runs, then each tree's atlas + sidecar shall reflect the Phase 1 projection / channels / resolution, and the sidecar shall self-validate (`atlasWidth === tilesX * tileSize`; the `directions` or `azimuths`/`elevations` length equals the tile count).
-- When the atlas re-bakes, then a KTX2 sibling shall be re-encoded for each shipped layer and `tools/ktx2-impostor-probe.mjs` shall confirm KTX2 loads with no PNG fallthrough.
-- If the depth channel is dropped (Q2), then no shipped sidecar shall reference a depth layer and no dist artifact shall include a `*.depth.*` file.
+- When the re-bake runs, then each tree's atlas + sidecar shall reflect the Phase 1 projection / channels / resolution, and the sidecar shall self-validate (`atlasWidth === tilesX * tileSize`; the `directions` or `azimuths`/`elevations` length equals the tile count). **DONE** - octahedral 8x8 @ 128px (1024^2), albedo + normal; sidecar `atlasWidth 1024 === 8 * 128`, `directions` length 64. `tests/imposter-octahedral-sidecar.spec.js` pins it.
+- When the atlas re-bakes, then the committed PNG atlases shall be non-blank (the baker's blank-atlas guard, added this phase after a headless render race silently produced a blank tree1) and the parity hashes shall be regenerated via `npm run record-impostor-parity-hashes`. **DONE.** (KTX2 dist encoding moved to Phase 4 - the production cutover. The octahedral atlas is lab-only until the production material reads it, and `tools/encode-impostors-ktx2.mjs` is latlon-scoped by design (`LIVE_LAYOUT`); encoding octahedral before production consumes it would ship an unused dist artifact and force flipping the live-layout constant while production still reads latlon.)
+- If the depth channel is dropped (Q2), then the octahedral sidecar shall not reference a depth layer and no octahedral `*.depth.*` artifact shall ship. **DONE** - octahedral depth PNGs deleted, `auxLayers: ["albedo","normal"]`. (The vestigial latlon depth atlas is removed at Phase 4 when production leaves the latlon path.)
 
 ### Phase 3 - Production impostor material (~4hr, autonomous)
 
@@ -88,6 +90,7 @@ Replace the static `createColdImpostorGeometry(atlas.sidecar, 0)` cross-billboar
 - When NSL renders far trees on the consolidated path, then the far band shall use the view-dependent relit impostor, not `MeshBasicMaterial` sampling column 0.
 - While NSL streams foliage, then the cold impostor coverage shall stay byte-coherent with the wave scatter (the Cycle 88 coverage rule holds).
 - If a far impostor would cast a shadow, then it shall not (the durable no-far-impostor-shadow rule holds).
+- When production reads the octahedral atlas, then it shall ship in `dist` (the Cycle 98 lab-only deletion in `vite.config.js` is removed): the lean 1024^2 albedo + normal (~1.8 MB both trees, no depth). It ships as **`.png` (lossless)** this cycle; KTX2 wire-encoding the octahedral set (extend `encode-impostors-ktx2.mjs` past `LIVE_LAYOUT`, make `MAPS` aux-layer-aware, extend the dist `.png` dedup into the octahedral subdir) is **deferred to a post-Phase-7 wire-optimization** so the UASTC transcode is not conflated with the new material as an unvalidated variable. The latlon atlas is NOT vestigial - cold coverage + the canopy shadow caster still read it - so it stays in dist (revises the earlier "remove latlon" note: only octahedral was lab-only).
 
 ### Phase 5 - Extend the far-impostor band to the per-chunk islands (~4hr, autonomous)
 
@@ -99,9 +102,9 @@ Give Rolling Hills + Open Country a far-impostor band using the approach decided
 
 **Acceptance (EARS):**
 
-- When Rolling Hills or Open Country renders trees beyond the far switch, then a view-dependent relit impostor band shall render where today there is none.
-- When a new scene needs the far band, then it shall opt in via a `SceneDef` flag, not a hardcoded scene-id branch in render code.
-- If the per-chunk extension would regress the field or NSL jitter rails, then stop and surface before shipping.
+- When Rolling Hills or Open Country renders trees beyond the far switch, then a view-dependent relit impostor band shall render where today there is none. **CODE DONE** - gate broadened (`usesConsolidatedTreeCull`, coastline + island) and `armAllColdFarImpostors` wired off the all-cold registry; the *rendered* confirmation is the Phase 6 paired SSIM A/B (headless WebGPU is unavailable on this box, measured in `cycle101-validation/webgpu-availability-check.mjs`).
+- When a new scene needs the far band, then it shall opt in via a `SceneDef` flag, not a hardcoded scene-id branch in render code. **DONE** - gates on the structural `boundary.kind` (a SceneDef field), no scene-id branch, no `types.js` fence touch (Q3 resolution). `tests/tree-cull-gate.spec.js` pins it.
+- If the per-chunk extension would regress the field or NSL jitter rails, then stop and surface before shipping. **HARD STOP #1 CLEARED** - the consolidated cull is loading-strategy-agnostic; only the far-*enable* was streaming-coupled, and the all-cold enable was added cleanly (no forklift). The jitter-rail perf pass (RH/OC + NSL) is the Phase 6 paired run (`cycle101-validation/phase6-validation-notes.md`).
 
 ### Phase 6 - Validation (~3hr, autonomous)
 
@@ -113,9 +116,9 @@ Settled-signal SSIM A/B (impostor vs LOD0 at matched poses across a yaw sweep) -
 
 **Acceptance (EARS):**
 
-- When the A/B probe runs, then the impostor shall hold SSIM >= the Phase 1 threshold vs the LOD0 mesh at matched camera across a yaw sweep, and the result shall be saved to `cycle101-validation/`.
-- When `npm run perf:jitter:nsl -- --check=1` runs (warm rerun), then NSL shall stay within the Cycle 96 budget (1%-low >= 100, worst-delta <= 45ms, hitch <= 30 per 30s).
-- While on the mobile (low) tier, then the impostor path shall not regress the mobile LOD1 ladder (no desktop-only path leaks to low tier).
+- When the A/B probe runs, then the impostor shall hold SSIM >= the Phase 1 threshold vs the LOD0 mesh at matched camera across a yaw sweep, and the result shall be saved to `cycle101-validation/`. **PAIRED** - needs real-browser WebGPU (unavailable headless here, measured). Runbook + method (cycle90 noise-floor; Phase 1 set no numeric threshold) in `cycle101-validation/phase6-validation-notes.md`.
+- When `npm run perf:jitter:nsl -- --check=1` runs (warm rerun), then NSL shall stay within the Cycle 96 budget (1%-low >= 100, worst-delta <= 45ms, hitch <= 30 per 30s). **PAIRED** - same WebGPU constraint; exact warm-rerun commands + RH/OC island perf pass in the Phase 6 notes.
+- While on the mobile (low) tier, then the impostor path shall not regress the mobile LOD1 ladder (no desktop-only path leaks to low tier). **DONE (code-enforced)** - `armAllColdFarImpostors` is gated on `hwTier !== 'low'` (mirrors the streamed path's `!sparse`); low tier keeps meshopt LOD1 island-wide. Analysis in the Phase 6 notes.
 
 ### Phase 7 - Paired review + close (paired)
 
@@ -141,6 +144,7 @@ Phase 1 gates everything (it picks the representation). Phases 4 and 5 can run i
 - `shared/**` - untouched this cycle (no sim-baseline, refactor-baseline, or wire impact). Listed so the fence is explicit.
 - The impostor atlas, sidecar, and `assets/objects.manifest.json` are **not** frozen - the re-bake is the authorized change.
 - `shared/scenes/types.js` (fence-frozen) - touched **only if** Phase 5 adds a far-band `SceneDef` flag, and only as the cheap case (an optional field with a default), with all consumers migrated in the same PR. If the per-chunk band needs anything more than an additive optional field, stop and surface.
+- `tests/refactor-baseline/__fixtures__/bundle-sizes.json` (fence-frozen) - **bumped in Phase 4 with this recorded decision** (ratchet convention: deliberate, recorded). The view-dependent impostor material is dynamic-imported so it lands in the WebGPU "other" chunk, not main; the residual growth is the far-band wiring in `TreePlacement.js` (loadOctahedralImpostorAtlas, the directions-texture helper, the rewritten enableConsolidatedFarImpostors). Bumps: `mainKB` 620 -> 623, `chunkBudgetsKiB.main` 621 -> 624, `chunkBudgetsKiB.other` 613 -> 619. No other baseline (sim, scatter) moved.
 
 ## Hard stops
 

@@ -1,37 +1,36 @@
-# Next Session - Cycle 101 (impostor-bake-repass)
+# Next Session - Cycle 102 (impostor-ktx2-and-polish)
 
-> **Updated:** 2026-06-14
-> **For:** Cycle 101 (`docs/cycle-101-plan.md`)
-> **Pickup priority:** Start with Phase 1 (the spike). Prove a view-dependent relit impostor on a single tree in the orbit lab and pick latlon-vs-octahedral + channels + resolution + the per-chunk-extension approach WITH NUMBERS before the bake. The plan is fully authored (not a stub).
+> **Updated:** 2026-06-15
+> **For:** Cycle 102 (`docs/cycle-102-plan.md`)
+> **Pickup priority:** The cycle-102 plan is a stub. Author Goal + Phases at `/cycle-start`. The thread is set: KTX2 wire-encode the new octahedral atlas (deferred from Cycle 101 Phase 4), fold in far-impostor polish, and run the carried-over GPU-bound Cycle 101 validation (SSIM A/B + jitter rails).
 
-## First action: the spike
+## First action: author the plan, then run the carried-over validation
 
-Cycle 101 implements proper impostors. The plan is authored end-to-end, but the representation is deliberately unresolved: Phase 1 is a risky-primitive spike that answers Q1-Q4 (octahedral vs latlon-hemi, depth channel kept or dropped, atlas resolution, and how to give the per-chunk islands a far band) with measured numbers, saved to `cycle101-validation/`. Use `js/impostors/impostorOrbitLab.js` + the `?webgpuNativeTreeImpostors` debug route. Do not start the bake (Phase 2) until Q1-Q4 are RESOLVED in the plan.
+Cycle 101 shipped the view-dependent relit far-tree impostor (octahedral, in-shader, relit) on the NSL consolidated cull path and extended the far band to Rolling Hills + Open Country, but two things are open and seed this cycle:
 
-## The decisive finding (why this cycle exists)
+1. **KTX2 wire-encode the octahedral atlas** (the headline Cycle 102 goal). The octahedral atlas ships as lossless `.png` today; the UASTC encode was deferred from Phase 4 so it would not be conflated with the new material as an unvalidated variable. Extend `tools/encode-impostors-ktx2.mjs` past its `LIVE_LAYOUT` (latlon-only) constant, make `MAPS` aux-layer-aware (albedo + normal, no depth), and extend the dist `.png` dedup in `vite.config.js` into the `octahedral/` subdir. Mirror the Cycle 98/99 KTX2 pattern.
+2. **The GPU-bound Cycle 101 validation** (paired/on-device, because this box has no headless WebGPU - measured, `cycle101-validation/webgpu-availability-check.mjs` reads `hasGpu: false`). Run the settled SSIM A/B (impostor vs LOD0 across a yaw sweep, on NSL + Rolling Hills + Open Country) and the warm jitter rails (`npm run perf:jitter:nsl -- --check=1` within the Cycle 96 budget, plus RH/OC). Full runbook + the cycle90 noise-floor method in `cycle101-validation/phase6-validation-notes.md`. A `?forceTreeLod0=1` reference toggle is the clean way to do the A/B (small render-code add).
 
-Four research agents (SDS-current, pixel-forge, terror-in-the-jungle, vegetation-research/ez-tree) converged on one fact: **the far-tree impostor players see is a flat single-angle cross-billboard.** On the only default path that renders far-tree impostors (NSL / coastline consolidated compute-cull), far trees are `createColdImpostorGeometry(atlas.sidecar, 0)` - a static 3-quad cross-billboard sampling ONE azimuth tile (column 0) with a plain `MeshBasicMaterial` (no view-dependent tile select, no normal relight, no depth). The sophisticated kiln material (`js/kiln-impostor-material.js` WebGL + `js/webgpuKilnImpostorNodeMaterial.js` TSL: camera-driven 3-tile blend + per-fragment relight) ships on NO default path - debug route only. SDS already owns ~80% of the pieces; this cycle wires them onto production + re-bakes to feed them properly, and extends the far band to Rolling Hills + Open Country (LOD0-only today).
+## What Cycle 101 left in place (the new impostor path)
 
-## References to borrow from
-
-- **pixel-forge v0.2.0** (`../pixel-forge`): the mature Kiln BAKER. Full octahedral 8x8, baseColor-unlit + capture-view normal + depth, `bleedTransparentRgb` edge-bleed, ortho pole-flip capture. Runtime shader NOT included.
-- **Fable5 demo** (vendored in TIJ at `../terror-in-the-jungle/examples/fable5-world-demo`): the gold-standard RUNTIME. `src/vegetation/Impostors.ts` (bake) + `src/render/ImpostorRuntime.ts` (4-tile bilinear blend + normal relight via `transformNormalToView` rotated by instance yaw, depth-in-normal-alpha, BFS dilation, `specularIntensity 0.25`).
-- Gotchas already paid for: skinny-trunk double-image on azimuth blend (pin stable azimuth / enough angles); transparent-black dark halo (dilation); night ambient multiply INSIDE albedo; far impostors must NOT cast shadows (SDS durable rule - Fable5's crown-proxy far shadows stay OUT unless Matt authorizes).
+- **The material:** `createWebGpuConsolidatedTreeImpostorMaterial` in `js/webgpuKilnImpostorNodeMaterial.js` - in-shader octahedral (MeshBasicNodeMaterial + TSL), reads the instance matrix from the cull's compacted storage buffer by `instanceIndex` (a `vertexNode` bypassing InstanceNode's auto-transform), 4-tile bilinear blend over albedo + capture-view normal, relit via the existing `setImpostorTint` uniforms.
+- **The wiring:** `treeComputeCull.js` takes a `materialFactory`; `TreePlacement.js` loads the octahedral atlas + builds a directions DataTexture + arms the band. NSL arms from `foliageStreaming` (cold-coverage continuation); the all-cold islands arm from `armAllColdFarImpostors` off the cold registry, gated on no `streamedZones` (no double-enable) and `hwTier !== 'low'` (low tier keeps meshopt LOD1).
+- **The gate:** `usesConsolidatedTreeCull(sceneDef)` (coastline || island) - Home Field (rect) stays per-chunk. Gates on the structural boundary kind, not a scene id.
+- **Latlon is NOT vestigial:** it still feeds the cold coverage + the canopy shadow caster. Far impostors never cast shadows.
+- **The fold-seam note:** `selectOctahedralImpostorTiles` round-trips the baked directions 54/64 - exact for the upper hemisphere + equator (gameplay views), off-by-one only at the steep-down fold seam (10 bottom tiles), bounded to a neighbor shift inside the 4-tile blend. Confirm in the paired A/B.
 
 ## Cold-Start Orientation
 
-Read in order: this file -> [`docs/cycle-101-plan.md`](docs/cycle-101-plan.md) -> `.claude/rules/scene-and-render.md` (foliage LOD, far-tree impostors, no-far-impostor-shadow, scene-def-flag rule) -> `docs/archive/research/webgpu-octahedral-impostor-spike-2026-05-16.md` (prior octahedral spike) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 100 + 99 entries) -> `git log --oneline -6`.
+Read in order: this file -> [`docs/cycle-102-plan.md`](docs/cycle-102-plan.md) -> `cycle101-validation/phase6-validation-notes.md` (the carried validation runbook) -> `.claude/rules/scene-and-render.md` (foliage LOD, far-tree impostors, no-far-impostor-shadow, scene-def-flag rule) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 101 + 100 + 99 entries) -> `git log --oneline -6`.
 
 ## Where it stands
 
-**Cycle 100 (`terrain-compression`) closed + shipped + deployed.** Brotli-pre-compress terrain heightfields on the CF Pages build: 16 MiB -> 3.85 MiB on the wire, lossless (`Content-Encoding: br` decodes below `fetch()`, byte-identical float32), zero baseline moves. Feature `17d1ebf0`, deploy `27514489101` green; 1552 vitest / lint / build green; no version bump (still 2.3.4). The fence dissolved by measurement: terrain `.bin` is a client-only asset (Worker sim loads no heightfield), so `shared/terrain/Heightfield.js` was untouched.
-
-**Cycle 101 (`impostor-bake-repass`) is fully authored.** 7 phases (spike -> bake -> material -> NSL wire -> per-chunk band -> validation -> paired close). Atlas/sidecar/`objects.manifest.json` are not fence-frozen (re-bake allowed); `shared/` untouched.
+**Cycle 101 (`impostor-bake-repass`) closed.** 5/7 phases shipped (Phases 1-5 + Phase 6 acceptance #3); the SSIM A/B + jitter rails + the paired visual close carry to Cycle 102. 1557 vitest / lint / build green; no version bump (still 2.3.4). The far-tree impostor is now view-dependent + relit on NSL and the islands, re-baked octahedral with pixel-forge v0.2.0 Kiln. Details in `docs/BACKLOG.md`.
 
 ## Standing carryover (do not drop)
 
-- **itch/native terrain wire win** - Cycle 100 scoped the win to Cloudflare Pages; an explicit-decode (`DecompressionStream`) path would cover itch/native if measured worth it.
-- **Golden harness staleness (test-infra)** - `tools/validation/golden/` no longer reproduces against the current capture environment (7/12 below 0.95, run-to-run stable, LOD0-tree deltas unrelated to any recent render change). Re-baseline under the canonical environment or gate the capture on a deterministic scene-settled signal. Cycle 101 explicitly does NOT use it as the impostor gate.
+- **itch/native terrain wire win** - Cycle 100 scoped the terrain compression win to Cloudflare Pages; an explicit-decode (`DecompressionStream`) path would cover itch/native if measured worth it.
+- **Golden harness staleness (test-infra)** - `tools/validation/golden/` no longer reproduces against the current capture environment. Re-baseline under the canonical environment or gate the capture on a deterministic scene-settled signal. Not the impostor gate.
 - **Paired launch session** - NSL-as-default-world (still Rolling Hills), version bump, itch/devlog/social posting (Matt's voice), S24+ device pass.
 - **three r185** blocked until it publishes (latest 0.184.0); checklist `cycle96-validation/r185-readiness.md`.
 - **Rock re-bake** behind the Cycle 96 collider-parity harness; needs a design direction.

@@ -32,6 +32,7 @@
     "compress-glbs": "node scripts/compress-glbs.mjs",
     "bake-trees": "node tools/bake-trees.mjs",
     "bake-tree-impostors": "node tools/bake-tree-impostors.mjs",
+    "record-impostor-parity-hashes": "node tools/record-impostor-parity-hashes.mjs",
     "encode-impostors-ktx2": "node tools/encode-impostors-ktx2.mjs",
     "bake-tree-lod1": "node tools/bake-tree-lod1.mjs",
     "bake-tree-mobile-budgets": "node tools/bake-mobile-tree-budgets.mjs",

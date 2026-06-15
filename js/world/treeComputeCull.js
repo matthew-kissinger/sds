@@ -37,7 +37,7 @@ export function createTreeComputeCull(webGpuModules, opts) {
     } = TSL;
 
     const {
-        geometry, material, matrices, offsets, count,
+        geometry, material, materialFactory = null, matrices, offsets, count,
         cullRadius = 15.0, castShadow = false, receiveShadow = true,
         lodRole = null, lodDistance = 0, lodEnabled = false,
     } = opts;
@@ -109,7 +109,14 @@ export function createTreeComputeCull(webGpuModules, opts) {
     })().compute(capacity);
 
     // The compacted storage buffer IS the mesh's instanceMatrix (InstanceNode storage path).
-    const mesh = new InstancedMesh(geo, material, capacity);
+    // An optional materialFactory binds a material to that buffer AFTER it exists
+    // (Cycle 101: the far-impostor material reads it by instanceIndex via a
+    // vertexNode that bypasses InstanceNode, so it needs the buffer reference up
+    // front - a plain `material` cannot, since the buffer is created here).
+    const effectiveMaterial = materialFactory
+        ? materialFactory({ instanceMatricesAttr: compactedMatrices, capacity })
+        : material;
+    const mesh = new InstancedMesh(geo, effectiveMaterial, capacity);
     mesh.instanceMatrix = compactedMatrices;
     mesh.frustumCulled = false;
     mesh.count = capacity;

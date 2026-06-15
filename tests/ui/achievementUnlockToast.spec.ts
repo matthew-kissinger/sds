@@ -143,10 +143,12 @@ describe('end to end: engine unlock surfaces a toast', () => {
         // The default show path lazy-imports the (mocked) i18n module; wait
         // for both unlock toasts to land (the import settles asynchronously).
         // This event unlocks first-pen and pen-200-home-field, so the two
-        // toasts stack in the shared rail.
+        // toasts stack in the shared rail. The 5s timeout (vs the 1s default)
+        // gives the dynamic import headroom under full-suite parallel CPU load,
+        // where the default raced and intermittently saw an empty rail.
         await vi.waitFor(() => {
             expect(railToasts().length).toBeGreaterThanOrEqual(2);
-        });
+        }, { timeout: 5000 });
         const rail = document.getElementById(TOP_RAIL_ID);
         expect(rail).toBeTruthy();
         expect(rail!.textContent).toContain('Achievement unlocked');
@@ -163,7 +165,7 @@ describe('end to end: engine unlock surfaces a toast', () => {
         recordEvent('solo-complete', payload);
         await vi.waitFor(() => {
             expect(railToasts()).toHaveLength(2);
-        });
+        }, { timeout: 5000 });
 
         recordEvent('solo-complete', payload);
         // Give any (wrong) re-toast time to land before asserting stability.

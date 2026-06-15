@@ -176,6 +176,22 @@ async function bakeOne(obj, layoutId, preset, variant) {
   let info = null;
   try { info = JSON.parse(stdout); } catch { /* ignore — leave info null */ }
   if (info?.ok) {
+    // Guard the known headless-render spinup race (see tree-assets.spec.js): a
+    // raced bake yields a fully transparent atlas, which PNG-compresses to a few
+    // KB (a 1024^2 blank is ~4 KB; real foliage is 200 KB+). Committing a blank
+    // would silently ship an invisible far impostor, so fail loud and let the
+    // caller re-run rather than record a blank's parity hash.
+    const BLANK_FLOOR_BYTES = 16 * 1024;
+    const shippedLayers = [out, ...(preset.auxLayers ?? []).map((l) => out.replace(/\.png$/, `.${l}.png`))];
+    for (const layer of shippedLayers) {
+      const bytes = statSync(layer).size;
+      if (bytes < BLANK_FLOOR_BYTES) {
+        throw new Error(
+          `bake produced a near-blank atlas (${(bytes / 1024).toFixed(1)} KB < ${BLANK_FLOOR_BYTES / 1024} KB) ` +
+          `for ${layer} — likely a headless render race. Re-run the bake.`
+        );
+      }
+    }
     const pngBytes = statSync(out).size;
     console.log(
       `  → ok (${dt}s) — ${info.tiles} ${info.atlas}, ` +
@@ -196,15 +212,23 @@ async function bakeOne(obj, layoutId, preset, variant) {
  * Cycle 50 Phase 2 identity fields land on tree1/tree2 without a re-render (CI
  * has neither the source GLBs nor a browser, so it can never render here).
  */
-export async function bakeAll({ augmentOnly = false } = {}) {
+export async function bakeAll({ augmentOnly = false, only = null } = {}) {
   const manifest = loadManifest();
-  const targets = [...enabledImpostorTargets(manifest)];
+  let targets = [...enabledImpostorTargets(manifest)];
+  if (only) {
+    const all = targets;
+    targets = targets.filter((t) => t.layoutId === only);
+    if (targets.length === 0) {
+      const layouts = [...new Set(all.map((t) => t.layoutId))].join(', ');
+      throw new Error(`--only "${only}" matched no impostor targets (available layouts: ${layouts})`);
+    }
+  }
   if (!augmentOnly) {
     assertCliBuilt();
     console.log(`pixel-forge cli:  ${PF_CLI}`);
   }
   console.log(`manifest:         ${MANIFEST_PATH}`);
-  console.log(`mode:             ${augmentOnly ? 'augment-only (no render)' : 'full bake'}`);
+  console.log(`mode:             ${augmentOnly ? 'augment-only (no render)' : 'full bake'}${only ? ` (only layout: ${only})` : ''}`);
   console.log(`impostor targets: ${targets.map((t) => `${t.obj.id}/${t.layoutId}/${t.variant.id}`).join(', ') || '(none)'}\n`);
 
   let count = 0;
@@ -228,7 +252,11 @@ export async function bakeAll({ augmentOnly = false } = {}) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  bakeAll({ augmentOnly: process.argv.includes('--augment-only') }).catch((err) => {
+  // `--only <layoutId>` restricts the bake to one layout (e.g. octahedral) so a
+  // targeted re-bake leaves the other layout's committed atlas byte-identical.
+  const onlyIdx = process.argv.indexOf('--only');
+  const only = onlyIdx >= 0 ? process.argv[onlyIdx + 1] ?? null : null;
+  bakeAll({ augmentOnly: process.argv.includes('--augment-only'), only }).catch((err) => {
     console.error('[bake] FAILED:', err.message);
     process.exit(1);
   });

@@ -23,7 +23,7 @@ import { InstancedMesh2 } from '@three.ez/instanced-mesh';
 
 import { generateTrees } from '../../shared/TreePlacement.js';
 import { mulberry32 } from '../../shared/Random.js';
-import { loadKilnImpostor } from '../kiln-impostor-material.js';
+import { loadKilnImpostor, createKilnImpostorGeometry } from '../kiln-impostor-material.js';
 import { getSceneManager } from '../GameBridge.js';
 import { createTreeComputeCull } from './treeComputeCull.js';
 import { getWebGpuModules } from './webgpuModules.js';
@@ -307,10 +307,12 @@ function makeCanopyShadowCaster(builder, entry, sidecar, texture) {
     return caster;
 }
 
-function makeFarImpostorController(builder, cullModules, entry, material) {
+function makeFarImpostorController(builder, cullModules, entry, materialFactory) {
     const far = createTreeComputeCull(cullModules, {
         geometry: entry.farGeometry,
-        material,
+        // Cycle 101: the far material reads the compacted instance buffer by
+        // index, so it is built by a factory once that buffer exists.
+        materialFactory,
         matrices: entry.impostorMatrices,
         offsets: entry.impostorOffsets,
         count: entry.used,
@@ -396,46 +398,91 @@ export function reserveConsolidatedTreeCapacity(builder, flatTrees) {
 }
 
 /**
- * Cycle 91 (Phase 2.5 item 4): activate the full LOD chain on the
- * consolidated path. Once a type's kiln albedo atlas is renderable, create
- * its far-impostor controller (everything beyond the switch distance renders
- * as kiln cross-billboards, sharing the cold-coverage material so tint +
- * texture binding ride along) and flip the LOD0 controllers' near gate on.
- * Until then LOD0 renders island-wide - exactly the pre-91 behavior - so a
- * failed atlas fetch degrades to the shipped look, never to absent trees.
+ * Cycle 91 (Phase 2.5 item 4) + Cycle 101 Phase 4: activate the full LOD chain
+ * on the consolidated path. Once a type's atlases resolve, create its far-
+ * impostor controller (everything beyond the switch distance renders as the
+ * view-dependent relit octahedral impostor - Cycle 101, replacing the static
+ * column-0 cross-billboard) and flip the LOD0 controllers' near gate on. Until
+ * then LOD0 renders island-wide - exactly the pre-91 behavior - so a failed
+ * atlas fetch degrades to the shipped look, never to absent trees.
+ *
+ * The far material reads each instance's transform from the cull's compacted
+ * storage buffer in-shader (the only thing that works with data-compaction's
+ * shifting slot order), so it is built by a factory once that buffer exists. The
+ * `latlon` atlas (`atlasByType`) still feeds the canopy shadow caster; the
+ * octahedral atlas (albedo + capture-view normal) is loaded here for the far
+ * band. `_materialsByType` (cold cross-billboard materials) is no longer used by
+ * the far controller - kept in the signature for the existing call site.
  */
-export function enableConsolidatedFarImpostors(builder, atlasByType, materialsByType, opts = {}) {
+export function enableConsolidatedFarImpostors(builder, atlasByType, _materialsByType, opts = {}) {
     const registry = builder._treeCullRegistry;
     const cullModules = getWebGpuModules();
     if (!registry || !cullModules?.TSL) return 0;
+    const sceneFog = builder.scene?.fog ?? null;
+    const fogDef = builder.sceneDef?.fog ?? {};
+    const fog = {
+        color: sceneFog?.color ? [sceneFog.color.r, sceneFog.color.g, sceneFog.color.b] : [0.8, 0.8, 0.8],
+        near: fogDef.near ?? sceneFog?.near ?? 60,
+        far: fogDef.far ?? sceneFog?.far ?? 400,
+        strength: 0.5,
+    };
     let scheduled = 0;
     for (const [treeType, entry] of registry) {
-        const atlas = atlasByType?.[treeType];
-        const material = materialsByType?.[treeType];
-        if (!atlas?.sidecar || !material || entry.far) continue;
+        const latlonAtlas = atlasByType?.[treeType]; // cold albedo, for the canopy shadow caster
+        if (!latlonAtlas?.sidecar || entry.far) continue;
         scheduled++;
-        atlas.texturePromise?.then((texture) => {
-            if (!texture || opts.signal?.aborted) return;
+        // Octahedral atlas (albedo + capture-view normal) drives the view-
+        // dependent relit far material; cold coverage + the shadow caster stay
+        // on the latlon albedo (unchanged fallback).
+        loadOctahedralImpostorAtlas(treeType).then(async (oct) => {
+            if (!oct?.sidecar || opts.signal?.aborted) return;
             if (builder._treeCullRegistry !== registry || entry.far) return; // scene swapped / raced
+            const [albedoTex, normalTex] = await Promise.all([oct.albedoPromise, oct.normalPromise]);
+            if (!albedoTex || !normalTex || opts.signal?.aborted) return;
+            if (builder._treeCullRegistry !== registry || entry.far) return;
             try {
-                entry.farGeometry = createColdImpostorGeometry(atlas.sidecar, 0);
-                const far = makeFarImpostorController(builder, cullModules, entry, material);
+                // Dynamic import keeps the WebGPU-only impostor material in the
+                // webgpu chunk (it ships nowhere WebGL/mobile can reach), so the
+                // main bundle stays lean - it is only fetched when a coastline/
+                // island scene actually arms its far band.
+                const { createWebGpuConsolidatedTreeImpostorMaterial } =
+                    await import('../webgpuKilnImpostorNodeMaterial.js');
+                const directionsTexture = buildImpostorDirectionsTexture(oct.sidecar);
+                // Camera-facing quad sized to the bake frustum; the material's
+                // vertexNode billboards + view-selects it per instance.
+                entry.farGeometry = createKilnImpostorGeometry(oct.sidecar);
+                const far = makeFarImpostorController(builder, cullModules, entry, ({ instanceMatricesAttr, capacity }) => {
+                    const mat = createWebGpuConsolidatedTreeImpostorMaterial(cullModules, {
+                        instanceMatricesAttr,
+                        capacity,
+                        sidecar: oct.sidecar,
+                        albedoAtlas: albedoTex,
+                        normalAtlas: normalTex,
+                        directionsTexture,
+                        fog,
+                    });
+                    // setImpostorTint drives sun/ambient/ground-bounce per frame.
+                    if (!builder._impostorMaterials) builder._impostorMaterials = [];
+                    builder._impostorMaterials.push(mat);
+                    return mat;
+                });
                 if (Array.isArray(builder.trees)) builder.trees.push(far.mesh);
                 entry.far = far;
                 for (const slot of entry.lod0) slot.controller.setLodEnabled(true);
-                // Cycle 91 Phase 2: same atlas arrival also arms the
-                // shadow-only canopy caster (desktop day-loop scenes). Once
+                // Cycle 91 Phase 2: the canopy shadow caster rides the latlon
+                // albedo (depth-pass alpha mask only, no view dependence). Once
                 // it exists it is the SOLE tree caster: the LOD0 trunks stop
-                // casting (their depth pass runs the full wind vertex shader
-                // per vertex, and the billboard atlas already contains the
-                // trunk, so trunk+billboard double-cast cost a measured
-                // ~0.7ms/frame and a double-shadow smudge). One-time toggle
-                // at arm, never per-frame.
-                entry.shadowCaster = makeCanopyShadowCaster(builder, entry, atlas.sidecar, texture);
-                if (entry.shadowCaster) {
-                    if (Array.isArray(builder.trees)) builder.trees.push(entry.shadowCaster);
-                    for (const slot of entry.lod0) slot.controller.mesh.castShadow = false;
-                }
+                // casting (trunk+billboard double-cast cost ~0.7ms/frame and a
+                // double-shadow smudge). One-time toggle at arm, never per-frame.
+                latlonAtlas.texturePromise?.then((latTex) => {
+                    if (!latTex || opts.signal?.aborted) return;
+                    if (builder._treeCullRegistry !== registry) return;
+                    entry.shadowCaster = makeCanopyShadowCaster(builder, entry, latlonAtlas.sidecar, latTex);
+                    if (entry.shadowCaster) {
+                        if (Array.isArray(builder.trees)) builder.trees.push(entry.shadowCaster);
+                        for (const slot of entry.lod0) slot.controller.mesh.castShadow = false;
+                    }
+                });
                 // Best-effort WebGPU pipeline prewarm for the one new mesh.
                 // WebGL compileAsync can keep polling after teardown, so WebGL
                 // takes the normal lazy compile path.
@@ -449,13 +496,48 @@ export function enableConsolidatedFarImpostors(builder, atlasByType, materialsBy
                     }
                 } catch { /* best-effort */ }
                 console.log(`[FOLIAGE] far-impostor LOD active for ${treeType}: `
-                    + `${entry.used} instances, LOD0 within ${CONSOLIDATED_FAR_SWITCH_DISTANCE}m`);
+                    + `${entry.used} instances, view-dependent octahedral, LOD0 within ${CONSOLIDATED_FAR_SWITCH_DISTANCE}m`);
             } catch (err) {
                 console.warn(`[FOLIAGE] far-impostor LOD enable failed for ${treeType}:`, err);
             }
         });
     }
     return scheduled;
+}
+
+/**
+ * Cycle 101 Phase 5: arm the consolidated far-impostor band for an all-cold
+ * island (Rolling Hills, Open Country - no streamed waves). The cold build
+ * populated `_treeCullRegistry` with the whole island's LOD0 controllers; this
+ * loads the latlon cold atlas per registered type (it feeds the canopy shadow
+ * caster; the octahedral far material loads its own atlas inside
+ * enableConsolidatedFarImpostors) and hands off. Detached: the cold build
+ * returns immediately and the far band lights up when the atlases resolve, so a
+ * failed fetch degrades to LOD0-island-wide, never to absent trees.
+ *
+ * Streamed scenes (Newsheepdogland) arm the band from the cold-coverage
+ * continuation in foliageStreaming instead; the call site gates this on the
+ * absence of `streamedZones` so they are never double-enabled. Scene-swap safety
+ * rides the registry-identity guard inside enableConsolidatedFarImpostors (the
+ * builder has no abort signal here; clearTrees nulls the registry on swap).
+ *
+ * @param {object} builder TerrainBuilder instance.
+ */
+function armAllColdFarImpostors(builder) {
+    const registry = builder._treeCullRegistry;
+    if (!registry?.size) return;
+    (async () => {
+        try {
+            const atlasByType = {};
+            await Promise.all([...registry.keys()].map(async (type) => {
+                atlasByType[type] = await loadColdImpostorAtlas(type);
+            }));
+            if (builder._treeCullRegistry !== registry) return; // scene swapped mid-load
+            enableConsolidatedFarImpostors(builder, atlasByType, {}, {});
+        } catch (err) {
+            console.warn('[FOLIAGE] all-cold far-impostor arm failed (island keeps LOD0-island-wide):', err);
+        }
+    })();
 }
 
 export function resolveWebGpuNativeTreeImpostorRoute(search = (typeof window === 'undefined' ? '' : window.location.search)) {
@@ -496,6 +578,22 @@ function computeChunkCenter(instances) {
     return center.multiplyScalar(1 / instances.length);
 }
 
+/**
+ * Cycle 101 Phase 5: consolidated compute-cull eligibility by structural
+ * boundary kind. Coastline (Newsheepdogland, streamed) plus island (Rolling
+ * Hills, Open Country, both all-cold) take the per-instance GPU cull + the
+ * view-dependent far-impostor band. Home Field (`rect`) stays per-chunk. Broadened
+ * from coastline-only this cycle so the islands inherit the Phase 3/4 impostor;
+ * gates on the boundary kind, not a scene id (scene-and-render.md rule).
+ *
+ * @param {object} [sceneDef] the active SceneDef.
+ * @returns {boolean}
+ */
+export function usesConsolidatedTreeCull(sceneDef) {
+    const kind = sceneDef?.boundary?.kind;
+    return kind === 'coastline' || kind === 'island';
+}
+
 async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     const instancedMeshes = [];
     const groups = [];
@@ -517,7 +615,7 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     // tree fan-out into ONE compute-culled InstancedMesh per child-mesh
     // (data-compaction storage instanceMatrix + indirect draw). Null on WebGL
     // and non-coastline paths -> per-chunk fan-out.
-    const treeCullModules = (builder.sceneDef?.boundary?.kind === 'coastline' && !useProductionNativeImpostor)
+    const treeCullModules = (usesConsolidatedTreeCull(builder.sceneDef) && !useProductionNativeImpostor)
         ? (getWebGpuModules() || null)
         : null;
     if (treeCullModules?.TSL) {
@@ -774,6 +872,21 @@ async function createNativeTreeInstancedMeshes(builder, treeInstances) {
     builder.webgpuNativeTreeInstancingSummary = summary;
     builder.trees = instancedMeshes;
     console.log(`[TERRAIN] Total trees: ${totalTrees} (native WebGPU InstancedMesh route)`);
+
+    // Cycle 101 Phase 5: all-cold islands (Rolling Hills, Open Country) arm the
+    // view-dependent far-impostor band here, off the cold registry. Streamed
+    // scenes (NSL) arm it from the foliageStreaming cold-coverage continuation,
+    // so the `streamedZones` guard skips them to avoid a double-enable. Home
+    // Field (rect) never built a consolidated registry, so size() is 0 there.
+    //
+    // Low tier is skipped: it keeps meshopt LOD1 island-wide with no far band,
+    // exactly as the streamed NSL path does in sparse mode (the cold build's
+    // consolidated source mesh is already LOD1 on mobile). The desktop octahedral
+    // far path must never leak to low tier (scene-and-render.md foliage LOD
+    // strategy + Cycle 101 Phase 6 acceptance).
+    if (treeCullModules?.TSL && hwTier !== 'low' && !builder.sceneDef?.terrain?.streamedZones) {
+        armAllColdFarImpostors(builder);
+    }
     return instancedMeshes;
 }
 
@@ -850,7 +963,7 @@ export function buildAdditiveTreeMeshes(builder, treeInstancesByType, _opts = {}
     const dummy = new THREE.Object3D();
     let meshCount = 0;
 
-    const cullModules = (builder.sceneDef?.boundary?.kind === 'coastline'
+    const cullModules = (usesConsolidatedTreeCull(builder.sceneDef)
         && shouldUseWebGpuProductionNativeInstancing())
         ? (getWebGpuModules() || null)
         : null;
@@ -958,6 +1071,66 @@ export async function loadColdImpostorAtlas(treeType) {
     })();
     _coldImpostorAtlasCache.set(treeType, promise);
     return promise;
+}
+
+/**
+ * Cycle 101 Phase 4: load the OCTAHEDRAL atlas (sidecar + albedo + capture-view
+ * normal) for the consolidated far-impostor controller's view-dependent relit
+ * material. Distinct from loadColdImpostorAtlas (latlon, albedo-only) which still
+ * feeds the cold-coverage cross-billboard + the canopy shadow caster. Cached per
+ * type across scene swaps.
+ *
+ * @param {string} treeType e.g. 'tree1'
+ * @returns {Promise<{sidecar: object, albedoPromise: Promise<THREE.Texture|null>,
+ *           normalPromise: Promise<THREE.Texture|null>} | null>}
+ */
+const _octImpostorAtlasCache = new Map();
+export async function loadOctahedralImpostorAtlas(treeType) {
+    if (_octImpostorAtlasCache.has(treeType)) return _octImpostorAtlasCache.get(treeType);
+    const promise = (async () => {
+        try {
+            const base = await resolveImpostorBase(treeType, { octahedral: true });
+            const res = await fetch(`${base}.json`);
+            if (!res.ok) throw new Error(`octahedral sidecar HTTP ${res.status}`);
+            const sidecar = await res.json();
+            const albedoPromise = loadImpostorTexture(base, '', THREE.SRGBColorSpace)
+                .catch((err) => { console.warn(`[FOLIAGE] octahedral albedo load failed for ${treeType}:`, err); return null; });
+            const normalPromise = loadImpostorTexture(base, '.normal', THREE.NoColorSpace)
+                .catch((err) => { console.warn(`[FOLIAGE] octahedral normal load failed for ${treeType}:`, err); return null; });
+            return { sidecar, albedoPromise, normalPromise };
+        } catch (err) {
+            console.warn(`[FOLIAGE] octahedral sidecar load failed for ${treeType}:`, err);
+            return null;
+        }
+    })();
+    _octImpostorAtlasCache.set(treeType, promise);
+    return promise;
+}
+
+/**
+ * Cycle 101 Phase 4: pack the sidecar's per-tile capture directions into a
+ * (tilesX*tilesY) x 1 RGBA float texture, texel i = direction for tile i
+ * (row-major), Nearest-sampled. The in-shader material reads it per tile to
+ * rebuild that tile's capture-view -> object normal basis.
+ */
+function buildImpostorDirectionsTexture(sidecar) {
+    const tiles = (sidecar.tilesX ?? 8) * (sidecar.tilesY ?? 8);
+    const dirs = Array.isArray(sidecar.directions) ? sidecar.directions : [];
+    const data = new Float32Array(tiles * 4);
+    for (let i = 0; i < tiles; i++) {
+        const d = dirs[i] ?? [0, 1, 0];
+        data[i * 4] = d[0];
+        data[i * 4 + 1] = d[1];
+        data[i * 4 + 2] = d[2];
+        data[i * 4 + 3] = 1;
+    }
+    const tex = new THREE.DataTexture(data, tiles, 1, THREE.RGBAFormat, THREE.FloatType);
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.needsUpdate = true;
+    return tex;
 }
 
 /**

@@ -47,7 +47,8 @@ describe('Kiln v2 octahedral tree impostor lab contract', () => {
       expect(m.angles).toBe(64);
       expect(m.tilesX).toBe(8);
       expect(m.tilesY).toBe(8);
-      expect(m.tileSize).toBe(256);
+      // Cycle 101 Q4: 1024^2 (8x8 @ 128px), a 4x VRAM cut from the 2048^2 lab atlas.
+      expect(m.tileSize).toBe(128);
       expect(m.atlasWidth).toBe(m.tilesX * m.tileSize);
       expect(m.atlasHeight).toBe(m.tilesY * m.tileSize);
       expect(m.directions).toHaveLength(m.tilesX * m.tilesY);
@@ -59,7 +60,10 @@ describe('Kiln v2 octahedral tree impostor lab contract', () => {
       expect(m.colorLayer).toBe('baseColor');
       expect(m.normalSpace).toBe('capture-view');
       expect(m.bgColor).toBe('transparent');
-      expect(m.auxLayers).toEqual(expect.arrayContaining(['albedo', 'normal', 'depth']));
+      // Cycle 101 Q2: depth dropped (debug-material-only consumer; the production
+      // relight uses albedo + the capture-view normal). Atlas ships albedo + normal.
+      expect(m.auxLayers).toEqual(['albedo', 'normal']);
+      expect(m.auxLayers).not.toContain('depth');
       expect(m.edgeBleedPx).toBeGreaterThanOrEqual(2);
     });
 
@@ -71,10 +75,11 @@ describe('Kiln v2 octahedral tree impostor lab contract', () => {
       expect(m.layoutId).toBe('octahedral');
     });
 
-    it('commits albedo, normal, and depth atlases beside the v2 sidecar', () => {
+    it('commits albedo + normal atlases beside the v2 sidecar (depth dropped Cycle 101)', () => {
       expectPng(t.atlasPath, '', 'albedo');
       expectPng(t.atlasPath, '.normal', 'normal');
-      expectPng(t.atlasPath, '.depth', 'depth');
+      const depthPath = t.atlasPath.replace(/\.png$/, '.depth.png');
+      expect(existsSync(depthPath), `depth atlas must be dropped (Cycle 101 Q2): ${depthPath}`).toBe(false);
     });
   });
 });

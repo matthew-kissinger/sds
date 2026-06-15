@@ -3,9 +3,9 @@
   "angles": 64,
   "tilesX": 8,
   "tilesY": 8,
-  "tileSize": 256,
-  "atlasWidth": 2048,
-  "atlasHeight": 2048,
+  "tileSize": 128,
+  "atlasWidth": 1024,
+  "atlasHeight": 1024,
   "worldSize": 1,
   "yOffset": 0.5,
   "projection": "orthographic",
@@ -28,8 +28,7 @@
   },
   "auxLayers": [
     "albedo",
-    "normal",
-    "depth"
+    "normal"
   ],
   "bgColor": "transparent",
   "colorLayer": "baseColor",

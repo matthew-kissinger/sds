@@ -40,10 +40,13 @@ const recordedHashes = JSON.parse(
 const targets = [...enabledImpostorTargets(loadManifest())];
 
 const relPosix = (abs) => relative(root, abs).split('\\').join('/');
-const atlasLayers = (atlasPath) => [
-  atlasPath,
-  atlasPath.replace(/\.png$/, '.normal.png'),
-  atlasPath.replace(/\.png$/, '.depth.png'),
+// Shipped atlas layers for a target: the albedo base atlas plus each aux layer
+// the layout preset declares. Cycle 101 dropped depth from the octahedral bake
+// (latlon still ships it until production leaves that path), so the layer list
+// must be preset-derived, not a hardcoded [albedo, normal, depth].
+const atlasLayers = (t) => [
+  t.atlasPath,
+  ...(t.preset.auxLayers ?? []).map((layer) => t.atlasPath.replace(/\.png$/, `.${layer}.png`)),
 ];
 
 describe('object impostor parity — determinism golden', () => {
@@ -74,7 +77,7 @@ describe('object impostor parity — determinism golden', () => {
     });
 
     it('every atlas layer has a recorded content-hash', () => {
-      for (const layerPath of atlasLayers(t.atlasPath)) {
+      for (const layerPath of atlasLayers(t)) {
         const rel = relPosix(layerPath);
         expect(recordedHashes[rel], `no recorded hash for ${rel}`).toBeTruthy();
       }
