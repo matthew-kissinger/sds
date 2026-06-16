@@ -1,12 +1,12 @@
-# Next Session - Cycle 104 (golden-determinism-and-launch-prep)
+# Next Session - Cycle 104 (impostor-and-nsl-burndown)
 
-> **Updated:** 2026-06-15
+> **Updated:** 2026-06-16
 > **For:** Cycle 104 (`docs/cycle-104-plan.md`)
-> **Pickup priority:** Cycle 104 is scaffolded as a stub (Goal + Phases empty; the slug is a placeholder, rename to the chosen focus). Decide the focus and run `/cycle-start`. Top candidates from the Cycle 103 carryover: (1) a **deterministic fixed-dt sim-step affordance** to restore the follow-cell goldens (the gate is classic-only until then); (2) the carried **paired impostor validation** (impostor-vs-LOD0 SSIM A/B + jitter rails), now tractable on-device via the new WebGPU harness + the `FOLIAGE_RIG.directWrap` knob; (3) the standing **launch session** (NSL-as-default, version bump, itch/devlog/social, S24+ device pass); (4) the **tree1 256px octahedral bake fix** in pixel-forge.
+> **Pickup priority:** Cycle 104 is authored as the burn-down (re-scoped from the golden-determinism stub, which slid to Cycle 105). DRAFT pending Matt's react to `docs/cycle-104-plan.md`. Scope: Home Field far-impostor fix (Q1 = Option A vs B), retire the `brightness=6` impostor-sun magic (Q2), diagnose + bound the NSL regression (Q3, no fixes), build the harness on-device runtime-confirmation layer. Phases 1-4 are autonomous + GPU-free; Phase 5 is paired + GPU-gated (waits for the concurrent perf effort to free the RTX 3070). Do not add perf/timing to the harness.
 
 ## First action
 
-Fill in `docs/cycle-104-plan.md` (Goal + Phases) for the chosen focus, then run `/cycle-start`.
+React to `docs/cycle-104-plan.md` (Q1/Q2/Q3 + phase shape). Once confirmed, start Phase 1 (harness runtime-confirmation layer, autonomous). Do not start the impostor enable/look work until the Phase 5 paired on-device gate.
 
 ## What Cycle 103 shipped (just closed)
 
