@@ -153,7 +153,11 @@ test.describe('SDS smoke', () => {
     await expect(armedTitle).toBeVisible({ timeout: 5_000 });
   };
 
-  test('Newsheepdogland returns to menu and starts again with survival surfaces', async ({ page, context }) => {
+  // Skipped while Newsheepdogland is switched off pending its regression burn-down:
+  // the entrance Play button is disabled (the world is "Coming soon"), so this
+  // arm-via-entrance survival loop cannot start. Re-enable when the world is playable
+  // again, alongside the worlds.ts `comingSoon` removal.
+  test.skip('Newsheepdogland returns to menu and starts again with survival surfaces', async ({ page, context }) => {
     test.setTimeout(240_000);
     const errors = collectConsoleErrors(page);
 

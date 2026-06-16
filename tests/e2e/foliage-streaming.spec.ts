@@ -49,7 +49,11 @@ function seedIdentity(id: string) {
   localStorage.setItem('playerIdentity', JSON.stringify(identity));
 }
 
-test.describe('Newsheepdogland foliage streaming', () => {
+// Skipped while Newsheepdogland is switched off pending its regression burn-down:
+// the entrance Play button is disabled (the world is "Coming soon"), so the
+// arm-via-entrance flow these tests use cannot start a run. Re-enable (drop .skip)
+// when the world is playable again, alongside the worlds.ts `comingSoon` removal.
+test.describe.skip('Newsheepdogland foliage streaming', () => {
   // Two concurrent full NSL sessions contend for the GPU and the dev server
   // and fail each other (goto timeouts, quality step-downs); run one at a time.
   test.describe.configure({ mode: 'serial' });
