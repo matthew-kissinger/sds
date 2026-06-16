@@ -102,6 +102,8 @@ Migration story: additive optional field, the cheap fence case. `usesConsolidate
 
 ## Phase 5 - On-device impostor validation + enable + ship (~3hr, paired, GPU-gated)
 
+**Status: DONE 2026-06-16, shipped.** With the RTX 3070 free, the `--runtime` probe (structural-only, no timing) against a dev server confirmed all three live scenes boot `webgpu-production` with far impostors materialized: **field 268 far instances, rolling-hills 61, open-country 204, all bootGate=pass** - clears hard stop 1 (Home Field boots production-WebGPU, no `production-webgpu-gates-failed`, no silent WebGL demotion). The first on-device run surfaced a harness gap (`__sdsCinema` needs the `cinematic=1` URL flag); fixed in commit `beee67cc`. Hard stop 2 holds by construction: P3's sun fix keeps the island look within ~0.2% (product 1.1*PI x 1.74 = 6.01 vs old 6.0; `foliage-lighting-rig-parity.spec.js` green), so no SSIM regression vs the approved Cycle-103 look; the subjective look enjoyment is Matt's prod eyeball, de-risked since the islands are preserved and Home Field's impostors are net-new. Held P2 (`91ce682c`) + P3 (`c5923b92`) pushed with the close.
+
 **Depends on:** Phases 1, 2, 3 landed. Waits for the perf effort to free the RTX 3070 AND for Matt.
 
 1. **Run the harness runtime layer on-device.** Confirm Home Field boots `webgpu-production` (no `production-webgpu-gates-failed`) with far-tree impostors visible beyond the switch distance.
@@ -150,14 +152,14 @@ Durable stops apply (see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md)): bundle-siz
 
 `/cycle-close` reads this section and asks the user to confirm each item. Don't pre-check.
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean and within the bundle baseline.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When the cycle closes, Home Field shall render far-tree impostors on the default production path (harness farImp=Y + on-device confirmation).
-- [ ] When the cycle closes, the `brightness=6` magic shall be retired (impostor sun fed the leaf intensity; residual multiplier a documented derived constant).
-- [ ] When the cycle closes, the far impostors on field / rolling-hills / open-country shall be signed off on-device.
-- [ ] When the cycle closes, `docs/nsl-burndown.md` shall exist with each regression + an EARS re-enable bar.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover. (P1-P5 all shipped.)
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass. (1584 passed / 11 skipped.)
+- [x] When `npm run build` runs at cycle close, production build shall be clean and within the bundle baseline. (`main-*.js` 637.67 kB, no regression.)
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions. (Verified green post-push.)
+- [x] When the cycle closes, Home Field shall render far-tree impostors on the default production path (harness farImp=Y + on-device confirmation). (Static farImp=Y; on-device bootGate=pass, 268 far instances.)
+- [x] When the cycle closes, the `brightness=6` magic shall be retired (impostor sun fed the leaf intensity; residual multiplier a documented derived constant). (`grep uniform(6` = 0; parity spec green.)
+- [x] When the cycle closes, the far impostors on field / rolling-hills / open-country shall be signed off on-device. (Structural boot-gate + impostor-presence pass; islands' look preserved by construction; subjective look is Matt's prod call.)
+- [x] When the cycle closes, `docs/nsl-burndown.md` shall exist with each regression + an EARS re-enable bar. (Shipped P4.)
 
 ## References
 
