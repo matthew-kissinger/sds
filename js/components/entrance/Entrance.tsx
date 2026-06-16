@@ -187,7 +187,12 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
   // 3,000 / Chaos 5,000) gets a performance warning before the round builds.
   // Continue commits anyway (player choice wins); go back stays here.
   const [perfWarnOpen, setPerfWarnOpen] = useState(false);
+  // A coming-soon world (Newsheepdogland, switched off for the regression burn-down)
+  // is non-committable. The badge + disabled Play below reflect it; this guard is the
+  // belt-and-suspenders against a keyboard/controller commit reaching flow.commit().
+  const comingSoon = !!flow.world.comingSoon;
   const handlePlay = () => {
+    if (comingSoon) return;
     if (shouldWarnMobileSheep({ sheepCount: flow.mode.sheep, gameMode: flow.family.gameMode, isMobile: isMobileClient() })) {
       setPerfWarnOpen(true);
       return;
@@ -268,6 +273,19 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
                     Experimental
                   </span>
                 )}
+                {flow.world.comingSoon && (
+                  <span
+                    title="In the workshop. Play Rolling Hills or Open Country for now."
+                    style={{
+                      display: 'inline-block', verticalAlign: 'middle', marginLeft: 8, padding: '2px 9px',
+                      fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                      borderRadius: 999, border: `1px solid ${pastoral.glassWarmBorder}`,
+                      background: alpha(pastoral.accentGold, 18), color: pastoral.ink,
+                    }}
+                  >
+                    Coming soon
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 13, color: pastoral.inkSoft, marginTop: 3, lineHeight: 1.25, overflow: 'hidden', textOverflow: compact ? undefined : 'ellipsis', whiteSpace: compact ? 'normal' : 'nowrap' }}>{flow.world.tagline}</div>
             </div>
@@ -337,13 +355,14 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
                 <div style={{ fontSize: 11, color: pastoral.inkSoft }}>{flow.dog.trait}</div>
               </div>
             </button>
-            <button onClick={handlePlay} style={{
-              flex: 1, height: 52, borderRadius: 16, border: 'none', cursor: 'pointer',
-              background: pastoral.accentMeadow, color: pastoral.cream, fontSize: 18, fontWeight: 700,
+            <button onClick={handlePlay} disabled={comingSoon} aria-disabled={comingSoon} style={{
+              flex: 1, height: 52, borderRadius: 16, border: 'none', cursor: comingSoon ? 'not-allowed' : 'pointer',
+              background: comingSoon ? alpha(pastoral.ink, 10) : pastoral.accentMeadow,
+              color: comingSoon ? pastoral.inkSoft : pastoral.cream, fontSize: 18, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: `0 6px 18px ${alpha(pastoral.accentMeadow, 45)}`,
+              boxShadow: comingSoon ? 'none' : `0 6px 18px ${alpha(pastoral.accentMeadow, 45)}`,
             }}>
-              <Icon name="play" size={20} /> Play
+              {comingSoon ? 'Coming soon' : <><Icon name="play" size={20} /> Play</>}
             </button>
           </div>
 

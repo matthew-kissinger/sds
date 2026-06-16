@@ -37,6 +37,8 @@ export interface World {
   gradient: string;
   /** Work-in-progress world: the entrance shows an Experimental badge. */
   experimental?: boolean;
+  /** Not yet playable: the entrance shows a "Coming soon" badge and disables Play. */
+  comingSoon?: boolean;
 }
 
 export interface Dog {
@@ -116,10 +118,14 @@ export const WORLDS: World[] = [
   {
     id: 'newsheepdogland',
     name: 'Newsheepdogland',
-    tagline: 'A boot-shaped survival island. Herd them home before the wolves come out.',
+    tagline: 'A boot-shaped survival island. Back in the workshop while it gets rebuilt.',
     render: '/assets/scenes/entrance/newsheepdogland.webp',
     accent: color.sceneNewsheepdogland,
     gradient: 'linear-gradient(180deg, #b9a98c 0%, #8f8a86 45%, #6a6f8c 78%, #3f4a63 100%)',
+    // Switched off pending a regression burn-down. The world stays in the carousel
+    // as a "Coming soon" tile (badge + disabled Play); the scene + survival code is
+    // untouched so a dev can still reach it via ?scene=newsheepdogland.
+    comingSoon: true,
   },
 ];
 
@@ -200,9 +206,9 @@ export const WAYS: Way[] = [
 export const formatSheep = (n: number): string => n.toLocaleString('en-US');
 
 /**
- * The entrance leads with Rolling Hills (Cycle 89). Newsheepdogland stepped
- * back to an experimental (WIP) world while its runtime perf is tuned; it
- * stays one "Next world" step away with an Experimental badge. Dog and
- * difficulty persist per-player; the landing world is fixed.
+ * The entrance leads with Rolling Hills (Cycle 89). Newsheepdogland is switched
+ * off pending a regression burn-down; it stays one "Next world" step away as a
+ * "Coming soon" tile (badge + disabled Play). Dog and difficulty persist
+ * per-player; the landing world is fixed and never a coming-soon world.
  */
 export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'rolling-hills'));

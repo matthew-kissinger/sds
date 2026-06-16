@@ -25,7 +25,9 @@ const gameModeDescriptions = {
 // 400 mode_not_allowed_on_scene guard from Phase 4. Scene order matches
 // the solo ScenePicker (RH first, OC second, Field last).
 // Cycle 67 P4: Newsheepdogland leads the list (the co-op survival scene).
-const SCENE_ORDER = ['newsheepdogland', 'rolling-hills', 'open-country', 'field'];
+// Newsheepdogland is switched off pending its regression burn-down, so it is not
+// offered as a multiplayer room scene. Re-add it here once the world is playable.
+const SCENE_ORDER = ['rolling-hills', 'open-country', 'field'];
 const ALL_MODES = ['cooperative', 'competitive', 'timed'];
 
 // Cycle 8 Phase 5: room-level sheep count picker.
