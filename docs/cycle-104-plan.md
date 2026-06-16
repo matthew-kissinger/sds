@@ -41,6 +41,8 @@ Migration story: additive optional field, the cheap fence case. `usesConsolidate
 
 ## Phase 1 - Harness runtime-confirmation layer (~3hr, autonomous)
 
+**Status: DONE 2026-06-16.** `deriveRuntimeRow` (pure) + `runRuntimeLayer` (lazy-playwright, reuses the screenshot-golden.mjs launcher) added to [`scene-render-path-map.mjs`](../tools/validation/scene-render-path-map.mjs); 5 derivation unit tests in the lock spec (8/8 green); static path intact; no-timing grep returns 0. On-device run is Phase 5.
+
 **Independently testable.** Builds the measurement tool the Home Field fix (Phase 2) is validated against, with no GPU dependency in its acceptance.
 
 1. **Build the `--runtime` layer** of [`scene-render-path-map.mjs`](../tools/validation/scene-render-path-map.mjs): reuse the genuine-WebGPU launcher from [`screenshot-golden.mjs`](../tools/validation/screenshot-golden.mjs) (installed Chrome, headed, `assertWebGpuEngaged`), load each scene once, read **structural** facts only - impostor groups present y/n (from the `TreePlacement` summary / `builder.trees` group metadata) and the production-WebGPU boot-gate result. No timing, no frame rate, no draw-call cost.

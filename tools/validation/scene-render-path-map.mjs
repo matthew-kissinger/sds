@@ -118,7 +118,7 @@ function classifyScene(s) {
   };
 }
 
-export { classifyScene, consolidatedTreeCull, farImpostorsOnDefaultProd, effectiveBoundaryKind };
+export { classifyScene, consolidatedTreeCull, farImpostorsOnDefaultProd, effectiveBoundaryKind, deriveRuntimeRow };
 
 // --- Table rendering --------------------------------------------------------
 
@@ -157,22 +157,133 @@ function renderModes(rows) {
   }).join('\n');
 }
 
-// --- Runtime-confirmation scaffold (NOT implemented this pass) ---------------
-// On-device, genuine-WebGPU, structural-only. Confirms the static prediction
-// actually materialized at runtime:
-//   - impostor groups present y/n  (TreePlacement summary `impostorGroupsOk`)
-//   - production-WebGPU boot gate pass/fail  (productionWebGpuBoot state.ok)
-// It does NOT time anything. It would reuse the genuine-WebGPU launch path from
-// tools/validation/screenshot-golden.mjs (installed Chrome, headed,
-// assertWebGpuEngaged), load each scene once, read the structural facts, tear
-// down. Deferred so it runs off the perf agent's schedule (one GPU at a time).
-function runtimeConfirmNotice() {
-  return [
-    'Runtime confirmation is scaffolded but not implemented this pass.',
-    'It is on-device + structural-only (no timing), and reuses the genuine-WebGPU',
-    'launcher in tools/validation/screenshot-golden.mjs. Run it during the impostor',
-    'burn-down, off the perf agent\'s GPU schedule. See the header for the contract.',
-  ].join('\n');
+// --- Runtime-confirmation layer (on-device; structural-only, NO timing) ------
+// Confirms the static prediction actually materialized at runtime:
+//   - production-WebGPU boot gate pass/fail  (window.__sdsG.productionWebGpu.ok
+//     + window.__sdsRendererMode.effective - the screenshot-golden.mjs signals)
+//   - far-impostor groups present y/n  (the consolidated cull registry's far
+//     instance count, or a per-chunk tree group tagged hybridRole far-impostor)
+// Reads NO frame-rate / timing / draw-cost metric. Reuses the genuine-WebGPU
+// launcher pattern from tools/validation/screenshot-golden.mjs (installed Chrome,
+// headed, --enable-unsafe-webgpu) against a running dev server on RUNTIME_BASE_URL.
+// playwright is lazy-imported inside runRuntimeLayer so the static path and the
+// lock spec (which import only the pure helpers) never pull it in.
+
+const RUNTIME_BASE_URL = (typeof process !== 'undefined' && process.env?.SDS_RUNTIME_BASE_URL)
+  || 'http://localhost:3000/';
+const RUNTIME_LAUNCH_ARGS = ['--use-angle=d3d11', '--enable-gpu', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'];
+
+// Pure: map the raw in-page reads to a structural row. GPU-free, unit-tested by
+// tests/scene-render-path-map.spec.js. Keep all browser IO out of here.
+function deriveRuntimeRow(sceneId, raw) {
+  const bootGate = raw?.bootGate ?? {};
+  const gateOk = bootGate.ok === true && bootGate.effective !== 'webgl';
+  const imp = raw?.impostors ?? {};
+  const groups = raw?.groups ?? {};
+  const farInstances = Number(imp.farInstances ?? 0) || 0;
+  const cullRegistry = Number(imp.registry ?? 0) || 0;
+  const farImpostorGroups = Number(groups.farImpostorGroups ?? 0) || 0;
+  const readError = imp.error ?? groups.error ?? null;
+  const present = farInstances > 0 || farImpostorGroups > 0;
+  return {
+    scene: sceneId,
+    bootGate: gateOk ? 'pass' : 'FAIL',
+    effective: bootGate.effective ?? null,
+    reason: gateOk ? null : (bootGate.reason ?? null),
+    // null = could not read (a structural read errored), not "absent".
+    impostorsPresent: readError ? null : present,
+    farInstances,
+    cullRegistry,
+    farImpostorGroups,
+    readError,
+  };
+}
+
+// On-device: the in-page structural reads. Eval bodies mirror screenshot-golden.mjs.
+async function runtimeReads(page) {
+  const bootGate = await page.evaluate(() => ({
+    ok: window.__sdsG?.productionWebGpu?.ok === true,
+    effective: window.__sdsRendererMode?.effective ?? null,
+    reason: window.__sdsG?.productionWebGpu?.error ?? window.__sdsRendererMode?.fallbackReason ?? null,
+  }));
+  const impostors = await page.evaluate(() => {
+    try {
+      const tb = window.gameInstance?.terrainBuilder ?? window.__sds?.sceneManager?.terrainBuilder;
+      const reg = tb?._treeCullRegistry;
+      let registry = 0, farInstances = 0;
+      if (reg && reg.size) {
+        registry = reg.size;
+        for (const e of reg.values()) {
+          const fm = e?.far?.mesh ?? e?.farController?.mesh ?? e?.farMesh ?? null;
+          farInstances += Number(fm?.count ?? fm?.instanceCount ?? 0) || 0;
+        }
+      }
+      return { registry, farInstances };
+    } catch (err) { return { error: String(err?.message || err) }; }
+  });
+  const groups = await page.evaluate(() => {
+    try {
+      const tb = window.gameInstance?.terrainBuilder ?? window.__sds?.sceneManager?.terrainBuilder;
+      let farImpostorGroups = 0;
+      const scan = (node, depth) => {
+        if (!node || depth > 6) return;
+        const role = node.userData?.hybridRole ?? node.hybridRole;
+        if (role === 'far-impostor') farImpostorGroups += 1;
+        for (const k of (node.children ?? [])) scan(k, depth + 1);
+      };
+      scan(tb?.trees, 0);
+      return { farImpostorGroups };
+    } catch (err) { return { error: String(err?.message || err) }; }
+  });
+  return { bootGate, impostors, groups };
+}
+
+async function runRuntimeLayer() {
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch({ channel: 'chrome', headless: false, args: RUNTIME_LAUNCH_ARGS });
+  const rows = [];
+  try {
+    for (const scene of listScenes()) {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+      const page = await context.newPage();
+      try {
+        const url = new URL(RUNTIME_BASE_URL);
+        url.searchParams.set('perfMode', '1');
+        url.searchParams.set('probeRender', '1');
+        url.searchParams.set('renderer', 'webgpu');
+        url.searchParams.set('scene', scene.id);
+        url.searchParams.set('ui', 'off');
+        await page.goto(url.toString(), { waitUntil: 'load', timeout: 90_000 });
+        await page.waitForFunction(() => !!window.__sdsCinema, null, { timeout: 30_000 });
+        await page.evaluate(() => window.__sdsCinema.waitReady(90_000));
+        await page.evaluate(() => { window.__sdsCinema.startSolo?.('jep', 'classic'); });
+        await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 90_000 });
+        rows.push(deriveRuntimeRow(scene.id, await runtimeReads(page)));
+      } catch (err) {
+        rows.push({ scene: scene.id, bootGate: 'ERROR', readError: String(err?.message || err) });
+      } finally {
+        await context.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+  return rows;
+}
+
+function renderRuntimeTable(rows) {
+  const cols = [
+    ['scene', r => r.scene, 16],
+    ['bootGate', r => r.bootGate ?? '?', 9],
+    ['effective', r => r.effective ?? '-', 10],
+    ['impostors', r => (r.impostorsPresent == null ? '?' : bool(r.impostorsPresent)), 10],
+    ['farInst', r => String(r.farInstances ?? 0), 8],
+    ['note', r => r.readError ?? r.reason ?? '', 44],
+  ];
+  const header = cols.map(([h, , w]) => pad(h, w)).join(' ');
+  const sep = cols.map(([, , w]) => '-'.repeat(w)).join(' ');
+  const body = rows.map(r => cols.map(([, fn, w]) => pad(fn(r), w)).join(' ')).join('\n');
+  return `${header}\n${sep}\n${body}`;
 }
 
 // --- Main -------------------------------------------------------------------
@@ -183,7 +294,20 @@ async function main() {
   const rows = scenes.map(classifyScene);
 
   if (args.has('--runtime')) {
-    console.log(runtimeConfirmNotice());
+    console.log('Scene render-path map - RUNTIME confirmation (on-device; structural-only, no timing)');
+    console.log(`Base URL: ${RUNTIME_BASE_URL}  (needs a running dev server + installed Chrome with WebGPU)\n`);
+    try {
+      const rows = await runRuntimeLayer();
+      console.log(renderRuntimeTable(rows));
+      console.log('\nimpostors=Y confirms far-impostor groups materialized; bootGate=pass');
+      console.log('confirms the production-WebGPU path engaged (no silent WebGL demotion).');
+    } catch (err) {
+      console.error('\nRuntime layer could not run. This path is on-device: it needs a dev');
+      console.error('server on the base URL and installed Chrome with WebGPU (set');
+      console.error('SDS_RUNTIME_BASE_URL to override the URL).');
+      console.error(`Cause: ${err?.message || err}`);
+      process.exitCode = 1;
+    }
     return;
   }
 
