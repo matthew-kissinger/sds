@@ -4,7 +4,7 @@ Working notes for the deliberate burn-down Matt called for (2026-06-16). Not a c
 plan yet. The next pass aligns on the custom perf/diagnostic harness and compacts
 these findings.
 
-## The custom harness (to build, not yet built)
+## The custom harness
 
 A custom harness to drill into the game systematically, comparing across:
 
@@ -13,11 +13,34 @@ A custom harness to drill into the game systematically, comparing across:
   shape: Home Field is a flat rect (no `boundary.kind`); the others are islands /
   coastline. That single difference routes Home Field down a different foliage path
   (see finding 1).
-- **Perf per scene/mode:** draw calls, instance counts, foliage path, impostor
-  presence, frame time.
 
 Goal: stop discovering per-scene path divergences by accident (like the Home Field
-impostor gap) and measure them on purpose.
+impostor gap) and read them off a table on purpose.
+
+### Scope boundary: this harness is NOT a perf harness
+
+Perf (draw calls, instance counts, frame time, sustained-play metrics) is owned by
+a separate effort. This harness deliberately stays out of it so the two never
+contend for the GPU. What it reports is **categorical render-path structure**:
+which foliage route a scene takes, whether it gets far impostors on the default
+production path, loading shape, renderer pin, tree source.
+
+### Status
+
+- **Built - static layer:** [`tools/validation/scene-render-path-map.mjs`](../tools/validation/scene-render-path-map.mjs).
+  Pure Node, no browser, no timing. Imports the real SceneDefs and prints a
+  per-scene render-path table; `--json` writes an artifact. It mirrors the one
+  routing predicate it needs (`usesConsolidatedTreeCull`) with a `SOURCE:` pointer,
+  locked against the canonical predicate by
+  [`tests/scene-render-path-map.spec.js`](../tests/scene-render-path-map.spec.js)
+  so the mirror cannot drift. First run confirmed `field` is the lone non-consolidated
+  row (`cull=N`, `farImp=N`) while the three islands are `Y/Y` - finding 1, on a table.
+- **Scaffolded - runtime confirmation layer (not implemented):** on-device,
+  genuine-WebGPU, structural-only (still no timing). Confirms the static prediction
+  materialized at runtime (impostor groups present y/n, production-WebGPU boot gate
+  pass/fail) by reusing the headed-Chrome launcher in
+  [`tools/validation/screenshot-golden.mjs`](../tools/validation/screenshot-golden.mjs).
+  Deferred to the impostor burn-down so it runs off the perf agent's GPU schedule.
 
 ## Finding 1: Home Field has no far-tree impostors + runaway draw calls
 
