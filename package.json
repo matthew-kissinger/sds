@@ -133,6 +133,7 @@
   },
   "overrides": {
     "@tootallnate/once": "^3.0.0",
+    "esbuild": "^0.28.1",
     "protobufjs": "^7.5.8",
     "qs": "6.15.2",
     "tmp": "0.2.7",
