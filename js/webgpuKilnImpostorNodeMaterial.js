@@ -215,16 +215,46 @@ export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts
 
   // Cycle 103 P2: one shared foliage relight path (foliageLightingRig.js),
   // calibrated to reproduce the LOD0 PBR leaf. nObj / vSunObj / vDirObj are
-  // object-space; ambient and ground bounce are PI-pre-multiplied irradiance.
-  const lit = buildFoliageImpostorColorNode(TSL, {
+  // object-space.
+  // Cycle 103 hotfix: the LOD0 leaf is lit by a FLAT AmbientLight (no hemisphere,
+  // no ground bounce - verified in three/src/nodes/lighting/AmbientLightNode.js), so
+  // feed the impostor the same flat ambient on both sky and ground. The earlier warm
+  // half-strength ground bounce (ambient * earth-tilt * 0.5) made the canopy underside
+  // read darker and redder than the LOD0 leaf it is meant to match - the "dark red" far
+  // trees at golden hour. groundBounceNode stays wired (setTint still fills it) so the
+  // bounce is one line away if we decide we want a subtle hemisphere back.
+  // Live on-device tuning knobs (uniforms) so the golden-hour "dark red" can be
+  // dialed in-scene without a rebuild, then the chosen values get baked into the rig:
+  //   directWrap (0..1) - canopy fill: 0 matches a single leaf (shadow side goes
+  //     dark), 1 floods half-Lambert warm sun (shadow side warms/reddens).
+  //   sunSat (0..1) - 1 keeps the warm sun, 0 desaturates it to neutral grey; this
+  //     is the direct lever against the warm-sun-on-green-albedo red read.
+  //   brightness - overall lit multiplier.
+  // All three are exposed via window.__tuneImpostor (see below).
+  // Defaults validated by Matt on Rolling Hills (golden hour) via __tuneImpostor.
+  // brightness 6 is NOT taste - it compensates a real underlight: the impostor's sun
+  // term is fed atmosphere.sun.light.intensity (SunSystem DirectionalLight = 1.0), but
+  // the WebGPU LOD0 leaves are lit by the production bridge directional at 1.1*PI (~3.46,
+  // installProductionWebGpuLightingBridge), so the impostor sun is ~3.4x too weak. The
+  // principled cure is to feed the impostor the same sun intensity the leaves get; that
+  // is the impostor burn-down. Until then these match the LOD0 look. Open Country shares
+  // them and is unverified - re-tune per scene live with __tuneImpostor if it reads off.
+  const directWrapNode = uniform(0.4);
+  const sunSatNode = uniform(0.3);
+  const brightnessNode = uniform(6.0);
+  const sunLuma = sunColorNode.x.mul(0.2126).add(sunColorNode.y.mul(0.7152)).add(sunColorNode.z.mul(0.0722));
+  const effSunColor = mix(vec3(sunLuma, sunLuma, sunLuma), sunColorNode, sunSatNode);
+  const litRaw = buildFoliageImpostorColorNode(TSL, {
     albedo,
     normal: nObj,
     sunDirObj: vSunObj,
-    sunColor: sunColorNode,
+    sunColor: effSunColor,
     skyIrradiance: ambientNode,
-    groundIrradiance: groundBounceNode,
+    groundIrradiance: ambientNode,
     viewDirObj: vDirObj,
+    directWrapNode,
   }, lightingRig);
+  const lit = litRaw.mul(brightnessNode);
   const fogBlend = smoothstep(fogNear, fogFar, vViewDist).mul(fogStrength);
 
   const material = new MeshBasicNodeMaterial();
@@ -283,6 +313,21 @@ export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts
       }
     },
   };
+  // Tuning aid: collect every impostor material's live knobs so one call sweeps the
+  // whole flock. Usage in DevTools: `__tuneImpostor.sunSat(0.5)`, `.directWrap(0.4)`,
+  // `.brightness(1.3)`, `.get()`. Guarded for the headless test/Worker env.
+  if (typeof window !== 'undefined') {
+    const tune = window.__tuneImpostor || (window.__tuneImpostor = {
+      _wrap: [], _sat: [], _bri: [],
+      directWrap(v) { this._wrap.forEach((n) => { n.value = v; }); return v; },
+      sunSat(v) { this._sat.forEach((n) => { n.value = v; }); return v; },
+      brightness(v) { this._bri.forEach((n) => { n.value = v; }); return v; },
+      get() { return { directWrap: this._wrap.at(-1)?.value, sunSat: this._sat.at(-1)?.value, brightness: this._bri.at(-1)?.value }; },
+    });
+    tune._wrap.push(directWrapNode);
+    tune._sat.push(sunSatNode);
+    tune._bri.push(brightnessNode);
+  }
   return material;
 }
 

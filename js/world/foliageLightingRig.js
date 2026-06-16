@@ -102,12 +102,16 @@ export function impostorReflectance(
  */
 export function buildFoliageImpostorColorNode(TSL, inputs, rig = FOLIAGE_RIG) {
   const { dot, max, clamp, mix, pow, float, normalize } = TSL;
-  const { albedo, normal, sunDirObj, sunColor, skyIrradiance, groundIrradiance, viewDirObj } = inputs;
+  const { albedo, normal, sunDirObj, sunColor, skyIrradiance, groundIrradiance, viewDirObj, directWrapNode } = inputs;
   const dotNL = dot(normal, sunDirObj);
   const lambert = max(dotNL, float(0));
-  const direct = rig.directWrap > 0
-    ? mix(lambert, clamp(dotNL.mul(0.5).add(0.5), float(0), float(1)), float(rig.directWrap))
-    : lambert;
+  const halfLambert = clamp(dotNL.mul(0.5).add(0.5), float(0), float(1));
+  // A live `directWrapNode` uniform (the consolidated impostor's on-device knob)
+  // overrides the rig constant when supplied; otherwise the constant drives it, so
+  // the latlon path with no node stays byte-identical to the deployed default.
+  const direct = directWrapNode
+    ? mix(lambert, halfLambert, directWrapNode)
+    : (rig.directWrap > 0 ? mix(lambert, halfLambert, float(rig.directWrap)) : lambert);
   const hemi = normal.y.mul(0.5).add(0.5);
   const indirect = mix(groundIrradiance, skyIrradiance, hemi);
   let reflected = sunColor.mul(direct).add(indirect).mul(albedo.mul(float(RECIPROCAL_PI)));
