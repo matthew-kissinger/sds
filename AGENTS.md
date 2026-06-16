@@ -4,7 +4,7 @@
 
 ## Project summary
 
-Production 3D web game shipped at [sheepdogsim.com](https://sheepdogsim.com). Three.js + React 19 (createElement, no JSX) + Vite 7 + Tailwind 4 client. Cloudflare Worker + Durable Objects + D1 backend. Shared deterministic boid + obstacle modules in [`shared/`](shared/) imported byte-identically by both runtimes. Vitest 4 (1541 specs / 11 skipped) + Playwright e2e + sim-baseline goldens + refactor-baseline characterization goldens + ESLint boundary on `shared/`. Current source is AGPL-3.0-or-later; non-code assets are CC BY-SA 4.0.
+Production 3D web game shipped at [sheepdogsim.com](https://sheepdogsim.com). Three.js + React 19 (createElement, no JSX) + Vite 7 + Tailwind 4 client. Cloudflare Worker + Durable Objects + D1 backend. Shared deterministic boid + obstacle modules in [`shared/`](shared/) imported byte-identically by both runtimes. Vitest 4 (1584 specs / 11 skipped) + Playwright e2e + sim-baseline goldens + refactor-baseline characterization goldens + ESLint boundary on `shared/`. Current source is AGPL-3.0-or-later; non-code assets are CC BY-SA 4.0.
 
 ## Quick commands
 
@@ -17,7 +17,7 @@ npm run dev:client         # Vite only (no multiplayer)
 npm run dev:worker         # wrangler only
 npm run dev:lan            # vite --host + wrangler (LAN, mobile testing)
 
-npm test                   # vitest, ~34s full run (1541 specs / 11 skipped)
+npm test                   # vitest, ~34s full run (1584 specs / 11 skipped)
 npm run test:integration   # WebSocket two-client harness
 npm run test:e2e           # Playwright browser smoke
 npm run test:ios-water     # BrowserStack real iOS Safari water canary

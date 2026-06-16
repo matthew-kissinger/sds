@@ -2,21 +2,24 @@
 
 > **Updated:** 2026-06-16
 > **For:** Cycle 104 (`docs/cycle-104-plan.md`)
-> **Pickup priority:** Cycle 104 is authored as the burn-down (re-scoped from the golden-determinism stub, which slid to Cycle 105). DRAFT pending Matt's react to `docs/cycle-104-plan.md`. Scope: Home Field far-impostor fix (Q1 = Option A vs B), retire the `brightness=6` impostor-sun magic (Q2), diagnose + bound the NSL regression (Q3, no fixes), build the harness on-device runtime-confirmation layer. Phases 1-4 are autonomous + GPU-free; Phase 5 is paired + GPU-gated (waits for the concurrent perf effort to free the RTX 3070). Do not add perf/timing to the harness.
+> **Pickup priority:** Cycle 104 (impostor-and-nsl-burndown) is mid-flight; Phases 1-4 are CODE COMPLETE and only Phase 5 (paired, on-device) remains. P1 (harness runtime-confirmation layer) + P4 (NSL diagnosis doc) shipped + DEPLOYED tonight (inert). P2 (Home Field gets far impostors via the `consolidatedTrees` flag, Option B) + P3 (retire `brightness=6` -> leaf-sun-intensity x residual) are CODE COMPLETE but committed LOCAL (unpushed) and HELD off prod: they flip live render and need the P5 on-device boot-gate + look sign-off (hard stops 1+2), which needs Matt + the RTX 3070 (the concurrent perf effort owns it). Do not push the held P2+P3 commits until P5 verifies on-device.
 
 ## First action
 
-React to `docs/cycle-104-plan.md` (Q1/Q2/Q3 + phase shape). Once confirmed, start Phase 1 (harness runtime-confirmation layer, autonomous). Do not start the impostor enable/look work until the Phase 5 paired on-device gate.
+**Phase 5 (paired, on-device).** With the GPU free, run `node tools/validation/scene-render-path-map.mjs --runtime` against a dev server: confirm Home Field boots `webgpu-production` (no `production-webgpu-gates-failed`) with far impostors present. Then the impostor-vs-LOD0 SSIM A/B on field/rolling-hills/open-country (dial `IMPOSTOR_CANOPY_RESIDUAL` via `__tuneImpostor` if the islands read off after the sun change), sign off the look, and `git push` the held P2+P3 commits to deploy. P5 acceptance + hard stops are in `docs/cycle-104-plan.md`.
 
-## What Cycle 103 shipped (just closed)
+## What Cycle 104 has shipped (P1-P4)
 
-Proper impostors + a WebGPU-capturing golden harness. Five phases landed autonomously:
+- **P1 (deployed):** the render-path map's on-device runtime-confirmation layer (`scene-render-path-map.mjs --runtime`) - boot-gate + impostor-presence, structural-only, no timing. `deriveRuntimeRow` unit-tested 5 ways.
+- **P2 (held local, unpushed):** the `consolidatedTrees` SceneDef flag (Option B) gives Home Field the islands' consolidated cull + far-impostor band. Spike confirmed the all-cold arm path (`TreePlacement.js:887`) already supports it; the static map now shows `field` cull=Y farImp=Y. Flips live render -> held for P5.
+- **P3 (held local, unpushed):** `brightness=6` retired to `LEAF_SUN_INTENSITY (1.1*PI) x IMPOSTOR_CANOPY_RESIDUAL (1.74)`, the intensity sourced from the bridge directional. Look preserved (product ~= 6); held for P5 dial-in.
+- **P4 (deployed):** `docs/nsl-burndown.md` - NSL diagnosis + EARS re-enable bar, no NSL code touched (Q3).
 
-- **P3 fold-seam:** `selectOctahedralImpostorTiles` + its in-shader mirror fixed from vertex- to cell-centering; 64/64 round-trip (was 54/64). Gate: `tests/impostor-octahedral-roundtrip.spec.js`.
-- **P2 shared lighting rig:** `js/world/foliageLightingRig.js` is the single foliage-lighting authority; the impostor is calibrated to the LOD0 PBR leaf (wrap/fresnel/subsurface/floor magic retired); both impostor relight paths collapse to one builder; the LOD0 leaf look is unchanged. Gate: `tests/foliage-lighting-rig-parity.spec.js` (1e-9 parity). The one reserved canopy knob is `FOLIAGE_RIG.directWrap` (0 = PBR match).
-- **P1 WebGPU harness:** `tools/validation/screenshot-golden.mjs` now captures the real WebGPU path (installed Chrome, headed) and fails closed on WebGL demotion (`assertWebGpuEngaged`). The prior "WebGPU" goldens were silently WebGL.
-- **P4 resolution:** keep 128px - the 256px re-bake breaks (tree1 bakes blank, a pixel-forge bug).
-- **P5 rebaseline:** genuine-WebGPU classic-only deterministic gate, `--diff` 6/6 (mean 0.988); follow cells dropped (non-deterministic - see carryover #1).
+1584 vitest green, build clean. The P2 + P3 commits are unpushed local on `main`; everything else is deployed.
+
+## Cycle 105 (next): golden-determinism-and-launch-prep
+
+The 104 stub's original theme slid here. Carryover candidates: the deterministic fixed-dt sim-step affordance (restore the follow-cell goldens), the paired launch session (NSL-as-default once the burn-down clears, version bump, itch/devlog/social, S24+ device pass), tree1 256px bake fix.
 
 ## Cold-Start Orientation
 

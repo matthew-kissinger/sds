@@ -56,6 +56,8 @@ Migration story: additive optional field, the cheap fence case. `usesConsolidate
 
 ## Phase 2 - Home Field far-impostor fix (~4hr, autonomous code; on-device verify is Phase 5)
 
+**Status: CODE DONE 2026-06-16, HELD for P5 ship.** Spike confirmed Option B viable (the all-cold arm gate at `TreePlacement.js:887` already fires for non-streamed scenes; only `usesConsolidatedTreeCull` blocked Home Field). Added the `consolidatedTrees` SceneDef flag (types.js), broadened the gate (TreePlacement.js), set it on Home Field (field.js), updated the harness mirror + tree-cull-gate + render-path-map specs (13 green; the static map now shows `field` cull=Y farImp=Y). This flips Home Field's DEFAULT render path, so it is committed LOCAL (unpushed) and does NOT deploy until the P5 on-device boot-gate + look sign-off (hard stop 1).
+
 **Depends on:** Phase 1 (uses the harness to confirm the row flips).
 
 1. **Resolve Q1 with a spike.** Read the cull arm path; if Option B, confirm the all-cold registry arms Home Field's band. Pick A or B with the harness + a short written rationale in the cycle plan Acceptance.
@@ -71,6 +73,8 @@ Migration story: additive optional field, the cheap fence case. `usesConsolidate
 
 ## Phase 3 - Principled impostor-sun fix (~3hr, autonomous code; look sign-off is Phase 5)
 
+**Status: CODE DONE 2026-06-16, HELD for P5 ship.** Retired `brightness=6`: it decomposes into `LEAF_SUN_INTENSITY` (1.1*PI, the production bridge directional the LOD0 leaf gets, SOURCE-pointed to `productionWebGpuBoot.js:251`) times `IMPOSTOR_CANOPY_RESIDUAL` (1.74, the reserved on-device knob), in `webgpuKilnImpostorNodeMaterial.js`. Contained to the consolidated octahedral material (the global `setImpostorTint` feed is shared with the latlon kiln, left untouched). Product ~= 6.0 so the Matt-validated look is preserved on this commit; parity test green; `grep uniform(6` returns 0. Committed LOCAL (unpushed); P5 dials the residual against the LOD0 SSIM A/B and ships (hard stop 2).
+
 **Depends on:** nothing (parallel with Phase 2 and Phase 4).
 
 1. **Retire `brightness=6`** in [`webgpuKilnImpostorNodeMaterial.js`](../js/webgpuKilnImpostorNodeMaterial.js): feed the impostor relight the same directional intensity the LOD0 leaf receives (the production bridge directional, ~1.1*PI), sourced from one place via the shared [`foliageLightingRig.js`](../js/world/foliageLightingRig.js).
@@ -83,6 +87,8 @@ Migration story: additive optional field, the cheap fence case. `usesConsolidate
 - When `npm test` runs, then `tests/foliage-lighting-rig-parity.spec.js` shall pass (LOD0 leaf look unchanged within 1e-9).
 
 ## Phase 4 - NSL regression diagnosis + re-enable bar (~3hr, autonomous, diagnosis only)
+
+**Status: DONE 2026-06-16, shipped.** [`docs/nsl-burndown.md`](nsl-burndown.md) written: NSL path characterization (coastline + streamed + WebGPU + survival), the four known regression classes with root-cause hypotheses, the not-yet-confirmed note (live symptoms need the on-device session + the perf effort's data), and the EARS re-enable bar. No NSL scene/survival code changed (Q3). Inert docs - deployed tonight.
 
 **Depends on:** nothing (parallel).
 
