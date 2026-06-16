@@ -62,12 +62,14 @@ function effectiveBoundaryKind(s) {
 }
 
 // SOURCE: usesConsolidatedTreeCull, js/world/TreePlacement.js:592
-//   `return kind === 'coastline' || kind === 'island';`
-// Reads RAW boundary.kind (NOT the rect-synthesised kind), matching the real
-// predicate: Home Field has no `boundary`, so this is false for it.
+//   `return kind === 'coastline' || kind === 'island' || sceneDef?.consolidatedTrees === true;`
+// Reads RAW boundary.kind (NOT the rect-synthesised kind) plus the Cycle 104
+// Phase 2 `consolidatedTrees` opt-in flag, matching the real predicate. Home
+// Field now sets the flag (Option B), so it is consolidated despite its rect
+// boundary. Locked against the real predicate by tests/scene-render-path-map.spec.js.
 function consolidatedTreeCull(s) {
   const kind = s.boundary?.kind;
-  return kind === 'coastline' || kind === 'island';
+  return kind === 'coastline' || kind === 'island' || s.consolidatedTrees === true;
 }
 
 // SOURCE: createNativeTreeInstancedMeshes, js/world/TreePlacement.js:604-620 +

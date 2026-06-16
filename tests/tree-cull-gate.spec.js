@@ -31,18 +31,24 @@ describe('usesConsolidatedTreeCull — boundary-kind gate', () => {
         expect(usesConsolidatedTreeCull(openCountry)).toBe(true);
     });
 
-    it('Home Field (no island/coastline boundary) stays per-chunk', () => {
+    it('Home Field opts into the cull via the consolidatedTrees flag (Cycle 104 P2)', () => {
+        // Home Field has no island/coastline boundary, but Option B opts the flat
+        // pasture in explicitly so it gets the far-impostor band the islands have.
         expect(field.boundary?.kind).not.toBe('island');
         expect(field.boundary?.kind).not.toBe('coastline');
-        expect(usesConsolidatedTreeCull(field)).toBe(false);
+        expect(field.consolidatedTrees).toBe(true);
+        expect(usesConsolidatedTreeCull(field)).toBe(true);
     });
 
-    it('is robust to a missing scene def or boundary', () => {
+    it('is robust to a missing scene def or boundary, and keys on the flag not the rect', () => {
         expect(usesConsolidatedTreeCull(undefined)).toBe(false);
         expect(usesConsolidatedTreeCull(null)).toBe(false);
         expect(usesConsolidatedTreeCull({})).toBe(false);
         expect(usesConsolidatedTreeCull({ boundary: {} })).toBe(false);
+        // A bare rect WITHOUT the flag stays per-chunk - it is the flag, not the
+        // rect kind, that enables consolidation (Cycle 104 P2 Option B).
         expect(usesConsolidatedTreeCull({ boundary: { kind: 'rect' } })).toBe(false);
+        expect(usesConsolidatedTreeCull({ consolidatedTrees: true })).toBe(true);
     });
 
     it('the two streamed-vs-all-cold paths split as the Phase 5 hook expects', () => {

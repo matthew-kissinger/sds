@@ -38,13 +38,17 @@ describe('scene-render-path-map mirror tracks the real cull predicate', () => {
     }
   });
 
-  it('classifies Home Field as the sole non-consolidated scene', () => {
+  it('classifies every scene as consolidated after Home Field opts in (Cycle 104 P2)', () => {
     const rows = listScenes().map(classifyScene);
     const nonConsolidated = rows.filter(r => !r.consolidatedTreeCull).map(r => r.id);
-    expect(nonConsolidated).toEqual(['field']);
+    expect(nonConsolidated).toEqual([]);
 
+    // Home Field opts into the consolidated cull via the consolidatedTrees flag
+    // (Option B), so it gets far impostors on the default prod path despite its
+    // rect boundary.
     const field = rows.find(r => r.id === 'field');
-    expect(field.farImpostorsDefaultProd).toBe(false);
+    expect(field.consolidatedTreeCull).toBe(true);
+    expect(field.farImpostorsDefaultProd).toBe(true);
     expect(field.boundaryKind).toBe('rect');
   });
 });

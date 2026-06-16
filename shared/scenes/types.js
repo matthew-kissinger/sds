@@ -355,6 +355,14 @@
  * @property {'webgl'} [renderer]   Cycle 71 — pin this scene to the WebGL renderer regardless of the global WebGPU preference. Render-only (the Worker ignores it). Default absent => follow the global renderer choice. Today only newsheepdogland sets it: its cold WebGPU pipeline compile blocks the main thread ~43s and TDR-crashes the tab, and the WebGPU node-lighting is wrong on it; WebGL loads it in ~2s with correct lighting. See cycle71-validation/webgpu-crash/findings.md.
  * @property {boolean} [prewarmShaders]   Cycle 74 - opt this scene into a build-tail `renderer.compileAsync(scene, camera)` pass (shown as an 'Optimizing shaders' load step) on the WebGPU renderer, so the heavy cold pipeline compile runs on Dawn's async path instead of blocking the first renderAsync (the lazy compile TDR-crashes the tab on the heavy scene). Render-only; WebGPU-only (no-op on the WebGL-pinned path, where lazy compile is already cheap); the Worker ignores it. Default absent => no prewarm (every existing scene byte-identical). Today only newsheepdogland sets it. See docs/cycle-74-plan.md.
  * @property {boolean} [perimeterFence]                    Render flag — false disables the visual fence ring
+ * @property {boolean} [consolidatedTrees]   Cycle 104 Phase 2 (Option B): opt a flat
+ *   scene (no island/coastline boundary) into the consolidated tree compute-cull +
+ *   view-dependent far-impostor band that island/coastline scenes get by default.
+ *   Absent => the legacy per-chunk tree fan-out (every pre-104 flat scene
+ *   byte-identical). Render-only; the Worker sim never reads it. Today only Home
+ *   Field sets it (the lone non-island scene, which otherwise renders every treeline
+ *   tree as LOD0 per chunk with no far impostors). Consumer: usesConsolidatedTreeCull
+ *   (js/world/TreePlacement.js).
  * @property {number} [timeLimit]              Mode-specific override, seconds
  * @property {number} [difficultyModifier]     Flock tightness / dog stamina scale
  */

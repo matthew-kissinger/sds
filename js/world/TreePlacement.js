@@ -591,7 +591,13 @@ function computeChunkCenter(instances) {
  */
 export function usesConsolidatedTreeCull(sceneDef) {
     const kind = sceneDef?.boundary?.kind;
-    return kind === 'coastline' || kind === 'island';
+    // Cycle 104 Phase 2 (Option B): a flat scene with no island/coastline boundary
+    // can opt into the consolidated cull + far-impostor band via the explicit
+    // `consolidatedTrees` SceneDef flag (Home Field). Gates on the structural flag,
+    // never a scene id (scene-and-render.md). The all-cold arm path already handles
+    // non-streamed scenes (armAllColdFarImpostors, gated on !streamedZones); the
+    // flag just lets the registry build so size() > 0 there.
+    return kind === 'coastline' || kind === 'island' || sceneDef?.consolidatedTrees === true;
 }
 
 async function createNativeTreeInstancedMeshes(builder, treeInstances) {

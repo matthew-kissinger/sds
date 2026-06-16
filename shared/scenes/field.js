@@ -83,6 +83,12 @@ export const field = {
     treeProfile: { tree1: 0.7, tree2: 0.3 },
     treeScaleJitter: { min: 0.90, max: 1.15 },
 
+    // Cycle 104 Phase 2 (Option B): opt the flat pasture into the consolidated tree
+    // compute-cull + far-impostor band the islands get by default. Home Field is the
+    // lone non-island scene; without this it renders every treeline tree as LOD0 per
+    // chunk (no far impostors, runaway draw count). Render-only; the Worker ignores it.
+    consolidatedTrees: true,
+
     sky: { preset: 'pastoral-noon' },
     // Cycle 25 Phase B: fog retuned from "structural mask" to "horizon
     // haze only". near 220 -> 350 / far 700 -> 900 lifts the mid-distance
