@@ -27,14 +27,16 @@
  *
  * A second layer - on-device runtime confirmation (did the predicted path
  * actually materialize: impostor groups present y/n, production-WebGPU boot gate
- * pass/fail) - is scaffolded below but NOT implemented this pass. It is also
- * structural-only (still no timing) and will run on-device, off the perf agent's
- * schedule, when we pick up the impostor burn-down.
+ * pass/fail) - runs under --runtime. It is also structural-only (still no timing)
+ * and runs on-device, off the perf agent's schedule. Scope it with
+ * SDS_RUNTIME_SCENES=<comma-ids> (the impostor ship probe skips newsheepdogland -
+ * NSL is entrance-off and its cold-WebGPU capture belongs to the NSL fix cycle;
+ * see runRuntimeLayer).
  *
  * Usage:
  *   node tools/validation/scene-render-path-map.mjs            # print the table
  *   node tools/validation/scene-render-path-map.mjs --json     # also write JSON
- *   node tools/validation/scene-render-path-map.mjs --runtime  # (scaffold notice)
+ *   node tools/validation/scene-render-path-map.mjs --runtime  # on-device confirmation
  */
 
 import { writeFile } from 'node:fs/promises';
@@ -244,14 +246,24 @@ async function runRuntimeLayer() {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ channel: 'chrome', headless: false, args: RUNTIME_LAUNCH_ARGS });
   const rows = [];
+  // Optional scene scoping (comma-separated ids). Defaults to every registered
+  // scene. The impostor ship probe sets SDS_RUNTIME_SCENES to the three live
+  // scenes and skips newsheepdogland on purpose: NSL is entrance-off and its
+  // cold-WebGPU compile is the documented TDR risk (docs/nsl-burndown.md), so its
+  // on-device capture is the NSL fix cycle's first task, not a ship probe.
+  const only = (process.env?.SDS_RUNTIME_SCENES || '').split(',').map(s => s.trim()).filter(Boolean);
+  const scenes = only.length ? listScenes().filter(s => only.includes(s.id)) : listScenes();
   try {
-    for (const scene of listScenes()) {
+    for (const scene of scenes) {
       const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
       const page = await context.newPage();
       try {
         const url = new URL(RUNTIME_BASE_URL);
         url.searchParams.set('perfMode', '1');
         url.searchParams.set('probeRender', '1');
+        // cinematic=1 exposes the window.__sdsCinema harness API (js/cinematic.js)
+        // that waitReady/startSolo below drive - same flag screenshot-golden.mjs sets.
+        url.searchParams.set('cinematic', '1');
         url.searchParams.set('renderer', 'webgpu');
         url.searchParams.set('scene', scene.id);
         url.searchParams.set('ui', 'off');
@@ -316,16 +328,18 @@ async function main() {
   console.log('Scene render-path map (static; no browser, no perf)\n');
   console.log(renderTable(rows));
   console.log('\nLegend:');
-  console.log('  cull   = usesConsolidatedTreeCull (boundary.kind island|coastline)');
+  console.log('  cull   = usesConsolidatedTreeCull (boundary.kind island|coastline,');
+  console.log('           or the consolidatedTrees opt-in flag - Home Field)');
   console.log('  farImp = far impostors present on the DEFAULT production path');
   console.log('           (non-consolidated scenes only get impostors under');
   console.log('           ?webgpuNativeTreeImpostors, so farImp == cull)');
   console.log('\nModes (sheep-count ladder per scene; data only, no perf):');
   console.log(renderModes(rows));
   console.log('\nNotes:');
-  console.log('  - Home Field (field) is the sole non-consolidated scene: boundary');
-  console.log('    is legacy `bounds` (synthesised rect), so cull=N and farImp=N.');
-  console.log('    This is finding 1 in docs/burndown-notes.md.');
+  console.log('  - Home Field (field) has a legacy `bounds` rect boundary but opts');
+  console.log('    into the consolidated cull via consolidatedTrees=true (Cycle 104');
+  console.log('    Phase 2, Option B), so it now gets far impostors like the islands');
+  console.log('    (finding 1 in docs/burndown-notes.md, now resolved).');
   console.log('  - newsheepdogland stays registered + reachable via ?scene=; the');
   console.log('    entrance Play button is disabled (Coming soon). Its render-path');
   console.log('    row is still characterised here for the NSL burn-down.');
