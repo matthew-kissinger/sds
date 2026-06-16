@@ -232,16 +232,25 @@ export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts
   //   brightness - overall lit multiplier.
   // All three are exposed via window.__tuneImpostor (see below).
   // Defaults validated by Matt on Rolling Hills (golden hour) via __tuneImpostor.
-  // brightness 6 is NOT taste - it compensates a real underlight: the impostor's sun
-  // term is fed atmosphere.sun.light.intensity (SunSystem DirectionalLight = 1.0), but
-  // the WebGPU LOD0 leaves are lit by the production bridge directional at 1.1*PI (~3.46,
-  // installProductionWebGpuLightingBridge), so the impostor sun is ~3.4x too weak. The
-  // principled cure is to feed the impostor the same sun intensity the leaves get; that
-  // is the impostor burn-down. Until then these match the LOD0 look. Open Country shares
-  // them and is unverified - re-tune per scene live with __tuneImpostor if it reads off.
+  // brightness is no longer a magic number (Cycle 104 Phase 2, Q2). It decomposes
+  // into the LOD0 leaf's directional sun intensity times a reserved canopy residual.
+  //
+  // The impostor's sun term is fed atmosphere.sun.light.intensity (SunSystem
+  // DirectionalLight = 1.0), but the WebGPU LOD0 leaves are lit by the production
+  // bridge directional at 1.1*PI (~3.46), so the impostor sun was ~3.4x too weak and
+  // the old brightness=6 compensated it blind. Scaling by LEAF_SUN_INTENSITY puts the
+  // impostor on the same sun footing as the leaf it replaces (the principled cure);
+  // IMPOSTOR_CANOPY_RESIDUAL (~1.7) is the reserved on-device canopy knob. The residual
+  // is set to preserve the Matt-validated Cycle-103 look (1.1*PI * 1.74 ~= 6.0, the
+  // prior value) on this commit; P5 dials it against the LOD0 SSIM A/B across scenes
+  // (Open Country shares it, unverified).
+  // SOURCE: installProductionWebGpuLightingBridge, productionWebGpuBoot.js:251 -
+  //   new DirectionalLight(0xffffff, 1.1 * Math.PI).
+  const LEAF_SUN_INTENSITY = 1.1 * Math.PI;
+  const IMPOSTOR_CANOPY_RESIDUAL = 1.74;
   const directWrapNode = uniform(0.4);
   const sunSatNode = uniform(0.3);
-  const brightnessNode = uniform(6.0);
+  const brightnessNode = uniform(LEAF_SUN_INTENSITY * IMPOSTOR_CANOPY_RESIDUAL);
   const sunLuma = sunColorNode.x.mul(0.2126).add(sunColorNode.y.mul(0.7152)).add(sunColorNode.z.mul(0.0722));
   const effSunColor = mix(vec3(sunLuma, sunLuma, sunLuma), sunColorNode, sunSatNode);
   const litRaw = buildFoliageImpostorColorNode(TSL, {
