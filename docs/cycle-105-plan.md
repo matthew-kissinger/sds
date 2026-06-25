@@ -185,7 +185,7 @@ Every phase's Acceptance section uses EARS notation so the lines are testable by
 
 **Depends on:** Phase 5.
 
-**Status - rejected 2026-06-25 (paired).** Matt rejected `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-a-joined.glb` because it read like a post and gate rather than a fence. The live runtime asset remains unchanged. The next candidate pass must return to the SDS palette/pack with fence-first constraints: straight repeatable rail spans, support posts, corner/end pieces, and at least three connected spans in preview before another Phase 6 approval attempt.
+**Status - approved 2026-06-25 (paired).** Matt rejected the first candidate, `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-a-joined.glb`, because it read like a post and gate rather than a fence. A second fence-first pass produced `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-c-runtime.glb`, with a three-span review preview at `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-c-three-span-preview.glb`. Matt approved the preview and actual-scene fence read on PC, then flagged the actual-scene gate as floating and stretched. `assets/models/Fence_Kit-v1.0.0.glb` now contains candidate C, and `assets/models/Gate_Assembly-v1.0.0.glb` adds a proper budgeted Kiln gate. `js/FencePresets.js` now loads the proper gate first and keeps the old side-post marker only as a load-failure fallback. Matt approved the proper gate in the actual scene on PC.
 
 1. Review the candidate fence in-game or in a representative preview with Matt.
 2. If accepted, replace the live fence asset and update any manifests or loader assumptions required by the replacement.

@@ -32,7 +32,8 @@ export class FencePresets {
             fencePost: null,
             fenceRail: null,
             gatePost: null,
-            gateArch: null
+            gateArch: null,
+            gateAssembly: null
         };
         this.modelsLoaded = false;
         this.useGLBModels = true; // Toggle to use GLB vs procedural
@@ -79,6 +80,7 @@ export class FencePresets {
         // cloning the old per-file gltf.scene produced. Built by
         // tools/merge-fence-kit.mjs; pre-merge pieces live in assets/_originals.
         const KIT_PATH = 'assets/models/Fence_Kit-v1.0.0.glb';
+        const GATE_PATH = 'assets/models/Gate_Assembly-v1.0.0.glb';
         const kitNodeNames = {
             fencePost: 'Fence_Post',
             fenceRail: 'Fence_Rail',
@@ -106,6 +108,22 @@ export class FencePresets {
             }
         } catch (err) {
             console.warn('[WARN] Failed to load fence kit:', err);
+        }
+
+        try {
+            const gltf = await this.loader.loadAsync(GATE_PATH);
+            const gate = gltf.scene.getObjectByName('Gate_Assembly') || gltf.scene;
+            gate.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            gate.userData.authoredWidth = 8;
+            this.models.gateAssembly = gate;
+            console.log('[OK] Loaded gate assembly');
+        } catch (err) {
+            console.warn('[WARN] Failed to load gate assembly:', err);
         }
 
         this.modelsLoaded = true;
@@ -337,13 +355,30 @@ export class FencePresets {
         const gateColor = config.color || 0x4a3c28;
         const gateHeight = 3.5; // Gate post height from GLB
 
-        // Use modular GLB components: gate posts + arch
-        if (this.useGLBModels && this.models.gatePost) {
+        if (this.useGLBModels && this.models.gateAssembly) {
+            const gate = this.cloneModel('gateAssembly');
+            if (gate) {
+                const authoredWidth = this.models.gateAssembly.userData.authoredWidth || 8;
+                const scale = width / authoredWidth;
+                gate.scale.setScalar(scale);
+                if (orientation === 'vertical') {
+                    gate.rotation.y = Math.PI / 2;
+                }
+                group.add(gate);
+                return group;
+            }
+        }
+
+        if (this.useGLBModels && (this.models.fencePost || this.models.gatePost)) {
+            const postModelName = this.models.fencePost ? 'fencePost' : 'gatePost';
             // Gate posts
-            const leftPost = this.cloneModel('gatePost');
-            const rightPost = this.cloneModel('gatePost');
+            const leftPost = this.cloneModel(postModelName);
+            const rightPost = this.cloneModel(postModelName);
 
             if (leftPost && rightPost) {
+                leftPost.scale.set(1.2, 1, 1.2);
+                rightPost.scale.set(1.2, 1, 1.2);
+
                 if (orientation === 'horizontal') {
                     leftPost.position.x = -width / 2;
                     rightPost.position.x = width / 2;
@@ -354,37 +389,6 @@ export class FencePresets {
 
                 group.add(leftPost);
                 group.add(rightPost);
-            }
-
-            // Gate arch (if available)
-            if (this.models.gateArch) {
-                const arch = this.cloneModel('gateArch');
-                if (arch) {
-                    // Arch model is 1.44 units long, scale to gate width
-                    const archModelLength = 1.44;
-                    const archScale = (width + 0.8) / archModelLength; // Slightly wider to span posts
-                    arch.scale.set(archScale, 1, 1);
-                    arch.position.y = gateHeight;
-
-                    if (orientation === 'vertical') {
-                        arch.rotation.y = Math.PI / 2;
-                    }
-
-                    group.add(arch);
-                }
-            } else {
-                // Fallback arch using procedural geometry
-                const archGeometry = new THREE.CylinderGeometry(0.2, 0.2, width + 1, 8);
-                const archMaterial = new THREE.MeshPhongMaterial({
-                    color: 0x7A6548,
-                    roughness: 0.75
-                });
-                const arch = new THREE.Mesh(archGeometry, archMaterial);
-                arch.position.y = gateHeight;
-                arch.rotation.z = orientation === 'horizontal' ? Math.PI / 2 : 0;
-                if (orientation === 'vertical') arch.rotation.x = Math.PI / 2;
-                arch.castShadow = true;
-                group.add(arch);
             }
 
             // Visual threshold effect (glowing ground marker instead of asset)
@@ -461,13 +465,13 @@ export class FencePresets {
         const thresholdMaterial = new THREE.MeshBasicMaterial({
             color: this.lightenColor(color, 0.4),
             transparent: true,
-            opacity: 0.3,
+            opacity: 0.18,
             side: THREE.DoubleSide
         });
 
         const threshold = new THREE.Mesh(thresholdGeometry, thresholdMaterial);
         threshold.rotation.x = -Math.PI / 2;
-        threshold.position.y = 0.05; // Slightly above ground to avoid z-fighting
+        threshold.position.y = 0.01; // Slightly above ground to avoid z-fighting
         group.add(threshold);
 
         // Add edge glow lines
@@ -477,23 +481,23 @@ export class FencePresets {
             opacity: 0.5
         });
 
-        const edgeWidth = 0.15;
+        const edgeWidth = 0.1;
         const edgeGeometry = new THREE.BoxGeometry(
             orientation === 'horizontal' ? width + 2 : edgeWidth,
-            0.1,
+            0.03,
             orientation === 'horizontal' ? edgeWidth : width + 2
         );
 
         // Front edge
         const frontEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
-        frontEdge.position.y = 0.05;
+        frontEdge.position.y = 0.015;
         frontEdge.position.z = orientation === 'horizontal' ? 1.5 : 0;
         frontEdge.position.x = orientation === 'horizontal' ? 0 : 1.5;
         group.add(frontEdge);
 
         // Back edge
         const backEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
-        backEdge.position.y = 0.05;
+        backEdge.position.y = 0.015;
         backEdge.position.z = orientation === 'horizontal' ? -1.5 : 0;
         backEdge.position.x = orientation === 'horizontal' ? 0 : -1.5;
         group.add(backEdge);

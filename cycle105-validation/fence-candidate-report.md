@@ -1,12 +1,190 @@
-# Cycle 105 Phase 5 - Fence Candidate Report
+# Cycle 105 Phase 5/6 - Fence Candidate Report
 
 Updated: 2026-06-25
 
 ## Phase Goal
 
-Produce and inspect a staged fence candidate from the SDS Kiln palette/pack workflow without replacing `assets/models/Fence_Kit-v1.0.0.glb`.
+Produce, inspect, and visually review fence candidates from the SDS Kiln palette/pack workflow, then replace `assets/models/Fence_Kit-v1.0.0.glb` only after Matt approves a candidate.
 
-## Candidate Summary
+## Accepted Candidate - 2026-06-25
+
+Generation ID: `sds-fence-kit-candidate-20260625-c`
+
+Accepted staged candidate:
+
+- `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-c-runtime.glb`
+
+Live replacement:
+
+- `assets/models/Fence_Kit-v1.0.0.glb`
+
+Visual approval:
+
+- Matt approved the candidate C review preview on 2026-06-25 with "looks good".
+- Matt approved the actual-scene fence read on 2026-06-25, then flagged the gate as floating in the Home Field scene.
+- The floating/stretched gate was an integration bug: `js/FencePresets.js` still stretched the small Kiln `Gate_Arch` module across the full 8m gate opening, and the visual threshold pad sat too high above the grass.
+- The post-only gate fallback was not visually sufficient, so a separate budgeted Kiln gate GLB was generated and integrated as `assets/models/Gate_Assembly-v1.0.0.glb`.
+- `js/FencePresets.js` now loads `Gate_Assembly-v1.0.0.glb` and places that proper gate first; the two-post/no-header path remains only as a load-failure fallback.
+- Matt approved the proper gate GLB in the actual scene on 2026-06-25 with "looks good i think".
+- Preview proof: `cycle105-validation/fence-candidate-c-preview-gallery.png`
+- Preview scene: `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-c-three-span-preview.glb`
+- Actual-scene proof before gate fix: `cycle105-validation/fence-actual-scene-field.png`
+- Actual-scene proof after gate fix: `cycle105-validation/fence-actual-scene-field-gate-grounded.png`
+- Actual-scene proof after removing the stretched gate span: `cycle105-validation/fence-actual-scene-field-gate-ground-posts.png`
+- Close actual-scene proof after removing the stretched gate span: `cycle105-validation/fence-actual-scene-field-gate-ground-posts-close2.png`
+- Actual-scene proof with the approved proper Kiln gate GLB: `cycle105-validation/fence-actual-scene-field-gate-kiln-budget.png`
+
+Candidate C source workflow:
+
+- Kiln Studio local service path: `runGenerate()`
+- Kiln data dir: `C:/Users/Mattm/X/kiln/kiln-studio/.localdata`
+- User: `dev-admin`
+- Model: `google:gemini-3.5-flash`
+- Palette: `sds-pastoral-survival-v1`
+- Pack: `sds-pastoral-survival-foundation`
+- Pack tag: `sds-pastoral-survival-fo`
+- Category: `environment`
+- Prompt ID: `sds-fence-kit-candidate-c-fence-spans`
+- Live SDS replacement: yes, after visual approval
+
+Gate assembly candidate workflow:
+
+- Kiln generation ID: `88374939-72cf-4ad0-95b0-33502b06a2d4`
+- Prompt ID: `sds-gate-assembly-budget-20260625-b`
+- Model: `google:gemini-3.5-flash`
+- Palette: `sds-pastoral-survival-v1`
+- Raw generated triangles: 720
+- Raw draw count after Kiln optimize: 10
+- Raw materials/textures: 3 opaque materials, 0 textures
+- Runtime postprocess: baked world transforms, merged by material, welded duplicate vertices, kept no-extension GLB for clean validation.
+- Live SDS replacement: `assets/models/Gate_Assembly-v1.0.0.glb`
+
+Candidate C generation metrics:
+
+- Status: ok
+- Latency: 162,122 ms
+- Tool calls: `kiln_list_primitives`, `kiln_validate`, `kiln_render`, `kiln_screenshot`, `kiln_submit`
+- Raw generated triangles: 920
+- Material count after palette snap: 1
+- Raw draw count after Kiln optimize: 53
+
+Candidate C postprocess:
+
+1. Removed metallic/roughness texture data and kept one tiny SDS palette base-color texture.
+2. Joined child meshes per required runtime wrapper where this preserved names and pivots.
+3. Stripped signboard meshes from `Gate_Arch` so the optional gate content no longer dominated the fence read.
+4. Extracted `Fence_Rail` to one repeatable unit-length rail module.
+5. Scaled `Fence_Post` to support the runtime rail stack heights used by `js/FencePresets.js`.
+6. Built a separate three-span preview GLB for visual approval while keeping the runtime GLB to the four required modules.
+
+Accepted live GLB inspection:
+
+Commands:
+
+```bash
+npx gltf-transform validate assets/models/Fence_Kit-v1.0.0.glb
+npx gltf-transform inspect assets/models/Fence_Kit-v1.0.0.glb --format md
+node tools/inspect-glb-three.mjs assets/models/Fence_Kit-v1.0.0.glb
+npx gltf-transform validate assets/models/Gate_Assembly-v1.0.0.glb
+npx gltf-transform inspect assets/models/Gate_Assembly-v1.0.0.glb --format md
+node tools/inspect-glb-three.mjs assets/models/Gate_Assembly-v1.0.0.glb
+npx vitest run tests/fence-presets.spec.js
+npm test
+npm run build
+```
+
+Overview:
+
+- File size: 41,224 bytes
+- Version: 2.0
+- Generator: `glTF-Transform v4.4.0`
+- `extensionsUsed`: none
+- `extensionsRequired`: none
+- Scene: `PastoralFenceKit`
+- Root name: `PastoralFenceKit`
+- Bounds: min `[-0.65943, -0.04962, -0.24]`, max `[0.65943, 2.21907, 0.24]`
+- Render vertex count: 2,208
+- Upload vertex count: 1,020
+- Upload naive vertex count: 1,020
+- Three.js inspector triangle count: about 736
+- Animations: none
+- `gltf-transform validate`: no errors, warnings, infos, or hints
+- `tests/fence-presets.spec.js`: passed; covers authored gate placement, vertical rotation/scaling, and the no-stretched-header fallback.
+- `npm test`: passed on 2026-06-25 after the proper gate GLB integration.
+- `npm run build`: passed on 2026-06-25 after the proper gate GLB integration.
+
+Gate assembly live GLB inspection:
+
+- File size: 39,096 bytes
+- Version: 2.0
+- Generator: `glTF-Transform v4.4.0`
+- `extensionsUsed`: none
+- `extensionsRequired`: none
+- Root name: `Gate_Assembly`
+- Bounds: min `[-4.24, 0, -0.24]`, max `[4.24, 2.20781, 3.53412]`
+- Render vertex count: 2,160
+- Upload vertex count: 1,341
+- Three.js inspector triangle count: about 720
+- Mesh count / draw shape: 3 meshes, one per material
+- Materials: `Gate_Wood`, `Gate_Cut_Wood`, `Gate_Dark_Iron`
+- Textures: 0
+- Animations: none
+- `gltf-transform validate`: no errors, warnings, infos, or hints
+
+Actual-scene gate proof:
+
+- Screenshot: `cycle105-validation/fence-actual-scene-field-gate-kiln-budget.png`
+- Probe URL: `http://localhost:3000/?scene=field&mode=classic&autostart=1&probeRender=1&cinematic=1&ui=off`
+- Runtime gate position: `{ x: 0, y: 0, z: 100 }`
+- Runtime gate metrics: 3 meshes, 720 triangles, 3 named materials, 0 textures
+- Runtime gate bounds: minY approximately `0`, maxY `2.2078`
+- Runtime scene names: `Gate_Assembly: 1`, `Gate_Wood: 1`, `Gate_Cut_Wood: 1`, `Gate_Dark_Iron: 1`, `Gate_Arch: 0`
+
+Meshes:
+
+| Mesh | GL Primitives | Vertices | Instances | Size |
+| --- | ---: | ---: | ---: | ---: |
+| `Mesh_Fence_Post_Runtime` | 156 | 218 | 1 | 7.91 KB |
+| `Mesh_Fence_Rail_Runtime` | 48 | 96 | 1 | 3.36 KB |
+| `Mesh_Gate_Post_Runtime` | 240 | 332 | 1 | 12.06 KB |
+| `Mesh_Gate_Arch_Runtime` | 292 | 374 | 1 | 13.72 KB |
+
+Materials and textures:
+
+| Material | Instances | Textures | Alpha |
+| --- | ---: | --- | --- |
+| `PaletteMaterial001` | 4 | baseColorTexture | opaque |
+
+| Texture | Slot | Resolution | Stored Size | Minimum GPU Size |
+| --- | --- | --- | ---: | ---: |
+| `PaletteBaseColor` | baseColorTexture | 32x4 PNG | 126 B | 700 B |
+
+Accepted candidate budget check:
+
+| Budget | Phase 4 Target | Phase 4 Hard Stop | Candidate C Runtime | Result |
+| --- | ---: | ---: | ---: | --- |
+| Optimized GLB file size | <= 180 KB | > 300 KB | 41,224 B | pass |
+| Materials | <= 2 | > 3 | 1 | pass |
+| Textures | 0 | > 1 | 1 | hard pass, target miss |
+| Texture resolution | none | > 256x256 | 32x4 | pass |
+| Texture GPU memory | 0 MB | > 0.35 MB | 700 B | pass |
+| Render vertices | <= 3,500 | > 5,000 | 2,208 | pass |
+| Upload vertices | <= 1,500 | > 2,500 | 1,020 | pass |
+| Mesh primitives | <= 4 visible canonical pieces | > 8 without written reason | 4 | pass |
+| Alpha materials | 0 | any | 0 | pass |
+| Animations | 0 | any | 0 | pass |
+
+Texture note:
+
+The accepted runtime candidate keeps one 32x4 palette texture. It still misses the zero-texture target, but it is far below the hard texture-memory limit and is a deliberate palette lookup rather than a detail texture stack.
+
+## Other Generated Assets
+
+Only fence-related assets were generated in this pass. Kiln pack definitions now describe future SDS assets such as farmhouse, scatter, trees, rocks, and grass-adjacent pieces, but no non-fence production candidates were generated or staged.
+
+Provider attempt `sds-fence-kit-candidate-20260625-b` failed with a provider 503 before a usable GLB was persisted.
+
+## Rejected Candidate A Summary
 
 Generation ID: `sds-fence-kit-candidate-20260625-a`
 
@@ -203,15 +381,15 @@ No live collision integration is included. These proxy dimensions are recorded f
 }
 ```
 
-## Verdict
+## Candidate A Verdict
 
 Candidate `sds-fence-kit-candidate-20260625-a-joined.glb` passed technical staging, but failed Phase 6 visual review on 2026-06-25.
 
 Matt rejection reason: it reads like a post and a gate, not a fence.
 
-Decision: do not integrate this candidate. The live runtime asset `assets/models/Fence_Kit-v1.0.0.glb` remains unchanged.
+Decision: do not integrate candidate A. At the time of this rejection, the live runtime asset `assets/models/Fence_Kit-v1.0.0.glb` remained unchanged. Candidate C later replaced the live runtime asset after separate visual approval.
 
-Next candidate constraints:
+Follow-up constraints used for candidate C:
 
 - The primary read must be a repeatable fence kit, not a gate, signpost, or arch prop.
 - Include a straight rail segment that looks correct when repeated into a continuous run.
