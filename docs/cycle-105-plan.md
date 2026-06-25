@@ -45,6 +45,8 @@ Goal: Rebuild the fence kit first in Kiln because the current fence has weak mat
 
 Goal: Accept a fence candidate only after GLB inspection proves stable pivots, clear names, material reuse, low texture cost, simple collision proxy, small file size, and acceptable draw-call shape.
 
+Goal: Accept the fence visually only if it reads as repeatable fence modules and connected fence spans, not as a standalone post, gate, signpost, or arch prop.
+
 ### Cycle 3 - Runtime Asset Cost Audit
 
 Goal: Measure the current non-core runtime assets before rebaking them, including fence, trees, grass, rocks, farmhouse, scatter props, and any other repeated or player-visible assets.
@@ -182,6 +184,8 @@ Every phase's Acceptance section uses EARS notation so the lines are testable by
 ## Phase 6 - Fence visual approval and integration (~3hr, paired)
 
 **Depends on:** Phase 5.
+
+**Status - rejected 2026-06-25 (paired).** Matt rejected `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-a-joined.glb` because it read like a post and gate rather than a fence. The live runtime asset remains unchanged. The next candidate pass must return to the SDS palette/pack with fence-first constraints: straight repeatable rail spans, support posts, corner/end pieces, and at least three connected spans in preview before another Phase 6 approval attempt.
 
 1. Review the candidate fence in-game or in a representative preview with Matt.
 2. If accepted, replace the live fence asset and update any manifests or loader assumptions required by the replacement.

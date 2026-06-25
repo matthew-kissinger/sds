@@ -205,8 +205,16 @@ No live collision integration is included. These proxy dimensions are recorded f
 
 ## Verdict
 
-Candidate `sds-fence-kit-candidate-20260625-a-joined.glb` is accepted for Phase 6 visual/in-game review only.
+Candidate `sds-fence-kit-candidate-20260625-a-joined.glb` passed technical staging, but failed Phase 6 visual review on 2026-06-25.
 
-It is not accepted as a live runtime replacement yet because Phase 6 still requires Matt visual approval and an in-game proof pass. If visual approval passes, the remaining integration work is to replace `assets/models/Fence_Kit-v1.0.0.glb` with this joined candidate or a final derivative, then run `npm test` and `npm run build`.
+Matt rejection reason: it reads like a post and a gate, not a fence.
 
-If visual approval rejects the look, keep this report as evidence and generate another candidate from the same SDS palette/pack.
+Decision: do not integrate this candidate. The live runtime asset `assets/models/Fence_Kit-v1.0.0.glb` remains unchanged.
+
+Next candidate constraints:
+
+- The primary read must be a repeatable fence kit, not a gate, signpost, or arch prop.
+- Include a straight rail segment that looks correct when repeated into a continuous run.
+- Include post, corner, and end-cap modules only as support pieces for the fence run.
+- Treat a gate as optional secondary content; it must not dominate the asset silhouette.
+- Preview at least three connected fence spans before Phase 6 approval.
