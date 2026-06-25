@@ -154,6 +154,7 @@ cycle105-validation/*
 !cycle105-validation/r185-release-audit.md
 !cycle105-validation/three-r185-example-notes.md
 !cycle105-validation/fence-kiln-spec.md
+!cycle105-validation/fence-candidate-report.md
 
 # Local upstream research clone. Keep source notes, not the cloned repo.
 /examples/three-r185/

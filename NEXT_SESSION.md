@@ -2,11 +2,11 @@
 
 > **Updated:** 2026-06-25
 > **For:** Cycle 105
-> **Pickup priority:** Start larger Cycle 2 in [`docs/cycle-105-plan.md`](docs/cycle-105-plan.md): create the SDS Kiln palette/pack direction, inspect the current fence GLB, and define fence rebake budgets before any live asset replacement.
+> **Pickup priority:** Continue larger Cycle 2 in [`docs/cycle-105-plan.md`](docs/cycle-105-plan.md): run Phase 6 visual/in-game review for the staged Kiln fence candidate before any live asset replacement.
 
 ## Goal
 
-Cycle 105 is the kickoff for the larger SDS r185 + Kiln Asset Renewal program. The program goal is to move SDS onto the current Three.js release and rebuild the non-core asset set around a coherent SDS Kiln palette, measured runtime budgets, and Matt-approved PC visual/playtest gates while keeping sheep and dog stable. Cycle 1 has the r185 dependency/render foundation locally implemented; the next chip-away target is Cycle 2, the SDS Kiln palette and fence kit.
+Cycle 105 is the kickoff for the larger SDS r185 + Kiln Asset Renewal program. The program goal is to move SDS onto the current Three.js release and rebuild the non-core asset set around a coherent SDS Kiln palette, measured runtime budgets, and Matt-approved PC visual/playtest gates while keeping sheep and dog stable. Cycle 1 has the r185 dependency/render foundation locally implemented; Cycle 2 now has a palette, locked local Kiln pack, fence spec, and staged fence candidate. The next chip-away target is Phase 6 visual/in-game review before any live fence replacement.
 
 ## Streamlined Cycle Map
 
@@ -23,9 +23,9 @@ Cycle 105 is the kickoff for the larger SDS r185 + Kiln Asset Renewal program. T
 - **Phase 1 - r185 release and migration audit (autonomous):** local evidence exists at `cycle105-validation/r185-release-audit.md`; this belongs to larger Cycle 1.
 - **Phase 2 - r185 dependency bump and render gates (autonomous):** local branch resolves `three@0.185.0`; render patches and verification evidence are recorded in `cycle105-validation/r185-release-audit.md`; this belongs to larger Cycle 1.
 - **Phase 3 - r185 examples adoption memo (autonomous):** local evidence exists at `cycle105-validation/three-r185-example-notes.md`; this supports larger Cycles 1, 4, and 5.
-- **Phase 4 - Kiln fence rebake specification (autonomous):** document the current fence GLB cost, define replacement budgets, and specify the first SDS Kiln palette/pack before live asset churn; this starts larger Cycle 2.
-- **Phase 5 - Fence candidate bake and staging (autonomous):** produce and inspect Kiln candidates under validation paths only; this continues larger Cycle 2.
-- **Phase 6 - Fence visual approval and integration (paired):** accept or reject the best candidate with Matt before any runtime replacement; this closes the first larger Cycle 2 replacement path.
+- **Phase 4 - Kiln fence rebake specification (autonomous):** shipped; evidence exists at `cycle105-validation/fence-kiln-spec.md`; this started larger Cycle 2.
+- **Phase 5 - Fence candidate bake and staging (autonomous):** shipped; evidence exists at `cycle105-validation/fence-candidate-report.md`; ignored candidate files live under `cycle105-validation/fence-candidates/`; this continues larger Cycle 2.
+- **Phase 6 - Fence visual approval and integration (paired):** next; accept or reject `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-a-joined.glb` with Matt before any runtime replacement; this closes the first larger Cycle 2 replacement path.
 - **Phase 7 - Tree source and impostor decision (paired):** compare better source trees from Kiln/EZ-Tree/free compatible sources/external inspiration, then decide whether current octahedral/KTX2 baking is enough or a future custom baker is justified; this starts larger Cycle 4 after the render foundation is stable.
 
 ## Parked Scope
@@ -48,6 +48,13 @@ Current local validation artifacts:
 
 - `cycle105-validation/r185-release-audit.md`
 - `cycle105-validation/three-r185-example-notes.md`
+- `cycle105-validation/fence-kiln-spec.md`
+- `cycle105-validation/fence-candidate-report.md`
+
+Current local ignored candidate artifacts:
+
+- `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-a-joined.glb`
+- `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-a-views.png`
 
 ## Matt Alignment - 2026-06-25
 

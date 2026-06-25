@@ -166,6 +166,8 @@ Every phase's Acceptance section uses EARS notation so the lines are testable by
 
 **Depends on:** Phase 4.
 
+**Status - shipped 2026-06-25 (autonomous).** Created local Kiln generation `sds-fence-kit-candidate-20260625-a` from the SDS palette/pack path, staged ignored candidate GLBs under `cycle105-validation/fence-candidates/`, normalized the runtime wrapper contract, reduced the final staged candidate to four canonical meshes, and wrote `cycle105-validation/fence-candidate-report.md`. No live runtime asset was replaced.
+
 1. Use the local Kiln workflow to produce one or more fence candidates from the approved spec.
 2. Optimize candidates with the existing GLB/glTF tooling.
 3. Stage candidates under validation or asset-review paths, not as live runtime replacements.
