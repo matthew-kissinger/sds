@@ -15,9 +15,42 @@ const isNative = nativeTargets.has(buildTarget)
 const workerBase = (process.env.SDS_WORKER_BASE || 'https://sds-worker.matt-m-kissinger.workers.dev').replace(/\/+$/, '')
 const buildId = Date.now().toString()
 const suppressBrowserOpen = process.env.SDS_SUPPRESS_BROWSER_OPEN === '1'
+const dracoDecoderCdn = 'https://www.gstatic.com/draco/v1/decoders/'
 
 function patchThreeAddonImport(content) {
   return content.replace(/from 'three';/g, "from '../../../three.core.min.js';")
+}
+
+function externalizeThreeDracoDecoderUrlsPlugin() {
+  return {
+    name: 'externalize-three-draco-decoder-urls',
+    enforce: 'pre',
+    transform(code, id) {
+      const normalized = id.replace(/\\/g, '/')
+      if (!normalized.endsWith('/node_modules/three/examples/jsm/loaders/DRACOLoader.js')) return null
+      return code
+        .replace(
+          "const WASM_BIN_URL = new URL( '../libs/draco/draco_decoder.wasm', import.meta.url ).toString();",
+          `const WASM_BIN_URL = '${dracoDecoderCdn}draco_decoder.wasm';`
+        )
+        .replace(
+          "const WASM_JS_URL = new URL( '../libs/draco/draco_wasm_wrapper.js', import.meta.url ).toString();",
+          `const WASM_JS_URL = '${dracoDecoderCdn}draco_wasm_wrapper.js';`
+        )
+        .replace(
+          "const JS_URL = new URL( '../libs/draco/draco_decoder.js', import.meta.url ).toString();",
+          `const JS_URL = '${dracoDecoderCdn}draco_decoder.js';`
+        )
+        .replace(
+          "js: new URL( '../libs/draco/gltf/draco_wasm_wrapper.js', import.meta.url ).toString(),",
+          `js: '${dracoDecoderCdn}draco_wasm_wrapper.js',`
+        )
+        .replace(
+          "wasm: new URL( '../libs/draco/gltf/draco_decoder.wasm', import.meta.url ).toString(),",
+          `wasm: '${dracoDecoderCdn}draco_decoder.wasm',`
+        )
+    }
+  }
 }
 
 // Cloudflare Pages has a 26MB per-file limit; .blend source files aren't needed at runtime.
@@ -185,6 +218,7 @@ export default defineConfig({
   },
   plugins: [
     tailwindcss(),
+    externalizeThreeDracoDecoderUrlsPlugin(),
     react(),
     htmlRuntimeConfigPlugin(),
     viteStaticCopy({

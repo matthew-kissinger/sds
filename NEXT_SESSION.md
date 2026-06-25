@@ -1,39 +1,60 @@
-# Next Session - Cycle 105 (golden-determinism-and-launch-prep)
+# Next Session - Cycle 105 (`three-r185-and-asset-pipeline`)
 
-> **Updated:** 2026-06-16
-> **For:** Cycle 105 (`docs/cycle-105-plan.md`)
-> **Pickup priority:** Cycle 104 is CLOSED and shipped. Cycle 105 is scaffolded but NOT authored - run `/cycle-start` to fill the Goal + phases with Matt. Two threads seed it: **golden determinism** (a deterministic fixed-dt sim-step affordance to restore the dropped follow-cell goldens) and **launch prep** (the NSL re-enable burn-down, then NSL-as-default, version bump, itch/devlog/social in Matt's voice, S24+ device pass). NSL stays entrance-off until its re-enable bar (`docs/nsl-burndown.md`) clears on-device.
+> **Updated:** 2026-06-25
+> **For:** Cycle 105
+> **Pickup priority:** Start larger Cycle 2 in [`docs/cycle-105-plan.md`](docs/cycle-105-plan.md): create the SDS Kiln palette/pack direction, inspect the current fence GLB, and define fence rebake budgets before any live asset replacement.
 
-## First action
+## Goal
 
-**Run `/cycle-start`** to author Cycle 105. The plan ([`docs/cycle-105-plan.md`](docs/cycle-105-plan.md)) is a template stub with seeded Open Questions (Q1 sim-step shape, Q2 launch-prep staging) and a carryover-fed Goal placeholder - it needs the one-paragraph Goal + EARS phases before any code. Don't start phases until that's done with Matt.
+Cycle 105 is the kickoff for the larger SDS r185 + Kiln Asset Renewal program. The program goal is to move SDS onto the current Three.js release and rebuild the non-core asset set around a coherent SDS Kiln palette, measured runtime budgets, and Matt-approved PC visual/playtest gates while keeping sheep and dog stable. Cycle 1 has the r185 dependency/render foundation locally implemented; the next chip-away target is Cycle 2, the SDS Kiln palette and fence kit.
 
-## What Cycle 104 shipped (just closed, 2026-06-16)
+## Streamlined Cycle Map
 
-`impostor-and-nsl-burndown`, 5/5 phases, all deployed on `main`:
+- **Cycle 1 - r185 Render Foundation:** finish and merge the Three.js r185 dependency/render migration as an attributable change, with local research evidence and no live art replacement mixed in.
+- **Cycle 2 - SDS Kiln Palette + Fence Kit:** create the SDS Kiln palette/pack direction, inspect the current fence GLB, define fence budgets, bake staged fence candidates, and integrate only after Matt visual approval.
+- **Cycle 3 - Runtime Asset Cost Audit:** measure current non-core assets before rebaking them, including fence, trees, grass, rocks, farmhouse, scatter props, and other repeated or player-visible assets.
+- **Cycle 4 - Trees, Source Quality, and Impostor Decision:** evaluate Kiln, EZ-Tree, compatible free stylized sources, and `dedekpo/stylized-scene` inspiration before changing the impostor pipeline.
+- **Cycle 5 - Grass and Ground Readability:** measure grass draw-call/perf cost and decide whether it stays, gets tuned, or gets replaced under the SDS palette direction.
+- **Cycle 6 - Broader SDS Asset Pack:** refresh remaining accepted environment assets in small, reviewable batches after fence and tree workflow decisions prove out.
+- **Cycle 7 - Merge Readiness and Mainline Shepherding:** keep commits separable and close each larger cycle with a clear ship, reject, or defer decision.
 
-- **Home Field far impostors (P2).** A new optional `consolidatedTrees` SceneDef flag (Option B) gives Home Field the islands' consolidated cull + far-impostor band. On-device confirmed: boots `webgpu-production`, 268 far instances. Stops the per-chunk LOD0 draw thrash on the distant treeline.
-- **Principled impostor sun (P3).** `brightness=6` retired to `LEAF_SUN_INTENSITY (1.1*PI) × IMPOSTOR_CANOPY_RESIDUAL (1.74)`, the intensity sourced from the same production bridge directional the LOD0 leaf gets. Look preserved within ~0.2%; parity spec green.
-- **Harness runtime layer (P1).** `scene-render-path-map.mjs --runtime` confirms on-device that the predicted render path materialized (boot-gate + impostor presence; structural-only, no timing). `SDS_RUNTIME_SCENES` scopes it; the ship probe skips NSL.
-- **NSL diagnosis (P4).** `docs/nsl-burndown.md` - four regression classes + an EARS re-enable bar. No NSL code touched (Q3 = diagnose only).
-- **On-device sign-off (P5).** field/rolling-hills/open-country all bootGate=pass with far impostors (268/61/204). Hard stops 1+2 cleared.
+## Detailed Phase Mapping
 
-1584 vitest / build green; no version bump (still 2.3.4). Full entry: [`docs/BACKLOG.md`](docs/BACKLOG.md) Cycle 104.
+- **Phase 1 - r185 release and migration audit (autonomous):** local evidence exists at `cycle105-validation/r185-release-audit.md`; this belongs to larger Cycle 1.
+- **Phase 2 - r185 dependency bump and render gates (autonomous):** local branch resolves `three@0.185.0`; render patches and verification evidence are recorded in `cycle105-validation/r185-release-audit.md`; this belongs to larger Cycle 1.
+- **Phase 3 - r185 examples adoption memo (autonomous):** local evidence exists at `cycle105-validation/three-r185-example-notes.md`; this supports larger Cycles 1, 4, and 5.
+- **Phase 4 - Kiln fence rebake specification (autonomous):** document the current fence GLB cost, define replacement budgets, and specify the first SDS Kiln palette/pack before live asset churn; this starts larger Cycle 2.
+- **Phase 5 - Fence candidate bake and staging (autonomous):** produce and inspect Kiln candidates under validation paths only; this continues larger Cycle 2.
+- **Phase 6 - Fence visual approval and integration (paired):** accept or reject the best candidate with Matt before any runtime replacement; this closes the first larger Cycle 2 replacement path.
+- **Phase 7 - Tree source and impostor decision (paired):** compare better source trees from Kiln/EZ-Tree/free compatible sources/external inspiration, then decide whether current octahedral/KTX2 baking is enough or a future custom baker is justified; this starts larger Cycle 4 after the render foundation is stable.
 
-## Cold-Start Orientation
+## Parked Scope
 
-Read in order: this file -> [`docs/cycle-105-plan.md`](docs/cycle-105-plan.md) (after `/cycle-start` authoring) -> [`docs/BACKLOG.md`](docs/BACKLOG.md) (Cycle 104 + prior) -> `git log --oneline -8` -> [`AGENTS.md`](AGENTS.md) + [`CLAUDE.md`](CLAUDE.md).
+- Golden-determinism follow-cell work remains parked.
+- NSL launch-prep, NSL-as-default, version bump, itch/devlog/social, and S24+ launch pass remain parked.
+- Dog and sheep replacement is parked; those assets stay for this cycle.
+- Wolf replacement is not first priority, but can be evaluated later if evidence says it is a real quality/perf issue.
+- Pixel Forge edits and a custom impostor baker are not implementation scope unless Phase 7 records a proven blocker and a later plan authorizes them.
 
-## Standing carryover (do not drop)
+## Durable Rules
 
-- **NSL regression fix + re-enable** - the live-symptom capture against the four `docs/nsl-burndown.md` classes is the first task; the entrance re-enable restores `comingSoon` + multiplayer `SCENE_ORDER` + the skipped player-flow E2E in one change, gated on the re-enable bar. Likely its own pass before launch-as-default.
-- **Subjective impostor look A/B** - the carried Cycle 101 impostor-vs-LOD0 SSIM A/B across a yaw sweep (now tractable with the WebGPU harness) + Matt's eyeball of Home Field's new far trees and the islands post-sun-fix. Paired, de-risked (islands preserved, Home Field net-new).
-- **Deterministic fixed-dt sim-step affordance** - restore the follow-cell goldens (Cycle 103 P5; the golden gate is classic-only / 6 cells without it). Seeds Q1.
-- **tree1 256px octahedral bake fix** in pixel-forge (ortho/scale bug at 256px tiles) if 256 is ever wanted.
-- **Paired launch session** - NSL-as-default-world (still Rolling Hills today), version bump, itch/devlog/social posting (Matt's voice), S24+ device pass.
-- **itch/native terrain wire win** - Cycle 100 scoped terrain compression to Cloudflare Pages; an explicit-decode (`DecompressionStream`) path would cover itch/native if measured worth it.
-- **three r185** blocked until it publishes (latest 0.184.0); checklist `cycle96-validation/r185-readiness.md`.
-- **Rock re-bake** behind the Cycle 96 collider-parity harness; needs a design direction.
-- **Matt's Cycle 95 prod validation** (A/B/C/E/D/F) - if prod shows a rejected element, re-capture the affected goldens.
-- **Survival onboarding translation** (es/ja/pt/zh-CN) once the English copy locks.
-- **NPC-sheepdogs** owner intake - needs an approach proposal before dispatch.
+Read [`AGENTS.md`](AGENTS.md), [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md), and [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) before modifying code or assets. This cycle does not authorize `shared/` edits or sim-baseline regeneration.
+
+## Current Local State
+
+The upstream Three.js research clone is local at `examples/three-r185/` and is research-only. It must not be imported by SDS runtime code. The copy-paste goal scratchpad `three-r185-asset-goals.txt` is local user-facing scratch content, not cycle scope.
+
+Current local validation artifacts:
+
+- `cycle105-validation/r185-release-audit.md`
+- `cycle105-validation/three-r185-example-notes.md`
+
+## Matt Alignment - 2026-06-25
+
+- Use the recommended evidence/clone hygiene: track the two small Cycle 105 markdown evidence files, keep the local `examples/three-r185/` clone out of git.
+- Accept the local r185 dependency/render patch as branch-ready; full e2e/CI still gates merge.
+- Use Kiln heavily for new SDS assets, including an SDS palette/pack via admin.
+- First asset target is the fence kit. Broader asset refresh is allowed for everything except dog and sheep. Grass, trees, rocks, farmhouse, scatter, and other props are open to evaluation based on quality and perf.
+- Trees need a real candidate pass. Compare Kiln-generated candidates, the existing EZ-Tree path, compatible free stylized assets, and external inspiration such as `dedekpo/stylized-scene`; decide from GLB metrics, screenshots, and playtest feel.
+- Surface PC previews or in-game candidates to Matt for visual approval before replacing live assets.
+- It is acceptable to keep moving on this branch, but keep commits separable enough that r185, specs, staged candidates, and live replacements remain reviewable.

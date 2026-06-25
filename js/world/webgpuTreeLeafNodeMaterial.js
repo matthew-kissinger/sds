@@ -4,7 +4,7 @@ import { Vector2 as ThreeVector2, Vector3 as ThreeVector3 } from 'three';
 import { FOLIAGE_RIG } from './foliageLightingRig.js';
 
 export function createWebGpuTreeLeafNodeMaterial({ MeshStandardNodeMaterial, DoubleSide, TSL }, treeLeaf) {
-  const { abs, clamp, dot, float, floor, fract, length, max, mix, normalize, positionLocal, positionView, positionWorld, screenCoordinate, sin, smoothstep, texture, time, uniform, uv, vec2, vec3 } = TSL;
+  const { abs, clamp, dot, float, floor, fract, length, max, mix, normalize, positionGeometry, positionLocal, positionView, positionWorld, screenCoordinate, sin, smoothstep, texture, time, uniform, uv, vec2, vec3 } = TSL;
   const linearColor = (color) => color.map((value) => (
     value <= 0.04045
       ? value / 12.92
@@ -22,7 +22,7 @@ export function createWebGpuTreeLeafNodeMaterial({ MeshStandardNodeMaterial, Dou
   const windDir = normalize(windDirection);
   const windPerp = vec2(windDir.y.negate(), windDir.x);
   const treeRange = Math.max(treeLeaf.treeTopY - treeLeaf.treeBaseY, 0.001);
-  const posY01 = clamp(positionLocal.y.sub(treeLeaf.treeBaseY).div(treeRange), 0.0, 1.0);
+  const posY01 = clamp(positionGeometry.y.sub(treeLeaf.treeBaseY).div(treeRange), 0.0, 1.0);
   const windWeightBase = smoothstep(0.25, 1.0, posY01);
   const windWeight = windWeightBase.mul(windWeightBase);
   const worldX = positionWorld.x;

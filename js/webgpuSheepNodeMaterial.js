@@ -3,7 +3,7 @@
 import { Vector3 as ThreeVector3 } from 'three';
 
 export function createWebGpuSheepWoolNodeMaterial({ MeshStandardNodeMaterial, Vector3 = ThreeVector3, TSL }, sheepWool) {
-  const { abs, attribute, clamp, cos, dot, float, floor, fract, length, max, mix, mod, normalize, normalLocal, normalView, positionLocal, positionView, positionWorld, pow, sin, smoothstep, step, time, uniform, vec3, vertexColor } = TSL;
+  const { abs, attribute, clamp, cos, dot, float, floor, fract, length, max, mix, mod, normalize, normalLocal, normalView, positionGeometry, positionLocal, positionView, positionWorld, pow, sin, smoothstep, step, time, uniform, vec3, vertexColor } = TSL;
   const vertexId = attribute('vertexId', 'float');
   const instanceData = attribute('instanceData', 'vec4');
   const instanceAnimation = attribute('instanceAnimation', 'vec4');
@@ -48,7 +48,7 @@ export function createWebGpuSheepWoolNodeMaterial({ MeshStandardNodeMaterial, Ve
   const bodyTime = time.mul(sheepWool.animationSpeed).add(animPhase);
   const headTime = bodyTime.add(0.5);
   const lookAngle = instanceAnimation.z;
-  const lowerLegMask = float(1.0).sub(clamp(positionLocal.y.div(0.62), 0.0, 1.0)).mul(legMask);
+  const lowerLegMask = float(1.0).sub(clamp(positionGeometry.y.div(0.62), 0.0, 1.0)).mul(legMask);
   const legSwing = legWave.mul(bounce).mul(speed);
   const legOffset = vec3(
     0.0,

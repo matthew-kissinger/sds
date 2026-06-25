@@ -43,6 +43,7 @@ let _loaderPromise = null;
  */
 export function initKtx2Loader(renderer) {
     if (!renderer) return null;
+    if (!canDetectKtx2Support(renderer)) return null;
     if (!_loaderPromise) {
         _loaderPromise = (async () => {
             const { KTX2Loader } = await import('three/addons/loaders/KTX2Loader.js');
@@ -57,6 +58,11 @@ export function initKtx2Loader(renderer) {
         });
     }
     return _loaderPromise;
+}
+
+function canDetectKtx2Support(renderer) {
+    if (renderer?.isWebGPURenderer === true) return typeof renderer.hasFeature === 'function';
+    return typeof renderer?.extensions?.has === 'function';
 }
 
 /**
