@@ -59,7 +59,9 @@ export function createWebGpuGrassBladeNodeMaterial(
   } else {
     instanceWorldOffset = attribute('instanceWorldOffset', 'vec3');
   }
-  const bladeWorld = instanceWorldOffset.add(positionLocal);
+  const bladeWorld = foldInstanceTransform
+    ? foldInstanceTransform(positionGeometry)
+    : instanceWorldOffset.add(positionGeometry);
   const interactionRadius = uniform(grassBlade.interactionRadius ?? 2.2);
   const interactionStrength = uniform(grassBlade.interactionStrength ?? 0.6);
   const sheepInteractionRadius = uniform(grassBlade.sheepInteractionRadius ?? 2.5);
@@ -282,7 +284,7 @@ export function createWebGpuGrassBladeNodeMaterial(
     maxNodeInteractors,
     source: 'dog-plus-nearest-sheep-unrolled',
     displacement: 'anchored-fullblade-bend-along-oval-normal-plus-laydown',
-    coordinateSource: 'instanceWorldOffset-instanced-attribute',
+    coordinateSource: 'instanceWorldOffset-plus-positionGeometry',
     overlapMode: 'dominant-contact-capped-vector',
     visualScale: interactionVisualScaleValue,
     maxDisplacement: interactionMaxDisplacementValue,
