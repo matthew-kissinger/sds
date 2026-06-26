@@ -155,9 +155,15 @@ cycle105-validation/*
 !cycle105-validation/three-r185-example-notes.md
 !cycle105-validation/fence-kiln-spec.md
 !cycle105-validation/fence-candidate-report.md
+!cycle105-validation/tree-source-impostor-report.md
+!cycle105-validation/grass-ground-redesign-brief.md
+!cycle105-validation/foliage-fastpan-lod-report.md
+!cycle105-validation/farmhouse-ground-batch-spec.md
+!cycle105-validation/homestead-playfield-pack-report.md
 
 # Local upstream research clone. Keep source notes, not the cloned repo.
 /examples/three-r185/
+/examples/stylized-scene/
 
 # Hero / media re-capture intermediates (contact sheets, frame PNGs, mp4).
 # Regenerable from tools/newsheepdogland-hero-final.mjs; only the encoded

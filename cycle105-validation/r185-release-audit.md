@@ -48,6 +48,7 @@ r185 changes `DRACOLoader` to define default decoder URLs with `new URL(..., imp
 After that mitigation, the remaining production build growth is accepted as the r185 dependency cost:
 
 - `threeKB`: `605` -> `614`
+- `mainKB`: `623` -> `624`
 - `chunkBudgetsKiB.three`: `606` -> `615`
 - `chunkBudgetsKiB.other`: `619` -> `676`
 
