@@ -39,7 +39,8 @@ export function createTreeComputeCull(webGpuModules, opts) {
     const {
         geometry, material, materialFactory = null, matrices, offsets, count,
         cullRadius = 15.0, castShadow = false, receiveShadow = true,
-        lodRole = null, lodDistance = 0, lodEnabled = false,
+        lodRole = null, lodDistance = 0, lodBase = lodDistance,
+        lodEnabled = false,
     } = opts;
     const capacity = Math.max(opts.capacity ?? count, count, 1);
     let used = count;
@@ -189,7 +190,8 @@ export function createTreeComputeCull(webGpuModules, opts) {
             lodGate.value = on ? 1 : 0;
             diag.lodEnabled = !!on;
         },
-        setLodDistance(d) {
+        setLodBias(b) {
+            const d = Math.max(96, lodBase * (1 - b));
             lodDistSq.value = d * d;
             diag.lodDistance = d;
         },

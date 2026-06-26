@@ -1,8 +1,8 @@
 # Cycle 5 - Cross-Scene Foliage Motion Proof
 
-Date: 2026-06-25  
-Branch: `codex/three-r185-upgrade`  
-Status: open; NSL LOD/shadow/gate wiring fixed and first spike class attributed to harness/cold-readiness. Remaining work is visual LOD handoff/contact-sheet review and any distribution tuning Matt flags.
+Date: 2026-06-25
+Branch: `codex/three-r185-upgrade`; follow-up tuning branch `codex/foliage-lod-density-tuning`
+Status: post-close tuning validated on the follow-up branch. NSL LOD/shadow/gate wiring fixed and first spike class attributed to harness/cold-readiness. Matt accepted the assets and asked to tune LOD/panning density from the contact sheet; the follow-up branch now makes consolidated tree handoff distances scene-aware and wires the existing quality governor into WebGPU compute-cull tree controllers.
 
 ## Goal
 
@@ -118,6 +118,56 @@ Additional headed NSL proof after the correction:
 - Screenshots: `cycle105-validation/nsl-lod-shadow-entrance-proof-r185-storage.png` and `cycle105-validation/nsl-lod-shadow-entrance-proof-r185-storage-streamed.png`
 
 This directly answers the LOD0 concern: after the matrix-translation fix, NSL trees are reaching LOD0 near the camera instead of staying far/impostor-only.
+
+## Post-Close LOD Density Tuning
+
+The contact sheet showed that one global `200m` consolidated far switch is too blunt:
+
+- Dense streamed coastline scenes need a tight enough handoff to stay performant after all waves land.
+- Sparse island scenes can hold LOD0 farther during pans because their total tree counts are low.
+- Home Field's treeline is a flat, opt-in consolidated scene and should not inherit NSL's dense-streaming handoff.
+
+Follow-up implementation on `codex/foliage-lod-density-tuning`:
+
+- Dense coastline profile: `220m`.
+- Sparse island profile: `280m`.
+- Flat consolidated pasture profile: `320m`.
+- Minimum quality-governed profile distance: `96m`.
+- `TerrainBuilder.applyQualityState()` now applies `treeLodBias` to consolidated WebGPU tree cull controllers, not only to the older `InstancedMesh2` LOD chain.
+- Controller diagnostics report the active `lodDistance`, while each controller retains its base distance internally for QualityGovernor updates. Contact-sheet/browser probes can prove which scene-specific distance is active without shipping profile-label state.
+
+Focused validation:
+
+```bash
+npx vitest run tests\tree-cull-gate.spec.js
+```
+
+Result: 7 tests passed.
+
+Final branch validation:
+
+```bash
+npm run build
+npx vitest run tests\tree-cull-gate.spec.js tests\refactor-baseline\baseline.spec.ts
+npm test
+```
+
+Results:
+
+- `npm run build`: pass, `main-*.js` `649.72 kB`; no bundle-budget fixture bump required.
+- Focused LOD + bundle-ratchet specs: 24 tests passed.
+- `npm test`: pass.
+
+Final production WebGPU proof:
+
+- Contact sheet: `cycle105-validation/foliage-fastpan/lod-density-proof/contact-sheet.png`
+- Manifest: `cycle105-validation/foliage-fastpan/lod-density-proof/manifest.json`
+- Browser route: production preview on `http://127.0.0.1:4174/` with `renderer=webgpu`, `perfMode=1`, `probeRender=1`, `cinematic=1`, `ui=off`
+- Console/page errors: none.
+- Field: `webgpu-production`, `flat-pasture:near:320 = 4`, `flat-pasture:far:320 = 2`, far-controller tree count `268`, nonblank frame.
+- Rolling Hills: `webgpu-production`, `sparse-island:near:280 = 4`, `sparse-island:far:280 = 2`, far-controller tree count `61`, nonblank frames.
+- NSL: `webgpu-production`, `dense-coastline:near:220 = 4`, `dense-coastline:far:220 = 2`, far-controller tree count `1879`, active far types `tree1/tree2`, nonblank frames.
+- Runtime quality-bias proof: applying `treeLodBias: 0.55` in Field updated all four near controllers and both far controllers to `144m`, with no console errors.
 
 ## Entrance and E2E Gate
 

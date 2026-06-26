@@ -33,7 +33,12 @@ import {
 } from './utils/TriangleCount.js';
 import { placeEnvironmentDetails } from './world/RockPlacement.js';
 import { getHomesteadPlayfieldPlacements } from './world/homesteadPlayfieldProps.js';
-import { placeTrees, bakeTreeImpostor, createCrossBillboardGeometry, resolveWebGpuNativeTreeImpostorRoute } from './world/TreePlacement.js';
+import {
+    placeTrees,
+    bakeTreeImpostor,
+    createCrossBillboardGeometry,
+    resolveWebGpuNativeTreeImpostorRoute
+} from './world/TreePlacement.js';
 import {
     patchTreeWindMaterial as runPatchTreeWind,
     setupTreeWind as runSetupTreeWind,
@@ -1532,9 +1537,7 @@ export class TerrainBuilder {
     applyQualityState(state = {}) {
         this.webgpuQualityState = { ...state };
         this.grassSystem?.applyQualityState?.(state);
-        const treeLodBias = Number.isFinite(state.treeLodBias)
-            ? THREE.MathUtils.clamp(state.treeLodBias, 0, 0.75)
-            : 0;
+        const treeLodBias = THREE.MathUtils.clamp(state.treeLodBias || 0, 0, 0.75);
         for (const tree of this.trees ?? []) {
             const levels = tree?.LODinfo?.render?.levels;
             if (!levels || levels.length < 2 || typeof tree.updateLOD !== 'function') continue;
@@ -1547,6 +1550,9 @@ export class TerrainBuilder {
                 const nextDistance = Math.max(24, baseDistances[i] * (1 - treeLodBias));
                 tree.updateLOD(i + 1, nextDistance);
             }
+        }
+        for (const controller of this._treeCullControllers ?? []) {
+            if (controller?.diag?.lodRole) controller.setLodBias?.(treeLodBias);
         }
     }
 

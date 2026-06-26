@@ -4,6 +4,22 @@
 
 ## Recently Completed
 
+### Cycle 105 - `three-r185-and-asset-pipeline` (r185 + Kiln asset pack integration) (closed 2026-06-26)
+
+Plan remains at [`docs/cycle-105-plan.md`](cycle-105-plan.md). PR #68 merged to `main` at `3300b1c7` and GitHub Actions Deploy run `28227099919` succeeded. This resolves the older "three r185 upstream-blocked" carryover: SDS now ships `three@0.185.0` with the r185 audit/examples evidence recorded under `cycle105-validation/`.
+
+- **r185 render foundation.** Three.js r185 is integrated with recorded audit notes, example/release observations, focused render fixes, and final validation in PR #68 (`git diff --check`, lint, typecheck, `npm test`, `npm run build`, focused homestead/refactor-baseline specs, release Playwright buckets).
+- **Fence and gate asset replacement.** The rejected first fence candidate remains evidence only. The accepted Kiln fence kit is live, the authored `Gate_Assembly-v1.0.0.glb` replaces the temporary side-post marker path, and NSL no longer overlaps the authored gate with the old procedural `HomesteadGateDoor`. Fence posts and rails now batch through terrain-aware instanced segment meshes.
+- **Trees and impostors.** The approved leafAtlas source candidates are live as tree1/tree2; the approved ash candidate is reserve-only until a later `shared/` placement/species cycle authorizes a third slot. The current Kiln/Pixel Forge latlon plus octahedral KTX2 bake path remains sufficient unless a future measured gate proves a custom SDS/Kiln baker is needed.
+- **Grass and ground.** `sds-hybrid-v1` is the production default, with `?grassProfile=legacy` preserved for explicit comparison captures. The accepted path cuts visible grass triangle estimates materially while keeping a one-draw-call hybrid dog/sheep ground-contact read.
+- **Homestead playfield pack.** The one-off farmhouse direction was rejected. The approved `sds-homestead-playfield-pack-v1` Kiln pack is integrated: farmhouse live, packyard props in Home Field and NSL, sparse natural accents in Rolling Hills/Open Country, and production runtime proof recorded in `cycle105-validation/homestead-playfield-pack-report.md`.
+
+Deferred / carryover after Cycle 105:
+
+- **Foliage LOD/panning density tuning** - validated on `codex/foliage-lod-density-tuning`, driven by the contact sheet at `cycle105-validation/foliage-fastpan/contact-sheet/lod-handoff-contact-sheet.png`. The branch keeps this render-only, avoids `shared/` placement edits, and records final proof in `cycle105-validation/foliage-fastpan-lod-report.md`.
+- **Preview Worker provisioning** - operator TODO remains from `docs/hardening/phase-2-scale-backend.md`: create preview D1, set `CF_PREVIEW_D1_ID`, set preview `JWT_SECRET`, and confirm D1 edit scope.
+- **Future asset cycles** - ash/tree3 placement, rock art rebake, custom SDS/Kiln impostor baker, and NSL launch/default/version/social/S24+ work remain separate future scopes.
+
 ### Cycle 104 - `impostor-and-nsl-burndown` (Home Field far impostors + principled impostor sun + NSL diagnosis) (closed 2026-06-16)
 
 Plan archived at [`docs/archive/cycles/cycle-104-plan.md`](archive/cycles/cycle-104-plan.md). Re-scoped from the `golden-determinism-and-launch-prep` stub after the intersession NSL takedown + Rolling Hills far-impostor calibration. Matt directed the harness build under a standing constraint - a concurrent effort owns the RTX 3070 for perf testing, so this cycle's harness stays categorical (no timing/fps/draw-cost) and never contends for the GPU - then chose Q1 = Option B (`consolidatedTrees` flag), Q2 = principled sun fix, Q3 = diagnose-NSL-only, and finally "finish cycle and ship the remaining phases then commit push and deploy." 5/5 phases shipped; 1584 vitest / build green; no version bump (still 2.3.4). Player-visible: Home Field's distant treeline now renders as far impostors (stops the per-chunk LOD0 draw thrash) and the islands' far trees keep their approved look on a documented sun footing.

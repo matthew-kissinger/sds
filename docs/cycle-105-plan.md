@@ -267,13 +267,13 @@ Durable hard stops apply on every cycle; see [`EMERGENCY_STOPS.md`](EMERGENCY_ST
 
 `/cycle-close` reads this section and asks the user to confirm each item. Do not pre-check.
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When the cycle closes, the r185 status shall be one of: shipped on `three@0.185.0`, reverted with blocker evidence, or explicitly deferred with blocker evidence.
-- [ ] When the cycle closes, the fence asset status shall be one of: accepted and integrated, rejected with candidate evidence, or deferred before integration.
-- [ ] When the cycle closes, the tree/impostor status shall state whether source-tree improvement, current Pixel Forge baking, or a future custom impostor baker is the next justified path.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover. Closed by PR #68, merged 2026-06-26 at `3300b1c7`.
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass. Recorded in PR #68 final validation.
+- [x] When `npm run build` runs at cycle close, production build shall be clean. Recorded in PR #68 final validation.
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions. Deploy run `28227099919` succeeded on `3300b1c7`.
+- [x] When the cycle closes, the r185 status shall be one of: shipped on `three@0.185.0`, reverted with blocker evidence, or explicitly deferred with blocker evidence. Shipped on `three@0.185.0`.
+- [x] When the cycle closes, the fence asset status shall be one of: accepted and integrated, rejected with candidate evidence, or deferred before integration. Accepted and integrated with the authored gate GLB.
+- [x] When the cycle closes, the tree/impostor status shall state whether source-tree improvement, current Pixel Forge baking, or a future custom impostor baker is the next justified path. Source tree1/tree2 improvement shipped; current Kiln/Pixel Forge impostor path remains sufficient pending future measured blocker evidence; ash remains reserve-only.
 
 ## References
 
