@@ -145,6 +145,7 @@ Local validation update:
 - `npm run lint` passed.
 - `npm run typecheck` passed.
 - `npm test` passed after dev-gating the local asset-review harness and recording the measured legacy `mainKB` ratchet.
+- Remote merge-ref CI later measured the final production prop placement and grass-default bundle ratchet as `mainKB` 634 and `chunkBudgetsKiB.main` 635; the budget fixture is updated to those values as the accepted cost of the approved live prop pack.
 - `npm run build` passed.
 - `npx playwright test --project=chromium --grep-invert='@local-only' --reporter=list` passed with 7 passed / 2 skipped.
 - `npx playwright test --project=mp --grep-invert='@local-only' --reporter=list` passed with 19 passed after starting `npm run dev:worker`.
@@ -161,7 +162,7 @@ Matt approved `01-farmhouse-a` in the actual NSL scene. It now replaces the live
 - Inspection: 97.6 KB GLB, 109 mesh nodes, 1396 triangles, one palette material, two 32x4 palette textures totaling 235 B.
 - Runtime proof: live NSL capture reports visible `Farmhouse`, 109 meshes, 1396 triangles, `castShadow=0`, and `receiveShadow=109`.
 - Shadow policy: farmhouse mesh casting stays disabled in `TerrainBuilder` until a dedicated proxy shadow pass is approved.
-- Bundle proof: the local asset-review harness is dev-gated so it does not ship in production. The legacy `mainKB` ratchet is updated from 627 to 628 after the final build; per-family chunk budgets stay unchanged and pass.
+- Bundle proof: the local asset-review harness is dev-gated so it does not ship in production. The legacy `mainKB` ratchet is updated from 627 to 628 for the live farmhouse review pass. The final production homestead prop placement module deliberately updates the refactor-baseline budget to `mainKB` 634 and `chunkBudgetsKiB.main` 635 after remote merge-ref CI measured that cost.
 
 ## Runtime Use Gates
 

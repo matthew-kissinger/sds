@@ -1,8 +1,8 @@
 {
-  "mainKB": 628,
+  "mainKB": 634,
   "threeKB": 614,
   "chunkBudgetsKiB": {
-    "main": 628,
+    "main": 635,
     "three": 615,
     "client": 177,
     "ui": 127,
