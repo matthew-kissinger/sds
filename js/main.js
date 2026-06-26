@@ -300,9 +300,10 @@ class SheepDogSimulation {
                     const grassMeshes = Array.from(terrain?.grassSystem?.chunks?.values?.() ?? [])
                         .map((chunk) => chunk?.mesh)
                         .filter(Boolean);
+                    const grassOverlays = [terrain?.grassSystem?.groundContactMesh].filter(Boolean);
                     const groups = {
                         terrain: [terrain?.terrainMesh, terrain?.terrainSkirtMesh].filter(Boolean),
-                        grass: grassMeshes,
+                        grass: grassMeshes.concat(grassOverlays),
                         trees: Array.isArray(terrain?.trees) ? terrain.trees : [],
                         rocks: Array.isArray(terrain?.rocks) ? terrain.rocks : [],
                         water: [gameInstanceRef._animeWater?.mesh].filter(Boolean),
@@ -538,6 +539,11 @@ class SheepDogSimulation {
         if (urlParams.has('grassInteractionProof')) {
             import('./diagnostics/grassInteractionProofHarness.js')
                 .then((m) => m.installGrassInteractionProofHarness(this));
+        }
+
+        if (import.meta.env.DEV && urlParams.get('assetReview') === '1') {
+            import('./diagnostics/assetReviewHarness.js')
+                .then((m) => m.installAssetReviewHarness(this));
         }
 
         // Cycle 17 Phase 1: lightweight diagnostic surface for the
@@ -1629,9 +1635,11 @@ class SheepDogSimulation {
             },
             grass: {
                 present: !!grass,
+                profile: grass?.grassProfileSummary ?? null,
                 interactorCount: grass?.interactorCount ?? 0,
                 maxInteractors: grass?.config?.maxInteractors ?? 0,
                 interactorSample: grass?.getInteractorSample?.(8) ?? [],
+                groundContact: grass?.getStats?.().groundContact ?? null,
                 qualityDistanceScale: grass?.qualityDistanceScale ?? 1,
                 qualityDensityScale: grass?.qualityDensityScale ?? 1,
                 materialSummary: grass?.webgpuGrassBladeMaterialSummary ?? null,

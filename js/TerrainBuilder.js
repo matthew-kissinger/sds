@@ -1771,11 +1771,13 @@ export class TerrainBuilder {
         const rotDeg = sceneDef?.farmHouse?.rotationDeg;
         farmHouse.rotation.y = (rotDeg != null) ? (rotDeg * Math.PI) / 180 : Math.PI * 1.25;
         
-        // Configure shadows and materials
+        // House mesh casters produce oversized shadows in the dog-following
+        // shadow box; restore house shadows later with a purpose-built proxy.
         farmHouse.traverse(child => {
             if (child.isMesh) {
-                child.castShadow = true;
+                child.castShadow = false;
                 child.receiveShadow = true;
+                child.userData.farmHouseShadowPolicy = 'disabled-house-caster';
                 
                 // Ensure materials work with fog
                 if (child.material) {
