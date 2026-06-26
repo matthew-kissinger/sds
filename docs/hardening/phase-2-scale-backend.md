@@ -286,12 +286,12 @@ Evidence:
 - `npx wrangler deploy --dry-run --env preview`: config valid, binds `sds-db-preview`. Note: dry-run does not contact the API, so the placeholder id passes structurally; a real `deploy --env preview` with the placeholder would fail at the API, and the migrate script refuses before that point anyway.
 - Guard-rail proofs: `D1_TARGET=preview` with the placeholder id refused (exit 1, "still the placeholder"); with the production id sed-substituted in, refused (exit 1, "equals the PRODUCTION database id"); wrangler.toml restored to placeholder after the test.
 
-Operator TODO (one time, before the preview Worker leg activates):
+Operator TODO (one time, before the preview Worker leg activates) - resolved 2026-06-26:
 
-1. `npx wrangler d1 create sds-db-preview` (from `worker/`).
-2. Set the repo Actions **variable** `CF_PREVIEW_D1_ID` to the new database id.
-3. `npx wrangler secret put JWT_SECRET --env preview` (the preview worker mints its own sessions; do not reuse anything that grants production access).
-4. Confirm the existing `CF_API_TOKEN` secret has D1 edit scope for the new database (it already migrates production D1, so it should).
+1. `sds-db-preview` exists as D1 id `6d5b0fce-952f-4d94-8936-b51fc559496c`.
+2. Repo Actions **variable** `CF_PREVIEW_D1_ID` is set to that id.
+3. Preview `JWT_SECRET` is set on `sds-worker-preview`.
+4. Preview D1 edit scope is confirmed by a full bootstrap migration run and a clean no-op rerun.
 
 ---
 

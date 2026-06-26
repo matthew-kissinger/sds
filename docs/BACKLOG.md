@@ -4,6 +4,10 @@
 
 ## Recently Completed
 
+### Preview Worker provisioning (completed 2026-06-26)
+
+The preview multiplayer backend is provisioned. Created Cloudflare D1 `sds-db-preview` (`6d5b0fce-952f-4d94-8936-b51fc559496c`), bootstrapped all 11 migrations, set repo Actions variable `CF_PREVIEW_D1_ID`, deployed `sds-worker-preview`, and set a preview-only `JWT_SECRET`. Live proof: `https://sds-worker-preview.matt-m-kissinger.workers.dev/healthz` returns ok and `api/leaderboards?scene=field&limit=1` reads from the preview D1.
+
 ### Cycle 105 - `three-r185-and-asset-pipeline` (r185 + Kiln asset pack integration) (closed 2026-06-26)
 
 Plan remains at [`docs/cycle-105-plan.md`](cycle-105-plan.md). PR #68 merged to `main` at `3300b1c7` and GitHub Actions Deploy run `28227099919` succeeded. This resolves the older "three r185 upstream-blocked" carryover: SDS now ships `three@0.185.0` with the r185 audit/examples evidence recorded under `cycle105-validation/`.
@@ -17,7 +21,7 @@ Plan remains at [`docs/cycle-105-plan.md`](cycle-105-plan.md). PR #68 merged to 
 Deferred / carryover after Cycle 105:
 
 - **Foliage LOD/panning density tuning** - validated on `codex/foliage-lod-density-tuning`, driven by the contact sheet at `cycle105-validation/foliage-fastpan/contact-sheet/lod-handoff-contact-sheet.png`. The branch keeps this render-only, avoids `shared/` placement edits, and records final proof in `cycle105-validation/foliage-fastpan-lod-report.md`.
-- **Preview Worker provisioning** - operator TODO remains from `docs/hardening/phase-2-scale-backend.md`: create preview D1, set `CF_PREVIEW_D1_ID`, set preview `JWT_SECRET`, and confirm D1 edit scope.
+- ~~**Preview Worker provisioning** - operator TODO remains from `docs/hardening/phase-2-scale-backend.md`: create preview D1, set `CF_PREVIEW_D1_ID`, set preview `JWT_SECRET`, and confirm D1 edit scope.~~ Completed 2026-06-26.
 - **Future asset cycles** - ash/tree3 placement, rock art rebake, custom SDS/Kiln impostor baker, and NSL launch/default/version/social/S24+ work remain separate future scopes.
 
 ### Cycle 104 - `impostor-and-nsl-burndown` (Home Field far impostors + principled impostor sun + NSL diagnosis) (closed 2026-06-16)
