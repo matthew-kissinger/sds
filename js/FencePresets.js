@@ -139,6 +139,26 @@ export class FencePresets {
         if (!this.models[modelName]) return null;
         return this.models[modelName].clone();
     }
+
+    _getSingleMeshSource(modelName) {
+        const model = this.models[modelName];
+        if (!model) return null;
+
+        const meshes = [];
+        model.traverse(child => {
+            if (child.isMesh) meshes.push(child);
+        });
+        if (meshes.length !== 1) return null;
+
+        const mesh = meshes[0];
+        model.updateMatrixWorld(true);
+        mesh.updateMatrixWorld(true);
+        const localMatrix = new THREE.Matrix4()
+            .copy(model.matrixWorld)
+            .invert()
+            .multiply(mesh.matrixWorld);
+        return { mesh, localMatrix };
+    }
     
     /**
      * Create a straight border fence segment
@@ -153,12 +173,30 @@ export class FencePresets {
         // Use GLB posts and rails if available (builds fence from components)
         if (this.useGLBModels && this.models.fencePost && this.models.fenceRail) {
             // Post spacing - 5 units between posts
-            const postSpacing = 5.0;
+            const postSpacing = this.postSpacing;
             const postCount = Math.ceil(length / postSpacing) + 1;
             const actualSpacing = length / (postCount - 1);
 
             // The rail model is 1 unit long, centered at origin (for easy scaling)
             const railModelLength = 1.0;
+            const railHeights = [0.5, 1.2, 1.9];
+            const postSource = this._getSingleMeshSource('fencePost');
+            const railSource = this._getSingleMeshSource('fenceRail');
+
+            if (postSource && railSource) {
+                group.name = 'FenceSegmentGLBInstanced';
+                group.userData.fenceInstancingSpec = {
+                    length,
+                    orientation,
+                    postCount,
+                    actualSpacing,
+                    railHeights,
+                    railModelLength,
+                    postSource,
+                    railSource
+                };
+                return group;
+            }
 
             // Create posts
             for (let i = 0; i < postCount; i++) {
@@ -176,7 +214,6 @@ export class FencePresets {
             }
 
             // Create rails between posts (3 levels based on fence segment model)
-            const railHeights = [0.5, 1.2, 1.9];
             for (const height of railHeights) {
                 for (let i = 0; i < postCount - 1; i++) {
                     const rail = this.cloneModel('fenceRail');

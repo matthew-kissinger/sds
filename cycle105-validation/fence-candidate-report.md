@@ -26,6 +26,7 @@ Visual approval:
 - The post-only gate fallback was not visually sufficient, so a separate budgeted Kiln gate GLB was generated and integrated as `assets/models/Gate_Assembly-v1.0.0.glb`.
 - `js/FencePresets.js` now loads `Gate_Assembly-v1.0.0.glb` and places that proper gate first; the two-post/no-header path remains only as a load-failure fallback.
 - Matt approved the proper gate GLB in the actual scene on 2026-06-25 with "looks good i think".
+- NSL homestead integration now mounts the hierarchy-preserving authored gate under `HomesteadGateAssetDoor`, removes the old `HomesteadGateDoor` procedural overlap, and drives the two authored leaf pivot groups instead of rotating the whole gate asset.
 - Preview proof: `cycle105-validation/fence-candidate-c-preview-gallery.png`
 - Preview scene: `cycle105-validation/fence-candidates/sds-fence-kit-candidate-20260625-c-three-span-preview.glb`
 - Actual-scene proof before gate fix: `cycle105-validation/fence-actual-scene-field.png`
@@ -56,7 +57,7 @@ Gate assembly candidate workflow:
 - Raw generated triangles: 720
 - Raw draw count after Kiln optimize: 10
 - Raw materials/textures: 3 opaque materials, 0 textures
-- Runtime postprocess: baked world transforms, merged by material, welded duplicate vertices, kept no-extension GLB for clean validation.
+- Runtime postprocess: kept the hierarchy-preserving Kiln GLB as the live asset because the material-merged bake flattened the left/right leaf pivot groups needed for gate animation.
 - Live SDS replacement: `assets/models/Gate_Assembly-v1.0.0.glb`
 
 Candidate C generation metrics:
@@ -110,12 +111,14 @@ Overview:
 - Animations: none
 - `gltf-transform validate`: no errors, warnings, infos, or hints
 - `tests/fence-presets.spec.js`: passed; covers authored gate placement, vertical rotation/scaling, and the no-stretched-header fallback.
-- `npm test`: passed on 2026-06-25 after the proper gate GLB integration.
-- `npm run build`: passed on 2026-06-25 after the proper gate GLB integration.
+- `tests/structure-builder.spec.js`: passed; covers NSL homestead authored-gate animation with no old procedural door, the no-asset procedural fallback, terrain-aware GLB fence instancing, and flat-to-terrain instance rebuilds.
+- Bundle ratchet for runtime instancing: `mainKB` `624` -> `627`, `chunkBudgetsKiB.main` `625` -> `628`.
+- `npm test`: passed on 2026-06-25 after the terrain-aware fence instancing pass.
+- `npm run build`: passed on 2026-06-25 after the terrain-aware fence instancing pass.
 
 Gate assembly live GLB inspection:
 
-- File size: 39,096 bytes
+- File size: 40,036 bytes
 - Version: 2.0
 - Generator: `glTF-Transform v4.4.0`
 - `extensionsUsed`: none
@@ -123,10 +126,10 @@ Gate assembly live GLB inspection:
 - Root name: `Gate_Assembly`
 - Bounds: min `[-4.24, 0, -0.24]`, max `[4.24, 2.20781, 3.53412]`
 - Render vertex count: 2,160
-- Upload vertex count: 1,341
+- Upload vertex count: 1,249
 - Three.js inspector triangle count: about 720
-- Mesh count / draw shape: 3 meshes, one per material
-- Materials: `Gate_Wood`, `Gate_Cut_Wood`, `Gate_Dark_Iron`
+- Mesh count / draw shape: 10 scene mesh nodes backed by 8 mesh definitions; fixed posts/hinge supports plus two leaf pivot groups containing `Mesh_LeftGateWood`, `Mesh_LeftGateMetal`, `Mesh_RightGateWood`, and `Mesh_RightGateMetal`
+- Materials: 3 opaque palette materials
 - Textures: 0
 - Animations: none
 - `gltf-transform validate`: no errors, warnings, infos, or hints
@@ -136,9 +139,19 @@ Actual-scene gate proof:
 - Screenshot: `cycle105-validation/fence-actual-scene-field-gate-kiln-budget.png`
 - Probe URL: `http://localhost:3000/?scene=field&mode=classic&autostart=1&probeRender=1&cinematic=1&ui=off`
 - Runtime gate position: `{ x: 0, y: 0, z: 100 }`
-- Runtime gate metrics: 3 meshes, 720 triangles, 3 named materials, 0 textures
+- Runtime gate metrics: 10 meshes, 720 triangles, 3 opaque materials, 0 textures
 - Runtime gate bounds: minY approximately `0`, maxY `2.2078`
-- Runtime scene names: `Gate_Assembly: 1`, `Gate_Wood: 1`, `Gate_Cut_Wood: 1`, `Gate_Dark_Iron: 1`, `Gate_Arch: 0`
+- Runtime scene names: `Gate_Assembly: 1`, `Mesh_LeftGateWood: 1`, `Mesh_LeftGateMetal: 1`, `Mesh_RightGateWood: 1`, `Mesh_RightGateMetal: 1`, `Gate_Arch: 0`
+
+NSL homestead gate and fence runtime proof:
+
+- Probe URL: `http://localhost:3000/?renderer=webgpu&scene=newsheepdogland&mode=survival&autostart=1&perfMode=1&probeRender=1&ui=off`
+- Headless probe renderer: requested WebGPU, effective WebGL because the adapter was unavailable in headless Chromium.
+- Runtime scene names: `Fence_Post: 0`, `Fence_Rail: 0`, `Fence_Post_Instances: 5`, `Fence_Rail_Instances: 5`, `Gate_Assembly: 1`, `HomesteadGateAssetDoor: 1`, `HomesteadGateDoor: 0`
+- Runtime instance totals: `Fence_Post_Instances: 51`, `Fence_Rail_Instances: 138`
+- Focused structure-builder proof drives `HomesteadGateDoorLeft` and `HomesteadGateDoorRight` from the authored open pose at about `-1.2566` radians back to closed `0` without rotating the `HomesteadGateAssetDoor` controller group.
+- Structure triangle estimate: `15300`
+- Console errors: none.
 
 Meshes:
 

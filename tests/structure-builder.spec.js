@@ -30,6 +30,163 @@ function makeBuilder(withHeightfield = true) {
   return { scene, sb };
 }
 
+function makeModule(name, meshName, geometry, meshY = 0) {
+  const group = new THREE.Group();
+  group.name = name;
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+  mesh.name = meshName;
+  mesh.position.y = meshY;
+  group.add(mesh);
+  return group;
+}
+
+function makeGateAssemblyWithLeafPivots() {
+  const group = new THREE.Group();
+  group.name = 'Gate_Assembly';
+  group.userData.authoredWidth = 8;
+  const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.2, 0.3), new THREE.MeshBasicMaterial());
+  leftPost.name = 'Mesh_LeftPostCombined';
+  leftPost.position.set(-4, 1.1, 0);
+  const rightPost = leftPost.clone();
+  rightPost.name = 'Mesh_RightPostCombined';
+  rightPost.position.x = 4;
+  group.add(leftPost, rightPost);
+
+  const leftLeaf = new THREE.Group();
+  leftLeaf.name = 'LeftLeafPivot';
+  leftLeaf.position.set(-3.8, 0, 0);
+  leftLeaf.rotation.y = THREE.MathUtils.degToRad(-72);
+  const leftWood = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.4, 0.12), new THREE.MeshBasicMaterial());
+  leftWood.name = 'Mesh_LeftGateWood';
+  leftWood.position.set(1.8, 0.9, 0);
+  leftLeaf.add(leftWood);
+
+  const rightLeaf = new THREE.Group();
+  rightLeaf.name = 'RightLeafPivot';
+  rightLeaf.position.set(3.8, 0, 0);
+  rightLeaf.rotation.y = THREE.MathUtils.degToRad(-72);
+  const rightWood = leftWood.clone();
+  rightWood.name = 'Mesh_RightGateWood';
+  rightWood.position.x = -1.8;
+  rightLeaf.add(rightWood);
+
+  group.add(leftLeaf, rightLeaf);
+  return group;
+}
+
+function installFenceKit(sb) {
+  sb.fencePresets.useGLBModels = true;
+  sb.fencePresets.models.fencePost = makeModule(
+    'Fence_Post',
+    'Mesh_Fence_Post_Runtime',
+    new THREE.BoxGeometry(0.4, 2, 0.4),
+    1,
+  );
+  sb.fencePresets.models.fenceRail = makeModule(
+    'Fence_Rail',
+    'Mesh_Fence_Rail_Runtime',
+    new THREE.BoxGeometry(1, 0.1, 0.12),
+  );
+}
+
+function instancePosition(instancedMesh, index) {
+  const matrix = new THREE.Matrix4();
+  const position = new THREE.Vector3();
+  instancedMesh.getMatrixAt(index, matrix);
+  position.setFromMatrixPosition(matrix);
+  return position;
+}
+
+describe('buildHomesteadGate — authored gate asset vs fallback door', () => {
+  const HOMESTEAD = {
+    gate: { x: 0, z: 0, width: 8, facingDeg: 90 },
+    pen: { center: { x: 20, z: 0 }, radius: 24 },
+  };
+
+  it('uses authored GLB leaf pivots for gate animation without rotating the whole asset', () => {
+    const { sb } = makeBuilder(false);
+    sb.fencePresets.useGLBModels = true;
+    sb.fencePresets.models.gateAssembly = makeGateAssemblyWithLeafPivots();
+
+    const group = sb.buildHomesteadGate(HOMESTEAD);
+    const door = group.getObjectByName('HomesteadGateAssetDoor');
+    const leftLeaf = group.getObjectByName('HomesteadGateDoorLeft');
+    const rightLeaf = group.getObjectByName('HomesteadGateDoorRight');
+
+    expect(group.getObjectByName('Gate_Assembly')).toBeTruthy();
+    expect(group.getObjectByName('HomesteadGateDoor')).toBeUndefined();
+    expect(sb._homesteadDoor).toBe(door);
+    expect(door.rotation.y).toBeCloseTo(0, 6);
+    expect(leftLeaf.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
+    expect(rightLeaf.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
+    sb.setHomesteadGateOpen(false);
+    sb.updateGate(1);
+    expect(door.rotation.y).toBeCloseTo(0, 6);
+    expect(leftLeaf.rotation.y).toBeCloseTo(0, 6);
+    expect(rightLeaf.rotation.y).toBeCloseTo(0, 6);
+  });
+
+  it('keeps the procedural swing door as the no-asset fallback', () => {
+    const { sb } = makeBuilder(false);
+    sb.fencePresets.useGLBModels = false;
+
+    const group = sb.buildHomesteadGate(HOMESTEAD);
+    const door = group.getObjectByName('HomesteadGateDoor');
+
+    expect(door).toBeTruthy();
+    expect(sb._homesteadDoor).toBe(door);
+    sb.setHomesteadGateOpen(false);
+    sb.updateGate(1);
+    expect(door.rotation.y).toBeCloseTo(0, 6);
+  });
+});
+
+describe('GLB fence segment instancing', () => {
+  it('collapses repeated GLB posts and rails into terrain-aware instanced meshes', () => {
+    const { scene, sb } = makeBuilder();
+    installFenceKit(sb);
+
+    const segment = sb.buildFenceSegment({ x: -5, z: 0 }, { x: 5, z: 0 });
+    scene.add(segment);
+
+    sb._surfaceToTerrain(segment);
+
+    const posts = segment.getObjectByName('Fence_Post_Instances');
+    const rails = segment.getObjectByName('Fence_Rail_Instances');
+    expect(posts).toBeInstanceOf(THREE.InstancedMesh);
+    expect(rails).toBeInstanceOf(THREE.InstancedMesh);
+    expect(segment.getObjectByName('Fence_Post')).toBeUndefined();
+    expect(segment.getObjectByName('Fence_Rail')).toBeUndefined();
+    expect(posts.count).toBe(3);
+    expect(rails.count).toBe(6);
+    expect(segment.userData.fenceInstanceCounts).toEqual({ posts: 3, rails: 6 });
+
+    expect(instancePosition(posts, 0).y).toBeCloseTo(8, 6);
+    expect(instancePosition(posts, 2).y).toBeCloseTo(18, 6);
+    expect(instancePosition(rails, 0).y).toBeCloseTo(10, 6);
+  });
+
+  it('rebuilds flat instance matrices when terrain becomes available later', () => {
+    const { scene, sb } = makeBuilder(false);
+    installFenceKit(sb);
+
+    const segment = sb.buildFenceSegment({ x: -5, z: 0 }, { x: 5, z: 0 });
+    scene.add(segment);
+    sb._surfaceToTerrain(segment);
+
+    const flatPosts = segment.getObjectByName('Fence_Post_Instances');
+    expect(instancePosition(flatPosts, 0).y).toBeCloseTo(1, 6);
+    expect(segment.userData.fenceInstancedWithTerrain).toBe(false);
+
+    sb.setHeightfield(STUB_HF);
+    sb._surfaceToTerrain(segment);
+
+    const terrainPosts = segment.getObjectByName('Fence_Post_Instances');
+    expect(instancePosition(terrainPosts, 0).y).toBeCloseTo(8, 6);
+    expect(segment.userData.fenceInstancedWithTerrain).toBe(true);
+  });
+});
+
 describe('_surfaceToTerrain — plain tagged node (post / flag / gate group)', () => {
   it('adds heightfield.sample(worldX, worldZ) to the node local Y', () => {
     const { scene, sb } = makeBuilder();
