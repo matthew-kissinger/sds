@@ -18,9 +18,12 @@
    than baseline by construction). Levers stay deferred per Cycle 86 plan
    Q2: fixed-point encoding or a calm/settle sim change, only if
    Cloudflare egress costs surface post-launch.
-3. Operator TODOs for staging: create the preview D1, set repo var
+3. ~~Operator TODOs for staging: create the preview D1, set repo var
    CF_PREVIEW_D1_ID, wrangler secret put JWT_SECRET --env preview
-   ([phase-2 P2-STAGING](phase-2-scale-backend.md)).
+   ([phase-2 P2-STAGING](phase-2-scale-backend.md)).~~ Resolved 2026-06-26:
+   preview D1 `sds-db-preview` (`6d5b0fce-952f-4d94-8936-b51fc559496c`)
+   exists, `CF_PREVIEW_D1_ID` is set, preview `JWT_SECRET` exists, all
+   migrations are applied, and `sds-worker-preview` is live.
 4. Worker findings from chaos validation (diagnosed, not fixed):
    full-room rehydration 409 lockout until the 60s idle alarm;
    host_migration.reclaimedByOriginal always logs true
