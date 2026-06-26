@@ -21,6 +21,53 @@ let grassShadersLoaded = false;
 // shore visually meets the water.
 const SHORELINE_Y_MIN = 0.5;
 
+const GRASS_PROFILES = Object.freeze({
+    'sds-hybrid-v1': Object.freeze({
+        id: 'sds-hybrid-v1',
+        label: 'SDS hybrid sparse grass v1',
+        clumpDensityScale: 0.68,
+        streamedClumpDensityScale: 0.58,
+        bladesPerClump: 5,
+        bladeWidth: 0.145,
+        bladeHeightScale: 0.9,
+        bladeHeightVariation: 0.5,
+        windStrengthScale: 0.82,
+        gustStrengthScale: 0.75,
+        lodDecimateMidScale: 0.86,
+        lodDecimateFarScale: 0.82,
+        grassFadeStart: 58,
+        grassFadeEndScale: 0.84,
+        interactionRadius: 1.02,
+        interactionStrength: 0.58,
+        sheepInteractionRadius: 1.05,
+        sheepInteractionStrength: 0.58,
+        dogFootprint: Object.freeze({ halfLen: 1.16, halfWid: 0.48, falloff: 0.68 }),
+        sheepFootprint: Object.freeze({ halfLen: 0.7, halfWid: 0.48, falloff: 0.82 }),
+        flattenAmount: 0.20,
+        node: Object.freeze({
+            visualScale: 7.1,
+            laydownStrength: 1.05,
+            maxDisplacement: 1.35,
+            shadowStrength: 0.18,
+            tipDampen: 0.44,
+            backlightStrength: 0.62,
+            rimStrength: 0.14,
+            hueVariation: 0.028,
+            colorScale: 0.98,
+        }),
+        groundContact: Object.freeze({
+            enabled: true,
+            opacity: 0.16,
+            color: 0x4f6327,
+            dogScale: Object.freeze({ x: 1.35, z: 2.35 }),
+            sheepScale: Object.freeze({ x: 1.25, z: 1.45 }),
+            yOffset: 0.035,
+        }),
+    }),
+});
+const DEFAULT_GRASS_PROFILE_ID = 'sds-hybrid-v1';
+const LEGACY_GRASS_PROFILE_IDS = new Set(['legacy', 'classic', 'off', 'none']);
+
 function hashString32(input) {
     let hash = 0x811c9dc5;
     for (let i = 0; i < input.length; i++) {
@@ -36,6 +83,44 @@ function createVisualGoldenRandom() {
     if (params.get('visualGolden') !== '1') return null;
     const sceneId = params.get('scene') || 'default';
     return mulberry32(hashString32(`visual-golden-grass:${sceneId}`));
+}
+
+function resolveGrassProfile(search) {
+    let params = null;
+    if (typeof search === 'string') {
+        params = new URLSearchParams(search.startsWith('?') ? search : `?${search}`);
+    } else if (typeof window !== 'undefined') {
+        params = new URLSearchParams(window.location.search);
+    }
+    const requestedId = params?.get('grassProfile') ?? params?.get('grassDesign') ?? null;
+    if (requestedId && LEGACY_GRASS_PROFILE_IDS.has(requestedId)) return null;
+    const id = requestedId ?? DEFAULT_GRASS_PROFILE_ID;
+    return id ? (GRASS_PROFILES[id] ?? null) : null;
+}
+
+function applyGrassProfile(config, profile) {
+    if (!profile) return;
+    config.clumpsPerChunk = Math.max(1, Math.round(config.clumpsPerChunk * profile.clumpDensityScale));
+    config.bladesPerClump = profile.bladesPerClump;
+    config.bladeWidth = profile.bladeWidth;
+    config.bladeHeight *= profile.bladeHeightScale;
+    config.bladeHeightVariation = profile.bladeHeightVariation;
+    config.windStrength *= profile.windStrengthScale;
+    config.gustStrength *= profile.gustStrengthScale;
+    config.lodDecimateMid *= profile.lodDecimateMidScale;
+    config.lodDecimateFar *= profile.lodDecimateFarScale;
+    config.grassFadeStart = profile.grassFadeStart;
+    config.grassFadeEnd = Math.max(
+        config.grassFadeStart + 20,
+        Math.round(config.grassFadeEnd * profile.grassFadeEndScale)
+    );
+    config.interactionRadius = profile.interactionRadius;
+    config.interactionStrength = profile.interactionStrength;
+    config.sheepInteractionRadius = profile.sheepInteractionRadius;
+    config.sheepInteractionStrength = profile.sheepInteractionStrength;
+    config.interaction.dog = { ...profile.dogFootprint };
+    config.interaction.sheep = { ...profile.sheepFootprint };
+    config.interaction.flattenAmount = profile.flattenAmount;
 }
 
 /**
@@ -119,6 +204,7 @@ export class GrassSystem {
         this._grassCenter = sceneGrass?.grassCenter ?? { x: 0, z: 0 };
         this.webgpuGrassSearch = opts.search;
         this.webgpuGrassFactories = opts.webgpuGrassFactories;
+        this.grassProfile = resolveGrassProfile(opts.search);
         this.webgpuMeadowQuadMaterialSummary = null;
         this.webgpuGrassBladeMaterialSummary = null;
         this.webgpuGrassBladeMaterialControls = null;
@@ -282,6 +368,20 @@ export class GrassSystem {
             fogDensity: 0.0006,
             fogColor: new THREE.Color(0xcccccc)
         };
+        applyGrassProfile(this.config, this.grassProfile);
+        this.grassProfileSummary = this.grassProfile ? {
+            id: this.grassProfile.id,
+            label: this.grassProfile.label,
+            clumpDensityScale: this.grassProfile.clumpDensityScale,
+            streamedClumpDensityScale: this.grassProfile.streamedClumpDensityScale,
+            bladesPerClump: this.config.bladesPerClump,
+            bladeHeight: this.config.bladeHeight,
+            bladeWidth: this.config.bladeWidth,
+            sheepFootprint: { ...this.config.interaction.sheep },
+            groundContact: this.grassProfile.groundContact
+                ? { ...this.grassProfile.groundContact }
+                : null,
+        } : null;
 
         // Runtime state
         this.chunks = new Map();
@@ -301,6 +401,15 @@ export class GrassSystem {
         // dog is heading.
         this.interactorFacings = new Float32Array(this.config.maxInteractors * 2);
         this.interactorCount = 0;
+        this.groundContactMesh = null;
+        this._groundContactMaterial = null;
+        this._groundContactTexture = null;
+        this._groundContactEnabled = true;
+        this._groundContactMatrix = new THREE.Matrix4();
+        this._groundContactQuaternion = new THREE.Quaternion();
+        this._groundContactPosition = new THREE.Vector3();
+        this._groundContactScale = new THREE.Vector3();
+        this._groundContactUp = new THREE.Vector3(0, 1, 0);
         this.qualityDistanceScale = 1;
         this.qualityDensityScale = 1;
         this._qualityBase = {
@@ -394,6 +503,7 @@ export class GrassSystem {
             } else {
                 this.generateChunks();
             }
+            this.createGroundContactMesh();
 
             this.initializationSucceeded = true;
             console.log(`[GRASS] GrassSystem initialized: ${this.stats.totalClumps} clumps in ${this.chunks.size} chunks (${this.isMobile ? 'mobile' : 'desktop'}, maxInteractors=${this.config.maxInteractors})`);
@@ -451,6 +561,58 @@ export class GrassSystem {
         texture.needsUpdate = true;
 
         return texture;
+    }
+
+    createGroundContactTexture() {
+        if (typeof document === 'undefined') return null;
+        const canvas = document.createElement('canvas');
+        canvas.width = 96;
+        canvas.height = 96;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        const gradient = ctx.createRadialGradient(48, 48, 4, 48, 48, 48);
+        gradient.addColorStop(0, 'rgba(255,255,255,0.95)');
+        gradient.addColorStop(0.48, 'rgba(255,255,255,0.45)');
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 96, 96);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        return texture;
+    }
+
+    createGroundContactMesh() {
+        if (this.groundContactMesh) return this.groundContactMesh;
+        const contact = this.grassProfile?.groundContact;
+        if (!contact?.enabled) return null;
+
+        this._groundContactTexture = this.createGroundContactTexture();
+        const geometry = new THREE.PlaneGeometry(1, 1);
+        geometry.rotateX(-Math.PI / 2);
+        const materialOptions = {
+            color: contact.color,
+            transparent: true,
+            opacity: contact.opacity,
+            depthWrite: false,
+            depthTest: true,
+            polygonOffset: true,
+            polygonOffsetFactor: -2,
+            polygonOffsetUnits: -2,
+        };
+        if (this._groundContactTexture) {
+            materialOptions.alphaMap = this._groundContactTexture;
+        }
+        const material = new THREE.MeshBasicMaterial(materialOptions);
+        const mesh = new THREE.InstancedMesh(geometry, material, this.config.maxInteractors);
+        mesh.name = 'SDSHybridGrassGroundContact';
+        mesh.count = 0;
+        mesh.visible = false;
+        mesh.frustumCulled = false;
+        mesh.renderOrder = 3;
+        this.groundContactMesh = mesh;
+        this._groundContactMaterial = material;
+        this.scene.add(mesh);
+        return mesh;
     }
 
     /**
@@ -675,6 +837,10 @@ export class GrassSystem {
                     dogHalfWid: this.config.interaction.dog.halfWid,
                     sheepHalfLen: this.config.interaction.sheep.halfLen,
                     sheepHalfWid: this.config.interaction.sheep.halfWid,
+                    visualScale: this.grassProfile?.node?.visualScale,
+                    laydownStrength: this.grassProfile?.node?.laydownStrength,
+                    maxDisplacement: this.grassProfile?.node?.maxDisplacement,
+                    shadowStrength: this.grassProfile?.node?.shadowStrength,
                 },
                 fog: {
                     color: this.config.fogColor.clone(),
@@ -693,6 +859,12 @@ export class GrassSystem {
                     alphaHash: true,
                     alphaTest: 0.06,
                 },
+                tipDampen: this.grassProfile?.node?.tipDampen,
+                backlightStrength: this.grassProfile?.node?.backlightStrength,
+                rimStrength: this.grassProfile?.node?.rimStrength,
+                hueVariation: this.grassProfile?.node?.hueVariation,
+                colorScale: this.grassProfile?.node?.colorScale,
+                grassProfile: this.grassProfileSummary,
             },
         });
         const material = materialResult.material;
@@ -1356,9 +1528,12 @@ export class GrassSystem {
         if (!this.initializationSucceeded) return { built: false, reason: 'init-failed' };
         if (createVisualGoldenRandom()) return { built: false, reason: 'visual-golden' };
         if (this._streamedCullController) return { built: false, reason: 'already-built' };
-        const clumpsPerChunk = this.isMobile
+        const rawClumpsPerChunk = this.isMobile
             ? (streamed.clumpsPerChunk?.mobile ?? 0)
             : (streamed.clumpsPerChunk?.desktop ?? 0);
+        const clumpsPerChunk = this.grassProfile
+            ? Math.max(1, Math.round(rawClumpsPerChunk * this.grassProfile.streamedClumpDensityScale))
+            : rawClumpsPerChunk;
         if (!(clumpsPerChunk > 0)) return { built: false, reason: 'zero-clumps' };
         if (streamed.grassRadius <= this.config.grassRadius) return { built: false, reason: 'radius-inside-cold' };
 
@@ -1927,6 +2102,8 @@ export class GrassSystem {
             }
         }
 
+        this.updateGroundContactMesh();
+
         // Update uniforms
         if (this.webgpuGrassBladeMaterialControls?.updateInteractors) {
             this.webgpuGrassBladeMaterialControls.updateInteractors({
@@ -1949,6 +2126,48 @@ export class GrassSystem {
             this.grassMaterial.uniforms.interactorFacings.value = this.interactorFacings;
             this.grassMaterial.uniforms.interactorCount.value = this.interactorCount;
         }
+    }
+
+    updateGroundContactMesh() {
+        const mesh = this.groundContactMesh;
+        const contact = this.grassProfile?.groundContact;
+        if (!mesh || !contact?.enabled) return;
+        if (!this._groundContactEnabled || this.interactorCount <= 0) {
+            mesh.count = 0;
+            mesh.visible = false;
+            return;
+        }
+
+        const count = Math.min(this.interactorCount, mesh.instanceMatrix.count);
+        for (let i = 0; i < count; i++) {
+            const p = i * 3;
+            const f = i * 2;
+            const x = this.interactorPositions[p];
+            const z = this.interactorPositions[p + 2];
+            const y = (this.heightfield ? this.heightfield.meshSampleY(x, z) : this.interactorPositions[p + 1]) + contact.yOffset;
+            const isSheep = this.interactorData[i] === 1;
+            const scale = isSheep ? contact.sheepScale : contact.dogScale;
+            const yaw = Math.atan2(this.interactorFacings[f], this.interactorFacings[f + 1]);
+
+            this._groundContactPosition.set(x, y, z);
+            this._groundContactQuaternion.setFromAxisAngle(this._groundContactUp, yaw);
+            this._groundContactScale.set(scale.x, 1, scale.z);
+            this._groundContactMatrix.compose(
+                this._groundContactPosition,
+                this._groundContactQuaternion,
+                this._groundContactScale
+            );
+            mesh.setMatrixAt(i, this._groundContactMatrix);
+        }
+        mesh.count = count;
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.visible = true;
+    }
+
+    setGroundContactEnabled(enabled = true) {
+        this._groundContactEnabled = enabled !== false;
+        this.updateGroundContactMesh();
+        return !!this.groundContactMesh && this._groundContactEnabled;
     }
 
     getInteractorSample(limit = 8) {
@@ -2179,7 +2398,16 @@ export class GrassSystem {
         return {
             ...this.stats,
             totalChunks: this.chunks.size,
-            effectiveBlades: this.stats.visibleClumps * this.config.bladesPerClump
+            effectiveBlades: this.stats.visibleClumps * this.config.bladesPerClump,
+            grassProfile: this.grassProfileSummary,
+            groundContact: this.groundContactMesh
+                ? {
+                    enabled: this._groundContactEnabled,
+                    drawCalls: 1,
+                    instances: this.groundContactMesh.count,
+                    trianglesPerInstance: geometryTriangleCount(this.groundContactMesh.geometry),
+                }
+                : null,
         };
     }
 
@@ -2310,6 +2538,23 @@ export class GrassSystem {
         if (this._meadowQuadMaterial) {
             this._meadowQuadMaterial.dispose();
             this._meadowQuadMaterial = null;
+        }
+
+        if (this.groundContactMesh) {
+            try { this.scene.remove(this.groundContactMesh); } catch { /* ignore */ }
+            try { this.groundContactMesh.geometry?.dispose?.(); } catch { /* ignore */ }
+            try { this.groundContactMesh.dispose?.(); } catch { /* ignore */ }
+            this.groundContactMesh = null;
+        }
+
+        if (this._groundContactMaterial) {
+            this._groundContactMaterial.dispose();
+            this._groundContactMaterial = null;
+        }
+
+        if (this._groundContactTexture) {
+            this._groundContactTexture.dispose();
+            this._groundContactTexture = null;
         }
     }
 }

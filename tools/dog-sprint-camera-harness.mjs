@@ -55,6 +55,10 @@ function parseArgs(argv) {
         maxSpikeMs: '50',
         p99Ms: '34',
         repeatedSpikeLimit: '0',
+        channel: 'chrome',
+        ui: 'off',
+        grassProfile: '',
+        waitFoliage: '0',
     };
     for (const a of argv.slice(2)) {
         const match = a.match(/^--([^=]+)(?:=(.*))?$/);
@@ -186,12 +190,26 @@ function makeTargetUrl(args) {
     url.searchParams.set('autostart', '1');
     url.searchParams.set('perfMode', '1');
     url.searchParams.set('probeRender', '1');
+    if (args.ui) url.searchParams.set('ui', args.ui);
+    if (args.grassProfile) url.searchParams.set('grassProfile', args.grassProfile);
     return url.href;
 }
 
 async function runScenario(page, args, config) {
     await page.goto(makeTargetUrl(args), { waitUntil: 'domcontentloaded', timeout: 90_000 });
     await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 120_000 });
+    const waitFoliage = args.waitFoliage === '1' || args.waitFoliage === 'true';
+    let foliageWaitTimedOut = false;
+    if (waitFoliage) {
+        await page.waitForFunction(
+            () => (window.__sdsFoliageStreaming?.completedAt ?? 0) > 0,
+            null,
+            { timeout: 120_000 },
+        ).catch(() => {
+            foliageWaitTimedOut = true;
+            console.log('[DOG-SPRINT] waitFoliage timed out or n/a; proceeding');
+        });
+    }
     await page.waitForTimeout(Number(args.warmup));
 
     const report = await page.evaluate(async ({ cameraMode, zoomPreset, durationMs, switchMs, turnRate, settleMs, route }) => {
@@ -242,8 +260,8 @@ async function runScenario(page, args, config) {
         const frameTimes = [];
         const samples = [];
         const spikes = [];
-        let last = performance.now();
-        let start = last;
+        let last = null;
+        let start = null;
         let waypointIndex = 1;
         let waypointSwitchCount = 0;
         let routeDistance = 0;
@@ -251,11 +269,16 @@ async function runScenario(page, args, config) {
 
         return await new Promise((resolve) => {
             const tick = (now) => {
-                const elapsed = now - start;
-                const dt = now - last;
+                const recording = last !== null;
+                if (!recording) {
+                    last = now;
+                    start = now;
+                }
+                const elapsed = recording ? now - start : 0;
+                const dt = recording ? now - last : 0;
                 last = now;
-                if (dt > 0) frameTimes.push(dt);
-                if (dt >= 50) spikes.push({ t: +elapsed.toFixed(1), frameMs: +dt.toFixed(3) });
+                if (recording && dt > 0) frameTimes.push(dt);
+                if (recording && dt >= 50) spikes.push({ t: +elapsed.toFixed(1), frameMs: +dt.toFixed(3) });
 
                 const probe = h.getVisualProbe?.() ?? null;
                 const dog = probe?.dog?.position ?? null;
@@ -288,7 +311,7 @@ async function runScenario(page, args, config) {
                     cc.applyYawDelta?.(turnRate * 0.08 * (dt / 1000));
                 }
 
-                if (samples.length < 160 && (samples.length === 0 || elapsed - samples[samples.length - 1].t >= 100)) {
+                if (recording && samples.length < 160 && (samples.length === 0 || elapsed - samples[samples.length - 1].t >= 100)) {
                     samples.push({
                         t: +elapsed.toFixed(1),
                         frameMs: +dt.toFixed(3),
@@ -375,6 +398,18 @@ async function runScenario(page, args, config) {
         gameMode: args.gameMode,
         renderer: args.renderer,
         effectiveRenderer,
+        foliage: await page.evaluate((waitRequested) => ({
+            waitRequested,
+            planned: window.__sdsFoliageStreaming?.planned ?? null,
+            wavesDone: window.__sdsFoliageStreaming?.wavesDone ?? null,
+            completed: (window.__sdsFoliageStreaming?.completedAt ?? 0) > 0,
+        }), waitFoliage).then((state) => ({ ...state, waitTimedOut: foliageWaitTimedOut })).catch(() => ({
+            waitRequested: waitFoliage,
+            waitTimedOut: foliageWaitTimedOut,
+            planned: null,
+            wavesDone: null,
+            completed: false,
+        })),
         ok: Object.values(checks).every(Boolean),
         thresholds,
         checks,
@@ -455,10 +490,17 @@ async function main() {
             deviceId = await ensureAndroidDevice();
             return connectAndroidChrome(args);
         })()
-        : await chromium.launch({ headless: args.headed !== '1', args: process.platform === 'win32' ? ['--use-angle=d3d11', '--enable-gpu'] : [] });
+        : await chromium.launch({
+            channel: args.channel || undefined,
+            headless: args.headed !== '1',
+            args: process.platform === 'win32' ? ['--use-angle=d3d11', '--enable-gpu'] : [],
+        });
     const context = args.target === 'android'
         ? (browser.contexts()[0] ?? await browser.newContext())
         : await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    await context.addInitScript(() => {
+        localStorage.setItem('sds:tutorialDone', '1');
+    });
     const page = await prepareSinglePage(context);
     const errors = [];
     page.on('pageerror', (err) => errors.push(err.message));
@@ -499,6 +541,7 @@ async function main() {
         routeLength: +getRouteLength(route).toFixed(3),
         durationMs: Number(args.duration),
         warmupMs: Number(args.warmup),
+        waitFoliage: args.waitFoliage === '1' || args.waitFoliage === 'true',
         switchMs: Number(args.switchMs),
         turnRate: Number(args.turnRate),
         ok: results.every((result) => result.ok) && errors.length === 0,

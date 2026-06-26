@@ -59,6 +59,11 @@ export function installGrassInteractionProofHarness(game) {
             if (!grass) return false;
             return grass.setInteractionShadowStrength(Number.isFinite(strength) ? strength : 0);
         },
+        setGroundContactEnabled(enabled = true) {
+            const grass = game.terrainBuilder?.grassSystem;
+            if (!grass?.setGroundContactEnabled) return false;
+            return grass.setGroundContactEnabled(enabled !== false);
+        },
         setGrassInteractors(entities = []) {
             const grass = game.terrainBuilder?.grassSystem;
             if (!grass) return null;
@@ -76,6 +81,7 @@ export function installGrassInteractionProofHarness(game) {
                 count: grass.interactorCount,
                 sample: grass.getInteractorSample?.(8) ?? [],
                 contract: grass.grassMaterial?.userData?.webgpuGrassBladeInteractors ?? null,
+                groundContact: grass.getStats?.().groundContact ?? null,
             };
         },
         setActorVisibility(state = {}) {

@@ -78,26 +78,27 @@ export async function bootApp(page: Page, opts: { extraQuery?: string; hash?: st
   await expect(async () => {
     const visible = await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button')).map((b) => b.textContent || '');
-      return buttons.some((t) => /Multiplayer|Solo Play|Join Room|Welcome to Sheep Dog/i.test(t));
+      return buttons.some((t) => /Play online|Create Room|Join Room/i.test(t));
     });
     expect(visible).toBe(true);
   }).toPass({ timeout: 90_000 });
 }
 
-// Dog name → en locale label used in DogSelection card <h3>. Matches the
-// translation in js/locales/en/index.js. The DogSelection card button has
-// no aria-label, so tests find it by the visible <h3> name.
-const DOG_DISPLAY_NAMES: Record<string, RegExp> = {
-  jep: /^Jep\b/,
-  pip: /^Pip\b/,
-  sally: /^Sally\b/,
-  shiloh: /^Shiloh\b/,
-  george_washington: /^George Washington\b/,
+const DOG_LABELS: Record<string, string> = {
+  jep: 'Jep',
+  pip: 'Pip',
+  sally: 'Sally',
+  shiloh: 'Shiloh',
+  george_washington: 'George Washington',
+};
+
+const DOG_PICKER_LABELS: Record<string, string> = {
+  ...DOG_LABELS,
+  george_washington: 'George',
 };
 
 /**
- * Navigate main menu → Multiplayer mode → optionally pick a specific dog
- * → confirm → MP options screen.
+ * Navigate main menu → optionally pick a specific dog → Multiplayer options screen.
  *
  * Cycle 24 Phase 4: optional `pickDog` arg drives the dog-selection step
  * so two-tab specs can assert each player's dogType propagates correctly.
@@ -106,33 +107,24 @@ export async function navigateToMultiplayer(
   page: Page,
   opts: { pickDog?: 'jep' | 'pip' | 'sally' | 'shiloh' | 'george_washington' } = {},
 ): Promise<void> {
-  // Main menu has the "Multiplayer" mode button. MenuOption renders the
-  // button with label + description as concatenated text content, so the
-  // accessible name is "Multiplayer Compete or cooperate online" (label +
-  // description). Match on the prefix "Multiplayer ".
-  const mpButton = page.getByRole('button', { name: /^Multiplayer\b/i });
-  await expect(mpButton).toBeVisible({ timeout: 60_000 });
-  await mpButton.dispatchEvent('click');
-
-  // Dog selection screen.
-  const confirm = page.getByRole('button', { name: /Confirm Selection/i });
-  await expect(confirm).toBeVisible({ timeout: 30_000 });
-
   if (opts.pickDog) {
-    const namePattern = DOG_DISPLAY_NAMES[opts.pickDog];
-    if (!namePattern) throw new Error(`navigateToMultiplayer: unknown dog ${opts.pickDog}`);
-    // The DogSelection card button has the dog name in an inner <h3>. The
-    // accessible name of the parent <button> picks that up. Stat labels
-    // (Speed/Stamina/Control) are inside StatBar, also inside the button,
-    // so the accessible name is e.g. "Pip Australian Shepherd Speed Stamina
-    // Control ...". Anchor on the dog name at the start of the name to
-    // avoid matching another card's description.
-    const card = page.getByRole('button', { name: namePattern });
-    await expect(card.first()).toBeVisible({ timeout: 15_000 });
-    await card.first().dispatchEvent('click');
+    const label = DOG_LABELS[opts.pickDog];
+    const pickerLabel = DOG_PICKER_LABELS[opts.pickDog];
+    if (!label) throw new Error(`navigateToMultiplayer: unknown dog ${opts.pickDog}`);
+    const activeDog = page.getByRole('button', { name: /^Your dog:/i });
+    const activeName = await activeDog.textContent();
+    if (!new RegExp(`\\b${label}\\b`, 'i').test(activeName || '')) {
+      await activeDog.dispatchEvent('click');
+      const card = page.locator('button').filter({ hasText: new RegExp(`^\\s*${pickerLabel}\\s*$`, 'i') });
+      await expect(card.first()).toBeVisible({ timeout: 15_000 });
+      await card.first().dispatchEvent('click');
+      await expect(page.getByRole('button', { name: new RegExp(`^Your dog: ${label}\\b`, 'i') })).toBeVisible({ timeout: 15_000 });
+    }
   }
 
-  await confirm.dispatchEvent('click');
+  const mpButton = page.getByRole('button', { name: /Play online/i });
+  await expect(mpButton).toBeVisible({ timeout: 60_000 });
+  await mpButton.dispatchEvent('click');
 
   // MultiplayerOptions screen has the Create Room / Join Room / Quick Match
   // panel. Wait for "Create Room" to appear.

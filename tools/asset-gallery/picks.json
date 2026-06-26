@@ -1,21 +1,21 @@
 {
   "dir": "tools/asset-gallery/staging",
-  "savedAt": "2026-06-11T00:00:00.000Z",
-  "_note": "Cycle 91 tree re-ground (ez-tree main @48dc193, preset-pure structure, real PBR bark, green aspen leaf swap). Picked from cycle91-validation/asset-survey/staging/ survey shots; Matt reviews the survey and can swap any pick (edit canonicalName, run `node tools/asset-gen/integrate.mjs --compress`). Rocks unchanged from the Cycle 16 gallery review. LOD1s are produced from the LOD0 picks by bake-tree-lod1.mjs (meshopt), not gallery picks, since Cycle 91. Prior picks preserved in git history.",
+  "savedAt": "2026-06-25T00:00:00.000Z",
+  "_note": "Cycle 105 tree refresh: Matt approved the leafAtlas EZ-Tree candidates from cycle105-validation/tree-source-survey/review-gallery.html. tree1/tree2 now use a validation bake from ez-tree leafAtlas branch 6e5fd44, with LOD1s derived by bake-tree-lod1.mjs and impostors rebaked through the current Kiln/Pixel Forge CLI. Candidate ash_small_double is visually approved as a future third-species/reserve candidate, but is not live because adding tree3 requires shared TreePlacement authorization. Rocks unchanged from the Cycle 16 gallery review.",
   "picks": [
     {
-      "path": "tools/asset-gallery/staging/trees/aspen_small_double_lowcanopy_green.glb",
+      "path": "cycle105-validation/tree-source-survey/ez-leafAtlas-candidates/aspen_small_double_lowcanopy_green.glb",
       "name": "aspen_small_double_lowcanopy_green.glb",
       "canonicalName": "tree1.glb",
-      "_role": "slim pasture silhouette (3616 tris, green ash-leaf swap on aspen structure, lowered canopy)",
+      "_role": "approved slim pasture replacement (3616 tris, leafAtlas green canopy on aspen structure, lowered canopy)",
       "tris": 3616,
       "bbox": { "sy": 1 }
     },
     {
-      "path": "tools/asset-gallery/staging/trees/oak_medium_single.glb",
+      "path": "cycle105-validation/tree-source-survey/ez-leafAtlas-candidates/oak_medium_single.glb",
       "name": "oak_medium_single.glb",
       "canonicalName": "tree2.glb",
-      "_role": "broad canopy anchor (8486 tris, preset-pure mature oak)",
+      "_role": "approved broad canopy replacement (8486 tris, leafAtlas mature oak)",
       "tris": 8486,
       "bbox": { "sy": 1 }
     },

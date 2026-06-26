@@ -126,6 +126,11 @@ describe('buildColdFoliageCoverage (Cycle 88 Phase 2)', () => {
         expect(diag.mode).toBe('full');
         expect(diag.scatteredWaves).toBe(NSL_PLANNED_WAVES);
         expect(diag.trees).toBeGreaterThan(500);
+        expect(diag.scatterCompletedAt).toBeGreaterThan(0);
+        expect(diag.coldImpostorsBuiltAt).toBeGreaterThan(0);
+        expect(diag.completedAt).toBeGreaterThanOrEqual(diag.coldImpostorsBuiltAt);
+        expect(diag.farImpostorTypesScheduled).toBe(0);
+        expect(diag.farImpostorTypesActive).toEqual([]);
         // At most tilesX azimuth batches per tree type, 2 types.
         expect(diag.meshes).toBeGreaterThan(0);
         expect(diag.meshes).toBeLessThanOrEqual(8);

@@ -63,7 +63,10 @@ export class StructureBuilder {
      * @private
      */
     _surfaceToTerrain(root) {
-        if (!this.heightfield || !root) return;
+        if (!root) return;
+        root.updateMatrixWorld(true);
+        this._instanceFenceSegments(root);
+        if (!this.heightfield) return;
         root.updateMatrixWorld(true);
         const liftSamples = [];
         const slopeSamples = [];
@@ -93,6 +96,151 @@ export class StructureBuilder {
         for (const node of slopeSamples) {
             this._slopeRailToTerrain(node);
         }
+    }
+
+    _instanceFenceSegments(root) {
+        const segments = [];
+        const hasTerrain = !!this.heightfield;
+        root.traverse(node => {
+            const spec = node.userData?.fenceInstancingSpec;
+            if (!spec) return;
+            if (node.userData.fenceInstanced && node.userData.fenceInstancedWithTerrain === hasTerrain) return;
+            segments.push(node);
+        });
+
+        for (const segment of segments) {
+            this._buildInstancedFenceSegment(segment);
+        }
+    }
+
+    _buildInstancedFenceSegment(segment) {
+        const spec = segment.userData?.fenceInstancingSpec;
+        const postMesh = spec?.postSource?.mesh;
+        const railMesh = spec?.railSource?.mesh;
+        if (!spec || !postMesh?.geometry || !railMesh?.geometry) return;
+
+        for (const child of [...segment.children]) {
+            child.traverse?.(node => {
+                if (node.geometry) node.geometry.dispose();
+            });
+            segment.remove(child);
+        }
+
+        segment.updateMatrixWorld(true);
+        const parentMatrix = segment.matrixWorld;
+        const parentInv = new THREE.Matrix4().copy(parentMatrix).invert();
+        const postInstances = new THREE.InstancedMesh(
+            postMesh.geometry.clone(),
+            postMesh.material,
+            spec.postCount
+        );
+        postInstances.name = 'Fence_Post_Instances';
+        postInstances.castShadow = true;
+        postInstances.receiveShadow = true;
+
+        const railCount = (spec.postCount - 1) * spec.railHeights.length;
+        const railInstances = new THREE.InstancedMesh(
+            railMesh.geometry.clone(),
+            railMesh.material,
+            railCount
+        );
+        railInstances.name = 'Fence_Rail_Instances';
+        railInstances.castShadow = true;
+        railInstances.receiveShadow = true;
+
+        const postRotation = spec.orientation === 'vertical'
+            ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
+            : new THREE.Quaternion();
+        const unitScale = new THREE.Vector3(1, 1, 1);
+        const baseRailAxis = new THREE.Vector3(1, 0, 0);
+        const matrix = new THREE.Matrix4();
+        const instanceMatrix = new THREE.Matrix4();
+        const local = new THREE.Vector3();
+        const world = new THREE.Vector3();
+        const liftedLocal = new THREE.Vector3();
+        const aLocal = new THREE.Vector3();
+        const bLocal = new THREE.Vector3();
+        const aWorld = new THREE.Vector3();
+        const bWorld = new THREE.Vector3();
+        const aLifted = new THREE.Vector3();
+        const bLifted = new THREE.Vector3();
+        const mid = new THREE.Vector3();
+        const dir = new THREE.Vector3();
+        const railRotation = new THREE.Quaternion();
+        const railScale = new THREE.Vector3();
+
+        const setSegmentPoint = (target, offset, y = 0) => {
+            if (spec.orientation === 'horizontal') {
+                target.set(offset, y, 0);
+            } else {
+                target.set(0, y, offset);
+            }
+        };
+        const terrainLocalPoint = (target, sourceLocal, baseY = 0) => {
+            if (!this.heightfield) {
+                target.copy(sourceLocal);
+                target.y = baseY;
+                return target;
+            }
+            world.copy(sourceLocal).applyMatrix4(parentMatrix);
+            world.y = this.heightfield.sample(world.x, world.z) + baseY;
+            return target.copy(world).applyMatrix4(parentInv);
+        };
+
+        for (let i = 0; i < spec.postCount; i++) {
+            const offset = i * spec.actualSpacing - spec.length / 2;
+            setSegmentPoint(local, offset);
+            terrainLocalPoint(liftedLocal, local);
+            matrix.compose(liftedLocal, postRotation, unitScale);
+            instanceMatrix.multiplyMatrices(matrix, spec.postSource.localMatrix);
+            postInstances.setMatrixAt(i, instanceMatrix);
+        }
+
+        let railIndex = 0;
+        for (const height of spec.railHeights) {
+            for (let i = 0; i < spec.postCount - 1; i++) {
+                const aOffset = i * spec.actualSpacing - spec.length / 2;
+                const bOffset = aOffset + spec.actualSpacing;
+                setSegmentPoint(aLocal, aOffset);
+                setSegmentPoint(bLocal, bOffset);
+
+                if (this.heightfield) {
+                    aWorld.copy(aLocal).applyMatrix4(parentMatrix);
+                    bWorld.copy(bLocal).applyMatrix4(parentMatrix);
+                    aWorld.y = this.heightfield.sample(aWorld.x, aWorld.z) + height;
+                    bWorld.y = this.heightfield.sample(bWorld.x, bWorld.z) + height;
+                    aLifted.copy(aWorld).applyMatrix4(parentInv);
+                    bLifted.copy(bWorld).applyMatrix4(parentInv);
+                } else {
+                    aLifted.copy(aLocal);
+                    bLifted.copy(bLocal);
+                    aLifted.y = height;
+                    bLifted.y = height;
+                }
+
+                mid.copy(aLifted).add(bLifted).multiplyScalar(0.5);
+                dir.copy(bLifted).sub(aLifted).normalize();
+                railRotation.setFromUnitVectors(baseRailAxis, dir);
+                railScale.set(spec.actualSpacing / spec.railModelLength, 1, 1);
+                matrix.compose(mid, railRotation, railScale);
+                instanceMatrix.multiplyMatrices(matrix, spec.railSource.localMatrix);
+                railInstances.setMatrixAt(railIndex++, instanceMatrix);
+            }
+        }
+
+        postInstances.instanceMatrix.needsUpdate = true;
+        railInstances.instanceMatrix.needsUpdate = true;
+        postInstances.computeBoundingBox?.();
+        postInstances.computeBoundingSphere?.();
+        railInstances.computeBoundingBox?.();
+        railInstances.computeBoundingSphere?.();
+        segment.add(postInstances, railInstances);
+        segment.userData.fenceInstanced = true;
+        segment.userData.fenceInstancedWithTerrain = !!this.heightfield;
+        segment.userData.fenceInstanceCounts = {
+            posts: spec.postCount,
+            rails: railCount
+        };
     }
 
     /**
@@ -348,14 +496,20 @@ export class StructureBuilder {
         //     and hinged door stay coplanar on a slope. ---
         const gate = new THREE.Group();
         gate.name = 'HomesteadGateAssembly';
-        gate.add(this.fencePresets.createGateStructure(width, 'horizontal'));
-        const door = this._buildGateDoor(width);
-        door.position.set(-width / 2, 0, 0);
-        gate.add(door);
+        const gateStructure = this.fencePresets.createGateStructure(width, 'horizontal');
+        const authoredGateAsset = !!gateStructure.getObjectByName?.('Gate_Assembly');
+        let door = authoredGateAsset ? this._buildAuthoredGateDoor(gateStructure) : null;
+        if (door) {
+            gate.add(door);
+        } else {
+            door = this._buildGateDoor(width);
+            door.position.set(-width / 2, 0, 0);
+            gate.add(door);
+        }
         this._homesteadDoor = door;
         this._homesteadGateOpen = true;
         this._homesteadDoorOpenAngle = -Math.PI * 0.58;
-        door.rotation.y = this._homesteadDoorOpenAngle; // start open at dawn
+        if (door) this._setHomesteadDoorImmediate(true); // start open at dawn
         gate.position.set(g.x, 0, g.z);
         gate.rotation.y = (facingDeg * Math.PI) / 180;
         gate.userData.surfaceToTerrain = true; // single lift for the whole gate
@@ -394,6 +548,41 @@ export class StructureBuilder {
         this._homesteadGate = group;
         console.log(`[BUILD] Homestead enclosure at pen (${(pen?.center?.x ?? g.x).toFixed(0)}, ${(pen?.center?.z ?? g.z).toFixed(0)}) r${pen?.radius ?? 0}, gate w${width}`);
         return group;
+    }
+
+    _buildAuthoredGateDoor(gateStructure) {
+        const leftLeaf = this._findParentWithChildMesh(gateStructure, 'Mesh_LeftGateWood');
+        const rightLeaf = this._findParentWithChildMesh(gateStructure, 'Mesh_RightGateWood');
+        if (!leftLeaf || !rightLeaf) return null;
+
+        leftLeaf.name = 'HomesteadGateDoorLeft';
+        rightLeaf.name = 'HomesteadGateDoorRight';
+
+        const controller = new THREE.Group();
+        controller.name = 'HomesteadGateAssetDoor';
+        controller.add(gateStructure);
+        controller.userData.gateLeaves = [
+            {
+                node: leftLeaf,
+                closed: 0,
+                open: leftLeaf.rotation.y,
+            },
+            {
+                node: rightLeaf,
+                closed: 0,
+                open: rightLeaf.rotation.y,
+            },
+        ];
+        return controller;
+    }
+
+    _findParentWithChildMesh(root, meshName) {
+        let found = null;
+        root.traverse(node => {
+            if (found || node.name !== meshName) return;
+            found = node.parent ?? null;
+        });
+        return found;
     }
 
     /**
@@ -436,7 +625,7 @@ export class StructureBuilder {
         if (!this._homesteadDoor) return;
         this._homesteadGateOpen = !!open;
         if (this._reducedMotion) {
-            this._homesteadDoor.rotation.y = open ? this._homesteadDoorOpenAngle : 0;
+            this._setHomesteadDoorImmediate(open);
         }
     }
 
@@ -448,11 +637,34 @@ export class StructureBuilder {
      */
     updateGate(deltaTime) {
         if (!this._homesteadDoor || this._reducedMotion) return;
+        const leaves = this._homesteadDoor.userData?.gateLeaves;
+        if (Array.isArray(leaves) && leaves.length > 0) {
+            const k = Math.min(1, (Number.isFinite(deltaTime) ? deltaTime : 0.016) * 3);
+            for (const leaf of leaves) {
+                const target = this._homesteadGateOpen ? leaf.open : leaf.closed;
+                const cur = leaf.node.rotation.y;
+                if (Math.abs(target - cur) > 1e-4) {
+                    leaf.node.rotation.y = cur + (target - cur) * k;
+                }
+            }
+            return;
+        }
         const target = this._homesteadGateOpen ? this._homesteadDoorOpenAngle : 0;
         const cur = this._homesteadDoor.rotation.y;
         if (Math.abs(target - cur) <= 1e-4) return;
         const k = Math.min(1, (Number.isFinite(deltaTime) ? deltaTime : 0.016) * 3);
         this._homesteadDoor.rotation.y = cur + (target - cur) * k;
+    }
+
+    _setHomesteadDoorImmediate(open) {
+        const leaves = this._homesteadDoor.userData?.gateLeaves;
+        if (Array.isArray(leaves) && leaves.length > 0) {
+            for (const leaf of leaves) {
+                leaf.node.rotation.y = open ? leaf.open : leaf.closed;
+            }
+            return;
+        }
+        this._homesteadDoor.rotation.y = open ? this._homesteadDoorOpenAngle : 0;
     }
 
     /**

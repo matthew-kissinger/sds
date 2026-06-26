@@ -99,6 +99,9 @@ export function createWebGpuGrassNodeMaterialFactories(webGpuModules, options = 
           ?? context.interactionLaydownStrength
           ?? bladeDefaults.interactionLaydownStrength
           ?? (context.isMobile ? 0.95 : 0.85),
+        interactionMaxDisplacement: interaction.maxDisplacement
+          ?? context.interactionMaxDisplacement
+          ?? bladeDefaults.interactionMaxDisplacement,
         interactionShadowStrength: interaction.shadowStrength
           ?? context.interactionShadowStrength
           ?? bladeDefaults.interactionShadowStrength

@@ -6,7 +6,7 @@ export function createWebGpuGrassBladeNodeMaterial(
   { MeshBasicNodeMaterial, MeshStandardNodeMaterial, DoubleSide, Vector2 = ThreeVector2, Vector3 = ThreeVector3, TSL },
   grassBlade
 ) {
-  const { abs, attribute, cameraPosition, clamp, cos, dot, float, fract, instanceIndex, length, max, mix, normalize, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
+  const { abs, attribute, cameraPosition, clamp, cos, dot, float, fract, instanceIndex, length, max, mix, normalize, positionGeometry, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
   const linearColor = (color) => color;
   const vector2 = (value) => (
     typeof Vector2 === 'function'
@@ -18,7 +18,7 @@ export function createWebGpuGrassBladeNodeMaterial(
       ? new Vector3(value[0], value[1], value[2])
       : value
   );
-  const height01 = clamp(positionLocal.y.div(Math.max(grassBlade.bladeHeight, 0.001)), 0.0, 1.0);
+  const height01 = clamp(positionGeometry.y.div(Math.max(grassBlade.bladeHeight, 0.001)), 0.0, 1.0);
   const windDirection = uniform(vector2(grassBlade.windDirection));
   const windStrength = uniform(grassBlade.windStrength);
   const sunDirection = uniform(vector3(grassBlade.sunDirection));
@@ -59,7 +59,9 @@ export function createWebGpuGrassBladeNodeMaterial(
   } else {
     instanceWorldOffset = attribute('instanceWorldOffset', 'vec3');
   }
-  const bladeWorld = instanceWorldOffset.add(positionLocal);
+  const bladeWorld = foldInstanceTransform
+    ? foldInstanceTransform(positionGeometry)
+    : instanceWorldOffset.add(positionGeometry);
   const interactionRadius = uniform(grassBlade.interactionRadius ?? 2.2);
   const interactionStrength = uniform(grassBlade.interactionStrength ?? 0.6);
   const sheepInteractionRadius = uniform(grassBlade.sheepInteractionRadius ?? 2.5);
@@ -228,10 +230,12 @@ export function createWebGpuGrassBladeNodeMaterial(
   const totalDisp = windDisp.add(interactionDisp);
   const laydownMask = smoothstep(0.10, 0.78, height01);
   const interactionLaydown = bodyFalloffTotal.mul(-interactionLaydownStrength).mul(laydownMask);
-  const localDisplaced = positionLocal.add(vec3(totalDisp.x, interactionLaydown, totalDisp.y));
+  const displacement = vec3(totalDisp.x, interactionLaydown, totalDisp.y);
+  const localDisplaced = positionGeometry.add(displacement);
+  const transformedDisplaced = positionLocal.add(displacement);
   // Cycle 81: fold T*R*S into the position when compute-culled (instanceMatrix is
   // identity on the consolidated mesh); otherwise keep local and let instanceMatrix apply.
-  material.positionNode = foldInstanceTransform ? foldInstanceTransform(localDisplaced) : localDisplaced;
+  material.positionNode = foldInstanceTransform ? foldInstanceTransform(localDisplaced) : transformedDisplaced;
   if (material.isMeshStandardNodeMaterial) {
     material.roughnessNode = float(0.96);
     material.metalnessNode = float(0.0);
@@ -280,7 +284,7 @@ export function createWebGpuGrassBladeNodeMaterial(
     maxNodeInteractors,
     source: 'dog-plus-nearest-sheep-unrolled',
     displacement: 'anchored-fullblade-bend-along-oval-normal-plus-laydown',
-    coordinateSource: 'instanceWorldOffset-instanced-attribute',
+    coordinateSource: 'instanceWorldOffset-plus-positionGeometry',
     overlapMode: 'dominant-contact-capped-vector',
     visualScale: interactionVisualScaleValue,
     maxDisplacement: interactionMaxDisplacementValue,

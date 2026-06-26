@@ -69,6 +69,7 @@ const RENDERER_MODE = args.renderer ?? 'webgl';
 const REQUESTED_SUN = args.sun ?? null;
 const UI_MODE = args.ui ?? null;
 const NATIVE_TREE_IMPOSTORS = args.nativeTreeImpostors ?? null;
+const GRASS_PROFILE = args.grassProfile ?? null;
 const OUT_PATH = args.out ? resolve(ROOT, args.out) : RESULTS_PATH;
 const SCREENSHOTS = !!args.screenshots;
 const VISUAL_ONLY = !!args.visualOnly;
@@ -217,6 +218,7 @@ async function seedIdentity(context) {
             isRegistered: false
         };
         localStorage.setItem('playerIdentity', JSON.stringify(identity));
+        localStorage.setItem('sds:tutorialDone', '1');
     });
 }
 
@@ -233,6 +235,9 @@ async function navigateAndWait(page, cfg) {
     }
     if (REQUESTED_SUN !== null) {
         url.searchParams.set('sun', String(REQUESTED_SUN));
+    }
+    if (GRASS_PROFILE) {
+        url.searchParams.set('grassProfile', String(GRASS_PROFILE));
     }
     if (UI_MODE) {
         url.searchParams.set('ui', String(UI_MODE));

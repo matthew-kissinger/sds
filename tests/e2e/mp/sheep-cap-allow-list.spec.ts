@@ -54,8 +54,7 @@ test.describe('Cycle 24 Phase 1 — sheep cap allow-list', () => {
       // Open Create Room form.
       await page.getByRole('button', { name: /Create Room/i }).first().dispatchEvent('click');
 
-      // Sheep count is the 3rd <select>.
-      const sheepSelect = page.locator('select').nth(2);
+      const sheepSelect = page.locator('select').filter({ has: page.locator('option[value="3000"]') });
       await expect(sheepSelect).toBeVisible({ timeout: 10_000 });
 
       const warningRegex = /Mobile players will be unable to join/i;

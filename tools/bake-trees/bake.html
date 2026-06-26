@@ -54,7 +54,11 @@ function applyTweaks(target, tweaks) {
 async function loadScaledTexture(url, targetSize, { srgb = false } = {}) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`texture fetch failed: ${url} (${res.status})`);
-    const bitmap = await createImageBitmap(await res.blob());
+    return loadScaledTextureFromBlob(await res.blob(), targetSize, { srgb });
+}
+
+async function loadScaledTextureFromBlob(blob, targetSize, { srgb = false } = {}) {
+    const bitmap = await createImageBitmap(blob);
     const size = targetSize ?? bitmap.width;
     const cnv = document.createElement('canvas');
     cnv.width = size;
@@ -68,6 +72,12 @@ async function loadScaledTexture(url, targetSize, { srgb = false } = {}) {
     if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
     tex.flipY = true;
     return tex;
+}
+
+async function fetchOptionalBlob(url) {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return res.blob();
 }
 
 const barkCache = new Map();
@@ -93,14 +103,90 @@ async function loadBarkMaps(barkType, targetSize) {
 }
 
 const leafCache = new Map();
-async function loadLeafMap(leafType, targetSize) {
+const LEAF_ATLASES = {
+    LeafSet004: { cols: 3, rows: 2, rotation: 0 },
+    LeafSet006: { cols: 2, rows: 3, rotation: 90 },
+    LeafSet008: { cols: 2, rows: 3, rotation: 90 },
+    LeafSet009: { cols: 3, rows: 2, rotation: 0 },
+    LeafSet010: { cols: 2, rows: 2, rotation: 0 },
+    LeafSet014: { cols: 3, rows: 2, rotation: 0 },
+    LeafSet017: { cols: 2, rows: 3, rotation: 0 },
+    LeafSet019: { cols: 1, rows: 3, rotation: 270 },
+    LeafSet022: { cols: 3, rows: 2, rotation: 0 },
+    LeafSet023: { cols: 2, rows: 3, rotation: 90 },
+    LeafSet024: { cols: 3, rows: 3, rotation: 0 },
+    LeafSet027: { cols: 3, rows: 3, rotation: 0 },
+    LeafSet029: { cols: 3, rows: 3, rotation: 0 },
+    LeafSet030: { cols: 4, rows: 4, rotation: 270 },
+};
+const LEGACY_LEAF_REMAP = {
+    ash: 'LeafSet014',
+    aspen: 'LeafSet022',
+    oak: 'LeafSet024',
+    pine: 'LeafSet019',
+};
+
+async function loadCompositeLeafTexture(leafType, targetSize) {
+    const meta = LEAF_ATLASES[leafType];
+    if (!meta) return null;
+    const dir = `${leafType}_1K-JPG`;
+    const base = `/ez-tree/src/app/public/textures/leaves/${dir}/${dir}`;
+    const [colorBlob, opacityBlob] = await Promise.all([
+        fetchOptionalBlob(`${base}_Color.jpg`),
+        fetchOptionalBlob(`${base}_Opacity.jpg`),
+    ]);
+    if (!colorBlob || !opacityBlob) return null;
+    const [color, opacity] = await Promise.all([
+        createImageBitmap(colorBlob),
+        createImageBitmap(opacityBlob),
+    ]);
+    const size = targetSize ?? color.width;
+    const cnv = document.createElement('canvas');
+    cnv.width = size;
+    cnv.height = size;
+    const ctx = cnv.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(color, 0, 0, size, size);
+    const out = ctx.getImageData(0, 0, size, size);
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(opacity, 0, 0, size, size);
+    const mask = ctx.getImageData(0, 0, size, size);
+    color.close();
+    opacity.close();
+    for (let i = 0; i < out.data.length; i += 4) {
+        const a = mask.data[i];
+        if (a < 8) {
+            out.data[i] = 0;
+            out.data[i + 1] = 0;
+            out.data[i + 2] = 0;
+            out.data[i + 3] = 0;
+        } else {
+            out.data[i + 3] = a;
+        }
+    }
+    ctx.putImageData(out, 0, 0);
+    const tex = new THREE.CanvasTexture(cnv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.flipY = true;
+    return { map: tex, atlas: meta };
+}
+
+async function loadLeafTextureBundle(leafType, targetSize) {
     const key = `${leafType}@${targetSize}`;
     if (leafCache.has(key)) return leafCache.get(key);
-    const tex = await loadScaledTexture(
-        `/ez-tree/src/app/public/textures/leaves/${leafType}.png`, targetSize, { srgb: true },
-    );
-    leafCache.set(key, tex);
-    return tex;
+    const legacyBlob = await fetchOptionalBlob(`/ez-tree/src/app/public/textures/leaves/${leafType}.png`);
+    if (legacyBlob) {
+        const tex = await loadScaledTextureFromBlob(legacyBlob, targetSize, { srgb: true });
+        const bundle = { map: tex, atlas: null };
+        leafCache.set(key, bundle);
+        return bundle;
+    }
+    const resolved = LEAF_ATLASES[leafType] ? leafType : LEGACY_LEAF_REMAP[leafType];
+    const bundle = resolved ? await loadCompositeLeafTexture(resolved, targetSize) : null;
+    if (!bundle) throw new Error(`leaf texture fetch failed for ${leafType}`);
+    leafCache.set(key, bundle);
+    return bundle;
 }
 
 /**
@@ -138,7 +224,12 @@ window.__bakeTree = async function bakeTree(recipe) {
     }
     const leafType = recipe.leafType ?? tree.options.leaves.type;
     if (leafType) {
-        tree.options.leaves.map = await loadLeafMap(leafType, recipe.leafTextureSize ?? 512);
+        const leaf = await loadLeafTextureBundle(leafType, recipe.leafTextureSize ?? 512);
+        tree.options.leaves.map = leaf.map;
+        if (tree.options.leaves.maps) tree.options.leaves.maps.color = leaf.map;
+        if (leaf.atlas && tree.options.leaves.atlas) {
+            Object.assign(tree.options.leaves.atlas, leaf.atlas);
+        }
     }
 
     tree.generate();

@@ -18,6 +18,11 @@ describe('ktx2Loader singleton', () => {
         expect(initKtx2Loader(undefined)).toBe(null);
     });
 
+    it('returns null for renderer-shaped test doubles before support detection is available', () => {
+        expect(initKtx2Loader({})).toBe(null);
+        expect(initKtx2Loader({ isWebGPURenderer: true })).toBe(null);
+    });
+
     it('getKtx2Loader resolves null before any init', async () => {
         await expect(getKtx2Loader()).resolves.toBe(null);
     });

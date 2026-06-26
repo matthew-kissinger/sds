@@ -3,7 +3,7 @@
 import { Vector2 as ThreeVector2 } from 'three';
 
 export function createWebGpuTreeBranchNodeMaterial({ MeshStandardNodeMaterial, TSL }, treeBranch = {}) {
-  const { clamp, float, length, mix, normalize, positionLocal, positionView, positionWorld, sin, smoothstep, texture, time, uniform, vec3 } = TSL;
+  const { clamp, float, length, mix, normalize, positionGeometry, positionLocal, positionView, positionWorld, sin, smoothstep, texture, time, uniform, vec3 } = TSL;
   const linearColor = (color) => color.map((value) => (
     value <= 0.04045
       ? value / 12.92
@@ -20,7 +20,7 @@ export function createWebGpuTreeBranchNodeMaterial({ MeshStandardNodeMaterial, T
   const windStrength = uniform(treeBranch.windStrength ?? 0.38);
   const windDir = normalize(windDirectionNode);
   const treeRange = Math.max((treeBranch.treeTopY ?? 0.525) - (treeBranch.treeBaseY ?? -0.525), 0.001);
-  const y01 = clamp(positionLocal.y.sub(treeBranch.treeBaseY ?? -0.525).div(treeRange), 0.0, 1.0);
+  const y01 = clamp(positionGeometry.y.sub(treeBranch.treeBaseY ?? -0.525).div(treeRange), 0.0, 1.0);
   const branchWeight = smoothstep(0.32, 1.0, y01).mul(smoothstep(0.32, 1.0, y01));
   const gustA = sin(positionWorld.x.mul(0.04).add(positionWorld.z.mul(0.034)).sub(time.mul(0.84)));
   const gustB = sin(positionWorld.x.mul(0.018).add(positionWorld.z.mul(0.022)).add(1.4).sub(time.mul(0.62)));

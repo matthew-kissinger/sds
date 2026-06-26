@@ -78,16 +78,17 @@ describe('webgpu grass material adapter', () => {
         }
     });
 
-    it('leaves the default grass blade material untouched without flag and factories', () => {
+    it('creates the production hybrid grass blade material without WebGPU factories', () => {
         const scene = new THREE.Scene();
         const grass = new GrassSystem(scene);
         const material = grass.createGrassMaterial();
 
         try {
             expect(material.isShaderMaterial).toBe(true);
+            expect(grass.grassProfileSummary.id).toBe('sds-hybrid-v1');
             expect(material.uniforms.baseColor.value.getHex()).toBe(grass.config.baseColor.getHex());
             expect(material.uniforms.windStrength.value).toBe(grass.config.windStrength);
-            expect(material.uniforms.grassFadeStart.value).toBe(70);
+            expect(material.uniforms.grassFadeStart.value).toBe(58);
             expect(grass.webgpuGrassBladeMaterialSummary).toMatchObject({
                 kind: 'grass-blade',
                 applied: false,
@@ -95,6 +96,78 @@ describe('webgpu grass material adapter', () => {
             });
         } finally {
             material.dispose();
+        }
+    });
+
+    it('can force the legacy grass profile for comparisons', () => {
+        const grass = new GrassSystem(new THREE.Scene(), false, null, null, null, {
+            search: '?grassProfile=legacy',
+        });
+
+        expect(grass.grassProfileSummary).toBeNull();
+        expect(grass.config.clumpsPerChunk).toBe(1800);
+        expect(grass.config.bladesPerClump).toBe(7);
+        expect(grass.config.bladeHeight).toBeCloseTo(1.0);
+        expect(grass.config.grassFadeStart).toBe(70);
+        expect(grass.config.grassFadeEnd).toBe(260);
+    });
+
+    it('can explicitly opt into the SDS hybrid sparse grass profile', () => {
+        const grass = new GrassSystem(new THREE.Scene(), false, null, null, null, {
+            search: '?grassProfile=sds-hybrid-v1',
+        });
+
+        expect(grass.grassProfileSummary).toMatchObject({
+            id: 'sds-hybrid-v1',
+            clumpDensityScale: 0.68,
+            streamedClumpDensityScale: 0.58,
+            bladesPerClump: 5,
+            sheepFootprint: { halfLen: 0.7, halfWid: 0.48, falloff: 0.82 },
+            groundContact: { enabled: true, opacity: 0.16 },
+        });
+        expect(grass.config.clumpsPerChunk).toBe(1224);
+        expect(grass.config.bladesPerClump).toBe(5);
+        expect(grass.config.bladeHeight).toBeCloseTo(0.9);
+        expect(grass.config.bladeWidth).toBeCloseTo(0.145);
+        expect(grass.config.sheepInteractionRadius).toBeCloseTo(1.05);
+        expect(grass.config.sheepInteractionStrength).toBeCloseTo(0.58);
+        expect(grass.getStats().grassProfile.id).toBe('sds-hybrid-v1');
+    });
+
+    it('creates an opt-in hybrid ground contact mesh for the SDS sparse profile', () => {
+        const scene = new THREE.Scene();
+        const grass = new GrassSystem(scene, false, null, {
+            meshSampleY: () => 0.5,
+        }, null, {
+            search: '?grassProfile=sds-hybrid-v1',
+        });
+
+        const mesh = grass.createGroundContactMesh();
+        try {
+            expect(mesh?.isInstancedMesh).toBe(true);
+            expect(scene.children).toContain(mesh);
+            expect(mesh.count).toBe(0);
+
+            grass.initializationSucceeded = true;
+            grass.updateInteractors([
+                { position: { x: 1, y: 0, z: 2 }, type: 'dog', currentRotation: Math.PI / 4 },
+                { position: { x: 3, y: 0, z: 4 }, type: 'sheep', facingDirection: Math.PI },
+            ]);
+
+            expect(mesh.count).toBe(2);
+            expect(mesh.visible).toBe(true);
+            expect(grass.getStats().groundContact).toMatchObject({
+                enabled: true,
+                drawCalls: 1,
+                instances: 2,
+                trianglesPerInstance: 2,
+            });
+
+            expect(grass.setGroundContactEnabled(false)).toBe(false);
+            expect(mesh.count).toBe(0);
+            expect(mesh.visible).toBe(false);
+        } finally {
+            grass.dispose();
         }
     });
 
@@ -212,7 +285,12 @@ describe('webgpu grass material adapter', () => {
             expect(contexts[0].interaction.facings).toBe(grass.interactorFacings);
             expect(contexts[0].interaction.sheepRadius).toBe(grass.config.sheepInteractionRadius);
             expect(contexts[0].interaction.sheepStrength).toBe(grass.config.sheepInteractionStrength);
-            expect(contexts[0].fade).toEqual({ start: 70, end: 260, strength: 1 });
+            expect(contexts[0].fade).toEqual({
+                start: grass.config.grassFadeStart,
+                end: grass.config.grassFadeEnd,
+                strength: 1,
+            });
+            expect(contexts[0].grassProfile.id).toBe('sds-hybrid-v1');
             expect(contexts[0].material).toMatchObject({
                 side: THREE.FrontSide,
                 transparent: false,
@@ -221,6 +299,37 @@ describe('webgpu grass material adapter', () => {
                 alphaHash: true,
                 alphaTest: 0.06,
             });
+        } finally {
+            material.dispose();
+        }
+    });
+
+    it('passes the SDS hybrid profile to WebGPU grass blade factories', () => {
+        const contexts = [];
+        const grass = new GrassSystem(new THREE.Scene(), false, null, null, null, {
+            search: '?renderer=webgpu&webgpuGrass=1&grassProfile=sds-hybrid-v1',
+            webgpuGrassFactories: {
+                createGrassBladeMaterial: (context) => {
+                    contexts.push(context);
+                    return createMaterial('webgpu-grass-blade-profile');
+                },
+            },
+        });
+
+        const material = grass.createGrassMaterial();
+        try {
+            expect(material.name).toBe('webgpu-grass-blade-profile');
+            expect(contexts).toHaveLength(1);
+            expect(contexts[0].grassProfile.id).toBe('sds-hybrid-v1');
+            expect(contexts[0].geometry.bladeHeight).toBeCloseTo(0.9);
+            expect(contexts[0].interaction.visualScale).toBeCloseTo(7.1);
+            expect(contexts[0].interaction.laydownStrength).toBeCloseTo(1.05);
+            expect(contexts[0].interaction.maxDisplacement).toBeCloseTo(1.35);
+            expect(contexts[0].interaction.shadowStrength).toBeCloseTo(0.18);
+            expect(contexts[0].interaction.sheepHalfLen).toBeCloseTo(0.7);
+            expect(contexts[0].interaction.sheepHalfWid).toBeCloseTo(0.48);
+            expect(contexts[0].tipDampen).toBeCloseTo(0.44);
+            expect(contexts[0].rimStrength).toBeCloseTo(0.14);
         } finally {
             material.dispose();
         }
@@ -265,18 +374,18 @@ describe('webgpu grass material adapter', () => {
                 maxNodeInteractors: 4,
                 source: 'dog-plus-nearest-sheep-unrolled',
                 displacement: 'anchored-fullblade-bend-along-oval-normal-plus-laydown',
-                coordinateSource: 'instanceWorldOffset-instanced-attribute',
+                coordinateSource: 'instanceWorldOffset-plus-positionGeometry',
                 overlapMode: 'dominant-contact-capped-vector',
-                visualScale: 6.4,
-                maxDisplacement: 0.95,
-                laydownStrength: 0.85,
-                shadowStrength: 0.22,
+                visualScale: 7.1,
+                maxDisplacement: 1.35,
+                laydownStrength: 1.05,
+                shadowStrength: 0.18,
                 shadowUniform: true,
             });
             expect(material.userData.webgpuGrassMaterialControls).toMatchObject({
-                tipDampen: 0.36,
-                backlightStrength: 0.7,
-                rimStrength: 0.2,
+                tipDampen: 0.44,
+                backlightStrength: 0.62,
+                rimStrength: 0.14,
                 fogStrength: 0.55,
             });
             expect(grass.webgpuGrassBladeMaterialSummary).toMatchObject({
@@ -327,7 +436,7 @@ describe('webgpu grass material adapter', () => {
         );
         const material = nodeFactories.createGrassBladeMaterial({
             tier: 'high',
-            interaction: { maxInteractors: 10 },
+            interaction: { maxInteractors: 10, maxDisplacement: 1.35 },
         });
 
         try {
@@ -356,6 +465,7 @@ describe('webgpu grass material adapter', () => {
             expect(nodes.sheepInteractionRadius.value).toBeCloseTo(4.0);
             expect(nodes.sheepInteractionStrength.value).toBeCloseTo(0.5);
             expect(material.userData.webgpuGrassBladeInteractors.maxNodeInteractors).toBe(8);
+            expect(material.userData.webgpuGrassBladeInteractors.maxDisplacement).toBe(1.35);
             expect(nodes.interactorCount.value).toBe(5);
             expect(nodes.interactorPositions[0].value.toArray()).toEqual([1, 0, 2]);
             expect(nodes.interactorPositions[4].value.toArray()).toEqual([9, 0, 10]);
@@ -484,8 +594,8 @@ describe('webgpu grass material adapter', () => {
 
         expect(grass.qualityDistanceScale).toBe(0.55);
         expect(grass.qualityDensityScale).toBe(0.55);
-        expect(grass.config.lodDecimateMid).toBeCloseTo(110);
-        expect(grass.config.lodDecimateFar).toBeCloseTo(154);
+        expect(grass.config.lodDecimateMid).toBeCloseTo(94.6);
+        expect(grass.config.lodDecimateFar).toBeCloseTo(126.28);
         expect(chunk.mesh.count).toBe(55);
     });
 

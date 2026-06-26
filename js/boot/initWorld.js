@@ -55,6 +55,7 @@ const STAGE_KEYS = {
     'Creating trees': 'trees',
     'Adding mountains': 'mountains',
     'Adding farm house': 'farmHouse',
+    'Adding homestead props': 'homesteadProps',
     'Loading fence models': 'fenceModels',
     'Building structures': 'structures',
     'Building anime water': 'water',
@@ -243,10 +244,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // chunk behind the swap overlay (~0.3-0.5s reference; NO yields -
         // see buildColdFoliageCoverage's doc for the SwiftShader starvation
         // lesson), then a detached atlas-fetch + mesh-build continuation.
-        // Awaited at its own stage just before scene-body-complete so the
-        // first playable frame shows the whole island at low fidelity. Soft
-        // failure = today's bare-island cold path; never blocks on the
-        // network (texture binds whenever it lands).
+        // Awaited at its own stage just before scene-body-complete for the
+        // scatter/cache contract only. The cold impostor mesh build and far
+        // LOD arm continue through coverage.impostorsReady and diagnostics on
+        // window.__sdsFoliageColdCoverage; first-interactive never waits on
+        // network atlas work.
         let coldCoveragePromise = null;
         if (game.currentScene?.terrain?.streamedZones) {
             coldCoveragePromise = import('../world/foliageStreaming.js')
@@ -263,6 +265,9 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // Add farm house
         logStep('Adding farm house');
         await game.terrainBuilder.addFarmHouse(game.currentScene);
+
+        logStep('Adding homestead props');
+        await game.terrainBuilder.addHomesteadPlayfieldProps(game.currentScene);
 
         // Load fence GLB models before building structures
         logStep('Loading fence models');
@@ -727,13 +732,14 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         logStep('Creating sheep flock');
         game.gameState.createSheepFlock(game.sceneManager.getScene());
 
-        // Cycle 88 Phase 2: settle the cold impostor coverage before the
-        // scene reads as complete. Stage-attribution reality (comment fixed
-        // Cycle 91 Phase 5): the scatter is ONE synchronous chunk that runs
-        // when the dynamic import above settles - its CPU cost lands inside
-        // whichever awaited stage is active at that moment, not here. This
-        // 'Cold impostor coverage' mark therefore measures only the
-        // remainder still outstanding at scene-body end.
+        // Cycle 88 Phase 2: settle the cold scatter/cache before the scene
+        // reads as complete. Stage-attribution reality (comment fixed Cycle 91
+        // Phase 5): the scatter is ONE synchronous chunk that runs when the
+        // dynamic import above settles - its CPU cost lands inside whichever
+        // awaited stage is active at that moment, not here. This 'Cold
+        // impostor coverage' mark therefore measures only the scatter/cache
+        // remainder still outstanding at scene-body end; visual impostor build
+        // and far LOD readiness are separate diagnostics on the coverage.
         if (coldCoveragePromise) {
             logStep('Cold impostor coverage');
             await coldCoveragePromise;
