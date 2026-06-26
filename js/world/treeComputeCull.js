@@ -60,10 +60,8 @@ export function createTreeComputeCull(webGpuModules, opts) {
         : (() => { const a = new Float32Array(capacity * 3); a.set(offsets.subarray(0, count * 3)); return a; })();
 
     const sourceMatricesAttr = new StorageInstancedBufferAttribute(sourceMatrices, 16);
-    const sourceOffsetsAttr = new StorageInstancedBufferAttribute(sourceOffsets, 3);
     const compactedMatrices = new StorageInstancedBufferAttribute(new Float32Array(capacity * 16), 16);
     const sourceMat = storage(sourceMatricesAttr, 'mat4', capacity).toReadOnly();
-    const sourceOff = storage(sourceOffsetsAttr, 'vec3', capacity).toReadOnly();
     const compactMat = storage(compactedMatrices, 'mat4', capacity);
     const indirectStore = storage(indirectAttr, 'uint', 5).toAtomic();
 
@@ -82,7 +80,8 @@ export function createTreeComputeCull(webGpuModules, opts) {
         const i = instanceIndex;
         // Appendable tail guard: instances past liveCount are unwritten.
         If(float(i).lessThan(liveCount), () => {
-            const off = sourceOff.element(i);
+            const srcMat = sourceMat.element(i).toVar();
+            const off = srcMat[3].xyz;
             const visible = bool(true).toVar();
             for (let p = 0; p < 6; p++) {
                 const pl = planeUniforms[p];
@@ -103,7 +102,7 @@ export function createTreeComputeCull(webGpuModules, opts) {
             }
             If(visible, () => {
                 const slot = atomicAdd(indirectStore.element(1), uint(1));
-                compactMat.element(slot).assign(sourceMat.element(i)); // data-compaction
+                compactMat.element(slot).assign(srcMat); // data-compaction
             });
         });
     })().compute(capacity);
@@ -133,6 +132,7 @@ export function createTreeComputeCull(webGpuModules, opts) {
         lodRole,
         lodDistance,
         lodEnabled: !!lodEnabled,
+        positionSource: 'sourceMatrixTranslation',
         indirectAttached: geo.indirect === indirectAttr,
         error: null,
     };
@@ -181,7 +181,6 @@ export function createTreeComputeCull(webGpuModules, opts) {
             used += n;
             liveCount.value = used;
             sourceMatricesAttr.needsUpdate = true;
-            sourceOffsetsAttr.needsUpdate = true;
             diag.used = used;
             diag.count = used;
             return n;

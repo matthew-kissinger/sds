@@ -197,6 +197,13 @@ function replaceTrackedController(builder, oldCtrl, fresh) {
     oldCtrl.dispose();
 }
 
+function createCanopyShadowInstanceMatrix(cullModules, entry) {
+    const Attribute = cullModules?.StorageInstancedBufferAttribute ?? THREE.InstancedBufferAttribute;
+    const attr = new Attribute(entry.impostorMatrices, 16);
+    attr.needsUpdate = true;
+    return attr;
+}
+
 /**
  * Grow a type entry to `neededCapacity` by rebuilding its controllers with
  * larger source stores. Happens at most once per scene load on the normal
@@ -228,7 +235,7 @@ function growConsolidatedEntry(builder, cullModules, entry, neededCapacity) {
     entry.impostorOffsets = newIO;
     if (entry.far) {
         const oldFar = entry.far;
-        const fresh = makeFarImpostorController(builder, cullModules, entry, oldFar.mesh.material);
+        const fresh = makeFarImpostorController(builder, cullModules, entry, () => oldFar.mesh.material);
         replaceTrackedController(builder, oldFar, fresh);
         entry.far = fresh;
     }
@@ -237,8 +244,7 @@ function growConsolidatedEntry(builder, cullModules, entry, neededCapacity) {
         // rebuild it on the new array, reusing geometry + material.
         const old = entry.shadowCaster;
         const fresh = new THREE.InstancedMesh(old.geometry, old.material, capacity);
-        fresh.instanceMatrix = new THREE.InstancedBufferAttribute(entry.impostorMatrices, 16);
-        fresh.instanceMatrix.needsUpdate = true;
+        fresh.instanceMatrix = createCanopyShadowInstanceMatrix(cullModules, entry);
         fresh.count = entry.used;
         fresh.castShadow = true;
         fresh.receiveShadow = false;
@@ -270,7 +276,7 @@ function growConsolidatedEntry(builder, cullModules, entry, neededCapacity) {
  * casting sharp near shadows, the billboards restore the canopy mass that
  * P1 took out of the depth pass.
  */
-function makeCanopyShadowCaster(builder, entry, sidecar, texture) {
+function makeCanopyShadowCaster(builder, cullModules, entry, sidecar, texture) {
     const sun = getSceneManager()?.webgpuSunLight ?? null;
     if (builder.isMobile || !sun?.userData?.shadowConfigured || !texture) return null;
     const geometry = createColdImpostorGeometry(sidecar, 0);
@@ -281,8 +287,7 @@ function makeCanopyShadowCaster(builder, entry, sidecar, texture) {
     });
     const capacity = entry.impostorMatrices.length / 16;
     const caster = new THREE.InstancedMesh(geometry, material, capacity);
-    caster.instanceMatrix = new THREE.InstancedBufferAttribute(entry.impostorMatrices, 16);
-    caster.instanceMatrix.needsUpdate = true;
+    caster.instanceMatrix = createCanopyShadowInstanceMatrix(cullModules, entry);
     caster.count = entry.used;
     caster.castShadow = true;
     caster.receiveShadow = false;
@@ -469,6 +474,7 @@ export function enableConsolidatedFarImpostors(builder, atlasByType, _materialsB
                 if (Array.isArray(builder.trees)) builder.trees.push(far.mesh);
                 entry.far = far;
                 for (const slot of entry.lod0) slot.controller.setLodEnabled(true);
+                opts.onFarImpostorActive?.(treeType, entry.used);
                 // Cycle 91 Phase 2: the canopy shadow caster rides the latlon
                 // albedo (depth-pass alpha mask only, no view dependence). Once
                 // it exists it is the SOLE tree caster: the LOD0 trunks stop
@@ -477,7 +483,7 @@ export function enableConsolidatedFarImpostors(builder, atlasByType, _materialsB
                 latlonAtlas.texturePromise?.then((latTex) => {
                     if (!latTex || opts.signal?.aborted) return;
                     if (builder._treeCullRegistry !== registry) return;
-                    entry.shadowCaster = makeCanopyShadowCaster(builder, entry, latlonAtlas.sidecar, latTex);
+                    entry.shadowCaster = makeCanopyShadowCaster(builder, cullModules, entry, latlonAtlas.sidecar, latTex);
                     if (entry.shadowCaster) {
                         if (Array.isArray(builder.trees)) builder.trees.push(entry.shadowCaster);
                         for (const slot of entry.lod0) slot.controller.mesh.castShadow = false;

@@ -221,6 +221,11 @@ export async function buildColdFoliageCoverage(game, opts = {}) {
         atlasMs: 0,
         buildMs: 0,
         textureBoundAt: 0,
+        scatterCompletedAt: 0,
+        coldImpostorsBuiltAt: 0,
+        farImpostorTypesScheduled: 0,
+        farImpostorTypesActive: [],
+        farImpostorsActiveAt: 0,
         completedAt: 0,
         aborted: false,
         error: null,
@@ -261,6 +266,7 @@ export async function buildColdFoliageCoverage(game, opts = {}) {
         }
         const flatAll = [...cache.values()].flat();
         diag.trees = flatAll.length;
+        diag.scatterCompletedAt = performance.now();
 
         // Cycle 91 Phase 3: size the consolidated tree controllers for the
         // whole island NOW - still behind the load overlay - so wave appends
@@ -306,6 +312,7 @@ export async function buildColdFoliageCoverage(game, opts = {}) {
                 coverage.ranges = built.ranges;
                 diag.buildMs = Math.round(performance.now() - tBuild);
                 diag.meshes = built.meshes.length;
+                diag.coldImpostorsBuiltAt = performance.now();
 
                 // Late-bind the albedo atlases: visibility follows the
                 // network, the scene build never does.
@@ -332,7 +339,16 @@ export async function buildColdFoliageCoverage(game, opts = {}) {
                 // rule), so the chain stays off there.
                 if (!sparse) {
                     diag.farImpostorTypes = enableConsolidatedFarImpostors(
-                        builder, atlasByType, built.materialsByType, { signal });
+                        builder, atlasByType, built.materialsByType, {
+                            signal,
+                            onFarImpostorActive: (treeType) => {
+                                if (!diag.farImpostorTypesActive.includes(treeType)) {
+                                    diag.farImpostorTypesActive.push(treeType);
+                                    diag.farImpostorsActiveAt = performance.now();
+                                }
+                            },
+                        });
+                    diag.farImpostorTypesScheduled = diag.farImpostorTypes;
                 }
 
                 diag.completedAt = performance.now();
