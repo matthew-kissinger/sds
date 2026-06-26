@@ -1,48 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-/**
- * Cycle 26 v2.1.0 — per-scene SEO metadata updater.
- *
- * Index.html ships strong baseline SEO (hreflang × 18, full OG + Twitter,
- * schema.org VideoGame + FAQPage + WebApplication, sitemap, robots,
- * preconnect, PWA manifest). The remaining gap was per-scene `<title>`
- * and OG image: deep-link `?scene=field` / `?scene=rolling-hills` /
- * `?scene=open-country` was loading the same metadata as `/` even though
- * each scene has a distinct identity.
- *
- * Canonical URL stays `/` (SPA, single page) — we don't want crawlers
- * fragmenting SEO juice across `?scene=X` URLs. The dynamic update is
- * for social sharing previews when someone shares a deep link, and for
- * tab-title clarity for the player.
- *
- * Source of truth: `shared/scenes/*.js` `name` + `description` fields.
- * Social images at `assets/scenes/entrance/*.webp`.
- */
-
 const SCENE_META = {
     field: {
-        title: 'Sheep Dog Sim · Home Field — Relaxing Free Herding Game',
-        description: 'Flat fenced pasture. The classic scene. Guide your sheepdog through peaceful meadows in this free, relaxing browser game.',
-        ogImage: '/assets/scenes/entrance/field.webp',
-        ogImageAlt: 'Sheep Dog Sim — Home Field current renderer capture with sheepdog and flock'
+        title: 'Home Field - Sheep Dog Sim Starter Pasture',
+        description: 'Flat fenced starter pasture with one gate, clean flock reads, solo modes, and multiplayer support.',
+        ogImage: '/assets/scenes/social/field.webp',
+        ogImageAlt: 'Sheep Dog Sim Home Field capture with sheepdog and flock'
     },
     'rolling-hills': {
-        title: 'Sheep Dog Sim · Sheep Dog Island — Relaxing Free Herding Game',
-        description: 'An island home with rolling hills and a hidden corral. Find it. Drive the flock home before they wander into the water.',
-        ogImage: '/assets/scenes/entrance/rolling-hills.webp',
-        ogImageAlt: 'Sheep Dog Sim — Rolling Hills current renderer capture with sheepdog by the shoreline'
+        title: 'Rolling Hills - Sheep Dog Sim Island Herding',
+        description: 'Golden-hour island with rolling terrain, shoreline water, trees, rocks, and a lightning corral.',
+        ogImage: '/assets/scenes/social/rolling-hills.webp',
+        ogImageAlt: 'Sheep Dog Sim Rolling Hills capture by the shoreline'
     },
     'open-country': {
-        title: 'Sheep Dog Sim · Open Country — Relaxing Free Herding Game',
-        description: 'A wild island of meadow and woods. Drive the flock through the trees to the portal.',
-        ogImage: '/assets/scenes/entrance/open-country.webp',
-        ogImageAlt: 'Sheep Dog Sim — Open Country current renderer capture with sheepdog facing the portal'
+        title: 'Open Country - Sheep Dog Sim Portal Island',
+        description: 'A 380-metre island with a gather zone, long terrain routes, and a portal objective.',
+        ogImage: '/assets/scenes/social/open-country.webp',
+        ogImageAlt: 'Sheep Dog Sim Open Country capture facing the portal'
     },
     newsheepdogland: {
-        title: 'Sheep Dog Sim · Newsheepdogland - Survival Herding Game',
-        description: 'A boot-shaped survival island. Bring the flock home before wolves thin it after dark.',
-        ogImage: '/assets/scenes/entrance/newsheepdogland.webp',
-        ogImageAlt: 'Sheep Dog Sim - Newsheepdogland WebGPU capture with homestead, pen, grass, trees, and dusk sea'
+        title: 'Newsheepdogland - Sheep Dog Sim Survival Island',
+        description: 'Boot-shaped survival island with a homestead pen, day/night pressure, wolves, and WebGPU-scale scenery.',
+        ogImage: '/assets/scenes/social/newsheepdogland.webp',
+        ogImageAlt: 'Sheep Dog Sim Newsheepdogland survival island capture'
     }
 };
 

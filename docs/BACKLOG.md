@@ -2,6 +2,20 @@
 
 > Append-only log of closed cycles and deferred work. Most recent at the top. The `/cycle-close` slash command writes the "Recently Completed" section automatically; "Deferred" and "Distant ideas" are edited by hand as items surface.
 
+## Planned / In Progress
+
+### Launch-readiness roadmap (Cycle 106 through Cycle 110)
+
+Matt asked for the remaining launch-prep work to be scaffolded so agents can continue autonomously through Cycle 110, then stop for final human review. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md); the staged cycle plans are:
+
+- [`docs/cycle-106-plan.md`](cycle-106-plan.md) - launch docs and repo hygiene.
+- [`docs/cycle-107-plan.md`](cycle-107-plan.md) - SEO and site content refresh.
+- [`docs/cycle-108-plan.md`](cycle-108-plan.md) - release candidate proof.
+- [`docs/cycle-109-plan.md`](cycle-109-plan.md) - native desktop and Steam readiness.
+- [`docs/cycle-110-plan.md`](cycle-110-plan.md) - itch, portals, and final launch review packet.
+
+Autonomy note: continue from one cycle to the next without stopping for Matt review unless a hard stop fires. Do not publish paid, irreversible, or public marketplace submissions before Cycle 110's final review packet unless Matt explicitly authorizes the exact action.
+
 ## Recently Completed
 
 ### Preview Worker provisioning (completed 2026-06-26)

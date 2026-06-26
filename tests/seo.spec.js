@@ -4,13 +4,14 @@
  * Cycle 26 v2.1.0 — per-scene SEO meta updater.
  *
  * Asserts the contract: each canonical scene id has full meta, the OG
- * image points at an existing current scene webp, and the
+ * image points at an existing current scene social webp, and the
  * updateSceneMetadata function mutates the right meta tags on the DOM.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 import { updateSceneMetadata, __TEST_ONLY__ } from '../js/utils/seo.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -25,17 +26,38 @@ describe('per-scene SEO meta', () => {
         expect(ids).toContain('newsheepdogland');
     });
 
-    it('every registered social image exists on disk under assets/scenes/entrance/', () => {
+    it('every registered social image exists on disk under assets/scenes/social/', () => {
         for (const [id, meta] of Object.entries(__TEST_ONLY__.SCENE_META)) {
+            expect(meta.ogImage, id).toMatch(/^\/assets\/scenes\/social\/.+\.webp$/);
             const rel = meta.ogImage.replace(/^\//, '');
             const abs = resolve(repoRoot, rel);
             expect(existsSync(abs), `${id}: ${meta.ogImage} not found at ${abs}`).toBe(true);
         }
     });
 
+    it('social cards and matching hero captures have launch dimensions', async () => {
+        for (const [id, meta] of Object.entries(__TEST_ONLY__.SCENE_META)) {
+            const socialRel = meta.ogImage.replace(/^\//, '');
+            const socialMeta = await sharp(resolve(repoRoot, socialRel)).metadata();
+            expect(`${socialMeta.width}x${socialMeta.height}`, id).toBe('1200x630');
+
+            const heroRel = socialRel.replace('assets/scenes/social/', 'assets/scenes/entrance/');
+            const heroMeta = await sharp(resolve(repoRoot, heroRel)).metadata();
+            expect(`${heroMeta.width}x${heroMeta.height}`, id).toBe('1920x1080');
+        }
+    });
+
     it('every scene has a distinct title (no copy-paste mistakes)', () => {
         const titles = Object.values(__TEST_ONLY__.SCENE_META).map(m => m.title);
         expect(new Set(titles).size).toBe(titles.length);
+    });
+
+    it('scene metadata uses the launch content matrix, not stale relaxing-game copy', () => {
+        for (const [id, meta] of Object.entries(__TEST_ONLY__.SCENE_META)) {
+            expect(meta.title, id).not.toMatch(/Relaxing Free Herding Game|Sheep Dog Island/);
+            expect(meta.description, id).not.toMatch(/peaceful meadows|experimental|performance tuning continues/i);
+            expect(meta.description.length, id).toBeGreaterThan(70);
+        }
     });
 
     it('updateSceneMetadata mutates document.title + og:* meta tags', () => {
@@ -76,5 +98,43 @@ describe('per-scene SEO meta', () => {
         updateSceneMetadata('atlantis');
         const after = (globalThis.document?.title) ?? '';
         expect(after).toBe(before);
+    });
+});
+
+describe('static public SEO files', () => {
+    const publicSeoFiles = [
+        'index.html',
+        'about.html',
+        'public/manifest.webmanifest',
+        'public/llms.txt',
+        'public/scenes/home-field.html',
+        'public/scenes/rolling-hills.html',
+        'public/scenes/open-country.html',
+        'public/scenes/newsheepdogland.html'
+    ];
+
+    it('public SEO surfaces do not contain launch-stale copy', () => {
+        const stale = [
+            /Three\.js 0\.184/,
+            /peaceful meadows/i,
+            /currently marked experimental/i,
+            /performance tuning continues/i,
+            /three biomes/i,
+            /Timed mode/i
+        ];
+
+        for (const rel of publicSeoFiles) {
+            const text = readFileSync(resolve(repoRoot, rel), 'utf8');
+            for (const pattern of stale) {
+                expect(text, `${rel} should not match ${pattern}`).not.toMatch(pattern);
+            }
+        }
+    });
+
+    it('sitemap lastmod matches the launch SEO refresh date', () => {
+        const sitemap = readFileSync(resolve(repoRoot, 'public/sitemap.xml'), 'utf8');
+        const dates = [...sitemap.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((m) => m[1]);
+        expect(dates.length).toBeGreaterThanOrEqual(6);
+        expect(new Set(dates)).toEqual(new Set(['2026-06-26']));
     });
 });

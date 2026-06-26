@@ -1,7 +1,7 @@
 {
   "name": "Sheep Dog Sim",
   "short_name": "Sheep Dog Sim",
-  "description": "Guide your sheepdog through peaceful meadows in this free, relaxing browser game. Herd flocks, explore zen gameplay, and unwind with satisfying sheep herding.",
+  "description": "Free browser herding game with solo challenges, survival wolves, 2-4 player multiplayer, mobile controls, gamepad support, and flocks up to 5,000 sheep.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

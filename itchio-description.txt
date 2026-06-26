@@ -1,37 +1,15 @@
-Guide your sheepdog through rolling meadows and herd 200 fluffy, panicky sheep through the gate. Sounds simple? The sheep have other ideas.
+Sheep Dog Sim is a free 3D herding game where you guide a sheepdog around a living flock, cut off escapes, and drive sheep home.
 
-Sheep flee when you get close. Get too close and the whole flock scatters. The trick is circling wide, nudging them gently, reading the herd. It's surprisingly meditative once you get the rhythm.
+Play a quiet starter pasture, golden-hour island herding, Open Country portal runs, or Newsheepdogland survival after dark when wolves start thinning the flock. Modes range from 30-sheep practice to 5,000-sheep chaos, with 2-4 player online rooms, mobile controls, and gamepad support.
 
+Desktop: WASD or arrow keys to move, Shift to sprint, mouse wheel or plus/minus to zoom.
+Mobile: touch joystick, sprint button, responsive HUD.
 
-WHAT'S IN THE BOX
+The sheep are not on rails. They flock, separate, recover, and route around terrain obstacles. Your dog applies pressure, so the trick is circling wide, nudging gently, and reading the herd before it breaks.
 
-Five dogs with different playstyles. Jep is balanced, Sally is fast but tires quickly, Pip has long range but moves slower. Pick one that fits how you play.
-
-Classic mode has no timer. Just vibes. Timed mode is for when you want to actually sweat. Multiplayer lets you herd with (or against) friends.
-
-There's a leaderboard if you're competitive about sheep.
-
-
-HOW IT WORKS
-
-Desktop: WASD moves, Shift sprints, scroll zooms
-Mobile: Joystick on the left, sprint button above it
-Works in any modern browser
-
-
-THE SHEEP AI
-
-200 sheep running boid flocking algorithms - they stick together, avoid each other, and align their movement. When your dog approaches, they scatter realistically. It's oddly satisfying to watch.
-
-
-TIPS
-
-Sheep flee from the dog - use this to guide them
-Don't get too close or the flock will scatter
-Circle around the flock to keep them together
-Sprint drains stamina - use it wisely
-
+Free to play. No signup. No ads. No microtransactions.
 
 Also at: sheepdogsim.com
+Source: github.com/matthew-kissinger/sds
 
-Started as a Three.js game jam entry. Made with Three.js. Free to play, no ads or signup. Current source is AGPL-3.0-or-later and current assets are CC BY-SA 4.0; hosted or modified versions must preserve attribution and publish corresponding source.
+Current source is AGPL-3.0-or-later and current non-code assets are CC BY-SA 4.0; hosted or modified versions must preserve attribution and publish corresponding source.

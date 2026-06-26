@@ -12,6 +12,9 @@
 /assets/scenes/entrance/*
   Cache-Control: public, max-age=300, s-maxage=300, must-revalidate
 
+/assets/scenes/social/*
+  Cache-Control: public, max-age=300, s-maxage=300, must-revalidate
+
 # Heightfield manifests (small JSON): keep the short revalidating TTL.
 /terrain/*.json
   Cache-Control: public, max-age=300, s-maxage=300, must-revalidate

@@ -1,34 +1,21 @@
-# SEO Image Assets
+# SEO Image Notes
 
-This directory contains optimized images for SEO and social media sharing.
+Status: historical holding folder.
 
-## Required Images
+Current public social metadata uses shipped social-card captures under `assets/scenes/social/*.webp`. Page heroes, README images, and the entrance carousel use the matching 16:9 captures under `assets/scenes/entrance/*.webp`. `assets/marketing/` and most of `assets/images/` are excluded from the production dist copy, so do not point public metadata at files in this folder unless the Vite copy rules are updated and a build proves the files ship.
 
-1. **sheepdog-herding-social.webp** (1200x630px)
-   - Main social media image for Open Graph and Twitter cards
-   - Should show gameplay with border collie herding sheep in realistic 3D environment
-   - Optimized to <100KB WebP format
+Current shipped hero captures:
 
-2. **sheepdog-herding-screenshot.webp** (1200x630px)
-   - Primary gameplay screenshot showing single player mode
-   - Focus on the sheepdog actively herding sheep
+- `assets/scenes/entrance/newsheepdogland.webp`
+- `assets/scenes/entrance/field.webp`
+- `assets/scenes/entrance/rolling-hills.webp`
+- `assets/scenes/entrance/open-country.webp`
 
-3. **multiplayer-racing-screenshot.webp** (1200x630px)
-   - Multiplayer competitive mode screenshot
-   - Show multiple players with colored gates/zones
+Current shipped social cards:
 
-4. **dog-selection-screenshot.webp** (1200x630px)
-   - Dog selection screen showing different breeds and stats
-   - Highlight the character variety and customization
+- `assets/scenes/social/newsheepdogland.webp`
+- `assets/scenes/social/field.webp`
+- `assets/scenes/social/rolling-hills.webp`
+- `assets/scenes/social/open-country.webp`
 
-## Image Guidelines
-
-- All images should be optimized WebP format
-- Maximum file size: 100KB each
-- Dimensions: 1200x630px for social sharing
-- Alt text should be descriptive for accessibility
-- Include game branding and title text overlay where appropriate
-
-## Placeholder Status
-
-Currently using placeholder references in HTML meta tags. Replace with actual screenshots from the game for production deployment.
+Refresh with `npm run media:capture-launch` against a production preview, verify `cycle110-validation/scene-media-refresh/report.json`, update `docs/launch/seo-content-matrix.md`, and run `npm run build`.

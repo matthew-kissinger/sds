@@ -1,6 +1,8 @@
 # SDS Desktop Electron Distributor
 
-Cycle 54 promoted the Cycle 53 proof shell into the first real Windows desktop distributor path for Sheep Dog Simulator. The shell still serves the built web game from `dist/` through the privileged `sds://app` protocol; the core web game architecture stays browser-first.
+This is the Windows desktop distributor path for Sheep Dog Simulator. It packages the built web game from root `dist/` into an Electron app served through the privileged `sds://app` protocol. The core game remains browser-first; this package exists for native distribution experiments such as Steam.
+
+Current launch-candidate version: `2.4.0`.
 
 ## Commands
 
@@ -21,11 +23,11 @@ npm run proof:webgl
 npm run proof:webgpu
 ```
 
-`npm run dist:win` writes Windows outputs under `../../cycle54-validation/desktop-electron/artifacts/`:
+`npm run dist:win` writes Windows outputs under `../../cycle109-validation/desktop-electron/artifacts/`:
 
 - `win-unpacked/Sheep Dog Simulator.exe`
-- `SheepDogSimulator-2.2.0-setup-x64.exe`
-- `SheepDogSimulator-2.2.0-portable-x64.exe`
+- `SheepDogSimulator-2.4.0-setup-x64.exe`
+- `SheepDogSimulator-2.4.0-portable-x64.exe`
 
 The artifacts are local validation output and intentionally gitignored.
 
@@ -36,16 +38,22 @@ The artifacts are local validation output and intentionally gitignored.
 - app identity and exact Windows installer/portable artifact names;
 - local signing posture and code-signing-ready config;
 - `sds://app` packaged boot from built `dist/`;
-- WebGL and WebGPU renderer requests, including a runtime snapshot when a renderer proof fails;
+- WebGL and WebGPU renderer requests, including runtime snapshots;
 - nonblank gameplay screenshot;
 - fullscreen, native window resize, pointer lock, keyboard/mouse visual response, virtual gamepad API path, audio context unlock, and localStorage persistence;
 - production Worker health and authenticated SDS room WebSocket open;
-- log and crash-dump paths under Electron `userData`.
+- log and crash-dump paths under Electron `userData`;
+- unexpected 404s separately from known optional tree-impostor probes.
 
-Proof JSON and screenshots are written under `../../cycle54-validation/desktop-electron/reports/`.
+Current proof JSON and screenshots are written under `../../cycle109-validation/desktop-electron/reports/`.
 
-Current evidence: `proof:webgl` and `proof:webgpu` are green from the packaged app. Both renderer proofs boot to gameplay, exercise native resize, and verify that the canvas and camera aspect follow the resized window. The next release lane is Steam/store prep, not another shell proof.
+Cycle 109 evidence: `proof:webgl` and `proof:webgpu` are green from the packaged v2.4.0 app. Both renderer proofs boot to Rolling Hills gameplay, verify nonblank screenshots, exercise native resize/input/audio/storage, confirm Worker health and WebSocket open, and record zero fatal console errors.
 
 ## Signing
 
-Local builds are unsigned and run with `CSC_IDENTITY_AUTO_DISCOVERY=false` so a developer machine certificate is not accidentally used. See [`SIGNING.md`](SIGNING.md) for the signing-ready handoff.
+Local builds are unsigned and run with `CSC_IDENTITY_AUTO_DISCOVERY=false` so a developer machine certificate is not accidentally used. `Get-AuthenticodeSignature` reports `NotSigned` for the setup, portable, and unpacked executables. See [`SIGNING.md`](SIGNING.md) for the signing-ready handoff.
+
+Do not publish public Windows binaries until Matt approves either:
+
+- a signed release path, or
+- an explicit unsigned-release decision with the support burden accepted.

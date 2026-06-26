@@ -1,6 +1,6 @@
 {
   "name": "sds-desktop-electron",
-  "version": "2.2.0",
+  "version": "2.4.0",
   "private": true,
   "description": "Windows desktop distributor path for Sheep Dog Simulator.",
   "author": "Matthew Kissinger",
@@ -34,7 +34,7 @@
     "copyright": "Copyright (c) 2026 Matthew Kissinger",
     "directories": {
       "buildResources": "build",
-      "output": "../../cycle54-validation/desktop-electron/artifacts"
+      "output": "../../cycle109-validation/desktop-electron/artifacts"
     },
     "files": [
       "main.cjs",

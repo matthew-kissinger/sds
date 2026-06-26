@@ -9,7 +9,7 @@
 You're a fresh agent (Claude / Codex / Cursor / etc.) on this repo with no session context. Read in this order:
 
 1. **[`../NEXT_SESSION.md`](../NEXT_SESSION.md)** — current pickup state. Tells you which cycle is active, when the snapshot was taken, and where to start.
-2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open. At this snapshot there is no active cycle; the latest closed plan is [`archive/cycles/cycle-83-plan.md`](archive/cycles/cycle-83-plan.md).
+2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open. At this snapshot the launch-readiness program is staged as [`cycle-106-plan.md`](cycle-106-plan.md), [`cycle-107-plan.md`](cycle-107-plan.md), [`cycle-108-plan.md`](cycle-108-plan.md), [`cycle-109-plan.md`](cycle-109-plan.md), and [`cycle-110-plan.md`](cycle-110-plan.md).
 3. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
 4. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
 5. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).
@@ -48,6 +48,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`multiplayer-ux.md`](multiplayer-ux.md) | How-to / Reference | Multiplayer UX flow + lobby state diagrams. |
 | [`native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md) | Reference | Cycle 53 native shell proof: green native preflight, packaged Windows Electron proof, Capacitor Android proof, and WebGL/WebGPU result matrix. |
 | [`native-desktop-package-cycle-54.md`](native-desktop-package-cycle-54.md) | Reference | Cycle 54 desktop package path: electron-builder Windows installer/portable targets, signing posture, WebGL/WebGPU packaged proof, resize proof, and Steam handoff. |
+| [`native-desktop-package-cycle-109.md`](native-desktop-package-cycle-109.md) | Reference | Current v2.4.0 Windows desktop package proof: installer/portable artifacts, WebGL/WebGPU packaged proofs, signing posture, and Steam no-go items. |
 | [`archive/cycles/cycle-54-plan.md`](archive/cycles/cycle-54-plan.md) | Reference / Explanation | Closed Cycle 54: Windows Electron distributor path, WebGL/WebGPU package proof, native resize proof, and Steam/store-prep handoff. |
 | [`archive/cycles/cycle-53-plan.md`](archive/cycles/cycle-53-plan.md) | Reference / Explanation | Closed Cycle 53: native shell proof 1, WebGL/WebGPU shell evidence, and `v2.2.0` release close. |
 | [`archive/cycles/cycle-42-plan.md`](archive/cycles/cycle-42-plan.md) | Reference / Explanation | Closed Cycle 42: WebGPU scene-material parity, darker water, sun/sky repaint, octahedral proof, and `v2.1.10` release approval state. |
@@ -65,7 +66,22 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) | Reference | Cycle plan stub. New cycle plans inherit from this. |
 | [`BACKLOG.md`](BACKLOG.md) | Reference | Closed-cycle headlines + deferred items. Append-only. |
 | [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md) | Reference | What `NEXT_SESSION.md` is for and how it's refreshed. |
-| [`cycle-N-plan.md`](.) | Reference / Explanation | The active cycle's plan — scope, phases, Acceptance, frozen files. |
+| [`cycle-106-plan.md`](cycle-106-plan.md) | Reference / Explanation | Launch-readiness cycle 106: docs and repo hygiene. |
+| [`cycle-107-plan.md`](cycle-107-plan.md) | Reference / Explanation | Launch-readiness cycle 107: SEO and site content refresh. |
+| [`cycle-108-plan.md`](cycle-108-plan.md) | Reference / Explanation | Launch-readiness cycle 108: release-candidate proof. |
+| [`cycle-109-plan.md`](cycle-109-plan.md) | Reference / Explanation | Launch-readiness cycle 109: native desktop and Steam readiness. |
+| [`cycle-110-plan.md`](cycle-110-plan.md) | Reference / Explanation | Launch-readiness cycle 110: itch, portals, and final launch review. |
+
+## Launch Review Packet
+
+| Doc | Type | Purpose |
+|---|---|---|
+| [`launch/final-launch-review.md`](launch/final-launch-review.md) | Reference | Single entry point for Matt review after Cycles 106-110. |
+| [`launch/release-candidate.md`](launch/release-candidate.md) | Reference | v2.4.0 release-candidate status, validation summary, deploy posture, and risks. |
+| [`launch/release-checklist.md`](launch/release-checklist.md) | How-to | Exact commands and manual steps for approved tag, deploy, itch update, Steam continuation, and rollback. |
+| [`launch/itch-launch-brief.md`](launch/itch-launch-brief.md) | Reference | itch copy, build proof, upload path, screenshots, and rollback notes. |
+| [`launch/steam-store-brief.md`](launch/steam-store-brief.md) | Reference | Steam page draft, asset requirements, feature claims, and blockers. |
+| [`launch/portal-target-matrix.md`](launch/portal-target-matrix.md) | Reference | CrazyGames, Poki, Newgrounds, Kongregate, Y8, and itch recommendations. |
 | [`../DECISIONS.md`](../DECISIONS.md) | Explanation | Why we made the calls we did. Chronological. |
 | [`../.claude/rules/`](../.claude/rules/) | Explanation | Durable project rules — *why* the frozen-file categories exist. |
 | [`archive/`](archive/) | Explanation | Closed cycle plans, archived research dossiers, wake-state reports. |
@@ -74,7 +90,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 
 After Cycle 28 Stream A3's consolidation, the only files at `docs/` root are:
 
-- The **active cycle plan**, when a cycle is open (`cycle-N-plan.md`; none is open at this snapshot).
+- The **active and pre-scaffolded launch cycle plans** while the launch-readiness program is open (`cycle-106-plan.md` through `cycle-110-plan.md`). Archive each one to `archive/cycles/` only after that cycle closes.
 - The **append-only [`BACKLOG.md`](BACKLOG.md)** — closed-cycle log + deferred items.
 - The **fence + template + contract triad**: [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md), [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md).
 - A small set of **stable how-tos and references**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md), [`native-desktop-package-cycle-54.md`](native-desktop-package-cycle-54.md), [`native-packaging-proof-0.md`](native-packaging-proof-0.md), [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md).

@@ -13,7 +13,7 @@ function parseArgs(argv) {
   const args = {
     dist: 'dist',
     target: process.env.BUILD_TARGET || 'native',
-    out: 'cycle36-validation/native/preflight.json',
+    out: 'cycle108-validation/native/preflight.json',
   };
   for (const a of argv.slice(2)) {
     const m = a.match(/^--([\w-]+)=(.*)$/);

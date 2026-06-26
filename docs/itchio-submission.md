@@ -1,13 +1,15 @@
 # itch.io Submission Details
 
+Status: refreshed for the v2.4.0 launch candidate on 2026-06-26. Do not publish the itch update until Matt approves the Cycle 110 final launch packet.
+
 ## Basic Info
 
 **Title:** Sheep Dog Sim
 
-**Project URL:** sheep-dog-sim (https://[username].itch.io/sheep-dog-sim)
+**Project URL:** sheep-dog-sim (`https://[username].itch.io/sheep-dog-sim`)
 
 **Short description/tagline:**
-Guide your sheepdog through peaceful meadows. A free, relaxing browser herding game.
+Free browser herding game with solo challenges, survival wolves, 2-4 player rooms, mobile controls, and flocks up to 5,000 sheep.
 
 **Classification:** Games
 
@@ -15,142 +17,86 @@ Guide your sheepdog through peaceful meadows. A free, relaxing browser herding g
 
 **Release status:** Released
 
-**Pricing:** $0 or donate (suggested donation: $2.00)
-
----
+**Pricing:** Free or pay what you want. Suggested donation can remain `$2.00` if Matt wants tips enabled.
 
 ## Upload
 
-**Option 1 - Link to hosted site (Recommended):**
-- Add external link to `https://sheepdogsim.com`
-- Always up-to-date, no re-uploading needed
+Preferred launch path: upload the generated itch build, then also link to `https://sheepdogsim.com` as the canonical always-current site.
 
-**Option 2 - Upload ZIP:**
-- File: `sheep-dog-sim-itchio.zip` (55.66 MB)
-- Run `scripts/build-itchio.ps1` to regenerate
+Build command:
 
----
+```bash
+npm run build:itchio
+```
+
+Upload source:
+
+- `dist/` after `BUILD_TARGET=itchio`
+- Zip the contents of `dist/`, not the parent folder, unless the current itch dashboard workflow already expects a parent folder.
+
+Do not upload the normal web or native build to itch. The itch build uses relative asset paths for itch's HTML runtime.
 
 ## Embed Options
 
-**Embed in page:** Yes (if using ZIP)
+**Embed in page:** Yes, if uploading ZIP.
 
-**For external link:** Just put `https://sheepdogsim.com` prominently in description
+**Viewport dimensions:**
 
-**Viewport dimensions (if embedding):**
-- Width: 960px
-- Height: 540px
-(Or 1280x720 for larger display)
+- Recommended: 1280 x 720
+- Minimum practical fallback: 960 x 540
 
 **Frame options:**
-- [x] Mobile friendly
-- [ ] Automatically start on page load (keep unchecked - let users click to start)
-- [x] Fullscreen button
-- [ ] Enable scrollbars
-- [ ] SharedArrayBuffer support
 
----
+- Mobile friendly: yes
+- Automatically start on page load: no
+- Fullscreen button: yes
+- Enable scrollbars: no
+- SharedArrayBuffer support: no
 
-## Details
+## Page Description
 
-### Description (for game page)
-
-```
-# Sheep Dog Sim
-
-A relaxing browser game where you guide your faithful sheepdog through peaceful meadows, herding flocks of fluffy sheep.
-
-## Features
-
-**Multiple Dog Breeds**
-Choose from several sheepdog breeds, each with unique Speed, Stamina, and Control stats.
-
-**Relaxing Gameplay**
-No timers, no pressure (in Classic mode). Just you, your dog, and the sheep.
-
-**Timed Challenges**
-Ready for more? Try Timed mode and see how fast you can herd 200 sheep.
-
-**Multiplayer**
-Compete or cooperate with other players in real-time multiplayer modes.
-
-**Global Leaderboards**
-Track your best times and compete for top rankings.
-
-## Controls
-
-**Desktop:**
-- WASD or Arrow Keys to move
-- Hold Shift to sprint
-- Mouse wheel or +/- to zoom
-
-**Mobile:**
-- Virtual joystick to move
-- Sprint button for speed boost
-- Pinch to zoom
-
-## Tips
-
-- Sheep flee from the dog - use this to guide them
-- Don't get too close or the flock will scatter
-- Circle around the flock to keep them together
-- Sprint uses stamina - use it wisely!
-
----
-
-Made with Three.js. Free to play, forever.
-```
-
----
+Use `docs/itch-description/sheep-dog-sim.md` as the long description source.
 
 ## Genre
 
-**Primary:** Simulation
+Primary: Simulation
 
----
+Secondary tags/genres: Casual, 3D, Multiplayer, Animals.
 
-## Tags (max 10)
+## Tags
 
-1. relaxing
-2. sheep
-3. herding
-4. 3d
-5. casual
-6. zen
-7. peaceful
-8. multiplayer
-9. leaderboard
-10. dog
+Itch caps visible tags; prefer this 10-tag set:
 
----
+```text
+simulation, casual, browser, 3d, multiplayer, animals, dog, sheep, herding, open-source
+```
+
+Alternates if needed:
+
+```text
+webgl, threejs, relaxing, survival, gamepad
+```
 
 ## AI Generation Disclosure
 
-**Answer:** Yes - This project contains the output of Generative AI
-
-(Code was developed with AI assistance - Claude)
-
----
+Answer: Yes - this project was developed with AI assistance. The exact wording should match the current itch disclosure UI.
 
 ## Community
 
-**Option:** Comments (allow players to leave comments)
-
----
-
-## Additional Notes
-
-- Game works best in Chrome, Firefox, or Edge
-- Mobile devices supported with touch controls
-- No account required to play
-- Scores sync to global leaderboard
-
----
+Recommended: enable comments. Watch first-week feedback for browser/device failures, especially itch iframe fullscreen and mobile touch behavior.
 
 ## Screenshots to Upload
 
-1. **Cover image** (630x500) - Main menu with title
-2. **Gameplay 1** - Dog herding sheep
-3. **Gameplay 2** - Large flock being herded
-4. **Dog Selection** - Showing different breeds
-5. (Optional) **Multiplayer** - Competitive mode
+Use the fresh WebGPU gameplay captures:
+
+1. `assets/scenes/entrance/field.webp`
+2. `assets/scenes/entrance/rolling-hills.webp`
+3. `assets/scenes/entrance/open-country.webp`
+4. `assets/scenes/entrance/newsheepdogland.webp`
+5. Optional: multiplayer or large-flock mode, only if the screenshot clearly shows the feature.
+
+## Launch Notes
+
+- The canonical site remains `https://sheepdogsim.com`.
+- The itch build should be smoke-tested after upload before it is announced.
+- If the itch upload regresses, restore the previous upload in the itch dashboard and point players back to the canonical site.

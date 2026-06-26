@@ -1,110 +1,82 @@
-# itch.io description draft — Sheep Dog Sim
+# itch.io Description Draft - Sheep Dog Sim
 
-> Draft for Matt's review. itch.io supports basic Markdown + a small whitelist of inline HTML in the project description field. Edit before posting; this is a starting point, not final copy.
->
-> **Where it goes:** itch.io project dashboard → Edit game → Description (the long-form field above "Embed options"). The short tagline goes in "Short description or tagline" near the top of the same page.
+Draft for Matt review. itch.io supports Markdown in the project description field. Keep the short tagline in the separate itch "Short description or tagline" field.
 
----
+## Short Description / Tagline
 
-## Short description / tagline (≤ 120 chars)
-
-```
-Herd 5,000 sheep across three biomes in your browser, with friends, WebGPU, and WebGL fallback. Free, no install.
+```text
+Free browser herding with solo challenges, survival wolves, 2-4 player rooms, and flocks up to 5,000 sheep.
 ```
 
-Variants if you want a different angle:
+Alternate:
 
-- `A zen 3D herding game. Three biomes, six modes, 5,000 sheep, real-time multiplayer. Free in your browser.`
-- `Border collie. 5,000 sheep. Cloudflare-edge multiplayer. Open the tab and herd. No install, no signup, source-readable.`
-- `Three biomes, six modes, real boid flocking, browser-native multiplayer. Source is public under AGPL.`
-
----
-
-## Long-form description
-
-A free, browser-based **herding sim** where you guide a sheepdog across three hand-built biomes — flat starter pasture, rolling sunset hills, and a wild island with a magical portal. Open the tab, herd some sheep, close the tab. No install, no signup, no microtransactions.
-
-### Three biomes
-
-- **Home Field** — flat fenced pasture, single perimeter pen with a gate. The starter.
-- **Rolling Hills** — 180-metre island with rolling heightfield, lightning-zap corral, golden-hour mood. The hero scene.
-- **Open Country** — 380-metre island with a multi-stage objective: gather sheep into the round-up zone for 2 seconds, then drive them through a magical portal at the north shore.
-
-### Six modes
-
-- **Just Play** — 30 sheep, no timer, no fail state. The practice paddock.
-- **Solo Classic** — 200 sheep, leaderboard.
-- **Solo Extreme** — 1,000 sheep.
-- **Solo Insane** — 3,000 sheep.
-- **Solo Chaos** — 5,000 sheep. The flock becomes the antagonist.
-- **Multiplayer** — 2–4 player real-time co-op + competitive + timed rooms, with shareable invite URLs and a sandbox editor.
-
-### What's actually under the hood
-
-- **GPU-instanced sheep** in a single draw call, with custom vertex shaders animating legs and heads per instance.
-- **Force-based steering** against real obstacles — sheep and dog route around tree trunks and rocks via a deterministic spatial index, not invisible walls.
-- **Authoritative 60 Hz multiplayer** on Cloudflare Workers + Durable Objects + D1, with MessagePack-over-WebSocket state frames and an adaptive jitter buffer.
-- **Hundreds of thousands of grass blades** with directional wind, dog-bends-grass interaction, per-scene density tuning, stochastic-dither LOD.
-- **Hosek-Wilkie analytic sky** with day/night presets, parallax cloud layer, water with sun-glint.
-
-### Free to play, source-readable, no ads
-
-- **Free.** No ads, no microtransactions, no energy meters, no notifications. Just the game.
-- **Open source.** Free to play, source-readable, and forkable under AGPL-3.0; assets are CC BY-SA 4.0. Modified or hosted versions must preserve attribution and publish corresponding source. Source: [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds).
-- **Five languages.** English, Spanish, Portuguese, Japanese, Simplified Chinese — auto-detected via i18next.
-- **Mobile controls.** Touch joystick, responsive HUD, gamepad support, and PWA installability are in place; Android WebGPU performance work remains active.
-
-### Native version on the web
-
-For the smoothest experience — including native-resolution displays, lower latency on multiplayer, and the latest hotfixes — the game also lives at **[sheepdogsim.com](https://sheepdogsim.com)**. The itch.io build is the same codebase, packaged as an HTML5 bundle for itch's runtime.
-
-### Source / about / press
-
-- Source: [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
-- About: [sheepdogsim.com/about](https://sheepdogsim.com/about)
-- Press kit: [github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md](https://github.com/matthew-kissinger/sds/blob/main/PRESSKIT.md)
-- Contact: matt.m.kissinger@gmail.com
-
----
-
-## Tags (itch metadata field)
-
-Paste into the "Tags" field, comma-separated:
-
-```
-3d, animals, atmospheric, browser, casual, dog, herding, multiplayer, open-source, relaxing, sheep, simulation, threejs, webgl, zen
+```text
+Herd sheep across four 3D scenes: practice pasture, island hills, portal runs, survival wolves, and online rooms.
 ```
 
-(itch caps tags at 10, so trim to taste. If you want max discovery: `casual, simulation, browser, multiplayer, relaxing, atmospheric, animals, 3d, threejs, open-source`.)
+## Long Description
 
-## Genre + classification
+Sheep Dog Sim is a free 3D herding game where you guide a sheepdog around a living flock, cut off escapes, and drive sheep home.
 
-- **Genre:** Simulation (with Casual / Sports cross-tag)
-- **Made with:** Three.js, Vite, Cloudflare Workers
-- **Average session:** A few minutes
-- **Inputs:** Keyboard, mouse, touchscreen, gamepad
-- **Accessibility:** Configurable text size, color blind friendly (no critical state encoded only in colour), keyboard-only playable.
-- **Multiplayer:** Server-based networked multiplayer + local multiplayer on same device.
+Start in a quiet fenced pasture, move into rolling island terrain, push a flock through a portal in Open Country, or survive Newsheepdogland after dark when wolves start thinning the flock. You can play short practice runs, chase leaderboard times, push huge solo flocks, or open 2-4 player online rooms.
 
-## Itch.io update post (optional, separate from description)
+## Scenes
 
-If you want a short update post to flag the new build, itch.io's update feed can nudge followers/community-feed traffic. Suggested title + body:
+- **Home Field** - flat fenced starter pasture with one clear pen.
+- **Rolling Hills** - golden-hour island with trees, rocks, shoreline water, and a lightning corral.
+- **Open Country** - larger island with a gather zone and portal objective.
+- **Newsheepdogland** - survival island with a homestead pen, day/night pressure, and wolves after dark.
 
-**Title:** `Heightfield fix shipped to itch — terrain renders correctly on RH and Open Country again`
+## Modes
+
+- **Just Play** - 30 sheep, no timer, no fail state.
+- **Solo Classic** - leaderboard herding.
+- **Solo Extreme / Insane / Chaos** - 1,000, 3,000, or 5,000 sheep.
+- **Survival** - bring sheep home before wolves cut the flock down.
+- **Multiplayer** - 2-4 player co-op, competitive, and timed rooms with shareable invite URLs.
+- **Sandbox** - experiment with local layouts and sheep movement.
+
+## Controls
+
+Desktop:
+
+- WASD or arrow keys to move.
+- Shift to sprint.
+- Mouse wheel or plus/minus to zoom.
+- Gamepad supported.
+
+Mobile:
+
+- Touch joystick to move.
+- Sprint button for speed boost.
+- Responsive HUD and mobile controls.
+
+## Why It Feels Different
+
+The sheep are not on rails. They flock, separate, recover, and route around terrain obstacles. Your dog does not "collect" them; it applies pressure. Circle wide, cut off breaks, and nudge the flock where it needs to go.
+
+## Free, No Ads, Source-Readable
+
+Sheep Dog Sim is free to play, has no signup, no ads, and no microtransactions.
+
+Current source is AGPL-3.0-or-later and current non-code assets are CC BY-SA 4.0. Modified or hosted versions must preserve attribution and publish corresponding source.
+
+- Play the canonical version: https://sheepdogsim.com
+- Source: https://github.com/matthew-kissinger/sds
+- About: https://sheepdogsim.com/about
+
+## Suggested Itch Tags
+
+```text
+simulation, casual, browser, 3d, multiplayer, animals, dog, sheep, herding, open-source
+```
+
+## Optional Devlog Post
+
+**Title:** `v2.4.0 release candidate: new launch copy, refreshed scenes, native proof`
 
 **Body:**
 
-> The mid-distance dark-blue terrain band on Rolling Hills and Open Country was a path-resolution bug specific to the itch.io HTML5 deploy: scene defs reference heightmap binaries via root-absolute paths (`/terrain/...`), which `sheepdogsim.com` (Cloudflare Pages, root-served) handles fine but itch's `html-classic.itch.zone` CDN serves from a build-id subdirectory, so the fetch hit the wrong root and 404'd. The game then fell back to flat terrain.
->
-> Fixed by routing every absolute-root asset path through Vite's `BASE_URL` at runtime via a `resolveAssetUrl` helper. `BUILD_TARGET=itchio` builds now produce `./terrain/...` fetches that resolve relative to the build root, not the CDN root. Same codebase otherwise — internal refactors only since the last itch push (game state decomposition, heightfield API cleanup) — no gameplay changes.
+Sheep Dog Sim's launch-candidate build refreshes the public page copy, scene metadata, itch packaging path, and desktop proof around the current game: four scenes, survival wolves, multiplayer rooms, mobile controls, gamepad support, and flock sizes up to 5,000 sheep.
 
-(Skip if you'd rather just push the build silently.)
-
----
-
-## What's NOT in this draft
-
-- **A "what's new" / "changelog" section.** itch.io's description field is mostly read by first-time visitors. Update posts are the better channel for "since the last build" notes - covered above as optional.
-- **Pricing widget config.** Project is set free, presumably with optional tip — leave that alone.
-- **Cover image / screenshots.** Already in place; not refreshing as part of this push.
-- **Embed options / display orientation.** Existing iframe size + landscape preference should stay as-is.
+This update keeps the canonical web version at sheepdogsim.com and refreshes the itch HTML5 package so the page no longer describes the old 200-sheep-only prototype. As always: free to play, no signup, no ads.

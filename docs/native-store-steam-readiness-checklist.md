@@ -1,116 +1,63 @@
 # Native Store and Steam Readiness Checklist
 
-Status: updated after Cycle 54 desktop packaging closed and deployed,
-2026-06-04. This is documentation only. No Steam submission, App Store
-submission, Google Play submission, signing, Steamworks feature integration,
-paid fee, public unsigned release, or default-renderer policy change is
-authorized by this handoff.
+Status: updated in Cycle 109 on 2026-06-26. This is documentation and release-prep evidence only. No Steam submission, App Store submission, Google Play submission, signing, Steamworks feature integration, paid fee, public unsigned release, or default-renderer policy change is authorized.
+
+## Current Recommendation
+
+`wait-for-signing-and-assets`
+
+The v2.4.0 Windows package is technically credible: `npm run desktop:dist`, packaged WebGL proof, and packaged WebGPU proof are green. Steam publication is still blocked by human/account/store work: Steam Direct fee, Steam app setup, signing decision, approved capsule art/screenshots/trailer status, privacy URL, support URL, install/uninstall review, pricing/free-to-play decision, and final store page review.
 
 ## Universal Gates
 
-- Native shell proof boots the built SDS `dist/` without source-server coupling.
-  Cycle 53 proved Electron and Capacitor shells; Cycle 54 promotes Electron to
-  a Windows distributor path.
-- Default app launch remains WebGL unless a later explicit renderer policy
-  decision changes it.
-- Explicit WebGPU launch records device preflight, success/fallback reason, and
-  frame-time evidence. Current Cycle 54 desktop package result is green on this
-  Windows host: WebGPU device and renderer are ready, no fallback occurs, and
-  gameplay HUD appears from the packaged executable.
-- Field, Rolling Hills, and Open Country all have nonblank screenshots and
-  passing frame-time proof for any store-targeted build. Cycle 54's packaged
-  WebGL proof covers Rolling Hills only.
-- Fullscreen, native resize, pointer lock, keyboard/mouse, gamepad, audio
-  unlock, storage, and WebSocket multiplayer are tested in the shell.
-- Crash/log capture path exists and does not require a developer console.
-- Privacy policy URL and support URL exist and match actual telemetry,
-  multiplayer, and data practices.
-- Icons, screenshots, capsule art, and app metadata reflect real gameplay.
-- Offline/online behavior is defined: solo boot, multiplayer unavailable state,
-  leaderboard unavailable state, and reconnect behavior.
-- Versioning and changelog policy are documented for native builds.
+| Gate | Status | Evidence or Next Action |
+|---|---|---|
+| Native shell boots built `dist/` without source-server coupling | Green | Cycle 109 packaged proofs boot `sds://app` from `cycle109-validation/desktop-electron/artifacts/win-unpacked/resources/dist`. |
+| Default launch remains WebGL | Green | Current app defaults to WebGL unless renderer query/env requests WebGPU. |
+| Explicit WebGPU launch proof | Green | `npm --prefix native/desktop-electron run proof:webgpu` passed on v2.4.0. |
+| WebGL launch proof | Green | `npm --prefix native/desktop-electron run proof:webgl` passed on v2.4.0. |
+| Native resize/fullscreen/input/audio/storage | Green | Both packaged proof JSON reports pass resize, fullscreen, pointer lock, keyboard/mouse diff, audio unlock, virtual gamepad API, and localStorage persistence. |
+| Worker health and multiplayer socket | Green | Both packaged proof JSON reports include Worker health 200 and authenticated SDS room WebSocket open. |
+| Crash/log capture path | Green | Proof writes logs and crash dump directories under proof-specific Electron `userData`. |
+| Windows signing | Human-required | Artifacts are `NotSigned`. Decide certificate/signing path or explicit unsigned distribution. |
+| Privacy policy URL | Human-required | Must match telemetry, multiplayer, leaderboard, crash log, and third-party data practices. |
+| Support URL/email | Human-required | Needed before store submission and public native distribution. |
+| Offline/online behavior | Yellow | Solo boot works; multiplayer/leaderboard unavailable copy should be explicitly reviewed before desktop store release. |
+| Versioning and changelog | Green | Root and native package metadata are `2.4.0`; changelog has v2.4.0 RC notes. |
 
 ## Steam
 
-- Steam Direct / app admin work is not started by this cycle.
-- Cycle 54 picked Electron plus electron-builder as the first desktop
-  distributor path; Steam prep now starts from that shell instead of reopening
-  the shell-choice decision.
-- Local Steam depot dry-run is plausible if accepted: the Windows installer,
-  portable executable, and unpacked executable exist; packaged WebGL and WebGPU
-  boot and play; Worker health and SDS WebSocket proof pass.
-- Public Steam submission is no-go until signing policy, store metadata,
-  install/uninstall pass, screenshots/capsules, controller notes,
-  cloud-save policy, privacy/support URLs, and release-channel policy are
-  resolved.
-- Prepare Store Presence checklist inputs: short description, long description,
-  genres/tags, capsule art, screenshots, trailer if used, controller notes,
-  languages, OS requirements, privacy/support links, and age/content fields.
-- Prepare Game Build checklist inputs: Windows build package, launch command,
-  depot layout, default branch, build description, save/config directories, and
-  install/uninstall behavior. Cycle 54's local package outputs are
-  `cycle54-validation/desktop-electron/artifacts/win-unpacked/Sheep Dog Simulator.exe`,
-  `SheepDogSimulator-2.2.0-setup-x64.exe` (242,122,782 bytes), and
-  `SheepDogSimulator-2.2.0-portable-x64.exe` (218,431,930 bytes). Current
-  Authenticode status is `NotSigned`.
-- Test build outside Steam before any SteamPipe upload.
-- Defer Steamworks SDK features until after plain packaged play works:
-  achievements, cloud saves, overlay, rich presence, leaderboards, and
-  controller API.
-- Record whether WebSocket multiplayer needs Steam networking later or can keep
-  the Cloudflare Worker/Durable Object route.
-- Do not use the Steam release controls without explicit approval.
+| Steam Gate | Status | Evidence or Next Action |
+|---|---|---|
+| Steam Direct fee and app creation | Human-required | Official Steam Direct fee is $100 per product. Matt must pay and create/redeem the app. |
+| Store Presence checklist | Human-required | Requires store copy, pricing/free choice, tags, mature content survey, supported OS, language, screenshots, and graphical assets. |
+| Store review timing | Human-required | Store page review usually takes 3-5 business days; plan at least 7 business days. |
+| Build review timing | Human-required | Build review usually takes 3-5 business days; plan at least 7 business days and submit store presence before build review. |
+| Coming Soon timing | Human-required | Steam release docs say the approved store page must be Coming Soon for at least 2 weeks before release. |
+| Windows build artifact | Green for private proof | `SheepDogSimulator-2.4.0-setup-x64.exe`, `SheepDogSimulator-2.4.0-portable-x64.exe`, and `win-unpacked/Sheep Dog Simulator.exe` exist locally. |
+| Depot/build upload | Human-required | Requires Steam app ID, depot ID, Steamworks SDK/SteamPipe access, and a private upload test. |
+| Signing policy | Human-required | Current Windows artifacts are unsigned. |
+| Install/uninstall pass | Human-required | NSIS installer exists, but install/uninstall has not been manually exercised in this cycle. |
+| Capsule art | Blocked | Current scene captures can inform art, but final Steam capsules are not approved. |
+| Screenshots | Yellow | Proof screenshots are technical evidence, not final Steam marketing screenshots. Need five or more approved gameplay screenshots with no marketing overlays. |
+| Trailer | Human-required | Decide whether to launch Coming Soon without trailer or capture a short gameplay trailer. |
+| Controller notes | Human-required | Gamepad support exists, but Steam input/controller claims need a tested store statement. |
+| Cloud saves | Human-required | Current saves/settings are local/browser storage. Decide whether to make no Steam Cloud claim or integrate later. |
+| Steamworks SDK features | Deferred | Achievements, Steam Cloud, overlay, rich presence, Steam leaderboards, and Steam networking are not required for first private depot proof. |
+| Multiplayer backend | Yellow | Current Cloudflare Worker/Durable Object route works in packaged proof. Store copy should not imply Steam networking. |
 
-## Apple App Store
+## Current Cycle 109 Artifacts
 
-- App Store submission is not started by this cycle.
-- Capacitor or another mobile shell must boot SDS on real iOS before metadata
-  work becomes meaningful.
-- Bundle identifier, signing certificates, provisioning profiles, Xcode build,
-  and TestFlight flow are future work.
-- App metadata must accurately reflect gameplay, screenshots, previews, input,
-  multiplayer, and any network requirement.
-- Privacy Nutrition Label answers must match SDS telemetry, leaderboard,
-  multiplayer, third-party SDK, crash log, and analytics behavior.
-- Support URL and privacy policy URL are required before submission work.
-- Safe areas, orientation, touch latency, audio unlock, storage, and WebSocket
-  behavior must be tested on current iOS hardware.
-- Do not add in-app purchases, subscriptions, Game Center, Sign in with Apple,
-  or tracking prompts without a separate approved plan.
+- `cycle109-validation/desktop-electron/artifacts/SheepDogSimulator-2.4.0-setup-x64.exe` - 134,038,407 bytes - `NotSigned`
+- `cycle109-validation/desktop-electron/artifacts/SheepDogSimulator-2.4.0-portable-x64.exe` - 133,710,734 bytes - `NotSigned`
+- `cycle109-validation/desktop-electron/artifacts/win-unpacked/Sheep Dog Simulator.exe` - `NotSigned`
+- `cycle109-validation/desktop-electron/reports/desktop-electron-proof-webgl.json` - `ok: true`
+- `cycle109-validation/desktop-electron/reports/desktop-electron-proof-webgpu.json` - `ok: true`
 
-## Google Play
+## Non-Steam Stores
 
-- Google Play submission is not started by this cycle.
-- Capacitor Android or TWA proof must boot SDS on real Android before store prep
-  becomes meaningful.
-- Package name, signed release artifact, Play App Signing, keystore handling,
-  AAB output, and release track choice are future work.
-- Data Safety answers must match SDS telemetry, leaderboard, multiplayer,
-  third-party SDK, crash log, and analytics behavior.
-- High-risk or sensitive permissions should stay out of scope unless a later
-  native feature requires them and is approved.
-- Store listing needs icon, feature graphic, screenshots, descriptions, content
-  rating, target audience, privacy policy, support contact, and testing notes.
-- Test at least one mid-range and one high-end Android device for touch latency,
-  audio unlock, storage, WebSocket multiplayer, and renderer fallback.
+Apple App Store, Google Play, Microsoft Store, PWA/TWA, and mobile native wrappers remain future work. Cycle 109 does not authorize those paths. For the immediate launch program, web remains canonical, itch is the first secondary channel, and Steam is a human-reviewed follow-up.
 
-## PWA / TWA / Store Wrapper
+## Handoff
 
-- PWA/TWA packaging is optional and secondary to a real app-shell proof.
-- Web manifest needs app name, short name, icons, screenshots, theme/background
-  colors, display mode, start URL, and scope aligned to `sheepdogsim.com`.
-- Service-worker behavior must be explicit for web/PWA versus native package
-  builds.
-- Android TWA requires Digital Asset Links from the package to the web origin.
-- Microsoft Store PWA packaging requires PWABuilder-style package validation and
-  Microsoft Partner Center metadata if pursued.
-- PWA updates are web-origin updates; manifest/package metadata changes can
-  require package resubmission depending on store.
-
-## Native Shell Handoff
-
-Cycle 53 completed the shell proof. Cycle 54 promotes Electron into the primary
-Windows desktop package path for Steam prep, with WebGL and WebGPU packaged
-proofs green on this Windows host. Tauri remains a future comparator if
-Electron package size, memory footprint, signing, or installer behavior becomes
-the limiting factor.
+Go for a private Steam app/depot setup only after Matt approves the cost and account actions. No-go for public Steam submission until signing, assets, support/privacy URLs, install/uninstall, pricing, and store page review are complete.

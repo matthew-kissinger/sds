@@ -1,64 +1,77 @@
-# Sheep Dog Sim — Press Kit
+# Sheep Dog Sim - Press Kit
 
-A free, browser-based herding game where you guide your sheepdog across four biomes: a flat pasture, rolling sunset hills, a wild island with a magical portal, and a boot-shaped survival island with wolves after dark. Zen, satisfying, no microtransactions, no signup.
+A free browser herding game where you guide a sheepdog across four playable scenes, solo challenge modes, 2-4 player online multiplayer, and a survival island with wolves after dark.
 
 ## Tagline
 
-**Herd 5,000 sheep in your browser. No install. Free to play. Source-readable under AGPL-3.0.**
+**Herd up to 5,000 sheep in your browser. No install, no signup, no ads.**
 
-## Headline features
+## Short Description
 
-- **Four biomes:** Home Field (flat starter pasture), Rolling Hills (180 m sunset island with corral), Open Country (380 m island with multi-stage gather→drive→portal objective), Newsheepdogland (boot-shaped survival island with a homestead pen, day/night cycle, and wolves after dark).
-- **Six modes:** Practice (30 sheep, no timer), Classic (200), Extreme (1,000), Insane (3,000), Chaos (5,000), plus 2–4 player multiplayer co-op + competitive + timed.
-- **Authoritative 60 Hz multiplayer:** Cloudflare Workers + Durable Objects + D1, MessagePack-over-WebSocket state frames, adaptive jitter buffer.
-- **5 languages:** auto-detected via i18next — English, Spanish, Portuguese, Japanese, Simplified Chinese. (Community PRs welcome for more.)
-- **Mobile-capable web controls:** touch joystick, responsive HUD, gamepad support, and PWA installability. Native mobile store releases are still proof-level work, not a current launch claim.
-- **Cinematic visuals:** Hosek-Wilkie analytic sky with day/night presets, parallax cloud layer, anime-style water with sun-glint, hundreds of thousands of grass blades with directional wind, real obstacle-aware boid flocking.
+Sheep Dog Sim is a browser-first 3D herding game. Use a sheepdog to shape a flock, drive sheep through gates and portals, survive wolves after dark, or play online with friends.
 
-## Why it exists
+## Long Description
 
-A relaxed, no-stakes corner of the modern web. Most casual games push notifications, ads, or energy meters — Sheep Dog Sim has none of that. Open the URL, herd some sheep, close the tab.
+Sheep Dog Sim turns flock pressure into a readable, tactile browser game. Sheep cluster, scatter, avoid obstacles, and react to the dog. The same deterministic simulation runs in the browser for solo play and on Cloudflare Durable Objects for authoritative multiplayer rooms.
 
-The codebase is also deliberately easy to read — ~10k lines of vanilla JavaScript on the client, ~600-line TypeScript Cloudflare Worker on the server, deterministic boid + physics modules shared byte-identically by both. Forkable in an afternoon.
+The game includes a flat starter pasture, a golden-hour island, a large open island with a gather-and-portal objective, and Newsheepdogland, a boot-shaped survival island with a homestead pen and wolves after dark. Modes scale from 30-sheep practice to 5,000-sheep chaos, with 2-4 player co-op and competitive multiplayer.
 
-## Quick facts
+## Headline Features
 
-- **Studio:** solo developer, Matthew Kissinger.
-- **Engine:** vanilla JavaScript + Three.js 0.184 (no game engine, no JSX, no codegen, no wasm).
-- **Backend:** Cloudflare Pages + Worker + Durable Objects + D1.
-- **License:** [AGPL-3.0-or-later](LICENSE) source code, [CC BY-SA 4.0](LICENSE-ASSETS) assets. Free to play; forks and hosted modifications must preserve attribution and publish corresponding source. Earlier releases retain the terms recorded in their historical artifacts; see [LICENSING.md](LICENSING.md).
-- **Platforms:** Web (any modern browser), PWA-installable on mobile, full gamepad support on desktop.
-- **Languages:** English, Spanish, Portuguese, Japanese, Simplified Chinese.
+- Four playable scenes: Home Field, Rolling Hills, Open Country, and Newsheepdogland.
+- Solo modes from 30 sheep to 5,000 sheep.
+- Survival mode with day/night pressure and wolves.
+- 2-4 player online co-op and competitive rooms.
+- Mobile touch controls, keyboard/mouse, and gamepad support.
+- Five UI languages: English, Spanish, Portuguese, Japanese, Simplified Chinese.
+- Three.js 0.185 renderer paths with WebGL fallback and progressive WebGPU.
+- Cloudflare Workers, Durable Objects, and D1 backend.
+- Source-readable AGPL code and CC BY-SA assets.
+
+## Quick Facts
+
+- **Developer:** Matthew Kissinger
+- **Website:** [sheepdogsim.com](https://sheepdogsim.com)
+- **Source:** [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
+- **Current release candidate:** v2.4.0, not yet tagged for public launch
+- **Latest public tag:** v2.3.4
+- **Engine:** vanilla JavaScript, Three.js 0.185, React 19, Vite 7, Tailwind 4
+- **Backend:** Cloudflare Pages, Worker, Durable Objects, D1
+- **Platforms:** Web now; itch HTML5 build target; Windows Electron package path under review for Steam
+- **License:** AGPL-3.0-or-later source code, CC BY-SA 4.0 current non-code assets
 
 ## URLs
 
-- **Play:** [sheepdogsim.com](https://sheepdogsim.com)
-- **About:** [sheepdogsim.com/about](https://sheepdogsim.com/about)
-- **Source / contact:** [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
+- Play: [https://sheepdogsim.com](https://sheepdogsim.com)
+- About: [https://sheepdogsim.com/about](https://sheepdogsim.com/about)
+- Source: [https://github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
+- License details: [LICENSING.md](LICENSING.md)
 
-## Screenshots & social cards
+## Screenshots
 
-Current 1920×1080 WebGPU scene captures:
+Current 16:9 scene captures:
 
-- [`assets/scenes/entrance/newsheepdogland.webp`](assets/scenes/entrance/newsheepdogland.webp). Newsheepdogland survival island, the sheepdog on the dusk shore facing the mountain. Default public social image.
-- [`assets/scenes/entrance/field.webp`](assets/scenes/entrance/field.webp) — Home Field with the sheepdog and flock in grass.
-- [`assets/scenes/entrance/rolling-hills.webp`](assets/scenes/entrance/rolling-hills.webp) — Rolling Hills shoreline capture.
-- [`assets/scenes/entrance/open-country.webp`](assets/scenes/entrance/open-country.webp) — Open Country with the sheepdog facing the portal objective.
+- [Newsheepdogland](assets/scenes/entrance/newsheepdogland.webp) - survival island with dusk shoreline and mountain.
+- [Home Field](assets/scenes/entrance/field.webp) - fenced starter pasture.
+- [Rolling Hills](assets/scenes/entrance/rolling-hills.webp) - golden-hour island.
+- [Open Country](assets/scenes/entrance/open-country.webp) - portal objective island.
 
-Older 1200×630 social-card assets remain under [`assets/marketing/og/`](assets/marketing/og/) for historical release material.
+Current 1200x630 social cards:
 
-Legacy in-game screenshots also still in [`assets/images/`](assets/images/):
-- `sds-zoomedout.png` — overhead pasture shot
-- `sds-zoomedin-play.png` — gameplay, sheep + dog mid-herd
-- `sds-menu.png` — start screen with biome picker
-- `sds-dog-selection.png` — dog breed select
+- [Newsheepdogland social card](assets/scenes/social/newsheepdogland.webp)
+- [Home Field social card](assets/scenes/social/field.webp)
+- [Rolling Hills social card](assets/scenes/social/rolling-hills.webp)
+- [Open Country social card](assets/scenes/social/open-country.webp)
 
-Reuse policy: screenshots, video captures, and excerpts from this press kit may be used in articles, reviews, social posts, and academic discussion under fair-use conventions. Please credit "Sheep Dog Sim by Matthew Kissinger" with a link to [sheepdogsim.com](https://sheepdogsim.com).
+Older social-card assets under `assets/marketing/og/` are historical. Current public metadata uses the shipped `assets/scenes/social/*.webp` captures.
 
-## Creator bio
+## Reuse
 
-Matt Kissinger — solo developer building games and tools at the intersection of generative AI and creative web tech. Sheep Dog Sim is one of several browser-first projects shipped with TypeScript + Three.js + Cloudflare. Reach out: [matt.m.kissinger@gmail.com](mailto:matt.m.kissinger@gmail.com).
+Screenshots, video captures, and excerpts from this press kit may be used in articles, reviews, social posts, and academic discussion. Credit "Sheep Dog Sim by Matthew Kissinger" with a link to [sheepdogsim.com](https://sheepdogsim.com).
 
-## Press contact
+Forks and hosted modifications must comply with the AGPL code license and CC BY-SA asset license.
 
-Email: [matt.m.kissinger@gmail.com](mailto:matt.m.kissinger@gmail.com) — usually within 48h.
+## Contact
+
+Matthew Kissinger
+[matt.m.kissinger@gmail.com](mailto:matt.m.kissinger@gmail.com)

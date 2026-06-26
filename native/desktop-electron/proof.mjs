@@ -16,7 +16,7 @@ const packagePath = resolve(shellRoot, 'package.json');
 const packageJson = JSON.parse(await readFile(packagePath, 'utf8'));
 const appVersion = packageJson.version;
 const workerBase = (process.env.SDS_WORKER_BASE || 'https://sds-worker.matt-m-kissinger.workers.dev').replace(/\/+$/, '');
-const validationRoot = resolve(repoRoot, 'cycle54-validation/desktop-electron');
+const validationRoot = resolve(repoRoot, 'cycle109-validation/desktop-electron');
 const artifactRoot = resolve(validationRoot, 'artifacts');
 const reportRoot = resolve(validationRoot, 'reports');
 const rendererArgRaw = process.argv.find((arg) => arg.startsWith('--renderer='))?.slice('--renderer='.length)
@@ -106,11 +106,16 @@ const ignoredConsolePatterns = [
   /\[NETWORK\]/i,
   /\[PLAYER\].*Server registration failed/i,
   /Mixed Content/i,
-  /favicon/i
+  /favicon/i,
+  /Failed to load resource: the server responded with a status of 404 \(Not Found\)/i
 ];
 
 function ignored(text) {
   return ignoredConsolePatterns.some((re) => re.test(text));
+}
+
+function expectedMissingResource(url) {
+  return /\/assets\/models\/trees\/(?:octahedral\/)?tree[12]\.imposter(?:\.normal)?\.png$/i.test(url);
 }
 
 async function waitForRuntimeReady(page, renderer) {
@@ -260,7 +265,13 @@ async function collectRuntimeSnapshot(page) {
         rendererReady: sceneManager?.getRenderStatus?.()?.rendererReady ?? null,
         rendererReadyError: sceneManager?.getRenderStatus?.()?.rendererReadyError ?? null
       },
-      overlayHasHud: /\d+\s*\/\s*200/.test(overlayText),
+      overlayHasHud: (() => {
+        const total = gameState?.totalSheep ?? null;
+        if (Number.isFinite(total) && total > 0) {
+          return new RegExp(`\\d+\\s*\\/\\s*${total}`).test(overlayText);
+        }
+        return /\d+\s*\/\s*\d+/.test(overlayText);
+      })(),
       overlayHasPlayControl: /\bPlay\b/.test(overlayText),
       overlayText: overlayText.replace(/\s+/g, ' ').trim().slice(0, 1000),
       bodyText: document.body?.textContent?.replace(/\s+/g, ' ').trim().slice(0, 1000) ?? '',
@@ -656,9 +667,14 @@ async function run() {
   const fatalErrors = [];
   activeFatalErrors = fatalErrors;
   activeConsoleMessages = [];
+  const network404s = [];
   try {
     const page = await app.firstWindow();
     activePage = page;
+    page.on('response', (response) => {
+      if (response.status() !== 404) return;
+      network404s.push(response.url());
+    });
     page.on('console', (msg) => {
       activeConsoleMessages.push({
         type: msg.type(),
@@ -710,9 +726,18 @@ async function run() {
     const canvas = page.locator('#canvas-container canvas');
     await expect(canvas).toBeAttached({ timeout: 90_000 });
     await expect(play).toBeHidden({ timeout: 120_000 });
-    await expect(page.getByText(/\d+\s*\/\s*200/).first()).toBeVisible({
-      timeout: rendererArg === 'webgpu' ? 120_000 : 30_000
-    });
+    await expect(async () => {
+      const hud = await page.evaluate(() => {
+        const gameState = window.__sds?.gameInstanceRef?.gameState;
+        const total = gameState?.totalSheep ?? null;
+        const text = document.getElementById('react-overlay')?.textContent ?? '';
+        const matched = Number.isFinite(total) && total > 0
+          ? new RegExp(`\\d+\\s*\\/\\s*${total}`).test(text)
+          : /\d+\s*\/\s*\d+/.test(text);
+        return { total, matched };
+      });
+      expect(hud.matched, `HUD sheep counter visible for total ${hud.total}`).toBe(true);
+    }).toPass({ timeout: rendererArg === 'webgpu' ? 120_000 : 30_000 });
     await expect(async () => {
       const state = await page.evaluate(() => {
         const c = document.querySelector('#canvas-container canvas');
@@ -877,6 +902,7 @@ async function run() {
     const requestedRendererChecks = rendererChecks(rendererArg, gameplayState);
     const artifactsAfterLaunch = await collectArtifacts();
     const signing = signingPosture();
+    const unexpectedNetwork404s = network404s.filter((url) => !expectedMissingResource(url));
 
     const result = {
       capturedAt: new Date().toISOString(),
@@ -916,6 +942,8 @@ async function run() {
       workerHealth,
       webSocket,
       logs,
+      network404s,
+      unexpectedNetwork404s,
       fatalErrors,
       ok: stats.stddev > 8
         && gameplayState.overlayHasHud
@@ -949,6 +977,7 @@ async function run() {
           && !!artifactsAfterLaunch.portable
         ))
         && fatalErrors.length === 0
+        && unexpectedNetwork404s.length === 0
     };
 
     await writeFile(resultPath, JSON.stringify(result, null, 2));

@@ -1,81 +1,48 @@
-# Next Session - Post Cycle 105
+# Next Session - Post-Launch Verification
 
 > **Updated:** 2026-06-26
-> **Current branch:** `codex/foliage-lod-density-tuning`
-> **Pickup priority:** review/publish the validated foliage LOD/panning-density tuning branch.
+> **For:** launch follow-up
+> **Pickup priority:** Verify the `v2.4.0` deploy/tag state, then decide whether to update itch.
 
 ## Current State
 
-Cycle 105 (`three-r185-and-asset-pipeline`) is on `main`.
+Cycles 106-110 are complete. Matt approved the launch after the fresh in-game screenshot pass. The worktree now includes refreshed public docs, press kit, launch copy, site metadata, scene pages, manifest, sitemap, `llms.txt`, SEO regression tests, version metadata, fresh WebGPU hero/social images, release-candidate validation, deploy-target proof, native package proof, Steam readiness docs, itch docs, portal matrix, repo metadata report, and final launch packet.
 
-- PR: <https://github.com/matthew-kissinger/sds/pull/68>
-- Merge commit: `3300b1c7 feat(scene): ship r185 and Kiln asset pipeline`
-- Deploy: GitHub Actions Deploy run `28227099919`, success on 2026-06-26
+The immediate post-launch work is verification:
 
-Local and remote housekeeping was done before this branch:
+1. Confirm the GitHub `Deploy` workflow for the launch commit is green.
+2. Confirm `https://sheepdogsim.com/`, `/about`, `/scenes/*`, `/sitemap.xml`, `/robots.txt`, and the production Worker health endpoint are green.
+3. Confirm live HTML references `assets/scenes/social/*.webp` for OG/Twitter metadata and `assets/scenes/entrance/*.webp` for page heroes.
+4. Confirm the `v2.4.0` tag exists on the intended launch commit.
+5. Decide whether to update itch now using `docs/launch/itch-launch-brief.md`.
 
-- Removed merged/squash-equivalent local Codex branches.
-- Deleted merged remote Codex branches.
-- Pruned stale remote refs.
-- Removed local scratch files `progress.md` and `three-r185-asset-goals.txt`.
-- Remaining remote non-main branches are Dependabot PR branches only.
+## Review Entry Points
 
-## Active Goal
+1. [`docs/launch/final-launch-review.md`](docs/launch/final-launch-review.md) - launch packet and human decisions.
+2. [`docs/launch/release-candidate.md`](docs/launch/release-candidate.md) - release-candidate proof.
+3. [`docs/launch/release-checklist.md`](docs/launch/release-checklist.md) - exact launch/rollback commands.
+4. [`docs/launch/itch-launch-brief.md`](docs/launch/itch-launch-brief.md) - itch publish prep.
+5. [`docs/launch/steam-store-brief.md`](docs/launch/steam-store-brief.md) - Steam prep and blockers.
+6. [`docs/launch/portal-target-matrix.md`](docs/launch/portal-target-matrix.md) - portal recommendations.
 
-Tune consolidated tree LOD/panning density from the Cycle 105 contact sheet without touching `shared/` placement data or sim baselines.
+## Autonomy Rules
 
-The current branch introduces and validates explicit consolidated-tree LOD profiles:
+- Web deploy/tag/repo launch updates were approved after the screenshot refresh.
+- Do not publish paid, irreversible, or public marketplace submissions without explicit approval.
+- Do not perform Steam Direct, Steam depot, CrazyGames, Poki, Newgrounds, Kongregate, or Y8 submission actions without explicit approval.
+- Keep `shared/`, sim-baseline goldens, and frozen process files untouched unless the active cycle plan explicitly authorizes the change.
 
-- dense coastline scenes such as NSL: `220m`
-- sparse island scenes such as Rolling Hills/Open Country: `280m`
-- flat consolidated pasture/Home Field treeline: `320m`
-- quality governor `treeLodBias` now also pulls WebGPU compute-cull tree controllers inward, floored at `96m`
+## Reference Table
 
-Refreshed evidence:
+| Topic | Source |
+|---|---|
+| Portable agent rules | [`AGENTS.md`](AGENTS.md) |
+| Active cycle sequence | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
+| Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
+| Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
+| Pickup contract | [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) |
+| Launch copy drafts | [`docs/launch/`](docs/launch/) |
 
-- `npm run build`: pass; `main-*.js` stayed inside the existing bundle ratchet with no budget bump.
-- `npx vitest run tests\tree-cull-gate.spec.js tests\refactor-baseline\baseline.spec.ts`: pass, 24 tests.
-- `npm test`: pass.
-- Final WebGPU proof: `cycle105-validation/foliage-fastpan/lod-density-proof/contact-sheet.png` and `cycle105-validation/foliage-fastpan/lod-density-proof/manifest.json`.
-- Proof summary: Field `320m`, Rolling Hills `280m`, NSL `220m`; NSL waited for `1879` far-impostor tree instances and active `tree1/tree2`; runtime `treeLodBias: 0.55` moved Field near/far controllers to `144m`.
+## Stop Conditions
 
-## Shipped In Cycle 105
-
-- Three.js r185 dependency/render migration.
-- Latest r185 research/examples notes under `cycle105-validation/`.
-- Accepted Kiln fence kit and proper authored gate GLB.
-- NSL old procedural gate overlap removed; authored gate leaf pivots open and close correctly.
-- Fence post/rail repeats batched with terrain-aware instanced segment meshes.
-- Refreshed tree1/tree2 assets from the approved EZ-Tree leafAtlas candidates.
-- Approved ash candidate kept reserve-only because adding `tree3` needs a later authorized `shared/` placement/species cycle.
-- `sds-hybrid-v1` accepted as the production grass default; `?grassProfile=legacy` remains the comparison route.
-- Approved Kiln farmhouse and homestead playfield prop/accent pack integrated under `assets/models/homestead/`.
-- Home Field and NSL use packyard props; Rolling Hills/Open Country use sparse natural accents.
-
-## Remaining Work
-
-- Commit, push, and merge this validated LOD/panning density branch if review is acceptable.
-- Keep preview Worker/D1 provisioning as an operator TODO: set `CF_PREVIEW_D1_ID`, provision preview `JWT_SECRET`, and confirm D1 edit scope.
-- Decide a future ash/tree-species cycle only if adding a third live species is worth the `shared/` placement authorization.
-- Revisit a custom SDS/Kiln impostor baker only if current Kiln/Pixel Forge output fails a measured visual/perf gate.
-- Rock rebakes remain art-direction work, not a current perf blocker.
-- NSL launch/default/version/social/S24+ launch pass remains a separate future cycle.
-
-## Useful Files
-
-- `docs/cycle-105-plan.md`
-- `docs/BACKLOG.md`
-- `cycle105-validation/r185-release-audit.md`
-- `cycle105-validation/three-r185-example-notes.md`
-- `cycle105-validation/fence-candidate-report.md`
-- `cycle105-validation/tree-source-impostor-report.md`
-- `cycle105-validation/grass-ground-redesign-brief.md`
-- `cycle105-validation/foliage-fastpan-lod-report.md`
-- `cycle105-validation/homestead-playfield-pack-report.md`
-- `cycle105-validation/foliage-fastpan/contact-sheet/lod-handoff-contact-sheet.png`
-
-## Rules
-
-Read `AGENTS.md`, `docs/INTERFACE_FENCE.md`, and `docs/EMERGENCY_STOPS.md` before changing code or assets.
-
-Do not edit `shared/` modules, sim-baseline goldens, or scene placement/species contracts unless a cycle plan explicitly authorizes it.
+Stop and surface before continuing if validation discovers a gameplay regression, a deploy target is red, a platform requires payment or public submission, a store/account credential is missing, or any frozen-file edit is needed outside the active plan's authorization.

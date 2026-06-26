@@ -4,6 +4,33 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] - 2026-06-26
+
+### Added
+
+- Launch-readiness program covering repo docs, SEO/site content, release-candidate proof, native/Steam readiness, itch/portal planning, and final review.
+- Isolated PR preview multiplayer backend: preview Worker `sds-worker-preview`, preview D1 `sds-db-preview`, preview-only `JWT_SECRET`, and CI proof that preview deploys do not touch production D1.
+- Current launch copy sources under `docs/launch/` for web, itch, Steam, portals, social copy, and final review.
+- Fresh WebGPU scene captures for README/site heroes plus 1200x630 Open Graph/Twitter cards under `assets/scenes/`.
+
+### Changed
+
+- Three.js runtime dependency moved to r185 and the render migration was validated against SDS WebGPU/WebGL surfaces.
+- Kiln-backed asset work promoted into the live game: accepted fence kit, authored gate, refreshed tree1/tree2 candidates, hybrid grass default, farmhouse, homestead props, and sparse natural accents.
+- Foliage LOD/panning-density tuning now uses explicit consolidated-tree distance profiles while keeping `shared/` placement data untouched.
+- Public repo, press, and launch docs now describe the current game, deployment posture, and release lanes instead of older r184/Cycle 83/native `2.2.0` state.
+
+### Validation
+
+- Release-candidate validation is recorded in `cycle108-validation/`.
+- Native/Steam validation is recorded in `cycle109-validation/`.
+- Itch/portal/final launch review status is recorded in `cycle110-validation/`.
+- Fresh scene media capture proof is recorded in `cycle110-validation/scene-media-refresh/`.
+
+### Notes
+
+- Steam public submission, paid platform actions, and third-party portal submissions remain separate follow-up decisions.
+
 ## [2.3.4] - 2026-06-12
 
 ### Fixed

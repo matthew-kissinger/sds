@@ -1,7 +1,7 @@
 {
   "name": "sheep-dog-sim",
-  "version": "2.3.4",
-  "description": "An interactive herding game where players control a sheepdog to guide sheep into a pen using boid flocking algorithms",
+  "version": "2.4.0",
+  "description": "Free browser herding game with solo challenges, 2-4 player multiplayer, survival wolves, mobile controls, gamepad support, and flocks up to 5,000 sheep",
   "type": "module",
   "main": "index.html",
   "engines": {
@@ -28,6 +28,7 @@
     "test:ios-water": "node tools/browserstack/run-ios-water.mjs",
     "proof:first-session": "node tools/newsheepdogland-first-session-proof.mjs",
     "cinema": "node tools/cinematic/run.mjs",
+    "media:capture-launch": "node tools/launch-scene-media-capture.mjs",
     "clean": "rm -rf dist node_modules/.vite",
     "compress-glbs": "node scripts/compress-glbs.mjs",
     "bake-trees": "node tools/bake-trees.mjs",
@@ -81,7 +82,10 @@
     "boids",
     "flocking",
     "three.js",
-    "herding"
+    "herding",
+    "multiplayer",
+    "webgpu",
+    "cloudflare"
   ],
   "author": "Matthew Kissinger",
   "license": "AGPL-3.0-or-later",
