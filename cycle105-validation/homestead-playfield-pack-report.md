@@ -58,7 +58,7 @@ Generated review artifacts are staged under:
 - `cycle105-validation/homestead-playfield-pack-v1/source/`
 - `cycle105-validation/homestead-playfield-pack-v1/homestead-playfield-pack-v1-contact-sheet.png`
 
-The staged artifacts started as review candidates only. After actual-scene review, Matt approved `01-farmhouse-a`; it is now integrated locally as `assets/models/Farm house.glb`. The remaining pack props and natural accents are still diagnostic review candidates only.
+The staged artifacts started as review candidates only. After actual-scene review, Matt approved `01-farmhouse-a`; it is now integrated locally as `assets/models/Farm house.glb`. Matt has since approved the remaining pack assets for this branch. Production copies for the accepted props and accents now live under `assets/models/homestead/` and are placed scene-appropriately by `js/world/homesteadPlayfieldProps.js`.
 
 ## Technical Inspection Summary
 
@@ -99,7 +99,7 @@ Refined artifacts:
 
 ## Scene Placement Review
 
-Candidates `10`, `11`, and `12` now have diagnostic SDS scene-placement previews, driven by opt-in local manifests and `?assetReview=1`. The original NSL farmhouse manifest hid the then-live farmhouse and mounted `01-farmhouse-a` at the scene farmhouse position for approval. After Matt approved it, `01-farmhouse-a` replaced the live farmhouse asset. The newer scene-fit sweep keeps the approved live farmhouse visible, excludes reserve farmhouse variant B from default review, and places the remaining pack props only where they fit: farmyard props in Home Field and NSL, sparse natural accents in Rolling Hills and Open Country.
+Candidates `10`, `11`, and `12` first had diagnostic SDS scene-placement previews, driven by opt-in local manifests and `?assetReview=1`. The original NSL farmhouse manifest hid the then-live farmhouse and mounted `01-farmhouse-a` at the scene farmhouse position for approval. After Matt approved it, `01-farmhouse-a` replaced the live farmhouse asset. The scene-fit sweep kept the approved live farmhouse visible, excluded reserve farmhouse variant B from default review, and placed the remaining pack props only where they fit: farmyard props in Home Field and NSL, sparse natural accents in Rolling Hills and Open Country. Those approved placements are now live runtime placements; the diagnostic manifests remain as evidence only.
 
 Review artifacts:
 
@@ -132,6 +132,14 @@ Runtime proof summary:
 - The live review URL for NSL is `http://localhost:3000/?renderer=webgpu&scene=newsheepdogland&mode=survival&autostart=1&perfMode=1&probeRender=1&cinematic=1&assetReview=1&assetReviewManifest=%2Fcycle105-validation%2Fhomestead-playfield-pack-v1%2Fscene-review%2Fnewsheepdogland-manifest.json&ui=off`.
 - The current packyard review URL for NSL is `http://localhost:3000/?renderer=webgpu&scene=newsheepdogland&mode=survival&autostart=1&perfMode=1&probeRender=1&cinematic=1&assetReview=1&assetReviewManifest=%2Fcycle105-validation%2Fhomestead-playfield-pack-v1%2Fscene-review%2Fnewsheepdogland-packyard-manifest.json&ui=off`.
 
+Live runtime integration update:
+
+- Production copies exist under `assets/models/homestead/` for utility shed, hay bales A/B, trough/bucket, crate stack, barrel/rope, log/stump, stone marker, wildflower A/B, and signpost.
+- `js/world/homesteadPlayfieldProps.js` maps live placements by scene without touching `shared/` scene definitions.
+- Home Field and NSL load 11 packyard props each at 6,092 triangles / 347 meshes, with no failed GLB loads.
+- Rolling Hills and Open Country load 4 natural accents each at 1,334 triangles / 82 meshes, with no failed GLB loads.
+- Runtime proof screenshots and `summary.json` live under `cycle105-validation/homestead-playfield-pack-v1/live-runtime/`.
+
 Local validation update:
 
 - `npm run lint` passed.
@@ -155,14 +163,13 @@ Matt approved `01-farmhouse-a` in the actual NSL scene. It now replaces the live
 - Shadow policy: farmhouse mesh casting stays disabled in `TerrainBuilder` until a dedicated proxy shadow pass is approved.
 - Bundle proof: the local asset-review harness is dev-gated so it does not ship in production. The legacy `mainKB` ratchet is updated from 627 to 628 after the final build; per-family chunk budgets stay unchanged and pass.
 
-## Acceptance Gates Before Runtime Use
+## Runtime Use Gates
 
-- Matt reviews the pack contact sheet, the no-ground refinement sheet, and the actual-scene review for taste and scale.
-- For any selected GLB: inspect file size, triangle count, upload vertices, materials, textures, bounds, pivot, node names, and warnings again after any cleanup or rebake.
-- Reject any output that violates the palette, reads generically, lacks stable gameplay pivots, creates many materials/textures, or needs runtime code to compensate for bad asset authoring.
-- Build or update an SDS scene preview for any additional plausible winners before replacement.
-- Integrate only accepted assets, one small group at a time, with runtime proof and Matt visual approval.
+- Matt reviewed and approved the pack assets for this branch.
+- File size, triangle count, materials, textures, bounds, pivots, and warnings were inspected during the pack and no-ground refinement passes.
+- Live integration keeps the scene-fit density decisions: farmyard props only in Home Field/NSL, sparse natural accents only in Rolling Hills/Open Country.
+- Runtime proof confirms live production placement counts and no failed GLB loads.
 
 ## Next Step
 
-Matt reviews the current scene-fit packyard and accent previews and decides accept, tune placement/scale/density, or reject each prop group. Do not integrate the remaining prop or accent candidates into live SDS placements until the selected assets have final cleanup/rebake if needed, runtime placement proof, tests/build proof, and Matt visual approval in scene.
+Run final post-integration validation, update the PR, and shepherd the branch through remote CI, merge, and deployment. Future prop work should be targeted tuning or a new asset-pack cycle, not more untracked candidate promotion on this branch.

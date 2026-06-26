@@ -718,7 +718,7 @@ class SheepDogSimulation {
         this._perfStructureScratch = []; // flattened structure objects
         this._perfVisibleCounts = {
             Terrain: 0, Trees: 0, Rocks: 0, Mountains: 0, Grass: 0,
-            Structures: 0, Sheep: 0, Water: 0, Atmosphere: 0,
+            Structures: 0, HomesteadProps: 0, Sheep: 0, Water: 0, Atmosphere: 0,
         };
         // [P2-ALLOC] Cached visible-group counts for trees/rocks/mountains.
         // Visibility on these arrays only flips on camera-driven hybrid LOD
@@ -1552,11 +1552,12 @@ class SheepDogSimulation {
     registerSystemTriangleCounts() {
         try {
             const perf = this.performanceMonitor;
-            const { Terrain, Trees, Rocks, Mountains } = this.terrainBuilder.getTriangleBreakdown();
+            const { Terrain, Trees, Rocks, Mountains, HomesteadProps } = this.terrainBuilder.getTriangleBreakdown();
             perf.addSystemTriangles('Terrain', Terrain);
             perf.addSystemTriangles('Trees', Trees);
             perf.addSystemTriangles('Rocks', Rocks);
             perf.addSystemTriangles('Mountains', Mountains);
+            perf.addSystemTriangles('Homestead Props', HomesteadProps);
 
             const grassSystem = this.terrainBuilder.grassSystem;
             if (grassSystem) {
@@ -1645,6 +1646,7 @@ class SheepDogSimulation {
                 materialSummary: grass?.webgpuGrassBladeMaterialSummary ?? null,
                 interactorContract: grass?.grassMaterial?.userData?.webgpuGrassBladeInteractors ?? null,
             },
+            homesteadProps: this.terrainBuilder?.homesteadPlayfieldPropSummary ?? null,
             sheep: {
                 count: sheepSystem?.sheepCount ?? 0,
                 animationRate: sheepSystem?.animationUpdateRate ?? 1,
@@ -1690,6 +1692,7 @@ class SheepDogSimulation {
                 this.performanceMonitor?.addSystemTriangles?.('Trees', systemVisible('trees') ? visibleBreakdown.Trees : 0);
                 this.performanceMonitor?.addSystemTriangles?.('Rocks', systemVisible('rocks') ? visibleBreakdown.Rocks : 0);
                 this.performanceMonitor?.addSystemTriangles?.('Mountains', systemVisible('mountains') ? visibleBreakdown.Mountains : 0);
+                this.performanceMonitor?.addSystemTriangles?.('Homestead Props', systemVisible('homesteadProps') ? visibleBreakdown.HomesteadProps : 0);
             }
             if (tb.grassSystem?.getVisibleTriangleEstimate) {
                 this.performanceMonitor?.addSystemTriangles?.('Grass', systemVisible('grass') ? tb.grassSystem.getVisibleTriangleEstimate() : 0);
@@ -1777,6 +1780,12 @@ class SheepDogSimulation {
                 : (systemVisible('rocks') ? (tb.webgpuNativeRockInstancingSummary?.renderedInstanceMeshes ?? 0) : 0);
             // `structures` counted above during the flatten pass.
             const grassChunks = systemVisible('grass') ? (gs.chunksVisible ?? 0) : 0;
+            let homesteadProps = 0;
+            if (systemVisible('homesteadProps') && Array.isArray(tb.homesteadPlayfieldProps)) {
+                for (let i = 0; i < tb.homesteadPlayfieldProps.length; i++) {
+                    if (tb.homesteadPlayfieldProps[i]?.visible !== false) homesteadProps++;
+                }
+            }
             const water = this._animeWater?.mesh?.visible === false ? 0 : (this._animeWater?.mesh ? 1 : 0);
             const skyMesh = this.atmosphere?.sky?.getMesh?.();
             const cloudMesh = this.atmosphere?.cloudLayer?.getMesh?.();
@@ -1799,12 +1808,13 @@ class SheepDogSimulation {
             counts.Mountains = systemVisible('mountains') && groupCache.mountains >= 0 ? groupCache.mountains : 0;
             counts.Grass = systemVisible('grass') ? (gs.visibleClumps ?? gs.totalClumps ?? 0) : 0;
             counts.Structures = structures;
+            counts.HomesteadProps = homesteadProps;
             counts.Sheep = sheep;
             counts.Water = water;
             counts.Atmosphere = atmosphere;
             this.performanceMonitor?.setVisibleCountsBySystem?.(counts);
             this.performanceMonitor?.setEstimatedDrawCalls?.(
-                terrain + treeGroups + rockGroups + grassChunks + structures + water + (sheep > 0 ? 1 : 0) + atmosphere
+                terrain + treeGroups + rockGroups + grassChunks + structures + homesteadProps + water + (sheep > 0 ? 1 : 0) + atmosphere
             );
         } catch {}
     }

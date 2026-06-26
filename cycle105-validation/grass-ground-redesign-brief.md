@@ -2,7 +2,7 @@
 
 Date: 2026-06-25  
 Branch: `codex/three-r185-upgrade`  
-Status: open; architecture brief, current baseline, and first hybrid sparse-grass candidate captured. Matt likes the visual direction, and the Rolling Hills candidate slice has perf/wiring/build validation. Herd-readability stills and cross-scene motion proof now exist; Matt PC visual review and the accept/tune/reject decision remain before production acceptance.
+Status: accepted; architecture brief, current baseline, and hybrid sparse-grass path captured. Matt liked the visual direction, the Rolling Hills slice passed perf/wiring/build validation, cross-scene stills and motion proof passed, and `sds-hybrid-v1` is now the production default. Use `?grassProfile=legacy` for explicit comparison captures.
 
 ## Goal
 
@@ -40,7 +40,7 @@ Current proof artifacts are intentionally ignored per `.gitignore`, but the key 
 
 ## Prototype Evidence - `sds-hybrid-v1`
 
-`sds-hybrid-v1` is an opt-in prototype behind `?grassProfile=sds-hybrid-v1`. It keeps the default path unchanged, reduces blade geometry, and adds a single instanced hybrid ground-contact patch for visible dog/sheep read. Matt likes the actual Rolling Hills scene direction, and the candidate passed the local Rolling Hills perf/wiring/build slice. It is still a candidate only; cross-scene proof supports the direction, but Matt PC visual review and the final accept/tune/reject decision remain before acceptance.
+`sds-hybrid-v1` reduces blade geometry and adds a single instanced hybrid ground-contact patch for visible dog/sheep read. Matt likes the actual Rolling Hills scene direction, and the candidate passed the local Rolling Hills perf/wiring/build slice plus cross-scene still/motion proof. It is now the production default; `?grassProfile=legacy` keeps the old path available for explicit comparison.
 
 Implementation shape:
 
@@ -113,7 +113,7 @@ Cross-scene herd-readability proof:
 node tools\grass-hybrid-cross-scene-proof.mjs --base-url=http://localhost:3000/ --out=cycle105-validation/grass/grass-hybrid-cross-scene-proof.json --screenshotDir=cycle105-validation/grass/hybrid-cross-scene --contactSheet=cycle105-validation/grass/hybrid-cross-scene-contact-sheet.png
 ```
 
-All 16 default-versus-hybrid screenshots were nonblank. The contact sheet is ignored evidence on disk at `cycle105-validation/grass/hybrid-cross-scene-contact-sheet.png`; Matt still needs to review it on PC before the grass direction is accepted.
+All 16 default-versus-hybrid screenshots were nonblank. The contact sheet is ignored evidence on disk at `cycle105-validation/grass/hybrid-cross-scene-contact-sheet.png`; the hybrid direction has since been accepted as the production default for this branch.
 
 | Scene | Pose | Visible grass tri delta | Sheep | Hybrid contact instances |
 |---|---|---:|---:|---:|
@@ -142,7 +142,7 @@ node tools\dog-sprint-camera-harness.mjs --url=http://localhost:3000 --renderer=
 | Open Country | webgpu-production | n/a | 20.90 ms | 27.90 ms | 0 | Pass |
 | NSL | webgpu-production | 40 planned / 40 done / completed | 7.10 ms | 7.20 ms | 0 | Pass |
 
-Current verdict: promising perf candidate, visually liked by Matt in the actual Rolling Hills scene, and validated across Home Field, Rolling Hills, Open Country, and NSL for automated herd-readability stills and motion timing. It should remain opt-in until Matt reviews the contact sheet and actual-scene feel, then decides whether to accept the hybrid path, tune it per scene, or require a cleaned-current shader comparison before production.
+Current verdict: accepted production default. The hybrid grass path was visually liked by Matt in the actual Rolling Hills scene, validated across Home Field, Rolling Hills, Open Country, and NSL for automated herd-readability stills and motion timing, and confirmed by a live route without a `grassProfile` query reporting `grassProfile: sds-hybrid-v1`.
 
 ## r185-Specific Finding
 
@@ -176,14 +176,14 @@ Main runtime surfaces:
 
 Important current values:
 
-- `GrassSystem.config.interactionRadius`: `0.9`
-- `GrassSystem.config.sheepInteractionRadius`: `0.62`
-- `GrassSystem.config.interaction.dog`: `{ halfLen: 1.1, halfWid: 0.45, falloff: 0.6 }`
-- `GrassSystem.config.interaction.sheep`: `{ halfLen: 0.4, halfWid: 0.3, falloff: 0.4 }`
-- WebGPU node `interactionVisualScale`: `6.4`
-- WebGPU node `interactionLaydownStrength`: `0.85`
-- WebGPU node `maxNodeInteractors`: `8`
-- `sds-hybrid-v1` adds opt-in `GrassSystem.groundContactMesh`; default grass has no ground-contact overlay.
+- `GrassSystem.config.interactionRadius`: `1.02`
+- `GrassSystem.config.sheepInteractionRadius`: `1.05`
+- `GrassSystem.config.interaction.dog`: `{ halfLen: 1.16, halfWid: 0.48, falloff: 0.68 }`
+- `GrassSystem.config.interaction.sheep`: `{ halfLen: 0.7, halfWid: 0.48, falloff: 0.82 }`
+- WebGPU node `interactionVisualScale`: `7.1`
+- WebGPU node `interactionLaydownStrength`: `1.05`
+- WebGPU node `maxNodeInteractors`: `4` on the default med tier, up to `8` on high tier.
+- `sds-hybrid-v1` adds `GrassSystem.groundContactMesh`; live Rolling Hills proof reports one ground-contact draw call with 76 instances.
 
 ## Design Principles
 
@@ -260,10 +260,10 @@ Before approving grass as stay/tune/replace, collect:
 - Do not inflate the sheep interaction radius or visual scale as the next move unless a prototype decision says the cleaned current shader is the chosen direction.
 - Do not touch `shared/` or regenerate sim-baseline fixtures for grass redesign.
 - Do not treat the current proof failure as a reason to approve the current grass system.
-- Treat `sds-hybrid-v1` as a measured hybrid candidate that Matt likes visually and that has passed the Rolling Hills perf/wiring/build slice plus automated cross-scene still/motion proof, not as accepted redesign work until Matt visual review and the final accept/tune/reject decision are recorded.
+- Treat `sds-hybrid-v1` as the accepted production grass direction for this branch. It passed the Rolling Hills perf/wiring/build slice, automated cross-scene still/motion proof, and live default-route probe; future work should be targeted tuning, not another default-vs-hybrid decision.
 
 ## Next Work
 
-1. Have Matt review `cycle105-validation/grass/hybrid-cross-scene-contact-sheet.png` and the actual scenes on PC.
-2. Decide whether to accept the hybrid path, tune it per scene, compare a cleaned-current shader path, or move to scene-scoped distributions.
-3. Keep the opt-in profile guarded until the chosen implementation slice is accepted for production.
+1. Use `?grassProfile=legacy` only for explicit regression comparison.
+2. If new playtest issues appear, tune `sds-hybrid-v1` per scene instead of reopening the old default path by default.
+3. Keep `shared/` untouched unless a later scene-distribution cycle explicitly authorizes deterministic placement changes.

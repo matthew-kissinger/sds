@@ -32,6 +32,7 @@ import {
     sumObjectTreeTriangles
 } from './utils/TriangleCount.js';
 import { placeEnvironmentDetails } from './world/RockPlacement.js';
+import { getHomesteadPlayfieldPlacements } from './world/homesteadPlayfieldProps.js';
 import { placeTrees, bakeTreeImpostor, createCrossBillboardGeometry, resolveWebGpuNativeTreeImpostorRoute } from './world/TreePlacement.js';
 import {
     patchTreeWindMaterial as runPatchTreeWind,
@@ -204,6 +205,9 @@ export class TerrainBuilder {
         this.rockPositions = [];
         this.mountains = []; // Track mountains
         this.buildings = []; // Track buildings
+        this.homesteadPlayfieldProps = [];
+        this.homesteadPlayfieldPropSummary = null;
+        this._homesteadPlayfieldPropLoadPromises = new Map();
 
         // Model loading - GLTFLoader with Draco + Meshopt decoders for compressed GLBs.
         this.loader = configureGLTFLoader(new GLTFLoader());
@@ -1478,16 +1482,17 @@ export class TerrainBuilder {
     /**
      * Estimate triangle counts for the terrain-owned meshes, broken down
      * by category for the PERF overlay. Called once post-init; not per-frame.
-     * Returns { Terrain, Trees, Rocks, Mountains } with zeros for any
+     * Returns { Terrain, Trees, Rocks, Mountains, HomesteadProps } with zeros for any
      * category that hasn't been built yet.
-     * @returns {{Terrain: number, Trees: number, Rocks: number, Mountains: number}}
+     * @returns {{Terrain: number, Trees: number, Rocks: number, Mountains: number, HomesteadProps: number}}
      */
     getTriangleBreakdown() {
         return {
             Terrain: countMeshTriangles(this.terrainMesh) + countMeshTriangles(this.terrainSkirtMesh),
             Trees: sumInstancedMeshTriangles(this.trees),
             Rocks: sumInstancedMeshTriangles(this.rocks),
-            Mountains: sumObjectTreeTriangles(this.mountains)
+            Mountains: sumObjectTreeTriangles(this.mountains),
+            HomesteadProps: sumObjectTreeTriangles(this.homesteadPlayfieldProps)
         };
     }
 
@@ -1519,7 +1524,8 @@ export class TerrainBuilder {
                 + (this.terrainSkirtMesh?.visible === false ? 0 : countMeshTriangles(this.terrainSkirtMesh)),
             Trees: sumInstancedMeshTriangles(visibleObjects(this.trees)),
             Rocks: sumInstancedMeshTriangles(visibleObjects(this.rocks)),
-            Mountains: sumObjectTreeTriangles(visibleObjects(this.mountains))
+            Mountains: sumObjectTreeTriangles(visibleObjects(this.mountains)),
+            HomesteadProps: sumObjectTreeTriangles(visibleObjects(this.homesteadPlayfieldProps))
         };
     }
 
@@ -1587,6 +1593,134 @@ export class TerrainBuilder {
         this.mountains = [];
         console.log('[BUILD] Mountains skipped (procedural ring removed)');
         return this.mountains;
+    }
+
+    _loadHomesteadPlayfieldProp(placement) {
+        let promise = this._homesteadPlayfieldPropLoadPromises.get(placement.key);
+        if (!promise) {
+            promise = this.loader.loadAsync(placement.path)
+                .then((gltf) => gltf.scene)
+                .catch((err) => {
+                    this._homesteadPlayfieldPropLoadPromises.delete(placement.key);
+                    throw err;
+                });
+            this._homesteadPlayfieldPropLoadPromises.set(placement.key, promise);
+        }
+        return promise;
+    }
+
+    _measureHomesteadPlayfieldProp(root) {
+        let meshes = 0;
+        let triangles = 0;
+        root.traverse((node) => {
+            if (!node.isMesh || !node.geometry) return;
+            meshes += 1;
+            const count = node.geometry.index?.count ?? node.geometry.attributes?.position?.count ?? 0;
+            triangles += count / 3;
+        });
+        return { meshes, triangles: Math.round(triangles) };
+    }
+
+    _fitHomesteadPlayfieldProp(sourceRoot, placement) {
+        const wrapper = new THREE.Group();
+        wrapper.name = placement.name;
+        wrapper.userData.homesteadPlayfieldProp = {
+            key: placement.key,
+            kind: placement.kind,
+            paletteId: placement.paletteId,
+        };
+
+        const root = sourceRoot.clone(true);
+        root.name = placement.key;
+        wrapper.add(root);
+
+        let box = new THREE.Box3().setFromObject(root);
+        const size = box.getSize(new THREE.Vector3());
+        if (Number.isFinite(placement.targetHeight) && placement.targetHeight > 0 && size.y > 0) {
+            root.scale.multiplyScalar(placement.targetHeight / size.y);
+        }
+
+        box = new THREE.Box3().setFromObject(root);
+        const center = box.getCenter(new THREE.Vector3());
+        root.position.x -= center.x;
+        root.position.z -= center.z;
+        root.position.y -= box.min.y;
+
+        const castShadow = placement.kind !== 'natural-accent'
+            || placement.key === 'stone-marker'
+            || placement.key === 'log-pile-stump';
+        root.traverse((node) => {
+            if (!node.isMesh) return;
+            node.castShadow = castShadow;
+            node.receiveShadow = true;
+            node.userData.homesteadPlayfieldProp = placement.key;
+            const materials = Array.isArray(node.material) ? node.material : [node.material];
+            materials.forEach((material) => {
+                if (material) material.fog = true;
+            });
+        });
+
+        wrapper.position.set(placement.x, this._groundY(placement.x, placement.z), placement.z);
+        wrapper.rotation.y = placement.rotationY;
+        wrapper.updateMatrixWorld(true);
+        return wrapper;
+    }
+
+    clearHomesteadPlayfieldProps() {
+        if (this.homesteadPlayfieldProps?.length) {
+            for (const prop of this.homesteadPlayfieldProps) {
+                if (prop.parent) prop.parent.remove(prop);
+            }
+        }
+        this.homesteadPlayfieldProps = [];
+        this.homesteadPlayfieldPropSummary = null;
+    }
+
+    async addHomesteadPlayfieldProps(sceneDef = this.sceneDef) {
+        this.clearHomesteadPlayfieldProps();
+        const sceneId = sceneDef?.id ?? this.sceneDef?.id ?? null;
+        const placements = getHomesteadPlayfieldPlacements(sceneId);
+        const summary = {
+            sceneId,
+            requested: placements.length,
+            count: 0,
+            meshes: 0,
+            triangles: 0,
+            assets: [],
+            failed: [],
+        };
+        this.homesteadPlayfieldPropSummary = summary;
+        if (placements.length === 0) return summary;
+
+        await Promise.all(placements.map(async (placement) => {
+            try {
+                const sourceRoot = await this._loadHomesteadPlayfieldProp(placement);
+                const prop = this._fitHomesteadPlayfieldProp(sourceRoot, placement);
+                const cost = this._measureHomesteadPlayfieldProp(prop);
+                this.scene.add(prop);
+                this.homesteadPlayfieldProps.push(prop);
+                summary.count += 1;
+                summary.meshes += cost.meshes;
+                summary.triangles += cost.triangles;
+                summary.assets.push({
+                    key: placement.key,
+                    kind: placement.kind,
+                    x: placement.x,
+                    z: placement.z,
+                    targetHeight: placement.targetHeight,
+                    triangles: cost.triangles,
+                });
+            } catch (err) {
+                summary.failed.push({
+                    key: placement.key,
+                    path: placement.path,
+                    message: err?.message || String(err),
+                });
+            }
+        }));
+
+        console.log(`[TERRAIN] Homestead playfield props for ${sceneId}: ${summary.count}/${summary.requested} loaded, ${summary.triangles} tris`);
+        return summary;
     }
     
     /**
@@ -1863,6 +1997,7 @@ export class TerrainBuilder {
     dispose() {
         try { this.clearTrees(); } catch (err) { console.warn('[TERRAIN] clearTrees threw:', err); }
         try { this.clearRocks(); } catch (err) { console.warn('[TERRAIN] clearRocks threw:', err); }
+        try { this.clearHomesteadPlayfieldProps(); } catch (err) { console.warn('[TERRAIN] clearHomesteadPlayfieldProps threw:', err); }
 
         if (this.grassSystem) {
             try { this.grassSystem.dispose(); } catch (err) { console.warn('[TERRAIN] grass dispose threw:', err); }

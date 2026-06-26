@@ -55,6 +55,7 @@ const STAGE_KEYS = {
     'Creating trees': 'trees',
     'Adding mountains': 'mountains',
     'Adding farm house': 'farmHouse',
+    'Adding homestead props': 'homesteadProps',
     'Loading fence models': 'fenceModels',
     'Building structures': 'structures',
     'Building anime water': 'water',
@@ -264,6 +265,9 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // Add farm house
         logStep('Adding farm house');
         await game.terrainBuilder.addFarmHouse(game.currentScene);
+
+        logStep('Adding homestead props');
+        await game.terrainBuilder.addHomesteadPlayfieldProps(game.currentScene);
 
         // Load fence GLB models before building structures
         logStep('Loading fence models');

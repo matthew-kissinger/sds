@@ -65,6 +65,8 @@ const GRASS_PROFILES = Object.freeze({
         }),
     }),
 });
+const DEFAULT_GRASS_PROFILE_ID = 'sds-hybrid-v1';
+const LEGACY_GRASS_PROFILE_IDS = new Set(['legacy', 'classic', 'off', 'none']);
 
 function hashString32(input) {
     let hash = 0x811c9dc5;
@@ -90,7 +92,9 @@ function resolveGrassProfile(search) {
     } else if (typeof window !== 'undefined') {
         params = new URLSearchParams(window.location.search);
     }
-    const id = params?.get('grassProfile') ?? params?.get('grassDesign') ?? null;
+    const requestedId = params?.get('grassProfile') ?? params?.get('grassDesign') ?? null;
+    if (requestedId && LEGACY_GRASS_PROFILE_IDS.has(requestedId)) return null;
+    const id = requestedId ?? DEFAULT_GRASS_PROFILE_ID;
     return id ? (GRASS_PROFILES[id] ?? null) : null;
 }
 

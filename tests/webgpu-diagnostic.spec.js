@@ -432,11 +432,11 @@ describe('webgpu diagnostic sky fog state', () => {
       expect(proof.meadow.isNodeMaterial).toBe(true);
       expect(proof.meadow.summary).toMatchObject({ kind: 'meadow-quad', applied: true });
       expect(proof.geometry).toMatchObject({
-        bladesPerClump: 7,
-        vertices: 28,
-        triangles: 28,
+        bladesPerClump: 5,
+        vertices: 20,
+        triangles: 20,
         bladeDataItemSize: 4,
-        bladeDataCount: 28,
+        bladeDataCount: 20,
       });
       expect(proof.chunk).toMatchObject({
         isInstancedMesh: true,
@@ -602,7 +602,7 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(treeLeaf.occluderPeak).toBeGreaterThan(0);
   });
 
-  it('keeps the grass blade diagnostic tied to production grass defaults and sky fog', () => {
+  it('keeps the grass blade diagnostic tied to production hybrid grass defaults and sky fog', () => {
     const skyFog = createSkyFogDiagnosticState();
     const grassBlade = createGrassBladeDiagnosticState(skyFog);
 
@@ -611,11 +611,12 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(grassBlade.midColor).toEqual([0.18, 0.48, 0.12]);
     expect(grassBlade.tipColor).toEqual([0.55, 0.82, 0.30]);
     expect(grassBlade.windDirection).toEqual([0.7, 0.7]);
-    expect(grassBlade.windStrength).toBe(0.12);
+    expect(grassBlade.windStrength).toBeCloseTo(0.0984);
     expect(grassBlade.windSpeed).toBe(0.6);
-    expect(grassBlade.gustStrength).toBe(0.05);
-    expect(grassBlade.grassFadeStart).toBe(70);
-    expect(grassBlade.grassFadeEnd).toBe(260);
+    expect(grassBlade.gustStrength).toBeCloseTo(0.0375);
+    expect(grassBlade.grassFadeStart).toBe(58);
+    expect(grassBlade.grassFadeEnd).toBe(218);
+    expect(grassBlade.grassProfile).toBe('sds-hybrid-v1');
     expect(grassBlade.grassFadeStart).toBeLessThan(grassBlade.grassFadeEnd);
     expect(grassBlade.sunColor).toBe(skyFog.sunColor);
     expect(grassBlade.sunDirection).toBe(skyFog.sunDirection);
