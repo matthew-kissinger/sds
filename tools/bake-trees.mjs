@@ -47,7 +47,8 @@ const ROOT = resolve(__dirname, '..');
 // Setup (one-time):
 //   git clone https://github.com/dgreenheck/ez-tree.git ../ez-tree
 //   cd ../ez-tree && git checkout 48dc193 && npm install && npm run build:lib
-const EZ_TREE_ROOT = resolve(ROOT, '..', 'ez-tree');
+// Set SDS_EZ_TREE_ROOT for validation bakes against a separate worktree.
+const EZ_TREE_ROOT = resolve(ROOT, process.env.SDS_EZ_TREE_ROOT ?? '../ez-tree');
 const EZ_TREE_PINNED_COMMIT = '48dc193';
 
 const args = Object.fromEntries(

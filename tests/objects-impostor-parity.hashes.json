@@ -1,15 +1,15 @@
 {
   "_comment": "Recorded sha256 of the committed Kiln impostor atlas PNGs (Cycle 50 Phase 2 determinism golden; layer set is manifest-derived since Cycle 101). A real re-bake must reproduce these byte-for-byte; tests/objects-impostor-parity.spec.js fails on drift. Regenerating these hashes is the explicit, reviewed act of accepting a new bake - run `npm run record-impostor-parity-hashes` (see docs/cycle-50-plan.md hard stops and .claude/rules/scene-and-render.md).",
   "atlases": {
-    "assets/models/trees/tree1.imposter.png": "6b8e9f18f038ed8fae866ec8bcf6d30c0fa3536bd635b639f58111cbd899d52c",
-    "assets/models/trees/tree1.imposter.normal.png": "ff0cb52ef3ae13407278d9f812d8a1aef67fadee5b5c289112a9633eaa2b5c99",
-    "assets/models/trees/tree1.imposter.depth.png": "77a5bca7bcac8ef384353f00656a941b8a5558998741afd59264333bf1d9afe0",
-    "assets/models/trees/octahedral/tree1.imposter.png": "124f8fe3a47c572993e9b61a3204720c1ad9c35e3392d8799436b7ac8cb19c6a",
-    "assets/models/trees/octahedral/tree1.imposter.normal.png": "e61ed6874016974c2a118d843107ea8f6c42ce728e0d2dc880047f4ac1a3b0f1",
-    "assets/models/trees/tree2.imposter.png": "598a52a436700f7edc659ce8e9da520cdeb1bdfa94de8fa05efe139af98b6358",
-    "assets/models/trees/tree2.imposter.normal.png": "51d49bc75a94b311e3cdc60f7655cae93dc6fcc07e6ec9e7fd50e742a8c47ff8",
-    "assets/models/trees/tree2.imposter.depth.png": "08b59e5ddf3ba3b580e3b71dc5f2a018e9d76c5c95f43b1180b06adb017a5e5b",
-    "assets/models/trees/octahedral/tree2.imposter.png": "22a0ca6a027fc4bc6dde495459ee143f823697a7c70838e743097b7a83f48150",
-    "assets/models/trees/octahedral/tree2.imposter.normal.png": "6f035c9174c18f74bf9cf91b3130755dfe9dcb199d08329df1fefe7949b1a621"
+    "assets/models/trees/tree1.imposter.png": "73b7198f9425ce9a095d77f6a515459c281e210b9da5257155577cebcddd7f09",
+    "assets/models/trees/tree1.imposter.normal.png": "ff9992c71c765f8a29016de634d8f3a2d4076c618acf619bf7ed0180d91e3a0a",
+    "assets/models/trees/tree1.imposter.depth.png": "47fe5000877c90f45030c86199dceeb5299178724a9426afdefa12ede8f1270a",
+    "assets/models/trees/octahedral/tree1.imposter.png": "606b3e5438df18b400247df70356ef40990d53f825a1af3c957a8514d1410eb8",
+    "assets/models/trees/octahedral/tree1.imposter.normal.png": "9199f085115bd3e403d8a430b6a4c60bff01e0f090a571646fc6aae446835103",
+    "assets/models/trees/tree2.imposter.png": "3d013abdefc549ef72d6017f86166c3f60ceb261350cf08e6fda375513b20bf4",
+    "assets/models/trees/tree2.imposter.normal.png": "024a89401da5f4b87970eee13c07e6168d31e499666b2b9a3bde6f7a0f33c499",
+    "assets/models/trees/tree2.imposter.depth.png": "7e08c14b1c5a42291167fe7950f54326462938ce08bb3d1d1ec2c1d48943eb57",
+    "assets/models/trees/octahedral/tree2.imposter.png": "a22bf5cdb2ec8e4b33f1c100f93640206effa3c584b13a8469ca40d21bec8041",
+    "assets/models/trees/octahedral/tree2.imposter.normal.png": "8d7ebb8ca548d4e342df0302208db7e3d4127ae1636ec424decbaeed3d8a2b05"
   }
 }

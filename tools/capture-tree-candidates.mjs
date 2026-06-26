@@ -84,6 +84,7 @@ async function main() {
         await page.evaluate(async ({ size }) => {
             const THREE = await import('three');
             const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+            const { DRACOLoader } = await import('three/addons/loaders/DRACOLoader.js');
             const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
             renderer.setSize(size, size);
             document.body.appendChild(renderer.domElement);
@@ -99,15 +100,19 @@ async function main() {
             );
             scene.add(ground);
             const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 200);
-            window.__cap = { THREE, GLTFLoader, renderer, scene, camera, current: null };
+            const dracoLoader = new DRACOLoader();
+            dracoLoader.setDecoderPath('/node_modules/three/examples/jsm/libs/draco/');
+            window.__cap = { THREE, GLTFLoader, dracoLoader, renderer, scene, camera, current: null };
         }, { size: SIZE });
 
         for (const file of files) {
             const name = file.replace(/\.glb$/, '');
             const shots = await page.evaluate(async ({ url, scaleTo }) => {
-                const { THREE, GLTFLoader, renderer, scene, camera } = window.__cap;
+                const { THREE, GLTFLoader, dracoLoader, renderer, scene, camera } = window.__cap;
                 if (window.__cap.current) scene.remove(window.__cap.current);
-                const gltf = await new Promise((res, rej) => new GLTFLoader().load(url, res, undefined, rej));
+                const loader = new GLTFLoader();
+                loader.setDRACOLoader(dracoLoader);
+                const gltf = await new Promise((res, rej) => loader.load(url, res, undefined, rej));
                 const model = gltf.scene;
                 // Staged trees are normalized to ~1m; scale to a typical
                 // in-game placement (~20m tree) so texture density reads true.

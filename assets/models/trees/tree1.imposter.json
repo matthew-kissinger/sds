@@ -11,19 +11,19 @@
   "projection": "orthographic",
   "bbox": {
     "min": [
-      -0.236320783592627,
+      -0.2683597713218195,
       0,
-      -0.2816386120516551
+      -0.3014804531313072
     ],
     "max": [
-      0.2574322736163801,
+      0.2875927870338809,
       1,
-      0.2089471044368585
+      0.22906236065173166
     ]
   },
   "source": {
     "path": "C:\\Users\\Mattm\\X\\games-3d\\sds\\assets\\_originals\\models\\trees\\tree1.glb",
-    "bytes": 1951076,
+    "bytes": 2019152,
     "tris": 3616
   },
   "auxLayers": [
