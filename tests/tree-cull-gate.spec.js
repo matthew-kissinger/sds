@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { describe, it, expect } from 'vitest';
-import { usesConsolidatedTreeCull } from '../js/world/TreePlacement.js';
+import {
+    CONSOLIDATED_MIN_FAR_SWITCH_DISTANCE,
+    resolveConsolidatedTreeLodProfile,
+    usesConsolidatedTreeCull,
+} from '../js/world/TreePlacement.js';
 import { field } from '../shared/scenes/field.js';
 import { rollingHills } from '../shared/scenes/rolling-hills.js';
 import { openCountry } from '../shared/scenes/open-country.js';
@@ -61,5 +65,23 @@ describe('usesConsolidatedTreeCull — boundary-kind gate', () => {
             expect(usesConsolidatedTreeCull(island)).toBe(true);
             expect(Boolean(island.terrain?.streamedZones)).toBe(false);
         }
+    });
+});
+
+describe('consolidated tree LOD distance profiles', () => {
+    it('keeps sparse scenes geometric farther than dense streamed coastline scenes', () => {
+        expect(resolveConsolidatedTreeLodProfile(newsheepdogland).baseDistance).toBe(220);
+        expect(resolveConsolidatedTreeLodProfile(newsheepdogland).distance).toBe(220);
+        expect(resolveConsolidatedTreeLodProfile(rollingHills).baseDistance).toBe(280);
+        expect(resolveConsolidatedTreeLodProfile(rollingHills).distance).toBe(280);
+        expect(resolveConsolidatedTreeLodProfile(openCountry).distance).toBe(280);
+        expect(resolveConsolidatedTreeLodProfile(field).baseDistance).toBe(320);
+        expect(resolveConsolidatedTreeLodProfile(field).distance).toBe(320);
+    });
+
+    it('applies the quality governor tree LOD bias with a floor', () => {
+        expect(resolveConsolidatedTreeLodProfile(field, { treeLodBias: 0.55 }).distance).toBe(144);
+        expect(resolveConsolidatedTreeLodProfile(newsheepdogland, { treeLodBias: 0.75 }).distance)
+            .toBe(CONSOLIDATED_MIN_FAR_SWITCH_DISTANCE);
     });
 });

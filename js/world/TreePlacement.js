@@ -51,13 +51,29 @@ function materialCastsShadow(material) {
 
 /**
  * Cycle 91 (Phase 2.5 item 4): camera-XZ distance past which consolidated
- * LOD0 trees hand off to the per-type far-impostor controller. Matches the
- * WebGL per-instance chain's 200m impostor switch. Camera-relative is safe
- * on the compute path (per-frame data-compaction, no mesh/render-list
+ * LOD0 trees hand off to the per-type far-impostor controller. Camera-relative
+ * distance is safe on the compute path (per-frame data-compaction, no mesh/render-list
  * switching), unlike the WebGL billboard rule's distance-from-origin
  * requirement.
  */
-export const CONSOLIDATED_FAR_SWITCH_DISTANCE = 200;
+export const CONSOLIDATED_MIN_FAR_SWITCH_DISTANCE = 96;
+
+function getConsolidatedTreeLodBaseDistance(sceneDef) {
+    const kind = sceneDef?.boundary?.kind;
+    return kind === 'island' ? 280 : sceneDef?.consolidatedTrees === true && kind !== 'coastline' ? 320 : 220;
+}
+
+function applyConsolidatedTreeLodBias(baseDistance, qualityState = {}) {
+    return Math.max(96, baseDistance * (1 - (qualityState.treeLodBias || 0)));
+}
+
+export function resolveConsolidatedTreeLodProfile(sceneDef, qualityState = {}) {
+    const baseDistance = getConsolidatedTreeLodBaseDistance(sceneDef);
+    return {
+        baseDistance,
+        distance: applyConsolidatedTreeLodBias(baseDistance, qualityState),
+    };
+}
 
 /**
  * Cycle 91 Phase 2: layer for shadow-only canopy casters. The main camera
@@ -126,6 +142,7 @@ function collectLod0MeshDefs(builder, treeType) {
 const EMPTY_F32 = new Float32Array(0);
 
 function makeLod0Controller(builder, cullModules, treeType, meshDef, init) {
+    const lodBase = getConsolidatedTreeLodBaseDistance(builder.sceneDef);
     const controller = createTreeComputeCull(cullModules, {
         geometry: meshDef.geometry,
         material: meshDef.material,
@@ -135,7 +152,8 @@ function makeLod0Controller(builder, cullModules, treeType, meshDef, init) {
         capacity: init.capacity,
         castShadow: !builder.isMobile && materialCastsShadow(meshDef.material),
         lodRole: 'near',
-        lodDistance: CONSOLIDATED_FAR_SWITCH_DISTANCE,
+        lodDistance: applyConsolidatedTreeLodBias(lodBase, builder.webgpuQualityState),
+        lodBase,
         lodEnabled: init.lodEnabled ?? false,
     });
     controller.diag.treeType = treeType;
@@ -313,6 +331,7 @@ function makeCanopyShadowCaster(builder, cullModules, entry, sidecar, texture) {
 }
 
 function makeFarImpostorController(builder, cullModules, entry, materialFactory) {
+    const lodBase = getConsolidatedTreeLodBaseDistance(builder.sceneDef);
     const far = createTreeComputeCull(cullModules, {
         geometry: entry.farGeometry,
         // Cycle 101: the far material reads the compacted instance buffer by
@@ -325,7 +344,8 @@ function makeFarImpostorController(builder, cullModules, entry, materialFactory)
         castShadow: false, // durable far-impostor rule
         receiveShadow: false,
         lodRole: 'far',
-        lodDistance: CONSOLIDATED_FAR_SWITCH_DISTANCE,
+        lodDistance: applyConsolidatedTreeLodBias(lodBase, builder.webgpuQualityState),
+        lodBase,
     });
     far.diag.treeType = entry.treeType;
     far.diag.meshName = 'far-impostor';
@@ -501,8 +521,7 @@ export function enableConsolidatedFarImpostors(builder, atlasByType, _materialsB
                         renderer.compileAsync(builder.scene, camera).catch(() => { /* best-effort */ });
                     }
                 } catch { /* best-effort */ }
-                console.log(`[FOLIAGE] far-impostor LOD active for ${treeType}: `
-                    + `${entry.used} instances, view-dependent octahedral, LOD0 within ${CONSOLIDATED_FAR_SWITCH_DISTANCE}m`);
+                console.log(`[FOLIAGE] far-impostor LOD active for ${treeType}: ${entry.used} instances, view-dependent octahedral`);
             } catch (err) {
                 console.warn(`[FOLIAGE] far-impostor LOD enable failed for ${treeType}:`, err);
             }
