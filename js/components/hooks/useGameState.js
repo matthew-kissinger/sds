@@ -11,6 +11,7 @@ import {
     subscribeGameEvent,
 } from '../../GameBridge.js';
 import { getModeCapabilities } from '../../gamestate/modes.js';
+import { DEFAULT_BARK_CONFIG } from '../../../shared/BarkImpulse.js';
 
 /**
  * Reactive game-state store for HUD components.
@@ -62,6 +63,9 @@ function makeInitialSnapshot() {
         // and not fooled by GameState.survival being sticky across scene swaps.
         survival: false,
         sceneId: 'field',
+        barkReady: true,
+        barkCooldownRemainingMs: 0,
+        barkCooldownRatio: 0,
     };
 }
 
@@ -105,6 +109,14 @@ function readGameState() {
     const currentStamina = sheepdog?.stamina || 100;
     const maxStamina = sheepdog?.maxStamina || 100;
     const staminaPercentage = Math.round((currentStamina / maxStamina) * 100);
+    const barkCooldownMs = sheepdog?.playerBarkCooldown ?? DEFAULT_BARK_CONFIG.cooldownMs;
+    const lastPlayerBarkTime = sheepdog?.lastPlayerBarkTime ?? 0;
+    const barkElapsed = lastPlayerBarkTime > 0 ? Date.now() - lastPlayerBarkTime : barkCooldownMs;
+    const barkRemaining = Math.max(0, barkCooldownMs - barkElapsed);
+    const barkCooldownRemainingMs = barkRemaining > 0 ? Math.ceil(barkRemaining / 100) * 100 : 0;
+    const barkCooldownRatio = barkCooldownMs > 0
+        ? Math.round((barkCooldownRemainingMs / barkCooldownMs) * 100) / 100
+        : 0;
 
     const cameraMode = getSceneManager()?.getCameraController?.()?.getMode?.() ?? 'classic';
 
@@ -135,6 +147,9 @@ function readGameState() {
         counted: roundBased ? (gameState.sheepRetired || 0) : 0,
         survival: !!gameState.survival,
         sceneId: (typeof window !== 'undefined' && window.__currentSceneId) || 'field',
+        barkReady: barkCooldownRemainingMs === 0,
+        barkCooldownRemainingMs,
+        barkCooldownRatio,
     };
 
     if (networkManager?.currentRoom) {
@@ -200,6 +215,9 @@ function hudEqual(a, b) {
         a.counted === b.counted &&
         a.survival === b.survival &&
         a.sceneId === b.sceneId &&
+        a.barkReady === b.barkReady &&
+        a.barkCooldownRemainingMs === b.barkCooldownRemainingMs &&
+        a.barkCooldownRatio === b.barkCooldownRatio &&
         mpCollectionsEqual(a, b)
     );
 }

@@ -9,7 +9,7 @@
 You're a fresh agent (Claude / Codex / Cursor / etc.) on this repo with no session context. Read in this order:
 
 1. **[`../NEXT_SESSION.md`](../NEXT_SESSION.md)** — current pickup state. Tells you which cycle is active, when the snapshot was taken, and where to start.
-2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open. At this snapshot the launch-readiness program is staged as [`cycle-106-plan.md`](cycle-106-plan.md), [`cycle-107-plan.md`](cycle-107-plan.md), [`cycle-108-plan.md`](cycle-108-plan.md), [`cycle-109-plan.md`](cycle-109-plan.md), and [`cycle-110-plan.md`](cycle-110-plan.md).
+2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open. At this snapshot Cycle 111 is the current completed release handoff: [`cycle-111-plan.md`](cycle-111-plan.md).
 3. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
 4. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
 5. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).
@@ -71,6 +71,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`cycle-108-plan.md`](cycle-108-plan.md) | Reference / Explanation | Launch-readiness cycle 108: release-candidate proof. |
 | [`cycle-109-plan.md`](cycle-109-plan.md) | Reference / Explanation | Launch-readiness cycle 109: native desktop and Steam readiness. |
 | [`cycle-110-plan.md`](cycle-110-plan.md) | Reference / Explanation | Launch-readiness cycle 110: itch, portals, and final launch review. |
+| [`cycle-111-plan.md`](cycle-111-plan.md) | Reference / Explanation | Core bark, first-session onboarding, leaderboard motivation, completion UX, and Newsheepdogland sandbox guard. |
 
 ## Launch Review Packet
 
@@ -79,6 +80,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`launch/final-launch-review.md`](launch/final-launch-review.md) | Reference | Single entry point for Matt review after Cycles 106-110. |
 | [`launch/release-candidate.md`](launch/release-candidate.md) | Reference | v2.4.0 release-candidate status, validation summary, deploy posture, and risks. |
 | [`launch/release-checklist.md`](launch/release-checklist.md) | How-to | Exact commands and manual steps for approved tag, deploy, itch update, Steam continuation, and rollback. |
+| [`launch/v2.5.0-release-notes.md`](launch/v2.5.0-release-notes.md) | Reference | Cycle 111 player-facing release notes for the bark/onboarding/leaderboard release. |
 | [`launch/itch-launch-brief.md`](launch/itch-launch-brief.md) | Reference | itch copy, build proof, upload path, screenshots, and rollback notes. |
 | [`launch/steam-store-brief.md`](launch/steam-store-brief.md) | Reference | Steam page draft, asset requirements, feature claims, and blockers. |
 | [`launch/portal-target-matrix.md`](launch/portal-target-matrix.md) | Reference | CrazyGames, Poki, Newgrounds, Kongregate, Y8, and itch recommendations. |
@@ -90,7 +92,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 
 After Cycle 28 Stream A3's consolidation, the only files at `docs/` root are:
 
-- The **active and pre-scaffolded launch cycle plans** while the launch-readiness program is open (`cycle-106-plan.md` through `cycle-110-plan.md`). Archive each one to `archive/cycles/` only after that cycle closes.
+- The **active and recent cycle plans** while a release handoff is open (`cycle-106-plan.md` through `cycle-111-plan.md`). Archive each one to `archive/cycles/` only after that cycle closes.
 - The **append-only [`BACKLOG.md`](BACKLOG.md)** — closed-cycle log + deferred items.
 - The **fence + template + contract triad**: [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md), [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md).
 - A small set of **stable how-tos and references**: [`adding-a-biome.md`](adding-a-biome.md), [`tree-pipeline.md`](tree-pipeline.md), [`cross-platform-testing.md`](cross-platform-testing.md), [`native-shell-proof-cycle-53.md`](native-shell-proof-cycle-53.md), [`native-desktop-package-cycle-54.md`](native-desktop-package-cycle-54.md), [`native-packaging-proof-0.md`](native-packaging-proof-0.md), [`native-store-steam-readiness-checklist.md`](native-store-steam-readiness-checklist.md), [`content-campaign-2026-05.md`](content-campaign-2026-05.md), [`capture-pipeline-spike-2026-05.md`](capture-pipeline-spike-2026-05.md), [`multiplayer-ux.md`](multiplayer-ux.md).

@@ -18,9 +18,12 @@
 export const DEFAULT_BARK_CONFIG = {
     range: 24,
     minDot: 0.6427876096865393, // cos(50 deg)
-    steerForce: 0.16,
-    durationTicks: 30,
+    steerForce: 0.22,
+    durationTicks: 36,
     cooldownMs: 2500,
+    forwardWeight: 0.62,
+    radialWeight: 0.38,
+    minFalloff: 0.18,
 };
 
 function isBarkSteerable(sheep) {
@@ -41,13 +44,13 @@ function clearBarkSteering(sheep) {
 }
 
 /**
- * Start a short forward steering intent for every active sheep inside the dog's
+ * Start a short hybrid steering intent for every active sheep inside the dog's
  * bark cone. Sheep outside the cone/range are untouched.
  *
  * @param {Array<{position:{x:number,z:number}, acceleration:{x:number,z:number}}>} sheep
  * @param {{x:number,z:number}} origin
  * @param {{x:number,z:number}} forward
- * @param {{range:number,minDot:number,steerForce:number,durationTicks:number}} [config]
+ * @param {{range:number,minDot:number,steerForce:number,durationTicks:number,forwardWeight?:number,radialWeight?:number,minFalloff?:number}} [config]
  * @returns {number} count of sheep that received steering intent.
  */
 export function startBarkSteering(sheep, origin, forward, config = DEFAULT_BARK_CONFIG) {
@@ -57,6 +60,9 @@ export function startBarkSteering(sheep, origin, forward, config = DEFAULT_BARK_
     const minDot = config.minDot;
     const steerForce = config.steerForce;
     const durationTicks = config.durationTicks;
+    const forwardWeight = config.forwardWeight ?? DEFAULT_BARK_CONFIG.forwardWeight;
+    const radialWeight = config.radialWeight ?? DEFAULT_BARK_CONFIG.radialWeight;
+    const minFalloff = config.minFalloff ?? DEFAULT_BARK_CONFIG.minFalloff;
     const rangeSq = range * range;
     const fx = forward.x;
     const fz = forward.z;
@@ -72,21 +78,30 @@ export function startBarkSteering(sheep, origin, forward, config = DEFAULT_BARK_
         if (distSq > rangeSq) continue;
 
         const dist = Math.sqrt(distSq);
+        let rx;
+        let rz;
         let falloff;
         if (dist < 1e-6) {
             // Point-blank: full steering force straight along facing (cone test moot).
+            rx = fx;
+            rz = fz;
             falloff = 1;
         } else {
+            rx = dx / dist;
+            rz = dz / dist;
             // Cone test: dot of (dog->sheep) unit vector against the forward unit.
-            const dot = (dx / dist) * fx + (dz / dist) * fz;
+            const dot = rx * fx + rz * fz;
             if (dot < minDot) continue;
-            falloff = 1 - dist / range; // linear, in (0, 1]
+            falloff = minFalloff + (1 - minFalloff) * (1 - dist / range);
         }
 
+        const hx = fx * forwardWeight + rx * radialWeight;
+        const hz = fz * forwardWeight + rz * radialWeight;
+        const hLen = Math.sqrt(hx * hx + hz * hz);
         s.barkSteerTicks = durationTicks;
         s.barkSteerDurationTicks = durationTicks;
-        s.barkSteerX = fx;
-        s.barkSteerZ = fz;
+        s.barkSteerX = hx / hLen;
+        s.barkSteerZ = hz / hLen;
         s.barkSteerForce = steerForce * falloff;
         steered++;
     }

@@ -27,9 +27,12 @@ describe('startBarkSteering - deterministic bark cone', () => {
     it('exports the accepted steering config while keeping the forward cone', () => {
         expect(DEFAULT_BARK_CONFIG.range).toBe(24);
         expect(DEFAULT_BARK_CONFIG.minDot).toBeCloseTo(0.6427876096865393, 15);
-        expect(DEFAULT_BARK_CONFIG.steerForce).toBe(0.16);
-        expect(DEFAULT_BARK_CONFIG.durationTicks).toBe(30);
+        expect(DEFAULT_BARK_CONFIG.steerForce).toBe(0.22);
+        expect(DEFAULT_BARK_CONFIG.durationTicks).toBe(36);
         expect(DEFAULT_BARK_CONFIG.cooldownMs).toBe(2500);
+        expect(DEFAULT_BARK_CONFIG.forwardWeight).toBe(0.62);
+        expect(DEFAULT_BARK_CONFIG.radialWeight).toBe(0.38);
+        expect(DEFAULT_BARK_CONFIG.minFalloff).toBe(0.18);
     });
 
     it('starts steering for a sheep directly ahead without changing velocity', () => {
@@ -40,7 +43,13 @@ describe('startBarkSteering - deterministic bark cone', () => {
         expect(s.barkSteerTicks).toBe(DEFAULT_BARK_CONFIG.durationTicks);
         expect(s.barkSteerX).toBeCloseTo(0, 10);
         expect(s.barkSteerZ).toBeCloseTo(1, 10);
-        expect(s.barkSteerForce).toBeCloseTo(DEFAULT_BARK_CONFIG.steerForce * (1 - 5 / DEFAULT_BARK_CONFIG.range), 10);
+        expect(s.barkSteerForce).toBeCloseTo(
+            DEFAULT_BARK_CONFIG.steerForce * (
+                DEFAULT_BARK_CONFIG.minFalloff
+                + (1 - DEFAULT_BARK_CONFIG.minFalloff) * (1 - 5 / DEFAULT_BARK_CONFIG.range)
+            ),
+            10
+        );
     });
 
     it('leaves sheep behind, beyond range, or outside the cone untouched', () => {
@@ -69,13 +78,17 @@ describe('startBarkSteering - deterministic bark cone', () => {
         expect(near.barkSteerForce).toBeGreaterThan(far.barkSteerForce);
     });
 
-    it('steers along dog facing, not radially from the dog', () => {
+    it('blends dog-facing pressure with radial scatter away from the dog', () => {
         const a = sheepAt(1, 5);
         const b = sheepAt(-1, 5);
         startBarkSteering([a], ORIGIN, FORWARD, DEFAULT_BARK_CONFIG);
         startBarkSteering([b], ORIGIN, FORWARD, DEFAULT_BARK_CONFIG);
-        expect(a.barkSteerX).toBeCloseTo(0, 10);
-        expect(b.barkSteerX).toBeCloseTo(0, 10);
+        expect(a.barkSteerX).toBeGreaterThan(0);
+        expect(b.barkSteerX).toBeLessThan(0);
+        expect(a.barkSteerZ).toBeGreaterThan(0);
+        expect(b.barkSteerZ).toBeGreaterThan(0);
+        expect(a.barkSteerX).toBeCloseTo(-b.barkSteerX, 10);
+        expect(a.barkSteerZ).toBeCloseTo(b.barkSteerZ, 10);
         expect(a.barkSteerForce).toBeCloseTo(b.barkSteerForce, 10);
     });
 

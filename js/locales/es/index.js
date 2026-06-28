@@ -88,7 +88,7 @@ export default {
     // Tutorial de primera partida (P1-TUTORIAL): tarjeta de oferta + indicaciones durante la partida.
     tutorial: {
         offerTitle: '¿Primera vez pastoreando?',
-        offerBody: 'Haz una partida guiada de 60 segundos en Home Field. Muévete, esprinta, cambia la cámara y encierra 3 ovejas.',
+        offerBody: 'Haz una partida guiada en Home Field. Muévete, esprinta, cambia la cámara, ladra y encierra 3 ovejas.',
         offerStart: 'Enséñame',
         offerSkip: 'No, gracias',
         skip: 'Saltar tutorial',
@@ -100,6 +100,8 @@ export default {
             sprintTouch: 'Mantén el botón de esprint para un impulso de velocidad. Gasta resistencia.',
             camera: 'Pulsa C para cambiar la vista de cámara.',
             cameraTouch: 'Toca el botón de cámara en la parte superior para cambiar la vista.',
+            bark: 'Pulsa tu tecla de ladrido cuando el rebaño esté delante. Observa la onda de sonido y el enfriamiento.',
+            barkTouch: 'Toca el botón de ladrido cuando el rebaño esté delante. Observa la onda de sonido y el enfriamiento.',
             herd: 'Lleva 3 ovejas por la puerta hasta el corral. Mantente detrás del rebaño; las ovejas huyen de ti.',
             done: 'Tres encerradas. Ya conoces el oficio. El resto del rebaño es tuyo.'
         }

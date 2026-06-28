@@ -88,7 +88,7 @@ export default {
     // First-run tutorial (P1-TUTORIAL): offer card + in-run prompts.
     tutorial: {
         offerTitle: 'First time herding?',
-        offerBody: 'Take a 60-second guided run on Home Field. Move, sprint, swap the camera, and pen 3 sheep.',
+        offerBody: 'Take a guided run on Home Field. Move, sprint, swap the camera, bark, and pen 3 sheep.',
         offerStart: 'Show me',
         offerSkip: 'No thanks',
         skip: 'Skip tutorial',
@@ -100,6 +100,8 @@ export default {
             sprintTouch: 'Hold the sprint button for a burst of speed. It drains stamina.',
             camera: 'Press C to change the camera view.',
             cameraTouch: 'Tap the camera chip at the top to change the view.',
+            bark: 'Press your bark key when the flock is ahead. Watch the sound wave and cooldown.',
+            barkTouch: 'Tap the bark button when the flock is ahead. Watch the sound wave and cooldown.',
             herd: 'Herd 3 sheep through the gate into the pen. Stay behind the flock; sheep run from you.',
             done: 'Three penned. You know the job now. The rest of the flock is yours.'
         }

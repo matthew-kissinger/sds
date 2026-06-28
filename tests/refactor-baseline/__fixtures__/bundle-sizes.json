@@ -1,15 +1,15 @@
 {
-  "mainKB": 634,
+  "mainKB": 637,
   "threeKB": 614,
   "chunkBudgetsKiB": {
-    "main": 635,
+    "main": 638,
     "three": 615,
     "client": 177,
     "ui": 127,
     "App": 27,
-    "i18n": 140,
+    "i18n": 141,
     "vendor": 60,
     "webgpuDiagnostic": 85,
-    "other": 683
+    "other": 690
   }
 }

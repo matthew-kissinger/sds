@@ -35,6 +35,7 @@ import { startReplay as runStartReplay, stopReplay as runStopReplay } from './ut
 import { WebVitalsMonitor } from './boot/WebVitalsMonitor.js';
 import { installStressTestHarness, installMpProbe } from './boot/debugProbes.js';
 import { BackdropReveal } from './effects/BackdropReveal.js';
+import { BarkWaveEffect } from './effects/BarkWaveEffect.js';
 import { installMpEventHandlers, handleMultiplayerGameState as runMpStateHandoff } from './boot/initNetwork.js';
 import { MultiplayerCoordinator } from './multiplayer/MultiplayerCoordinator.js';
 import { buildSceneBody } from './boot/initWorld.js';
@@ -214,6 +215,7 @@ class SheepDogSimulation {
 
         this.terrainBuilder = new TerrainBuilder(this.sceneManager.getScene(), this.sceneManager.isMobile, this.currentScene);
         this.structureBuilder = new StructureBuilder(this.sceneManager.getScene());
+        this._barkWaveEffect = new BarkWaveEffect(() => this.sceneManager?.getScene?.());
         this.inputHandler = new InputHandler();
         this.performanceMonitor = new PerformanceMonitor();
         const urlParams = new URLSearchParams(location.search);
@@ -1108,6 +1110,7 @@ class SheepDogSimulation {
      */
     async disposeScene() {
         // Body extracted to js/boot/loadScene.js#disposeScene.
+        this._barkWaveEffect?.dispose();
         await runDisposeScene(this);
     }
 
@@ -2437,9 +2440,13 @@ class SheepDogSimulation {
             // the bark edge in the next authoritative input payload.
             const barkPressed = this.inputHandler.consumeBark() || gamepad.wasJustPressed('RB');
             const barkFired = barkPressed && !!sheepdog && sheepdog.triggerPlayerBark();
+            const barkForward = barkFired ? sheepdog.getBarkForward() : null;
             if (barkFired && !(this.isMultiplayer && this.networkManager)) {
-                startBarkSteering(this.gameState.getSheep(), sheepdog.position,
-                    sheepdog.getBarkForward(), DEFAULT_BARK_CONFIG);
+                startBarkSteering(this.gameState.getSheep(), sheepdog.position, barkForward, DEFAULT_BARK_CONFIG);
+            }
+            if (barkFired) {
+                this._barkWaveEffect?.emit(sheepdog.position, barkForward, DEFAULT_BARK_CONFIG);
+                window.dispatchEvent(new CustomEvent('sds-bark-fired'));
             }
             // The bark also scares wolves - a radial repel with a
             // longer reach than the forward sheep cone, breaking their pursuit.
@@ -2992,6 +2999,7 @@ class SheepDogSimulation {
         if (this._portalEffect) {
             this._portalEffect.update(deltaTime);
         }
+        this._barkWaveEffect?.update(deltaTime);
 
         // Render the scene (always render to show pause indicator)
         const renderResult = options.skipRender ? false : this.sceneManager.render();

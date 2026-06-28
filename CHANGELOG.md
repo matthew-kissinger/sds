@@ -4,6 +4,28 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] - 2026-06-28
+
+### Added
+
+- Bark is now a core skill with stronger hybrid directional/radial sheep steering through the deterministic shared bark primitive.
+- Bark readiness and cooldown are visible on desktop and mobile, with a subtle world-space sound-wave cone when bark fires.
+- Short, calm, dog-specific bark sounds are bundled for runtime use and documented with source/license details.
+
+### Changed
+
+- The first-session tutorial now teaches move, sprint, camera, bark, and a 3-sheep intro goal before routing players toward Quick 25.
+- Leaderboards now prioritize easy scored boards, surface active/scored board counts, and keep Newsheepdogland out of the public picker while it remains a sandbox.
+- Completion flow now separates unranked practice from ranked runs, highlights score/save feedback, and offers clearer next actions.
+
+### Fixed
+
+- The first-run tutorial offer now sits above the React overlay host and can be clicked reliably.
+
+### Validation
+
+- `npm test`, `npm run build`, `npm run lint`, `npm run typecheck`, `npm run test:e2e -- --project=chromium`, `git diff --check`, installed-Chrome bark/tutorial/leaderboard/NSL audits, and bark audio duration checks passed.
+
 ## [2.4.0] - 2026-06-26
 
 ### Added

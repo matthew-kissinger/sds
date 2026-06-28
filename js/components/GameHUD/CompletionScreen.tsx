@@ -286,6 +286,10 @@ interface CompletionContent {
     showNewBest?: boolean;
     stats: StatEntry[];
     scores?: ScoreEntry[];
+    nextAction?: {
+        title: string;
+        body: string;
+    };
 }
 
 export interface CompletionData {
@@ -298,6 +302,9 @@ export interface CompletionData {
     isNewBest?: boolean;
     sheepCount?: number;
     replayBlobUrl?: string;
+    gameMode?: string;
+    singlePlayerMode?: string;
+    sceneId?: string;
     // Cycle 59 (Counting Sheep): the banked counted total + the round reached.
     counted?: number;
     round?: number;
@@ -308,10 +315,11 @@ export interface CompletionScreenProps {
     data: CompletionData;
     onPlayAgain: () => void;
     onMainMenu?: () => void;
+    onLeaderboard?: () => void;
 }
 
 // Main completion screen component
-export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: CompletionScreenProps) {
+export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu, onLeaderboard }: CompletionScreenProps) {
     const { t } = useTranslation();
     const [isVisible, setIsVisible] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<{ ok: boolean } | null>(null);
@@ -404,16 +412,34 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
         }
 
         if (mode === 'single') {
+            const isPracticeRun = data.singlePlayerMode === 'practice' || data.gameMode === 'sandbox';
             return {
-                title: t('completion.victory'),
-                subtitle: t('completion.allSheepHerded', { count: data.totalSheep || 20 }),
-                icon: <Icon name="trophy" size={64} color={TROPHY_GOLD} />,
+                title: isPracticeRun
+                    ? t('completion.practice.title', 'Intro complete')
+                    : t('completion.victory'),
+                subtitle: isPracticeRun
+                    ? t('completion.practice.subtitle', {
+                        count: data.totalSheep || 20,
+                        defaultValue: 'You penned {{count}} sheep in Just Play.'
+                    })
+                    : t('completion.allSheepHerded', { count: data.totalSheep || 20 }),
+                icon: <Icon name={isPracticeRun ? 'dog' : 'trophy'} size={64} color={TROPHY_GOLD} />,
                 accentColor: VICTORY_ACCENT,
                 bgGradient: VICTORY_BG,
                 showConfetti: true,
                 stats: [
-                    { label: t('completion.stats.time'), value: formatTime(data.finalTime || 0), icon: <Icon name="timer" size={20} color={pastoral.cream} /> }
-                ]
+                    { label: t('completion.stats.time'), value: formatTime(data.finalTime || 0), icon: <Icon name="timer" size={20} color={pastoral.cream} /> },
+                    { label: t('completion.stats.sheepCollected'), value: String(data.totalSheep || 0), icon: <Icon name="sheep" size={20} color={pastoral.cream} /> }
+                ],
+                nextAction: isPracticeRun
+                    ? {
+                        title: t('completion.practice.nextTitle', 'Next: Quick 25'),
+                        body: t('completion.practice.nextBody', 'Try a short ranked run for your first leaderboard time.')
+                    }
+                    : {
+                        title: t('completion.ranked.nextTitle', 'Ranked result'),
+                        body: t('completion.ranked.nextBody', 'Your time can be saved to the scene leaderboard when the save line appears below.')
+                    }
             };
         }
 
@@ -667,15 +693,41 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                     </div>
                 )}
 
+                {content.nextAction && (
+                    <div
+                        style={{
+                            maxWidth: '390px',
+                            margin: '0 auto 16px',
+                            padding: '12px 14px',
+                            borderRadius: '12px',
+                            background: alpha(pastoral.cream, 8),
+                            border: `1px solid ${alpha(content.accentColor, 28)}`,
+                            animation: 'slideUp 0.5s ease-out 0.58s both',
+                        }}
+                    >
+                        <div style={{ color: pastoral.cream, fontWeight: 700, fontSize: '14px', marginBottom: '3px' }}>
+                            {content.nextAction.title}
+                        </div>
+                        <div style={{ color: alpha(pastoral.cream, 68), fontSize: '13px', lineHeight: 1.35 }}>
+                            {content.nextAction.body}
+                        </div>
+                    </div>
+                )}
+
                 {/* Cycle 57 P6: leaderboard submit status (single-player only). */}
                 {submitStatus && (
                     <div
                         style={{
                             textAlign: 'center',
-                            marginBottom: '12px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            color: submitStatus.ok ? content.accentColor : alpha(pastoral.cream, 60),
+                            margin: '0 auto 12px',
+                            maxWidth: '360px',
+                            padding: '10px 12px',
+                            borderRadius: '12px',
+                            fontSize: '14px',
+                            fontWeight: 700,
+                            color: submitStatus.ok ? pastoral.cream : alpha(pastoral.cream, 72),
+                            background: submitStatus.ok ? alpha(content.accentColor, 16) : alpha(pastoral.cream, 8),
+                            border: `1px solid ${submitStatus.ok ? alpha(content.accentColor, 32) : alpha(pastoral.cream, 14)}`,
                             animation: 'slideUp 0.5s ease-out 0.6s both'
                         }}
                     >
@@ -720,6 +772,7 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                         display: 'flex',
                         gap: '12px',
                         justifyContent: 'center',
+                        flexWrap: 'wrap',
                         animation: 'slideUp 0.5s ease-out 0.7s both'
                     }}
                 >
@@ -781,6 +834,37 @@ export function CompletionScreen({ mode, data, onPlayAgain, onMainMenu }: Comple
                         >
                             <Icon name="home" size={20} color={pastoral.cream} />
                             {t('pause.mainMenu')}
+                        </button>
+                    )}
+
+                    {onLeaderboard && (
+                        <button
+                            onClick={onLeaderboard}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '14px 22px',
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                color: pastoral.cream,
+                                background: alpha(pastoral.accentGold, 18),
+                                border: `1px solid ${alpha(pastoral.accentGold, 34)}`,
+                                borderRadius: '12px',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = alpha(pastoral.accentGold, 26);
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = alpha(pastoral.accentGold, 18);
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                        >
+                            <Icon name="trophy" size={20} color={pastoral.accentGold} />
+                            {t('menu.leaderboard')}
                         </button>
                     )}
 

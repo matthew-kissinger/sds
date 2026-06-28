@@ -78,6 +78,7 @@ export async function initReactUI() {
             { ObjectiveBanner },
             { PracticeHint },
             { BarkHint },
+            { BarkMeter },
             { SurvivalIntro },
             { MobileHUD },
             { MobileControls },
@@ -119,6 +120,7 @@ export async function initReactUI() {
             import('./GameHUD/ObjectiveBanner.js'),
             import('./GameHUD/PracticeHint.js'),
             import('./GameHUD/BarkHint.js'),
+            import('./GameHUD/BarkMeter.js'),
             import('./GameHUD/SurvivalIntro.js'),
             import('./GameHUD/MobileHUD.js'),
             import('./GameHUD/MobileControls.js'),
@@ -351,11 +353,15 @@ export async function initReactUI() {
                     savePlayerIdentity(identity);
                 }
                 setPlayerIdentity(identity);
+                const openLeaderboard = window.__sdsOpenLeaderboardOnMenu === true;
+                if (openLeaderboard) window.__sdsOpenLeaderboardOnMenu = false;
                 if (pendingSandboxConfig) {
                     setScreen('sandboxSetup');
                 } else if (inviteCode) {
                     // Navigate directly to join room with code pre-filled
                     setScreen('joinRoom');
+                } else if (openLeaderboard) {
+                    setScreen('leaderboard');
                 } else {
                     setScreen('entrance');
                 }
@@ -958,6 +964,10 @@ export async function initReactUI() {
                 createElement(BarkHint, {
                     key: 'bark-hint',
                     active: isDesktop
+                }),
+                createElement(BarkMeter, {
+                    key: 'bark-meter',
+                    active: isDesktop && !isMultiplayer
                 }),
                 // Cycle 95 (Bug F): first-run Survival loop explainer. Solo
                 // survival on Newsheepdogland only (gameData.survival is sticky,

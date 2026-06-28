@@ -66,7 +66,7 @@ function speed(s) {
 
 describe('bark over the wire', () => {
     function fieldSim() {
-        return new GameSimulation(makeRoomAdapter('field', 3, ['p1']));
+        return new GameSimulation(makeRoomAdapter('field', 4, ['p1']));
     }
 
     // Position the auto-created dog and give it a +z facing velocity so the
@@ -85,6 +85,7 @@ describe('bark over the wire', () => {
             const ahead = sim.gameState.sheep[0]; parkSheep(ahead, 0, 4);   // in cone + range
             const behind = sim.gameState.sheep[1]; parkSheep(behind, 0, -4); // behind => out of cone
             const medium = sim.gameState.sheep[2]; parkSheep(medium, 0, 20);
+            const offAxis = sim.gameState.sheep[3]; parkSheep(offAxis, 4, 8);
             const beforeBehind = behind.velocity.z;
 
             sim.applyPlayerInput('p1', { direction: { x: 0, z: 1 }, sprint: false, inputSequence: 1, bark: true });
@@ -93,6 +94,9 @@ describe('bark over the wire', () => {
             expect(ahead.barkSteerTicks).toBeGreaterThan(0);
             expect(behind.barkSteerTicks).toBe(0);
             expect(medium.barkSteerTicks).toBeGreaterThan(0);
+            expect(offAxis.barkSteerTicks).toBeGreaterThan(0);
+            expect(offAxis.barkSteerX).toBeGreaterThan(0);
+            expect(offAxis.barkSteerZ).toBeGreaterThan(0);
 
             sim.updateSheep();
 
@@ -101,6 +105,8 @@ describe('bark over the wire', () => {
             expect(behind.velocity.z).toBe(beforeBehind);
             expect(medium.velocity.z).toBeGreaterThan(0);
             expect(speed(medium)).toBeLessThanOrEqual(sim.sheepConfig.maxSpeed);
+            expect(offAxis.velocity.z).toBeGreaterThan(0);
+            expect(speed(offAxis)).toBeLessThanOrEqual(sim.sheepConfig.maxSpeed);
         } finally { sim.cleanup?.(); }
     });
 

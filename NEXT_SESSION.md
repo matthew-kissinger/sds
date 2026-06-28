@@ -1,33 +1,34 @@
-# Next Session - Post-Launch Verification
+# Next Session - Cycle 111 Release Verification
 
-> **Updated:** 2026-06-26
-> **For:** launch follow-up
-> **Pickup priority:** Verify the `v2.4.0` deploy/tag state, then decide whether to update itch.
+> **Updated:** 2026-06-28
+> **For:** v2.5.0 web release follow-up
+> **Pickup priority:** Verify the `v2.5.0` deploy/tag state, then decide whether to update itch or other storefronts.
 
 ## Current State
 
-Cycles 106-110 are complete. Matt approved the launch after the fresh in-game screenshot pass. The worktree now includes refreshed public docs, press kit, launch copy, site metadata, scene pages, manifest, sitemap, `llms.txt`, SEO regression tests, version metadata, fresh WebGPU hero/social images, release-candidate validation, deploy-target proof, native package proof, Steam readiness docs, itch docs, portal matrix, repo metadata report, and final launch packet.
+Cycle 111 is complete. The worktree includes bark-as-core-skill behavior, calm runtime bark audio, a bark cooldown HUD, a world-space bark wave, tutorial onboarding that teaches bark, easier leaderboard discovery, completion-screen polish, and a continued Newsheepdogland public gate.
 
-The immediate post-launch work is verification:
+The immediate post-release work is verification:
 
-1. Confirm the GitHub `Deploy` workflow for the launch commit is green.
+1. Confirm the GitHub `Deploy` workflow for the `v2.5.0` release commit is green.
 2. Confirm `https://sheepdogsim.com/`, `/about`, `/scenes/*`, `/sitemap.xml`, `/robots.txt`, and the production Worker health endpoint are green.
-3. Confirm live HTML references `assets/scenes/social/*.webp` for OG/Twitter metadata and `assets/scenes/entrance/*.webp` for page heroes.
-4. Confirm the `v2.4.0` tag exists on the intended launch commit.
-5. Decide whether to update itch now using `docs/launch/itch-launch-brief.md`.
+3. Confirm the live first-session tutorial offer can start the tutorial and reach the bark step.
+4. Confirm bark readiness/cooldown and leaderboard navigation are visible in the live web build.
+5. Confirm the `v2.5.0` tag exists on the intended release commit.
+6. Decide whether to update itch now using `docs/launch/itch-launch-brief.md`.
 
 ## Review Entry Points
 
-1. [`docs/launch/final-launch-review.md`](docs/launch/final-launch-review.md) - launch packet and human decisions.
-2. [`docs/launch/release-candidate.md`](docs/launch/release-candidate.md) - release-candidate proof.
-3. [`docs/launch/release-checklist.md`](docs/launch/release-checklist.md) - exact launch/rollback commands.
-4. [`docs/launch/itch-launch-brief.md`](docs/launch/itch-launch-brief.md) - itch publish prep.
-5. [`docs/launch/steam-store-brief.md`](docs/launch/steam-store-brief.md) - Steam prep and blockers.
-6. [`docs/launch/portal-target-matrix.md`](docs/launch/portal-target-matrix.md) - portal recommendations.
+1. [`docs/cycle-111-plan.md`](docs/cycle-111-plan.md) - implementation plan, EARS acceptance, and validation notes.
+2. [`docs/launch/v2.5.0-release-notes.md`](docs/launch/v2.5.0-release-notes.md) - player-facing release notes.
+3. [`docs/bark-audio-assets.md`](docs/bark-audio-assets.md) - bark audio sources and licenses.
+4. [`docs/launch/release-checklist.md`](docs/launch/release-checklist.md) - launch/rollback commands.
+5. [`docs/launch/itch-launch-brief.md`](docs/launch/itch-launch-brief.md) - itch publish prep.
+6. [`docs/launch/steam-store-brief.md`](docs/launch/steam-store-brief.md) - Steam prep and blockers.
 
 ## Autonomy Rules
 
-- Web deploy/tag/repo launch updates were approved after the screenshot refresh.
+- Web deploy/tag/repo release updates are approved for Cycle 111.
 - Do not publish paid, irreversible, or public marketplace submissions without explicit approval.
 - Do not perform Steam Direct, Steam depot, CrazyGames, Poki, Newgrounds, Kongregate, or Y8 submission actions without explicit approval.
 - Keep `shared/`, sim-baseline goldens, and frozen process files untouched unless the active cycle plan explicitly authorizes the change.

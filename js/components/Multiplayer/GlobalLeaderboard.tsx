@@ -45,9 +45,10 @@ import {
 } from '../../../shared/survivalModes.js';
 import { color } from '../ui/tokens';
 
-// Cycle 35 Phase 5: three concrete scenes. The 'any' option is gone with
-// the cross-scene mash-up.
-const SCENE_ORDER = ['field', 'rolling-hills', 'open-country', 'newsheepdogland'];
+// Public leaderboard scenes. Newsheepdogland stays a tech sandbox until its
+// survival loop is ready for public surfacing.
+const SCENE_ORDER = ['field', 'rolling-hills', 'open-country'];
+const SCENE_ORDER_SET = new Set(SCENE_ORDER);
 const LAST_SCENE_KEY = 'sds:leaderboardLastScene';
 const FALLBACK_SCENE = 'field';
 
@@ -146,6 +147,11 @@ function defaultTabForScene(sceneId: string): string {
         return SURVIVAL_LEADERBOARD_MODE;
     }
     if (scene) {
+        const beginner = getRankedCounts(scene)[0];
+        if (beginner) {
+            const key = soloTabKey(beginner);
+            if (tabs.includes(key)) return key;
+        }
         const classic = getLadderEntry(scene, 'classic');
         if (classic && classic.ranked) {
             const key = soloTabKey(classic.count);
@@ -155,15 +161,19 @@ function defaultTabForScene(sceneId: string): string {
     return tabs[0] || 'cooperative';
 }
 
+function isPublicLeaderboardScene(sceneId: string): boolean {
+    return SCENE_ORDER_SET.has(sceneId) && !!getSceneById(sceneId);
+}
+
 function initialSceneId(): string {
     if (typeof window === 'undefined') return FALLBACK_SCENE;
     try {
         const fromUrl = new URLSearchParams(window.location.search).get('scene');
-        if (fromUrl && getSceneById(fromUrl)) return fromUrl;
+        if (fromUrl && isPublicLeaderboardScene(fromUrl)) return fromUrl;
     } catch {}
     try {
         const stored = localStorage.getItem(LAST_SCENE_KEY);
-        if (stored && getSceneById(stored)) return stored;
+        if (stored && isPublicLeaderboardScene(stored)) return stored;
     } catch {}
     return FALLBACK_SCENE;
 }
@@ -184,6 +194,23 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
     }, []);
 
     const visibleModes = useMemo(() => leaderboardModesForScene(sceneId), [sceneId]);
+    const beginnerTab = useMemo(() => defaultTabForScene(sceneId), [sceneId]);
+    const displayModes = useMemo(() => {
+        const out: string[] = [];
+        const add = (mode: string) => {
+            if (mode && visibleModes.includes(mode) && !out.includes(mode)) out.push(mode);
+        };
+        add(beginnerTab);
+        visibleModes
+            .filter((mode) => (leaderboards[mode]?.length ?? 0) > 0)
+            .forEach(add);
+        visibleModes.forEach(add);
+        return out;
+    }, [beginnerTab, leaderboards, visibleModes]);
+    const scoredBoardCount = useMemo(
+        () => visibleModes.filter((mode) => (leaderboards[mode]?.length ?? 0) > 0).length,
+        [leaderboards, visibleModes]
+    );
 
     // Cycle 58: default tab is the scene's signature solo run (its 'classic'
     // rung), so the leaderboard opens on a meaningful board rather than an MP
@@ -243,6 +270,9 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
 
     const isFixedCountTab = isFixedCountTabKey(activeTab);
     const hasActiveSheepFilter = !isFixedCountTab && sheepFilter > 0;
+    const beginnerLabel = beginnerTab.startsWith(SOLO_TAB_PREFIX)
+        ? soloTabLabel(sceneId, Number(beginnerTab.slice(SOLO_TAB_PREFIX.length)))
+        : t(labelKeyForMode(beginnerTab));
 
     const renderLeaderboardTable = (gameMode: string): ReactNode => {
         const data = leaderboards[gameMode] || [];
@@ -365,7 +395,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
         );
     };
 
-    const tabButtonStyle = (isActive: boolean): CSSProperties => ({
+    const tabButtonStyle = (isActive: boolean, hasScores = false, isBeginner = false): CSSProperties => ({
         padding: isCompact ? '0.5rem 0.75rem' : '0.5rem 1rem',
         borderRadius: '0.5rem',
         fontSize: isCompact ? '0.75rem' : '0.875rem',
@@ -373,12 +403,22 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
         transition: 'all 0.2s',
         whiteSpace: 'nowrap',
         cursor: 'pointer',
-        border: isActive ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid transparent',
-        background: isActive ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+        border: isActive
+            ? '1px solid rgba(255, 255, 255, 0.3)'
+            : hasScores
+                ? '1px solid rgba(224, 164, 88, 0.35)'
+                : '1px solid transparent',
+        background: isActive
+            ? 'rgba(255, 255, 255, 0.2)'
+            : isBeginner
+                ? 'rgba(224, 164, 88, 0.12)'
+                : hasScores
+                    ? 'rgba(224, 164, 88, 0.08)'
+                    : 'rgba(255, 255, 255, 0.05)',
         color: isActive ? 'white' : 'rgba(255, 255, 255, 0.7)',
     });
 
-    const labelKeyForMode = (mode: string): string => {
+    function labelKeyForMode(mode: string): string {
         const known: Record<string, string> = {
             soloClassic: 'leaderboard.soloClassic',
             soloExtreme: 'leaderboard.soloExtreme',
@@ -394,7 +434,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
             survival: 'leaderboard.survival',
         };
         return known[mode] || `leaderboard.${mode}`;
-    };
+    }
 
     return (
         <div
@@ -495,6 +535,47 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
                     </select>
                 </div>
 
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: isMobile ? 'flex-start' : 'center',
+                        justifyContent: 'space-between',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: '0.5rem',
+                        marginBottom: isCompact ? '0.75rem' : '1rem',
+                        padding: isCompact ? '0.6rem 0.75rem' : '0.75rem 1rem',
+                        borderRadius: '0.5rem',
+                        background: 'rgba(224, 164, 88, 0.09)',
+                        border: '1px solid rgba(224, 164, 88, 0.24)',
+                        flexShrink: 0,
+                    }}
+                >
+                    <div>
+                        <div style={{ color: 'white', fontWeight: 650, fontSize: isCompact ? '0.82rem' : '0.92rem' }}>
+                            First ranked target: {beginnerLabel}
+                        </div>
+                        <div style={{ color: 'rgba(255, 255, 255, 0.62)', fontSize: isCompact ? '0.72rem' : '0.78rem' }}>
+                            {scoredBoardCount} active board{scoredBoardCount === 1 ? '' : 's'} in this scene.
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setActiveTab(beginnerTab)}
+                        style={{
+                            padding: '0.42rem 0.75rem',
+                            borderRadius: '0.45rem',
+                            background: activeTab === beginnerTab ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.18)',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem',
+                            fontWeight: 650,
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        Open target
+                    </button>
+                </div>
+
                 {/* Mode tabs (filtered by the scene's available modes). */}
                 <div
                     style={{
@@ -506,7 +587,7 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
                         flexShrink: 0,
                     }}
                 >
-                    {visibleModes.map((mode) => {
+                    {displayModes.map((mode) => {
                         // Cycle 58: solo count tabs (`solo:<count>`) label from the
                         // scene ladder; MP tabs keep their i18n labels.
                         // Cycle 67 P7: co-op survival tabs read "Survival NP".
@@ -516,9 +597,27 @@ export function GlobalLeaderboard({ onBack, playerIdentity }: GlobalLeaderboardP
                             : isCoopSurvival
                                 ? `${t('leaderboard.survival')} ${mode.slice(SURVIVAL_LEADERBOARD_MODE.length + 1)}P`
                                 : t(labelKeyForMode(mode));
+                        const entryCount = leaderboards[mode]?.length ?? 0;
+                        const hasScores = entryCount > 0;
+                        const isBeginner = mode === beginnerTab;
                         return (
-                            <button key={mode} style={tabButtonStyle(activeTab === mode)} onClick={() => setActiveTab(mode)}>
-                                {label}
+                            <button key={mode} style={tabButtonStyle(activeTab === mode, hasScores, isBeginner)} onClick={() => setActiveTab(mode)}>
+                                <span>{label}</span>
+                                {hasScores && (
+                                    <span
+                                        style={{
+                                            marginLeft: '0.45rem',
+                                            padding: '0.08rem 0.35rem',
+                                            borderRadius: '999px',
+                                            background: 'rgba(224, 164, 88, 0.22)',
+                                            color: 'white',
+                                            fontSize: '0.68rem',
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        {entryCount}
+                                    </span>
+                                )}
                             </button>
                         );
                     })}

@@ -1,6 +1,6 @@
 # Sheep Dog Sim Launch Checklist
 
-Use this after Matt approves the Cycle 110 final launch packet. Approval was recorded on 2026-06-26 after the fresh WebGPU screenshot pass.
+Use this after Matt approves a web release action. The current web release target is `v2.5.0` for Cycle 111.
 
 ## Pre-Tag Verification
 
@@ -26,15 +26,15 @@ npm --prefix native/desktop-electron run proof:webgpu
 ## Tag
 
 ```bash
-git tag -a v2.4.0 -m "release: v2.4.0"
-git push origin v2.4.0
+git tag -a v2.5.0 -m "release: v2.5.0"
+git push origin v2.5.0
 ```
 
 ## GitHub Release
 
 1. Open GitHub Releases for `matthew-kissinger/sds`.
-2. Draft a release for tag `v2.4.0`.
-3. Use `docs/launch/v2.4.0-release-notes.md` as source copy.
+2. Draft a release for tag `v2.5.0`.
+3. Use `docs/launch/v2.5.0-release-notes.md` as source copy.
 4. Attach desktop artifacts only if Cycle 109 says they are approved for distribution.
 5. Publish only after production deploy is green.
 
@@ -54,7 +54,7 @@ powershell -NoProfile -Command "Invoke-WebRequest https://sheepdogsim.com/sitema
 powershell -NoProfile -Command "Invoke-WebRequest https://sds-worker.matt-m-kissinger.workers.dev/healthz -UseBasicParsing | Select-Object StatusCode,Content"
 ```
 
-Also inspect the deployed HTML for the new `v2.4.0` SEO copy and scene metadata.
+Also inspect the deployed HTML and game flow for the new `v2.5.0` bark/onboarding changes.
 
 ## Itch Update
 
@@ -88,4 +88,4 @@ gh run list --workflow Deploy --limit 10
 - Revert the launch commit and push to `main` to redeploy the prior bundle.
 - If only Worker behavior regresses, use Wrangler deployment rollback for `sds-worker`.
 - If only itch regresses, restore the previous itch upload/channel state in the itch dashboard.
-- Do not delete the `v2.4.0` tag after public release unless Matt explicitly approves a tag correction.
+- Do not delete the `v2.5.0` tag after public release unless Matt explicitly approves a tag correction.

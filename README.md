@@ -4,7 +4,7 @@
 
 [![Three.js 0.185](https://img.shields.io/badge/three.js-0.185-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/)
 
-**Sheep Dog Sim is a free browser herding game with solo challenges, 2-4 player online multiplayer, a survival island with wolves, mobile controls, gamepad support, and flocks that scale up to 5,000 sheep.** Play at [sheepdogsim.com](https://sheepdogsim.com). No install, no signup, no ads.
+**Sheep Dog Sim is a free browser herding game with solo challenges, 2-4 player online multiplayer, a gated survival-island sandbox with wolves, mobile controls, gamepad support, and flocks that scale up to 5,000 sheep.** Play at [sheepdogsim.com](https://sheepdogsim.com). No install, no signup, no ads.
 
 Current code is AGPL-3.0-or-later. Current non-code assets are CC BY-SA 4.0. Hosted or modified versions must publish corresponding source and preserve attribution.
 
@@ -23,7 +23,7 @@ Scenes:
 - **Home Field** - flat fenced starter pasture with one gate.
 - **Rolling Hills** - 180 m golden-hour island with shoreline water and a lightning corral.
 - **Open Country** - 380 m island with a multi-stage gather-and-portal objective.
-- **Newsheepdogland** - boot-shaped survival island with a homestead pen, a day/night loop, and wolves after dark.
+- **Newsheepdogland** - boot-shaped survival island tech sandbox with a homestead pen, a day/night loop, and wolves after dark. It remains publicly gated while the survival loop is reconsidered.
 
 Modes:
 
@@ -32,7 +32,7 @@ Modes:
 - **Solo Extreme** - 1,000 sheep.
 - **Solo Insane** - 3,000 sheep.
 - **Solo Chaos** - 5,000 sheep.
-- **Survival** - start small on Newsheepdogland, bring sheep home before night, and survive wolves.
+- **Survival** - Newsheepdogland sandbox mode for development and deep-link testing while public access remains gated.
 - **Multiplayer** - 2-4 player real-time co-op, competitive, timed rooms, split-screen, and sandbox/editor flows.
 
 ## Why This Repo Exists
@@ -138,12 +138,13 @@ The repo is currently in a launch-readiness program:
 - Cycle 108 - release-candidate proof
 - Cycle 109 - native desktop and Steam readiness
 - Cycle 110 - itch, portals, and final launch review
+- Cycle 111 - core bark, onboarding, leaderboard, and completion UX
 
 ## Release State
 
-The latest public git tag is `v2.3.4`. The current launch candidate is being prepared as `v2.4.0` because the work since `v2.3.4` includes the Three.js r185 migration, Kiln fence/gate/tree/grass/homestead asset integration, foliage LOD tuning, preview backend provisioning, and launch-content refresh.
+The current player-visible release line is `v2.5.0`. It builds on the `v2.4.0` launch refresh with Cycle 111's bark-as-core-skill pass, first-session tutorial routing, easier leaderboard discovery, completion-screen polish, and the continued Newsheepdogland sandbox gate.
 
-No store upload, Steam submission, paid platform action, or production launch approval is implied by this README. Those are held for final review after Cycle 110.
+No store upload, Steam submission, paid platform action, or third-party portal publication is implied by this README. Those remain separate owner-approved actions.
 
 ## Contributing
 

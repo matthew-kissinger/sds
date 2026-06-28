@@ -19,6 +19,7 @@ import { useState, useEffect, useRef, type CSSProperties, type PointerEvent as R
 import { Z } from '../../ui/zIndex.js';
 import { getMobileControls, getSceneManager } from '../../GameBridge.js';
 import { useResponsive } from '../hooks/usePlatform.js';
+import { useGameState } from '../hooks/useGameState.js';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
 
@@ -46,6 +47,7 @@ export function MobileControls() {
     const [isZooming, setIsZooming] = useState<'in' | 'out' | null>(null);
     const [thumb, setThumb] = useState({ x: 0, y: 0 });
     const [dragging, setDragging] = useState(false);
+    const gameData = useGameState();
 
     const baseRef = useRef<HTMLDivElement>(null);
     const activePointer = useRef<number | null>(null);
@@ -63,6 +65,12 @@ export function MobileControls() {
     const iconSize = isLandscapeMobile ? 20 : 28;
     const zoomIconSize = isLandscapeMobile ? 16 : 20;
     const joystickRadius = joystickSize / 2;
+    const barkReady = gameData.barkReady === true;
+    const barkRatio = Math.max(0, Math.min(1, gameData.barkCooldownRatio || 0));
+    const barkFillDegrees = Math.round((1 - barkRatio) * 360);
+    const barkLabel = barkReady
+        ? 'Bark ready'
+        : `Bark ready in ${Math.max(0.1, (gameData.barkCooldownRemainingMs || 0) / 1000).toFixed(1)} seconds`;
 
     // --- Custom pointer-events joystick (replaces nipplejs) ---
 
@@ -297,20 +305,17 @@ export function MobileControls() {
                     height: `${sprintSize}px`,
                     bottom: `calc(env(safe-area-inset-bottom, 0px) + ${isLandscapeMobile ? '8px' : '2rem'})`,
                     right: `calc(env(safe-area-inset-right, 0px) + ${isLandscapeMobile ? '1rem' : '1.5rem'} + ${sprintSize}px + ${isLandscapeMobile ? '0.75rem' : '1rem'})`,
-                    background: alpha(pastoral.cream, 8),
-                    border: `1px solid ${pastoral.glassWarmBorder}`,
-                    boxShadow: '0 4px 16px rgba(43,38,32,0.14)',
+                    background: barkReady
+                        ? alpha(pastoral.accentGold, 24)
+                        : `conic-gradient(${pastoral.accentGold} ${barkFillDegrees}deg, ${alpha(pastoral.cream, 10)} ${barkFillDegrees}deg)`,
+                    border: barkReady ? `2px solid ${alpha(pastoral.accentGold, 62)}` : `1px solid ${pastoral.glassWarmBorder}`,
+                    boxShadow: barkReady ? `0 0 20px ${alpha(pastoral.accentGold, 32)}` : '0 4px 16px rgba(43,38,32,0.14)',
                     transition: 'all 0.15s ease-out',
                 }}
-                onPointerDown={() => window.dispatchEvent(new CustomEvent('sds-bark'))}
-                aria-label="Bark"
+                onPointerDown={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent('sds-bark')); }}
+                aria-label={barkLabel}
             >
-                <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none"
-                     stroke={alpha(pastoral.cream, 90)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 9v6h4l5 4V5L8 9H4z" />
-                    <path d="M16.5 8.5a5 5 0 0 1 0 7" />
-                    <path d="M19.5 5.5a9 9 0 0 1 0 13" />
-                </svg>
+                <Icon name="sound" size={iconSize} color={barkReady ? pastoral.accentGold : alpha(pastoral.cream, 90)} />
             </button>
 
             {/* Zoom controls - always vertical */}

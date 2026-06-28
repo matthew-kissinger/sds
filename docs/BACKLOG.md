@@ -4,19 +4,21 @@
 
 ## Planned / In Progress
 
-### Launch-readiness roadmap (Cycle 106 through Cycle 110)
+### Current release follow-up
 
-Matt asked for the remaining launch-prep work to be scaffolded so agents can continue autonomously through Cycle 110, then stop for final human review. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md); the staged cycle plans are:
-
-- [`docs/cycle-106-plan.md`](cycle-106-plan.md) - launch docs and repo hygiene.
-- [`docs/cycle-107-plan.md`](cycle-107-plan.md) - SEO and site content refresh.
-- [`docs/cycle-108-plan.md`](cycle-108-plan.md) - release candidate proof.
-- [`docs/cycle-109-plan.md`](cycle-109-plan.md) - native desktop and Steam readiness.
-- [`docs/cycle-110-plan.md`](cycle-110-plan.md) - itch, portals, and final launch review packet.
-
-Autonomy note: continue from one cycle to the next without stopping for Matt review unless a hard stop fires. Do not publish paid, irreversible, or public marketplace submissions before Cycle 110's final review packet unless Matt explicitly authorizes the exact action.
+Cycle 111 is ready for the `v2.5.0` web release. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md). Do not publish paid, irreversible, or third-party marketplace submissions unless Matt explicitly authorizes the exact action.
 
 ## Recently Completed
+
+### Cycle 111 - `core-bark-onboarding` (closed 2026-06-28)
+
+Plan remains at [`docs/cycle-111-plan.md`](cycle-111-plan.md). Cycle 111 shipped the bark-as-core-skill pass, first-session tutorial routing, leaderboard motivation, completion-screen polish, calm bark audio replacement, and a Newsheepdogland sandbox guard. Release notes are at [`docs/launch/v2.5.0-release-notes.md`](launch/v2.5.0-release-notes.md).
+
+- **Bark as a core skill.** `shared/BarkImpulse.js` now applies a stronger bounded hybrid of dog-facing wave direction and radial pressure. Desktop/mobile HUDs show readiness and cooldown, and bark fires a subtle world-space wave.
+- **Calm bark audio.** Runtime bark MP3s are short, immediate, and dog-specific. Source/license details are recorded in [`docs/bark-audio-assets.md`](bark-audio-assets.md).
+- **Intro path and motivation.** The tutorial teaches move, sprint, camera, bark, and a 3-sheep intro goal, then routes practice players toward Quick 25. Leaderboards now emphasize easy scored boards and visible score activity.
+- **Completion and sandbox guard.** Completion screens now distinguish unranked practice from ranked save feedback. Newsheepdogland remains publicly gated and absent from the public leaderboard picker.
+- **Validation.** `npm test`, `npm run build`, `npm run lint`, `npm run typecheck`, `npm run test:e2e -- --project=chromium`, `git diff --check`, installed-Chrome bark/tutorial/leaderboard/NSL audits, and bark audio duration checks passed.
 
 ### Preview Worker provisioning (completed 2026-06-26)
 

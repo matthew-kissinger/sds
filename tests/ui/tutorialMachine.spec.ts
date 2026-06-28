@@ -39,7 +39,7 @@ function makeMachine(storage = fakeStorage()) {
     let t = 0;
     const machine = createTutorialMachine({ now: () => t, storage });
     const tick = (ms: number) => { t += ms; };
-    const idle = { moving: false, sprinting: false, cameraMode: 'classic', penned: 0 };
+    const idle = { moving: false, sprinting: false, cameraMode: 'classic', barked: false, penned: 0 };
     return { machine, tick, idle, storage };
 }
 
@@ -120,6 +120,25 @@ describe('tutorial machine step ladder', () => {
         machine.signal({ ...idle, cameraMode: 'classic' }); // baseline recorded, unchanged
         expect(machine.getSnapshot().step).toBe('camera');
         machine.signal({ ...idle, cameraMode: 'follow' });
+        expect(machine.getSnapshot().step).toBe('bark');
+    });
+
+    it('bark step advances on an accepted bark after dwell', () => {
+        const { machine, tick, idle } = makeMachine();
+        machine.start();
+        tick(1000);
+        machine.signal({ ...idle, moving: true });   // -> sprint
+        tick(1000);
+        machine.signal({ ...idle, sprinting: true }); // -> camera
+        tick(1000);
+        machine.signal({ ...idle, cameraMode: 'classic' });
+        machine.signal({ ...idle, cameraMode: 'follow' }); // -> bark
+        expect(machine.getSnapshot().step).toBe('bark');
+
+        machine.signal({ ...idle, barked: true });
+        expect(machine.getSnapshot().step).toBe('bark');
+        tick(1000);
+        machine.signal({ ...idle, barked: true });
         expect(machine.getSnapshot().step).toBe('herd');
     });
 
@@ -130,6 +149,7 @@ describe('tutorial machine step ladder', () => {
         tick(1000); machine.signal({ ...idle, sprinting: true });
         tick(1000); machine.signal({ ...idle, cameraMode: 'classic' });
         machine.signal({ ...idle, cameraMode: 'follow' });
+        tick(1000); machine.signal({ ...idle, barked: true });
         expect(machine.getSnapshot().step).toBe('herd');
 
         tick(1000);

@@ -29,7 +29,8 @@ export class AudioManager {
                 jep: null,
                 pip: null,
                 sally: null,
-                shiloh: null
+                shiloh: null,
+                george_washington: null
             },
             // Competitive mode sounds
             scoreSound: null,
@@ -172,9 +173,9 @@ export class AudioManager {
         const dogBarkFiles = {
             'jep': 'assets/sounds_compressed/dog_bark_jep.mp3',
             'pip': 'assets/sounds_compressed/dog_bark_pip.mp3',
-            'sally': 'assets/sounds_compressed/dog_bark_pip.mp3',
-            'shiloh': 'assets/sounds_compressed/dog_bark_jep.mp3',
-            'george_washington': 'assets/sounds_compressed/dog_bark_pip.mp3'
+            'sally': 'assets/sounds_compressed/dog_bark_sally.mp3',
+            'shiloh': 'assets/sounds_compressed/dog_bark_shiloh.mp3',
+            'george_washington': 'assets/sounds_compressed/dog_bark_george_washington.mp3'
         };
         
         // Load regular sound files

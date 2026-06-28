@@ -133,6 +133,12 @@ export async function showCompletionOverlay(game, mode, data = {}) {
             sheepCount: data.sheepCount || game.gameState?.sheepInPenCount || 0,
             scores: [],
             replayBlobUrl,
+            gameMode: game.gameMode,
+            singlePlayerMode: game.singlePlayerMode,
+            sceneId: game.gameState?.sceneId
+                || game.gameState?.sceneSpawnDef?.sceneId
+                || (typeof window !== 'undefined' && window.__currentSceneId)
+                || 'field',
             // Cycle 59 (Counting Sheep): the banked counted total + round reached.
             counted: data.counted || 0,
             round: data.round || 0,
@@ -162,7 +168,11 @@ export async function showCompletionOverlay(game, mode, data = {}) {
                     // screen. Both go through methods that call
                     // disposeCompletionOverlay() first.
                     onPlayAgain: () => game.restartSameMode(),
-                    onMainMenu: () => game.restartToMenu()
+                    onMainMenu: () => game.restartToMenu(),
+                    onLeaderboard: async () => {
+                        window.__sdsOpenLeaderboardOnMenu = true;
+                        await game.restartToMenu();
+                    }
                 }));
                 console.log('[GAME] React completion overlay rendered!');
             },

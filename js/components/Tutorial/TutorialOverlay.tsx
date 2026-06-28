@@ -30,7 +30,7 @@ interface MachineLike {
 
 /** Per-step locale key, with a touch variant where the control differs. */
 function stepKey(step: string, isTouch: boolean): string {
-    if (isTouch && (step === 'move' || step === 'sprint' || step === 'camera')) {
+    if (isTouch && (step === 'move' || step === 'sprint' || step === 'camera' || step === 'bark')) {
         return `tutorial.step.${step}Touch`;
     }
     return `tutorial.step.${step}`;

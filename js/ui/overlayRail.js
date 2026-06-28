@@ -15,9 +15,11 @@
  * the tutorial pill). The rail leaves the bottom to gameplay surfaces.
  *
  * The rail itself is pointer-events: none; rows opt in for their own
- * content. `--sds-toast-top-offset` (published by HudLayout when the in-game
- * HUD is up, Phase 6) pushes the rail below the top-center HUD stack;
- * the 8px fallback is the entrance default.
+ * content. The rail is a body-level sibling of `#react-overlay`, whose CSS
+ * root sits at z-index 1000; keep the host above that root so rail cards remain
+ * clickable while the entrance overlay is mounted. `--sds-toast-top-offset`
+ * (published by HudLayout when the in-game HUD is up, Phase 6) pushes the rail
+ * below the top-center HUD stack; the 8px fallback is the entrance default.
  *
  * Vanilla DOM (no React) so boot-path callers stay chunk-light; React
  * callers portal into it.
@@ -45,7 +47,7 @@ export function ensureTopRail(doc = (typeof document === 'undefined' ? null : do
         top: 'calc(max(env(safe-area-inset-top, 8px), 8px) + var(--sds-toast-top-offset, 8px))',
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: String(Z.toast),
+        zIndex: String(Z.debug + 1),
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

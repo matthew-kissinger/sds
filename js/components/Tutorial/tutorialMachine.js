@@ -3,8 +3,8 @@
 /**
  * P1-TUTORIAL: the first-run tutorial state machine, pure and renderer-free.
  *
- * The tutorial is a ~60 second guided run of Just Play (practice, 30 sheep) on
- * Home Field: move -> sprint -> camera -> herd 3 sheep into the pen -> done.
+ * The tutorial is a guided run of Just Play (practice, 30 sheep) on Home Field:
+ * move -> sprint -> camera -> bark -> herd 3 sheep into the pen -> done.
  * This module owns the step logic and the sds:tutorialDone persistence; the
  * controller (./index.js) pumps it one signal snapshot per frame and the
  * overlay (./TutorialOverlay.tsx) renders whatever step it reports.
@@ -20,7 +20,7 @@ export const TUTORIAL_DONE_KEY = 'sds:tutorialDone';
 export const TUTORIAL_GOAL = 3;
 
 /** Step order. 'done' is the penned celebration; it lingers then finishes. */
-export const TUTORIAL_STEPS = Object.freeze(['move', 'sprint', 'camera', 'herd', 'done']);
+export const TUTORIAL_STEPS = Object.freeze(['move', 'sprint', 'camera', 'bark', 'herd', 'done']);
 
 /** A prompt must be on screen at least this long before its condition can
  * advance it, so a held key doesn't flash the whole ladder past the player. */
@@ -65,6 +65,7 @@ export function shouldOfferTutorial(storage = defaultStorage()) {
  * @property {boolean} moving      any movement input active this frame
  * @property {boolean} sprinting   sprint input active this frame
  * @property {string | null} cameraMode  current camera mode id, if readable
+ * @property {boolean} barked      accepted bark fired since the previous signal
  * @property {number} penned       sheep retired into the pen so far
  */
 
@@ -169,6 +170,9 @@ export function createTutorialMachine(opts = {}) {
                     break;
                 case 'camera':
                     if (cameraBaseline && sig.cameraMode && sig.cameraMode !== cameraBaseline) advance();
+                    break;
+                case 'bark':
+                    if (sig.barked) advance();
                     break;
                 case 'herd':
                     if (penned >= goal) advance();

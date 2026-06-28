@@ -47,10 +47,13 @@ function readSignal() {
     const input = getInputHandler();
     const gameState = getGameState();
     const cameraMode = getSceneManager()?.getCameraController?.()?.getMode?.() ?? null;
+    const barked = session?.barked === true;
+    if (session) session.barked = false;
     return {
         moving: input?.isMoving?.() === true,
         sprinting: input?.isSprinting?.() === true,
         cameraMode,
+        barked,
         penned: gameState?.sheepRetired ?? 0,
     };
 }
@@ -62,6 +65,7 @@ function teardown(reason) {
     s.unsubFrame?.();
     s.unsubRestart?.();
     s.unsubMachine?.();
+    if (s.onBarkFired) window.removeEventListener('sds-bark-fired', s.onBarkFired);
     if (reason === 'cancelled') s.machine.cancel();
     // Defer the unmount one tick: the machine subscription that calls this can
     // fire from inside a React event handler, and root.unmount() during render
@@ -92,7 +96,11 @@ export async function startTutorial(opts = {}) {
     document.body.appendChild(container);
     const root = createRoot(container);
 
-    session = { machine, container, root };
+    session = { machine, container, root, barked: false };
+    session.onBarkFired = () => {
+        if (session) session.barked = true;
+    };
+    window.addEventListener('sds-bark-fired', session.onBarkFired);
     session.unsubMachine = machine.subscribe(() => {
         if (machine.getSnapshot().status === 'finished') teardown('finished');
     });

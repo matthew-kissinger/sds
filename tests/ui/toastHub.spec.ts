@@ -34,6 +34,13 @@ afterEach(() => {
 });
 
 describe('enqueueToast', () => {
+    it('places the shared rail above the React overlay host', () => {
+        const mount = mountSpy();
+        enqueueToast({ id: 'a', mount }, { probe: () => false });
+        const rail = document.getElementById(TOP_RAIL_ID)!;
+        expect(Number(rail.style.zIndex)).toBeGreaterThan(1000);
+    });
+
     it('mounts immediately when idle, into the shared rail', () => {
         const mount = mountSpy();
         enqueueToast({ id: 'a', mount }, { probe: () => false });
