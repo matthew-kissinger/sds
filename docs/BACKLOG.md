@@ -6,7 +6,7 @@
 
 ### Current release follow-up
 
-The web-only `v2.6.0` beta release line is current: three public scenes, Newsheepdogland as a gated lab, support/privacy surfaces, mobile first-session polish, public lobby verification, leaderboard-season planning, and community/playtest scaffolding. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md). Do not publish paid, irreversible, or third-party marketplace submissions unless Matt explicitly authorizes the exact action.
+The web-only `v2.6.1` beta hotfix release line is current: the `v2.6.0` beta posture plus a WebGPU Counting Sheep fix for Incremental and Exponential starts. The beta still centers three public scenes, Newsheepdogland as a gated lab, support/privacy surfaces, mobile first-session polish, public lobby verification, leaderboard-season planning, and community/playtest scaffolding. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md). Do not publish paid, irreversible, or third-party marketplace submissions unless Matt explicitly authorizes the exact action.
 
 ## Recently Completed
 

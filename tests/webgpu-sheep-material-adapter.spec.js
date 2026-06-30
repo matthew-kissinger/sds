@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { MeshStandardNodeMaterial, TSL } from 'three/webgpu';
+import { MeshStandardNodeMaterial, StorageInstancedBufferAttribute, TSL } from 'three/webgpu';
 
 import { OptimizedSheepSystem } from '../js/OptimizedSheep.js';
 import { createWebGpuSheepNodeMaterialFactories } from '../js/webgpuSheepNodeMaterialFactories.js';
@@ -148,6 +148,42 @@ describe('webgpu sheep material adapter', () => {
             expect(contexts).toHaveLength(1);
         } finally {
             sheep.dispose();
+        }
+    });
+
+    it('uses storage-backed instance matrices for large WebGPU sheep flocks', () => {
+        const nodeFactories = createWebGpuSheepNodeMaterialFactories({ MeshStandardNodeMaterial, TSL });
+        const scene = new THREE.Scene();
+        let sheep = null;
+        const previousWindow = globalThis.window;
+        globalThis.window = {
+            ...(previousWindow ?? {}),
+            location: previousWindow?.location ?? { search: '' },
+            __sdsWebGpuModules: { StorageInstancedBufferAttribute },
+        };
+
+        try {
+            sheep = new OptimizedSheepSystem(scene, 1, {
+                centerX: 0,
+                centerZ: 0,
+                spreadRadius: 0,
+                defaultCount: 1,
+            }, false, {
+                maxCapacity: 5000,
+                search: '?renderer=webgpu&webgpuSheep=1',
+                webgpuSheepFactories: nodeFactories,
+            });
+
+            expect(sheep.instancedMesh.instanceMatrix.isStorageInstancedBufferAttribute).toBe(true);
+            expect(sheep.instancedMesh.instanceMatrix.array).toHaveLength(5000 * 16);
+            expect(sheep.instancedMesh.count).toBe(1);
+        } finally {
+            sheep?.dispose();
+            if (previousWindow === undefined) {
+                delete globalThis.window;
+            } else {
+                globalThis.window = previousWindow;
+            }
         }
     });
 

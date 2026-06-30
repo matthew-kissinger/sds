@@ -1,10 +1,10 @@
 # Sheep Dog Sim Launch Checklist
 
-Use this after Matt approves a web release action. The current web release target is the `v2.6.0` web beta.
+Use this after Matt approves a web release action. The current web release target is the `v2.6.1` web beta hotfix.
 
 ## Pre-Tag Verification
 
-Bundle note: the support/privacy pages plus settings and pause-menu disclosure links intentionally ratchet the lazy `other` chunk-family budget from 690 KiB to 692 KiB for the `v2.6.0` beta disclosure surface.
+Bundle note: the support/privacy pages plus settings and pause-menu disclosure links intentionally ratchet the lazy `other` chunk-family budget from 690 KiB to 692 KiB for the beta disclosure surface.
 
 ```bash
 git status --short
@@ -33,15 +33,15 @@ npm --prefix native/desktop-electron run proof:webgpu
 ## Tag
 
 ```bash
-git tag -a v2.6.0 -m "release: v2.6.0"
-git push origin v2.6.0
+git tag -a v2.6.1 -m "release: v2.6.1"
+git push origin v2.6.1
 ```
 
 ## GitHub Release
 
 1. Open GitHub Releases for `matthew-kissinger/sds`.
-2. Draft a release for tag `v2.6.0`.
-3. Use `docs/launch/v2.6.0-beta-release-notes.md` as source copy once the beta release notes are finalized.
+2. Draft a release for tag `v2.6.1`.
+3. Use `docs/launch/v2.6.1-hotfix-release-notes.md` as source copy for this hotfix.
 4. Do not attach desktop artifacts unless Matt explicitly approves native distribution.
 5. Publish only after production deploy is green.
 
@@ -61,11 +61,11 @@ powershell -NoProfile -Command "Invoke-WebRequest https://sheepdogsim.com/sitema
 powershell -NoProfile -Command "Invoke-WebRequest https://sds-worker.matt-m-kissinger.workers.dev/healthz -UseBasicParsing | Select-Object StatusCode,Content"
 ```
 
-Also inspect the deployed HTML and game flow for the `v2.6.0` beta claims: three public scenes, Newsheepdogland gated lab, support/privacy pages, mobile first-session polish, public lobby discovery, and leaderboard posture.
+Also inspect the deployed HTML and game flow for the `v2.6.1` beta hotfix claims: three public scenes, Newsheepdogland gated lab, support/privacy pages, mobile first-session polish, public lobby discovery, leaderboard posture, and Counting Sheep WebGPU stability.
 
 ## Itch Update
 
-Deferred for the `v2.6.0` web beta. Do not upload or publish unless Matt explicitly reopens itch.
+Deferred for the `v2.6.1` web beta hotfix. Do not upload or publish unless Matt explicitly reopens itch.
 
 If reopened:
 
@@ -77,7 +77,7 @@ If reopened:
 
 ## Steam Continuation
 
-Do not continue during the `v2.6.0` web beta setup. Steam remains a long-term target only.
+Do not continue during the `v2.6.1` web beta hotfix. Steam remains a long-term target only.
 
 Required before submission:
 
@@ -99,4 +99,4 @@ gh run list --workflow Deploy --limit 10
 - Revert the launch commit and push to `main` to redeploy the prior bundle.
 - If only Worker behavior regresses, use Wrangler deployment rollback for `sds-worker`.
 - If only itch regresses after a separately approved itch upload, restore the previous itch upload/channel state in the itch dashboard.
-- Do not delete the `v2.6.0` tag after public release unless Matt explicitly approves a tag correction.
+- Do not delete the `v2.6.1` tag after public release unless Matt explicitly approves a tag correction.

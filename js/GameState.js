@@ -656,6 +656,10 @@ export class GameState {
 
         // Store previous sheep count to check if we need to recreate the flock
         const previousSheepCount = this.totalSheep;
+        if (mode !== COUNTING_GAME_MODE) {
+            this.countingState = null;
+            this.countingCurve = null;
+        }
 
         // Cycle 9 Phase 1: solo sheep count is owned by mode, not scene def
         // (table lives in js/gamestate/modes.js). Classic=200, Extreme=1000,

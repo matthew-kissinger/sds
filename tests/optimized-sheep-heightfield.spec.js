@@ -5,6 +5,7 @@ import * as THREE from 'three';
 
 import { GameState } from '../js/GameState.js';
 import { OptimizedSheepSystem } from '../js/OptimizedSheep.js';
+import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
 
 function matrixY(instancedMesh, index = 0) {
     return instancedMesh.instanceMatrix.array[index * 16 + 13];
@@ -127,5 +128,26 @@ describe('optimized sheep heightfield placement', () => {
         expect(setSpawnConfigCalls).toBe(2);
         expect(resetCalls).toBe(2);
         expect(setUseExtremeBoidsCalls).toBe(2);
+    });
+
+    it('clears counting round state when a non-counting run starts', () => {
+        const state = new GameState();
+        state.gameMode = COUNTING_GAME_MODE;
+        state.countingState = { round: 4 };
+        state.countingCurve = 'exponential';
+        state.totalSheep = 5000;
+        state.optimizedSheepSystem = {
+            instancedMesh: {},
+            setSpawnConfig: () => {},
+            resetAllSheep: () => {},
+            setUseExtremeBoids: () => {},
+        };
+
+        state.startGame('solo', null, 'classic');
+
+        expect(state.countingState).toBeNull();
+        expect(state.countingCurve).toBeNull();
+        expect(state.totalSheep).toBe(200);
+        expect(state.needsFlockRecreation).toBe(true);
     });
 });

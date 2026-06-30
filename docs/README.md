@@ -81,7 +81,8 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`launch/leaderboard-season-plan.md`](launch/leaderboard-season-plan.md) | Reference | Seasonal leaderboard model: preserve all-time records, add beta seasons intentionally, and avoid reset shortcuts. |
 | [`launch/release-candidate.md`](launch/release-candidate.md) | Reference | Historical v2.4.0 release-candidate status, validation summary, deploy posture, and risks. |
 | [`launch/release-checklist.md`](launch/release-checklist.md) | How-to | Exact commands and manual steps for approved tag, deploy, itch update, Steam continuation, and rollback. |
-| [`launch/v2.6.0-beta-release-notes.md`](launch/v2.6.0-beta-release-notes.md) | Reference | Current web beta release notes for the public support/privacy/copy/lobby alignment pass. |
+| [`launch/v2.6.1-hotfix-release-notes.md`](launch/v2.6.1-hotfix-release-notes.md) | Reference | Current WebGPU Counting Sheep hotfix release notes for the web beta. |
+| [`launch/v2.6.0-beta-release-notes.md`](launch/v2.6.0-beta-release-notes.md) | Reference | Web beta release notes for the public support/privacy/copy/lobby alignment pass. |
 | [`launch/v2.5.0-release-notes.md`](launch/v2.5.0-release-notes.md) | Reference | Cycle 111 player-facing release notes for the bark/onboarding/leaderboard release. |
 | [`launch/itch-launch-brief.md`](launch/itch-launch-brief.md) | Reference | itch copy, build proof, upload path, screenshots, and rollback notes. |
 | [`launch/steam-store-brief.md`](launch/steam-store-brief.md) | Reference | Steam page draft, asset requirements, feature claims, and blockers. |

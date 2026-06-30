@@ -1438,6 +1438,13 @@ class SheepDogSimulation {
         // React StartScreen remount can't reach; tear it down here so the menu
         // doesn't open under a stale overlay.
         disposeCompletionOverlay();
+        if (this.gameState?.gameMode === COUNTING_GAME_MODE) {
+            this.gameState.gameMode = 'solo';
+            this.gameState.countingState = null;
+            this.gameState.countingCurve = null;
+            const classicRung = this.currentScene?.soloLadder?.find((entry) => entry.id === 'classic');
+            this.gameState.totalSheep = classicRung?.count ?? 200;
+        }
         emitGameEvent('scene-swap-start');
 
         try {

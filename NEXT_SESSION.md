@@ -1,16 +1,16 @@
-# Next Session - v2.6.0 Beta Release
+# Next Session - v2.6.1 Beta Hotfix
 
 > **Updated:** 2026-06-30
-> **For:** web-only `v2.6.0` beta release
+> **For:** web-only `v2.6.1` beta hotfix release
 > **Pickup priority:** Post-release beta follow-up: community/playtest loop, seasonal leaderboard implementation decision, and first-session route review.
 
 ## Current State
 
-The repo has released the web-only `v2.6.0` beta. Matt's current GTM decisions:
+The repo has released the web-only `v2.6.1` beta hotfix. It keeps the `v2.6.0` beta posture and adds a WebGPU Counting Sheep fix for Incremental and Exponential starts. Matt's current GTM decisions:
 
 1. Newsheepdogland is a gated lab, not a launch promise.
 2. Public copy should say three public playable scenes.
-3. The beta identity is `v2.6.0 beta`.
+3. The beta identity is `v2.6.1 beta`.
 4. The beta channel is web-only on `https://sheepdogsim.com`.
 5. Steam remains the ultimate target if beta succeeds, but it is not a current public-launch task.
 6. Itch, portals, and ad SDKs are deferred.

@@ -36,7 +36,6 @@ const SHEEP_STARTUP_VISUAL_SPEED = 0.1;
 const SHEEP_STARTUP_VISUAL_BOUNCE = 0.018;
 const SHEEP_IDLE_VISUAL_SPEED = 0.025;
 const SHEEP_IDLE_VISUAL_BOUNCE = 0.006;
-
 // Module-level scratch Vector2Ds for the per-sheep gate-attraction block in
 // updateBehavior(). Reused via .set() instead of allocating fresh Vector2Ds
 // (and .clone()s) per sheep per frame. Safe to share because the sim is
@@ -384,7 +383,7 @@ export class OptimizedSheepSystem {
         this.webgpuSheepMaterialSummary = materialResult.summary;
         this.webgpuSheepMaterialControls = this.material.userData.webgpuSheepMaterialControls;
     }
-    
+
     /**
      * Create the instanced mesh with all sheep
      */
@@ -394,6 +393,17 @@ export class OptimizedSheepSystem {
             this.material,
             this.maxCapacity
         );
+        const StorageInstancedBufferAttribute = this.webgpuSheepMaterialSummary?.applied === true
+            && this.maxCapacity > 1024
+            && typeof window !== 'undefined'
+            ? window.__sdsWebGpuModules?.StorageInstancedBufferAttribute
+            : null;
+        if (StorageInstancedBufferAttribute) {
+            this.instancedMesh.instanceMatrix = new StorageInstancedBufferAttribute(
+                new Float32Array(this.maxCapacity * 16),
+                16,
+            );
+        }
 
         // Enable shadows
         this.instancedMesh.castShadow = true;

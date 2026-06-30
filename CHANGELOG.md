@@ -4,6 +4,18 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.6.1] - 2026-06-30
+
+### Fixed
+
+- Counting Sheep no longer trips WebGPU validation on 5,000-capacity flocks. Large WebGPU sheep instance matrices now use storage-backed attributes, keeping Round 1 Incremental and Exponential starts to one visible sheep instead of corrupting the scene with a bright centered render artifact.
+- Returning from Counting Sheep to the menu now clears counting round state before the backdrop scene rebuild, so later non-counting starts cannot inherit the 5,000-sheep counting ceiling.
+
+### Validation
+
+- `npm test`, `npm run build`, `npm run lint`, and `npm run test:e2e -- tests/e2e/smoke.spec.ts --project=chromium --grep-invert @local-only` passed.
+- Local production WebGPU Playwright proof passed for Counting Sheep Incremental and Exponential on Rolling Hills and Home Field, with screenshots showing no centered/grounded sun artifact and no WebGPU validation errors.
+
 ## [2.6.0] - 2026-06-30
 
 ### Added

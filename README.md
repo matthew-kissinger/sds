@@ -141,7 +141,7 @@ The repo is currently in a launch-readiness program:
 
 ## Release State
 
-The current player-visible release line is `v2.6.0 beta`: a web-only public beta posture with three public scenes, support/privacy surfaces, leaderboard-season planning, community/playtest scaffolding, and the continued Newsheepdogland lab gate.
+The current player-visible release line is `v2.6.1 beta`: the `v2.6.0` web beta posture with a WebGPU Counting Sheep hotfix. The beta remains web-only with three public scenes, support/privacy surfaces, leaderboard-season planning, community/playtest scaffolding, and the continued Newsheepdogland lab gate.
 
 No store upload, Steam submission, paid platform action, or third-party portal publication is implied by this README. Those remain separate owner-approved actions.
 
