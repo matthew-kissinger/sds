@@ -174,15 +174,9 @@ export class Sheepdog {
         
         // Audio and behavior
         this.audioManager = null;
-        this.lastBarkTime = 0;
-        // Passive herding bark cadence. Held above the bark animation length so
-        // a passive bark (which now plays the animation too, not just audio)
-        // never restarts mid-animation. Tunable; flagged for visual review.
-        this.barkCooldown = Math.max(3000, Math.round(ANIMATION_STATES.BARKING.duration * 1000) + 1000);
-        this.nearSheep = false;
 
-        // Player-triggered bark command. Separate cooldown from the passive
-        // near-sheep audio above; this gate is the single bark limiter.
+        // Player-triggered bark command. This gate is the single bark limiter;
+        // the dog only barks on an explicit player command.
         this.lastPlayerBarkTime = 0;
         this.playerBarkCooldown = DEFAULT_BARK_CONFIG.cooldownMs;
         
@@ -814,22 +808,7 @@ export class Sheepdog {
 
         // Update movement state
         this.isMoving = this.velocity.magnitude() > 0.5;
-        
-        // Passive herding bark: while moving near sheep, bark periodically.
-        // Cycle 95: this now plays the bark animation alongside the audio (it
-        // was audio-only, which read as a barking sound with no open mouth).
-        // The cadence (barkCooldown) sits above the animation length so it never
-        // restarts mid-animation; triggerBark self-guards on its own timer, so
-        // the visual and audio stay in lockstep.
-        if (this.audioManager && this.isMoving && this.nearSheep) {
-            const now = Date.now();
-            if (now - this.lastBarkTime > this.barkCooldown) {
-                this.triggerBark();
-                this.audioManager.playSheepdogBark(this.dogType);
-                this.lastBarkTime = now;
-            }
-        }
-        
+
         // Update mesh position and rotation
         if (this.mesh) {
             this.mesh.position.x = this.position.x;
@@ -1129,31 +1108,7 @@ export class Sheepdog {
     setAudioManager(audioManager) {
         this.audioManager = audioManager;
     }
-    
-    /**
-     * Update whether the dog is near sheep for barking purposes
-     */
-    updateNearSheepStatus(sheep) {
-        if (!sheep || sheep.length === 0) {
-            this.nearSheep = false;
-            return;
-        }
-        
-        const barkRadius = 12;
-        this.nearSheep = false;
-        
-        for (let i = 0; i < sheep.length; i++) {
-            const sheepInstance = sheep[i];
-            if (sheepInstance && sheepInstance.position) {
-                const distance = this.position.distanceTo(sheepInstance.position);
-                if (distance < barkRadius) {
-                    this.nearSheep = true;
-                    break;
-                }
-            }
-        }
-    }
-    
+
     /**
      * Create colored player icon for competitive mode
      */

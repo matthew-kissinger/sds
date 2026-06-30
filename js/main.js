@@ -2478,10 +2478,7 @@ class SheepDogSimulation {
             if (this.sceneManager.competitiveCameraDirection && movementDirection.magnitude() > 0) {
                 console.log(`[INPUT] Input transform: original(${originalDirection.x.toFixed(2)}, ${originalDirection.z.toFixed(2)}) -> transformed(${movementDirection.x.toFixed(2)}, ${movementDirection.z.toFixed(2)}) for ${this.sceneManager.competitiveCameraDirection} camera`);
             }
-            
-            // Update sheepdog's awareness of nearby sheep for barking
-            sheepdog.updateNearSheepStatus(this.gameState.getSheep());
-            
+
             // Handle input based on mode
             if (this.isMultiplayer && this.networkManager) {
                 // --- MULTIPLAYER LOGIC WITH CLIENT-SIDE PREDICTION ---
@@ -3138,7 +3135,6 @@ class SheepDogSimulation {
         const cameraDistance = this.twoPlayerCamera ? this.twoPlayerCamera.getDistance() : 80;
 
         // Update Player 1 sheepdog
-        sheepdog1.updateNearSheepStatus(this.gameState.getSheep());
         sheepdog1.move(p1Direction, bounds, deltaTime, p1Sprint);
         sheepdog1.animate(deltaTime, cameraDistance); // Animate player icon with camera distance for scaling
         if (sheepdog1.isLocalPlayer) {
@@ -3146,7 +3142,6 @@ class SheepDogSimulation {
         }
 
         // Update Player 2 sheepdog
-        sheepdog2.updateNearSheepStatus(this.gameState.getSheep());
         sheepdog2.move(p2Direction, bounds, deltaTime, p2Sprint);
         sheepdog2.animate(deltaTime, cameraDistance); // Animate player icon with camera distance for scaling
         if (sheepdog2.isLocalPlayer) {
