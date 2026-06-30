@@ -11,14 +11,17 @@
  * the scatter on every scene-load (see js/world/TreePlacement.js placeTrees).
  *
  * Two deliberate departures from the runtime default scatter:
- *   1. The treeline is pulled inward (FIELD_TREELINE_ZONES below): the outer
- *      zone rects shrink so trees stop ~430m out instead of ~800m. Field's
- *      shared terrain.zones stay at +/-800 (so the ground mesh still reaches
- *      the horizon and both placement goldens keep passing); the thinned zones
- *      live here, bake-time only.
+ *   1. The treeline is pulled inward (FIELD_TREELINE_ZONES below) to sit INSIDE
+ *      the green: Home Field's grass reaches ~252m (worldSize 420 * densityRange
+ *      0.6) on desktop, so the treeline lands at ~240m and no tree floats on the
+ *      bare terrain past the grass edge. Field's shared terrain.zones stay at
+ *      +/-800 (so the ground mesh still reaches the horizon and both placement
+ *      goldens keep passing); the thinned zones live here, bake-time only.
+ *      Pulling the treeline in (from the earlier ~430m band) also drops the
+ *      cold tree count, so it is a load + draw win.
  *   2. A radial clamp (FIELD_TREELINE_RADIUS) trims the rect corners to a clean
  *      circular treeline so the diagonals don't bulge a square forest silhouette
- *      out past the cardinal treeline once it sits forward of the fog wall.
+ *      out past the cardinal treeline.
  *
  * Rocks are NOT applied here. Runtime rocks are Math.random (non-deterministic
  * per load), so the bake stays pure/deterministic and placeTrees re-rejects
@@ -42,25 +45,28 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const MANIFEST_VERSION = 1;
 
 /**
- * Pulled-in treeline zones. nearField/playArea match Field's shared zones (the
- * inner play approach is untouched); midField/farField/horizon shrink so the
- * outer treeline lands in Matt's "380-450m" band rather than at +/-800m.
+ * Pulled-in treeline zones. playArea matches Field's shared zone (the inner play
+ * approach is untouched, and generateTrees rejects trees within a 20m buffer of
+ * it anyway). nearField/midField shrink so the treeline sits INSIDE the ~252m
+ * grass edge; farField/horizon are dropped entirely so no tree scatters past the
+ * green. midField (+/-250) fully encloses the FIELD_TREELINE_RADIUS disc so it is
+ * Poisson-filled out to the clamp.
  * @type {Record<string, {minX:number,maxX:number,minZ:number,maxZ:number}>}
  */
 export const FIELD_TREELINE_ZONES = {
     playArea:  { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
-    nearField: { minX: -200, maxX: 200, minZ: -200, maxZ: 200 },
-    midField:  { minX: -300, maxX: 300, minZ: -300, maxZ: 300 },
-    farField:  { minX: -380, maxX: 380, minZ: -380, maxZ: 380 },
-    horizon:   { minX: -450, maxX: 450, minZ: -450, maxZ: 450 },
+    nearField: { minX: -180, maxX: 180, minZ: -180, maxZ: 180 },
+    midField:  { minX: -250, maxX: 250, minZ: -250, maxZ: 250 },
 };
 
 /**
  * Radial clamp (m). Trees beyond this distance from origin are dropped so the
  * treeline reads as a clean disc instead of a square with bulging corners. Set
- * inside the horizon rect (+/-450) so the disc is fully Poisson-filled.
+ * just inside the ~252m grass edge so the treeline frames the pasture without any
+ * tree sitting on the bare terrain past the green. Fully enclosed by the
+ * midField rect (+/-250) so the disc is Poisson-filled.
  */
-export const FIELD_TREELINE_RADIUS = 430;
+export const FIELD_TREELINE_RADIUS = 240;
 
 /**
  * Build the Field placement manifest object. Pure + deterministic: same output
@@ -109,7 +115,7 @@ export function buildFieldPlacementManifest() {
 
 // Ring histogram for the console readout (matches the Phase 3 probe bins so
 // the bake's distribution is comparable to field-tree-probe.mjs).
-const RINGS = [120, 200, 250, 300, 350, 400, 430, 450];
+const RINGS = [120, 150, 180, 210, 230, 240];
 function histogram(trees) {
     const counts = new Array(RINGS.length).fill(0);
     let beyond = 0;

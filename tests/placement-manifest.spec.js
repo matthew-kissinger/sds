@@ -15,7 +15,7 @@ import {
  * renderer skips the ~489ms Poisson scatter at scene-load. These tests guard
  * two things:
  *   1. The committed public/placement/field.json is well-formed and its treeline
- *      lands in the intended 380-450m band (the "pull the treeline inward" call).
+ *      sits inside the ~252m grass edge (the "no foliage past the green" call).
  *   2. The committed file is exactly reproducible from source - re-running the
  *      bake produces byte-identical output. If someone hand-edits the manifest or
  *      changes the bake without re-running it, this fails loudly.
@@ -58,13 +58,15 @@ describe('field placement manifest - pulled-in treeline', () => {
     it('thins the scatter well below the full +/-800 zone count', () => {
         // Full-zone Field scatters ~1359 trees; the pulled-in treeline must be
         // a clear reduction without being pathologically sparse.
-        expect(committed.treeCount).toBeGreaterThan(250);
-        expect(committed.treeCount).toBeLessThan(600);
+        expect(committed.treeCount).toBeGreaterThan(60);
+        expect(committed.treeCount).toBeLessThan(300);
     });
 
-    it('treeline lands in the 380-450m band (Matt: pull it inward)', () => {
-        expect(committed.maxRadius).toBeGreaterThanOrEqual(380);
-        expect(committed.maxRadius).toBeLessThanOrEqual(450);
+    it('treeline sits inside the grass edge (no foliage past the green)', () => {
+        // Grass reaches ~252m on desktop; the treeline lands just inside it so
+        // no tree floats on the bare terrain past the green.
+        expect(committed.maxRadius).toBeGreaterThanOrEqual(FIELD_TREELINE_RADIUS - 60);
+        expect(committed.maxRadius).toBeLessThanOrEqual(FIELD_TREELINE_RADIUS);
     });
 
     it('no tree exceeds the radial clamp', () => {

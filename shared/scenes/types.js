@@ -233,6 +233,26 @@
  */
 
 /**
+ * Optional rock-scatter confinement (Home Field). The default rock placement
+ * spreads cluster/line/field formations across every terrain zone out to the
+ * +/-800 horizon. A flat starter pasture wants its rocks kept inside the green,
+ * so this restricts which named zones scatter rocks and clamps every rock to a
+ * radial distance. Absent => the legacy all-zone scatter (every pre-existing
+ * scene byte-identical). Render + sim-collision input (the rock obstacle bundle
+ * is derived from this), but not part of the deterministic shared sim - the
+ * Worker never reads `terrain`/rock placement.
+ *
+ * @typedef {Object} RockPlacementDef
+ * @property {Array<'nearField'|'midField'|'farField'|'horizon'>} [zones]
+ *   Named terrain zones allowed to scatter rock formations. When present, zones
+ *   not listed are skipped entirely (so their RNG draws never happen). Absent =>
+ *   all default zones for the boundary kind.
+ * @property {number} [maxRadius]
+ *   Drop any rock whose distance from origin exceeds this (m), trimming rect
+ *   corners + formation spread to a clean disc inside the green.
+ */
+
+/**
  * @typedef {Object} FarmHouseDef
  * @property {{x: number, z: number}} position
  * @property {Bounds} exclusionArea
@@ -326,6 +346,7 @@
  * @property {ObjectiveDef} [objective]         Cycle 7+ — multi-stage objective (round-up → drive). When absent, scene retires sheep on corral entry directly.
  * @property {SheepSpawnDef} sheepSpawn
  * @property {WoodsZoneDef[]} [woodsZones]      Cycle 5+ — biased tree placement clusters (Open Country)
+ * @property {RockPlacementDef} [rockPlacement] Optional rock-scatter confinement (Home Field keeps rocks inside the green). Absent => legacy all-zone scatter.
  * @property {FlockingOverride} [flocking]      Cycle 5+ — per-scene boid tuning override (Phase 1.5)
  *
  * Rendering (reserved for Step 1b — BiomeBuilder consumption):

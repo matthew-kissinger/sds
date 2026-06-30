@@ -93,7 +93,18 @@ export const field = {
     // Cycle 25 Phase B: fog retuned from "structural mask" to "horizon
     // haze only". near 220 -> 350 / far 700 -> 900 lifts the mid-distance
     // fog veil that was compensating for LOD1 silhouette drift.
-    fog: { color: '#cfd9e8', near: 350, far: 900 },
+    // Treeline pull-in: near 350 -> 300 / far 900 -> 800 brings the haze in just
+    // past the ~252m grass edge so the bare terrain beyond the treeline reads as
+    // soft horizon haze instead of a hard white ring. The play area (+/-100)
+    // stays well clear of the near plane.
+    fog: { color: '#cfd9e8', near: 300, far: 800 },
+
+    // Keep rocks inside the green: scatter only the nearField formations and clamp
+    // them to the treeline radius, so no rock floats on the bare terrain past the
+    // grass edge (matches the pulled-in treeline in /placement/field.json). Drops
+    // the far/horizon rock formations entirely, so it is also a draw + collision
+    // win. See RockPlacementDef in shared/scenes/types.js.
+    rockPlacement: { zones: ['nearField', 'midField'], maxRadius: 240 },
 
     // --- Gameplay ---
     // Cycle 58: Home Field keeps its four ranked anchors exactly (200 / 1000 /

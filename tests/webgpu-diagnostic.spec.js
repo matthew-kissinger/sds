@@ -194,7 +194,7 @@ describe('webgpu diagnostic sky fog state', () => {
       expect(proof.cloud.materialName).toBe('webgpu-node-cloud-layer');
       expect(proof.sky.summary).toMatchObject({ kind: 'sky-dome', applied: true });
       expect(proof.cloud.summary).toMatchObject({ kind: 'cloud-layer', applied: true });
-      expect(proof.fog).toMatchObject({ kind: 'Fog', near: 350, far: 900 });
+      expect(proof.fog).toMatchObject({ kind: 'Fog', near: 300, far: 800 });
       expect(proof.fog.color).toEqual(skyFog.fogColor);
       expect(scene.children).toContain(atmosphere.sky.getMesh());
       expect(scene.children).toContain(atmosphere.cloudLayer.getMesh());
@@ -870,7 +870,7 @@ describe('webgpu runtime glb material proof', () => {
       ...acc,
       [sample.type]: (acc[sample.type] ?? 0) + 1,
     }), {});
-    expect(counts).toEqual({ rock1: 2, rock2: 2, rock3: 2 });
+    expect(counts).toEqual({ rock1: 3, rock2: 1, rock3: 2 });
     expect(plan.samples.every((sample) => Number.isFinite(sample.production.rotationY))).toBe(true);
     expect(plan.samples.every((sample) => sample.production.scale > 0)).toBe(true);
     expect(plan.samples.every((sample) => sample.production.scaleY === 0.7)).toBe(true);

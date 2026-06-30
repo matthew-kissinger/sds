@@ -62,19 +62,25 @@ export function createRockPlacementZones(zones, sceneDef) {
     // (rocks scatter the near/mid land, not the whole bounding box).
     const kind = sceneDef?.boundary?.kind;
     const waterAware = kind === 'island' || kind === 'coastline';
-    if (waterAware) {
-        return [
-            { zone: zones.nearField, formations: 1, types: ['cluster'], scaleRange: { min: 4, max: 7 } },
-            { zone: zones.midField, formations: 2, types: ['cluster'], scaleRange: { min: 5, max: 9 } },
+    const table = waterAware
+        ? [
+            { name: 'nearField', zone: zones.nearField, formations: 1, types: ['cluster'], scaleRange: { min: 4, max: 7 } },
+            { name: 'midField', zone: zones.midField, formations: 2, types: ['cluster'], scaleRange: { min: 5, max: 9 } },
+        ]
+        : [
+            { name: 'nearField', zone: zones.nearField, formations: 2, types: ['cluster'], scaleRange: { min: 8, max: 15 } },
+            { name: 'midField', zone: zones.midField, formations: 4, types: ['cluster', 'line'], scaleRange: { min: 10, max: 20 } },
+            { name: 'farField', zone: zones.farField, formations: 6, types: ['cluster', 'line', 'field'], scaleRange: { min: 15, max: 30 } },
+            { name: 'horizon', zone: zones.horizon, formations: 8, types: ['field', 'line'], scaleRange: { min: 25, max: 50 } },
         ];
-    }
 
-    return [
-        { zone: zones.nearField, formations: 2, types: ['cluster'], scaleRange: { min: 8, max: 15 } },
-        { zone: zones.midField, formations: 4, types: ['cluster', 'line'], scaleRange: { min: 10, max: 20 } },
-        { zone: zones.farField, formations: 6, types: ['cluster', 'line', 'field'], scaleRange: { min: 15, max: 30 } },
-        { zone: zones.horizon, formations: 8, types: ['field', 'line'], scaleRange: { min: 25, max: 50 } },
-    ];
+    // Optional confinement: restrict scatter to the named zones (Home Field keeps
+    // rocks inside the green). Unlisted zones are skipped before any RNG draw.
+    const allowed = sceneDef?.rockPlacement?.zones;
+    if (Array.isArray(allowed)) {
+        return table.filter((entry) => allowed.includes(entry.name));
+    }
+    return table;
 }
 
 function isInRect(point, rect, buffer = 0) {
@@ -106,6 +112,11 @@ export function generateRockPlacementPlan({
     const waterAware = !!(islandBoundary || coastlineBoundary);
     const playArea = zones.playArea;
     const corral = sceneDef?.corral || null;
+    // Optional radial confinement (Home Field): drop rocks past this distance so
+    // formation spread + rect corners never push a rock onto the bare terrain
+    // outside the green. Squared once to keep the per-rock check multiply-only.
+    const maxRockRadius = sceneDef?.rockPlacement?.maxRadius ?? null;
+    const maxRockRadiusSq = maxRockRadius != null ? maxRockRadius * maxRockRadius : null;
     const islandSafeRadius = islandBoundary
         ? islandBoundary.radius - islandBoundary.falloff - 4
         : 0;
@@ -156,6 +167,9 @@ export function generateRockPlacementPlan({
                 }
 
                 if (isInFarmHouseArea(rock.x, rock.z)) continue;
+
+                if (maxRockRadiusSq != null
+                    && (rock.x * rock.x + rock.z * rock.z) > maxRockRadiusSq) continue;
 
                 const size = rng();
                 const rockType = waterAware

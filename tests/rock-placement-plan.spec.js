@@ -31,7 +31,10 @@ describe('rock placement plan', () => {
         const first = createPlan('field');
         const second = createPlan('field');
 
-        expect(first.totalRocks).toBe(334);
+        // Home Field confines rocks to nearField+midField within a 240m radius
+        // (scene.rockPlacement), so the count is far below the legacy all-zone
+        // scatter and every rock sits inside the green.
+        expect(first.totalRocks).toBe(10);
         expect(first.placements).toEqual(second.placements);
         expect(first.rockPositions).toEqual(second.rockPositions);
         expect(Object.values(first.rockInstances).flat()).toHaveLength(first.totalRocks);
