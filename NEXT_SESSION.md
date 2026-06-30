@@ -2,15 +2,15 @@
 
 > **Updated:** 2026-06-30
 > **For:** web-only `v2.6.0` beta release
-> **Pickup priority:** Release proof, live verification, and small follow-up from public-copy/support/privacy/lobby validation.
+> **Pickup priority:** Post-release beta follow-up: community/playtest loop, seasonal leaderboard implementation decision, and first-session route review.
 
 ## Current State
 
-Cycle 111 is complete and the repo is now preparing a web-only `v2.6.0` beta. Matt's current GTM decisions:
+The repo has released the web-only `v2.6.0` beta. Matt's current GTM decisions:
 
 1. Newsheepdogland is a gated lab, not a launch promise.
 2. Public copy should say three public playable scenes.
-3. The next beta identity is `v2.6.0 beta`.
+3. The beta identity is `v2.6.0 beta`.
 4. The beta channel is web-only on `https://sheepdogsim.com`.
 5. Steam remains the ultimate target if beta succeeds, but it is not a current public-launch task.
 6. Itch, portals, and ad SDKs are deferred.
@@ -28,18 +28,18 @@ Completed in this GTM alignment pass:
 7. Settings now include a product telemetry toggle; tutorial offer shown/accepted/skipped events are emitted.
 8. Leaderboard season planning and beta release notes are documented.
 
-Immediate remaining work:
+Immediate remaining work after release:
 
 1. Owner decision: keep Rolling Hills as the first visual default with a Home Field tutorial offer, or make Home Field the first-time primary path until tutorial completion.
 2. Engineering follow-up: implement seasonal leaderboard storage/UI only as a scoped Worker/D1 cycle; do not reset production scores as a shortcut.
-3. Release follow-up: use [`docs/launch/release-checklist.md`](docs/launch/release-checklist.md) and [`docs/launch/v2.6.0-beta-release-notes.md`](docs/launch/v2.6.0-beta-release-notes.md).
+3. Community follow-up: start the first small playtest loop before adding new launch channels.
 
 ## Review Entry Points
 
 1. [`docs/cycle-111-plan.md`](docs/cycle-111-plan.md) - implementation plan, EARS acceptance, and validation notes.
 2. [`docs/launch/seo-content-matrix.md`](docs/launch/seo-content-matrix.md) - canonical public copy constraints.
 3. [`docs/launch/leaderboard-season-plan.md`](docs/launch/leaderboard-season-plan.md) - seasonal leaderboard plan and no-reset guardrails.
-4. [`docs/launch/v2.6.0-beta-release-notes.md`](docs/launch/v2.6.0-beta-release-notes.md) - draft beta release notes.
+4. [`docs/launch/v2.6.0-beta-release-notes.md`](docs/launch/v2.6.0-beta-release-notes.md) - beta release notes.
 5. [`docs/launch/release-checklist.md`](docs/launch/release-checklist.md) - approved web beta release/rollback commands.
 
 ## Autonomy Rules

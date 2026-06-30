@@ -4,6 +4,29 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.6.0] - 2026-06-30
+
+### Added
+
+- Public `/support` and `/privacy` pages are now part of the web build and sitemap.
+- Settings expose a telemetry opt-out for nonessential product events.
+- Beta release notes and leaderboard-season planning document the v2.6.0 web beta posture.
+
+### Changed
+
+- Public copy now centers the beta around three public scenes: Home Field, Rolling Hills, and Open Country.
+- Newsheepdogland remains a gated lab and is no longer presented as a public beta scene, sitemap entry, or indexed scene page.
+- Pause/settings surfaces now keep source, support, privacy, and telemetry controls available without carrying source text in the active-play HUD.
+
+### Fixed
+
+- Public lobby discovery now requests lobby listings directly through `NetworkManager.requestPublicLobbies()`.
+- First-session tutorial offer spacing is safer on compact and mobile layouts.
+
+### Validation
+
+- `npm run build`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:e2e -- --project=chromium`, `git diff --check`, and GitHub Actions deploy validation passed for the beta release set.
+
 ## [2.5.0] - 2026-06-28
 
 ### Added

@@ -6,7 +6,7 @@
 
 ### Current release follow-up
 
-Cycle 111 has shipped the `v2.5.0` release line. The active follow-up is the web-only `v2.6.0` beta GTM alignment: three public scenes, Newsheepdogland as a gated lab, support/privacy surfaces, mobile first-session polish, public lobby verification, leaderboard-season planning, and community/playtest scaffolding. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md). Do not publish paid, irreversible, or third-party marketplace submissions unless Matt explicitly authorizes the exact action.
+The web-only `v2.6.0` beta release line is current: three public scenes, Newsheepdogland as a gated lab, support/privacy surfaces, mobile first-session polish, public lobby verification, leaderboard-season planning, and community/playtest scaffolding. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md). Do not publish paid, irreversible, or third-party marketplace submissions unless Matt explicitly authorizes the exact action.
 
 ## Recently Completed
 
