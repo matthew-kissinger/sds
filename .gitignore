@@ -73,8 +73,13 @@ ehthumbs.db
 Thumbs.db
 
 # Temporary files
+tmp/
 *.tmp
-*.temp 
+*.temp
+
+# Internal launch planning notes
+docs/launch/*-gtm-plan.md
+docs/launch/community-playtest-plan.md
 # Claude Code: shared agent infrastructure (commands, hooks, rules, skills, settings.json) commits with the repo. Only personal/local state stays out.
 .claude/settings.local.json
 .claude/scheduled_tasks.lock

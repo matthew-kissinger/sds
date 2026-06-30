@@ -1,5 +1,7 @@
 # Sheep Dog Sim v2.4.0 Release Candidate
 
+Historical Cycle 108/110 release-candidate packet. Superseded for current beta release work by [`release-checklist.md`](release-checklist.md) and [`v2.6.0-beta-release-notes.md`](v2.6.0-beta-release-notes.md).
+
 Status: green for local candidate proof; approved for web deploy/tag after fresh media capture.
 
 ## Candidate

@@ -31,6 +31,7 @@ interface GameSettings {
     experimentalWebGpu?: boolean;
     audioEnabled?: boolean;
     audioVolume?: number;
+    telemetryEnabled?: boolean;
     showStats?: boolean;
     [key: string]: unknown;
 }
@@ -154,6 +155,12 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }: InGam
     const labelStyle: CSSProperties = {
         color: pastoral.cream,
         fontSize: isCompact ? '0.8rem' : '0.9rem'
+    };
+
+    const infoLinkStyle: CSSProperties = {
+        color: alpha(pastoral.cream, 55),
+        fontSize: isCompact ? '0.72rem' : '0.78rem',
+        textDecoration: 'none'
     };
 
     const presetButtonStyle = (isActive: boolean, color: string): CSSProperties => ({
@@ -296,6 +303,28 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }: InGam
                 </div>
             )}
 
+            {/* Product telemetry toggle */}
+            <div style={rowStyle}>
+                <div
+                    style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', marginRight: '0.75rem' }}
+                >
+                    <span style={labelStyle}>{t('settings.telemetryEnabled', 'Product telemetry')}</span>
+                    <span
+                        style={{
+                            color: alpha(pastoral.cream, 55),
+                            fontSize: isCompact ? '0.68rem' : '0.72rem'
+                        }}
+                    >
+                        {t('settings.telemetryEnabledDesc', 'Helps tune the beta. Scores and multiplayer still use required service logs.')}
+                    </span>
+                </div>
+                <Toggle
+                    value={settings.telemetryEnabled !== false}
+                    onChange={(v) => handleChange('telemetryEnabled', v)}
+                    color={pastoral.accentMeadow}
+                />
+            </div>
+
             {/* Performance stats toggle */}
             <div style={rowStyle}>
                 <span style={labelStyle}>{t('settings.showStats')}</span>
@@ -304,6 +333,35 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }: InGam
                     onChange={(v) => handleChange('showStats', v)}
                     color="#f59e0b"
                 />
+            </div>
+
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.8rem',
+                    paddingTop: '0.7rem'
+                }}
+            >
+                <a
+                    href="/support"
+                    target="_blank"
+                    rel="noopener"
+                    onClick={(e) => e.stopPropagation()}
+                    style={infoLinkStyle}
+                >
+                    Support
+                </a>
+                <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener"
+                    onClick={(e) => e.stopPropagation()}
+                    style={infoLinkStyle}
+                >
+                    Privacy
+                </a>
             </div>
         </div>
     );
@@ -619,6 +677,16 @@ export function PauseMenu({
                                 variant="secondary"
                                 size={buttonSize}
                                 onClick={onMainMenu}
+                            />
+
+                            <MenuButton
+                                icon={<Icon name="info" size={iconSize} color={pastoral.cream} />}
+                                label="Source"
+                                variant="secondary"
+                                size={buttonSize}
+                                onClick={() => {
+                                    window.open('https://github.com/matthew-kissinger/sds', '_blank', 'noopener,noreferrer');
+                                }}
                             />
                         </div>
                     </>

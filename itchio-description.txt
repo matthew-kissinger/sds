@@ -1,6 +1,6 @@
 Sheep Dog Sim is a free 3D herding game where you guide a sheepdog around a living flock, cut off escapes, and drive sheep home.
 
-Play a quiet starter pasture, golden-hour island herding, Open Country portal runs, or Newsheepdogland survival after dark when wolves start thinning the flock. Modes range from 30-sheep practice to 5,000-sheep chaos, with 2-4 player online rooms, mobile controls, and gamepad support.
+Play a quiet starter pasture, golden-hour island herding, or Open Country portal runs. Modes range from quiet practice to 5,000-sheep chaos, with 2-4 player online rooms, mobile controls, and gamepad support.
 
 Desktop: WASD or arrow keys to move, Shift to sprint, mouse wheel or plus/minus to zoom.
 Mobile: touch joystick, sprint button, responsive HUD.
@@ -11,5 +11,7 @@ Free to play. No signup. No ads. No microtransactions.
 
 Also at: sheepdogsim.com
 Source: github.com/matthew-kissinger/sds
+Support: sheepdogsim.com/support
+Privacy: sheepdogsim.com/privacy
 
 Current source is AGPL-3.0-or-later and current non-code assets are CC BY-SA 4.0; hosted or modified versions must preserve attribution and publish corresponding source.

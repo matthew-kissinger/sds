@@ -993,7 +993,7 @@ export async function initReactUI() {
                     bottomSafe: bottomSafeSlot,
                     mobileControls: mobileControlsSlot
                 }),
-                createElement('a', {
+                isDesktop && createElement('a', {
                     key: 'source-notice',
                     href: 'https://github.com/matthew-kissinger/sds',
                     target: '_blank',
@@ -1001,10 +1001,10 @@ export async function initReactUI() {
                     style: {
                         position: 'fixed',
                         right: '8px',
-                        bottom: isMobilePlatform ? 'max(env(safe-area-inset-bottom, 0px), 4px)' : '8px',
+                        bottom: '8px',
                         zIndex: Z.hudMeta,
                         pointerEvents: 'auto',
-                        maxWidth: isMobilePlatform ? '56vw' : '420px',
+                        maxWidth: '420px',
                         padding: '3px 6px',
                         borderRadius: '6px',
                         background: 'rgba(0,0,0,0.28)',

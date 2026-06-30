@@ -170,7 +170,7 @@ Worker secrets (set via `npx wrangler secret put <NAME>`):
 Repo secrets (GitHub Actions, when CI is wired up):
 
 - `CF_API_TOKEN` — Cloudflare API token with Workers Edit + Pages Edit + D1 Edit
-- `CF_ACCOUNT_ID` — `56adffd40534f7fe110fc661a40bbf53` (not secret, shown here for convenience)
+- `CF_ACCOUNT_ID` - set this from the Cloudflare dashboard or GitHub secret store; keep account identifiers out of repo docs.
 
 ---
 

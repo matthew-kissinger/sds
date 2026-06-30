@@ -25,7 +25,7 @@ The frontend runs on Cloudflare Pages, the multiplayer server is a Cloudflare Wo
 | D1 database | `sds-db` | id `513aa937-e60a-4fb6-b499-9f3814149e88`; schema at `worker/migrations/0001_init.sql` |
 | Pages project | `sds-frontend` | production branch `main` |
 | Worker secret | `JWT_SECRET` | 32-byte hex, scoped to `sds-worker` |
-| Account | `56adffd40534f7fe110fc661a40bbf53` | `matt.m.kissinger@gmail.com` |
+| Account | Cloudflare account for `sheepdogsim.com` | Login email and account id intentionally omitted from repo docs |
 
 ## What shipped
 

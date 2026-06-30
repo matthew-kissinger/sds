@@ -1,13 +1,17 @@
 # Portal Target Matrix
 
-Status: Cycle 110 evaluation on 2026-06-26. No portal submissions were made.
+Status: Cycle 110 evaluation plus v2.6.0 beta override. No portal submissions were made.
 
 ## Summary Recommendation
 
-Prioritize:
+For the `v2.6.0` beta, prioritize the canonical web build only:
+
+1. `sheepdogsim.com`
+
+After the web beta proves demand, consider:
 
 1. `itch` after Matt review.
-2. `Newgrounds` after human review and a portal-specific smoke.
+2. `Newgrounds` after itch smoke and a portal-specific smoke.
 3. `CrazyGames` only after SDK/quality work.
 
 Defer or skip:
@@ -15,6 +19,8 @@ Defer or skip:
 - `Poki`: skip for now. SDS is far over Poki's recommended tiny initial/total download guidance.
 - `Kongregate`: after human review only; current path requires developer approval and a publishing portal process.
 - `Y8`: after human review only; low-cost, but ads/monetization and iframe/upload choices need review.
+
+Do not add portal ad SDKs during the web beta setup. The public brand promise remains free, no signup, no ads, and no microtransactions.
 
 ## Matrix
 

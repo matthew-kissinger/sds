@@ -15,15 +15,17 @@
  * GlobalLeaderboard reads listScenes()/getSceneById() against it, matching the
  * existing leaderboard-modes.spec contract.
  */
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, screen } from '@testing-library/react';
+
+const network = vi.hoisted(() => ({ manager: null as any }));
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (k: string) => k, i18n: {} }),
 }));
 
 vi.mock('../../js/GameBridge.js', () => ({
-    getNetworkManager: () => null,
+    getNetworkManager: () => network.manager,
 }));
 
 import { MultiplayerOptions } from '../../js/components/Multiplayer/MultiplayerOptions';
@@ -34,6 +36,10 @@ import { GlobalLeaderboard } from '../../js/components/Multiplayer/GlobalLeaderb
 
 afterEach(() => {
     cleanup();
+});
+
+beforeEach(() => {
+    network.manager = null;
 });
 
 describe('MultiplayerOptions (smoke)', () => {
@@ -62,6 +68,30 @@ describe('PublicLobbyList (smoke)', () => {
         // assertion above. The 'Back' BackButton label stays hardcoded.
         expect(await screen.findByText('multiplayer.publicLobbies')).toBeTruthy();
         expect(screen.getByText('Back')).toBeTruthy();
+    });
+
+    it('loads public lobbies from NetworkManager.requestPublicLobbies without a channel listener', async () => {
+        network.manager = {
+            requestPublicLobbies: vi.fn().mockResolvedValue({
+                lobbies: [{
+                    roomCode: 'ABCD',
+                    hostName: 'Moss',
+                    gameMode: 'cooperative',
+                    sceneId: 'field',
+                    playerCount: 1,
+                    maxPlayers: 4,
+                    state: 'open',
+                }],
+            }),
+        };
+
+        const onJoinRoom = vi.fn();
+        render(<PublicLobbyList onBack={vi.fn()} onJoinRoom={onJoinRoom} />);
+
+        expect(await screen.findByText('Moss')).toBeTruthy();
+        expect(screen.getByText('Cooperative')).toBeTruthy();
+        expect(screen.getByText('Home Field')).toBeTruthy();
+        expect(network.manager.requestPublicLobbies).toHaveBeenCalledTimes(1);
     });
 });
 

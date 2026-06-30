@@ -105,6 +105,8 @@ describe('static public SEO files', () => {
     const publicSeoFiles = [
         'index.html',
         'about.html',
+        'support.html',
+        'privacy.html',
         'public/manifest.webmanifest',
         'public/llms.txt',
         'public/scenes/home-field.html',
@@ -120,7 +122,13 @@ describe('static public SEO files', () => {
             /currently marked experimental/i,
             /performance tuning continues/i,
             /three biomes/i,
-            /Timed mode/i
+            /Timed mode/i,
+            /survival wolves/i,
+            /wolves after dark/i,
+            /four scenes/i,
+            /four playable/i,
+            /three hand-built islands/i,
+            /survival island/i
         ];
 
         for (const rel of publicSeoFiles) {
@@ -134,7 +142,10 @@ describe('static public SEO files', () => {
     it('sitemap lastmod matches the launch SEO refresh date', () => {
         const sitemap = readFileSync(resolve(repoRoot, 'public/sitemap.xml'), 'utf8');
         const dates = [...sitemap.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((m) => m[1]);
-        expect(dates.length).toBeGreaterThanOrEqual(6);
-        expect(new Set(dates)).toEqual(new Set(['2026-06-26']));
+        expect(dates.length).toBeGreaterThanOrEqual(7);
+        expect(new Set(dates)).toEqual(new Set(['2026-06-30']));
+        expect(sitemap).toContain('https://sheepdogsim.com/support');
+        expect(sitemap).toContain('https://sheepdogsim.com/privacy');
+        expect(sitemap).not.toContain('https://sheepdogsim.com/scenes/newsheepdogland');
     });
 });

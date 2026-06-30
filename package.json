@@ -1,7 +1,7 @@
 {
   "name": "sheep-dog-sim",
   "version": "2.5.0",
-  "description": "Free browser herding game with solo challenges, 2-4 player multiplayer, a gated survival sandbox, mobile controls, gamepad support, and flocks up to 5,000 sheep",
+  "description": "Free browser herding game with three public scenes, solo challenges, 2-4 player multiplayer, mobile controls, gamepad support, and flocks up to 5,000 sheep",
   "type": "module",
   "main": "index.html",
   "engines": {

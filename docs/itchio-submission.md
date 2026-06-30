@@ -1,6 +1,6 @@
 # itch.io Submission Details
 
-Status: refreshed for the v2.4.0 launch candidate on 2026-06-26. Do not publish the itch update until Matt approves the Cycle 110 final launch packet.
+Status: deferred for the `v2.6.0` web beta. Keep this packet ready, but do not upload or publish an itch update until Matt explicitly reopens itch.
 
 ## Basic Info
 
@@ -9,7 +9,7 @@ Status: refreshed for the v2.4.0 launch candidate on 2026-06-26. Do not publish 
 **Project URL:** sheep-dog-sim (`https://[username].itch.io/sheep-dog-sim`)
 
 **Short description/tagline:**
-Free browser herding game with solo challenges, survival wolves, 2-4 player rooms, mobile controls, and flocks up to 5,000 sheep.
+Free browser herding game with three public scenes, solo challenges, 2-4 player rooms, mobile controls, and flocks up to 5,000 sheep.
 
 **Classification:** Games
 
@@ -21,7 +21,7 @@ Free browser herding game with solo challenges, survival wolves, 2-4 player room
 
 ## Upload
 
-Preferred launch path: upload the generated itch build, then also link to `https://sheepdogsim.com` as the canonical always-current site.
+Preferred launch path if itch reopens: upload the generated itch build, then also link to `https://sheepdogsim.com` as the canonical always-current site.
 
 Build command:
 
@@ -34,7 +34,7 @@ Upload source:
 - `dist/` after `BUILD_TARGET=itchio`
 - Zip the contents of `dist/`, not the parent folder, unless the current itch dashboard workflow already expects a parent folder.
 
-Do not upload the normal web or native build to itch. The itch build uses relative asset paths for itch's HTML runtime.
+Do not upload during the `v2.6.0` web beta setup pass. If itch reopens, do not upload the normal web or native build to itch. The itch build uses relative asset paths for itch's HTML runtime.
 
 ## Embed Options
 
@@ -74,7 +74,7 @@ simulation, casual, browser, 3d, multiplayer, animals, dog, sheep, herding, open
 Alternates if needed:
 
 ```text
-webgl, threejs, relaxing, survival, gamepad
+webgl, threejs, relaxing, gamepad, open-world
 ```
 
 ## AI Generation Disclosure
@@ -87,13 +87,14 @@ Recommended: enable comments. Watch first-week feedback for browser/device failu
 
 ## Screenshots to Upload
 
-Use the fresh WebGPU gameplay captures:
+Use fresh public-scene gameplay captures:
 
 1. `assets/scenes/entrance/field.webp`
 2. `assets/scenes/entrance/rolling-hills.webp`
 3. `assets/scenes/entrance/open-country.webp`
-4. `assets/scenes/entrance/newsheepdogland.webp`
-5. Optional: multiplayer or large-flock mode, only if the screenshot clearly shows the feature.
+4. Optional: multiplayer or large-flock mode, only if the screenshot clearly shows the feature.
+
+Do not use Newsheepdogland as public itch marketing art while it remains a gated lab.
 
 ## Launch Notes
 

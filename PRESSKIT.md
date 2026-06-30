@@ -1,6 +1,6 @@
 # Sheep Dog Sim - Press Kit
 
-A free browser herding game where you guide a sheepdog across four playable scenes, solo challenge modes, 2-4 player online multiplayer, and a survival island with wolves after dark.
+A free browser herding game where you guide a sheepdog across three public scenes, solo challenge modes, 2-4 player online multiplayer, and flocks up to 5,000 sheep.
 
 ## Tagline
 
@@ -8,19 +8,19 @@ A free browser herding game where you guide a sheepdog across four playable scen
 
 ## Short Description
 
-Sheep Dog Sim is a browser-first 3D herding game. Use a sheepdog to shape a flock, drive sheep through gates and portals, survive wolves after dark, or play online with friends.
+Sheep Dog Sim is a browser-first 3D herding game. Use a sheepdog to shape a flock, drive sheep through gates and portals, chase leaderboard times, or play online with friends.
 
 ## Long Description
 
 Sheep Dog Sim turns flock pressure into a readable, tactile browser game. Sheep cluster, scatter, avoid obstacles, and react to the dog. The same deterministic simulation runs in the browser for solo play and on Cloudflare Durable Objects for authoritative multiplayer rooms.
 
-The game includes a flat starter pasture, a golden-hour island, a large open island with a gather-and-portal objective, and Newsheepdogland, a boot-shaped survival island with a homestead pen and wolves after dark. Modes scale from 30-sheep practice to 5,000-sheep chaos, with 2-4 player co-op and competitive multiplayer.
+The v2.6 web beta includes three public scenes: a flat starter pasture, a golden-hour island, and a large open island with a gather-and-portal objective. Modes scale from quiet practice to 5,000-sheep chaos, with 2-4 player co-op and competitive multiplayer. Newsheepdogland remains a gated lab for directed testing and is not a public launch promise.
 
 ## Headline Features
 
-- Four playable scenes: Home Field, Rolling Hills, Open Country, and Newsheepdogland.
-- Solo modes from 30 sheep to 5,000 sheep.
-- Survival mode with day/night pressure and wolves.
+- Three public scenes: Home Field, Rolling Hills, and Open Country.
+- Solo modes from quiet practice to 5,000 sheep.
+- Newsheepdogland gated lab for directed beta testing.
 - 2-4 player online co-op and competitive rooms.
 - Mobile touch controls, keyboard/mouse, and gamepad support.
 - Five UI languages: English, Spanish, Portuguese, Japanese, Simplified Chinese.
@@ -33,17 +33,19 @@ The game includes a flat starter pasture, a golden-hour island, a large open isl
 - **Developer:** Matthew Kissinger
 - **Website:** [sheepdogsim.com](https://sheepdogsim.com)
 - **Source:** [github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
-- **Current release candidate:** v2.4.0, not yet tagged for public launch
-- **Latest public tag:** v2.3.4
+- **Current beta target:** v2.6.0 web beta
+- **Current public release line:** v2.5.0
 - **Engine:** vanilla JavaScript, Three.js 0.185, React 19, Vite 7, Tailwind 4
 - **Backend:** Cloudflare Pages, Worker, Durable Objects, D1
-- **Platforms:** Web now; itch HTML5 build target; Windows Electron package path under review for Steam
+- **Platforms:** Web now; itch and Steam are deferred targets
 - **License:** AGPL-3.0-or-later source code, CC BY-SA 4.0 current non-code assets
 
 ## URLs
 
 - Play: [https://sheepdogsim.com](https://sheepdogsim.com)
 - About: [https://sheepdogsim.com/about](https://sheepdogsim.com/about)
+- Support: [https://sheepdogsim.com/support](https://sheepdogsim.com/support)
+- Privacy: [https://sheepdogsim.com/privacy](https://sheepdogsim.com/privacy)
 - Source: [https://github.com/matthew-kissinger/sds](https://github.com/matthew-kissinger/sds)
 - License details: [LICENSING.md](LICENSING.md)
 
@@ -51,10 +53,10 @@ The game includes a flat starter pasture, a golden-hour island, a large open isl
 
 Current 16:9 scene captures:
 
-- [Newsheepdogland](assets/scenes/entrance/newsheepdogland.webp) - survival island with dusk shoreline and mountain.
 - [Home Field](assets/scenes/entrance/field.webp) - fenced starter pasture.
 - [Rolling Hills](assets/scenes/entrance/rolling-hills.webp) - golden-hour island.
 - [Open Country](assets/scenes/entrance/open-country.webp) - portal objective island.
+- [Newsheepdogland](assets/scenes/entrance/newsheepdogland.webp) - gated large-scene lab capture.
 
 Current 1200x630 social cards:
 
@@ -74,4 +76,4 @@ Forks and hosted modifications must comply with the AGPL code license and CC BY-
 ## Contact
 
 Matthew Kissinger
-[matt.m.kissinger@gmail.com](mailto:matt.m.kissinger@gmail.com)
+[GitHub profile](https://github.com/matthew-kissinger)

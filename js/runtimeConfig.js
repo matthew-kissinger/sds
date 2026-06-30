@@ -20,6 +20,18 @@ export function getWsBase() {
     return getApiBase().replace(/^http/, 'ws');
 }
 
+function allowsProductTelemetry() {
+    if (typeof localStorage === 'undefined') return true;
+    try {
+        const raw = localStorage.getItem('sds-settings');
+        if (!raw) return true;
+        const settings = JSON.parse(raw);
+        return settings?.telemetryEnabled !== false;
+    } catch {
+        return true;
+    }
+}
+
 export function isTelemetryEnabled() {
-    return !isLocalRuntime();
+    return !isLocalRuntime() && allowsProductTelemetry();
 }

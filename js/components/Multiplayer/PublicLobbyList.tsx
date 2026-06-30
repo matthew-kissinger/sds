@@ -9,8 +9,7 @@
  * red-400 -> dangerSoft, the mode-badge blue-400 -> info, the in-game amber ->
  * warn, and the scene-badge indigo-300 reuses objectiveGather (the one token
  * holding that exact value). The badge-fill rgba() triples stay raw literals (a
- * token round-trip would risk a sub-pixel shift). The poll/connect path is
- * unchanged presentational behavior. Identical to the previous PublicLobbyList.js.
+ * token round-trip would risk a sub-pixel shift).
  */
 import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -71,39 +70,10 @@ export function PublicLobbyList({ onBack, onJoinRoom }: PublicLobbyListProps) {
                 return;
             }
 
-            if (!nm.isConnected()) {
-                try {
-                    await nm.connect();
-                } catch {
-                    setError('Could not connect to server. Retrying...');
-                    setLoading(false);
-                    return;
-                }
-            }
-
-            // Register a one-time listener before emitting
-            const channel = nm.channel;
-            if (!channel) {
-                setError('No channel available.');
-                setLoading(false);
-                return;
-            }
-
-            const handler = (data: { lobbies?: Lobby[] }) => {
-                setLobbies(data && data.lobbies ? data.lobbies : []);
-                setLoading(false);
-                setError('');
-            };
-
-            channel.on('publicLobbies', handler);
-            nm.requestPublicLobbies();
-
-            // After a brief window, remove the handler to avoid stacking
-            setTimeout(() => {
-                // geckos.io does not expose removeListener; subsequent calls overwrite
-                // the last registered handler automatically as the server responds.
-                // This is acceptable for polling.
-            }, 2000);
+            const data = await nm.requestPublicLobbies();
+            setLobbies(Array.isArray(data?.lobbies) ? data.lobbies : []);
+            setLoading(false);
+            setError('');
         } catch (err) {
             console.error('[PublicLobbyList] Error fetching lobbies:', err);
             setError('Failed to load lobbies. Retrying...');

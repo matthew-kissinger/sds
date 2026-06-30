@@ -17,9 +17,9 @@ The Cycle 1 postmortem is still worth reading for *what to not repeat* (`docs/cy
 ## Access and credentials
 
 - **CF credentials** live in `~/.config/mk-agent/env` (600 perms). Source it with `source ~/.config/mk-agent/env`. The PowerShell profile on Windows autoloads it; Git Bash loads it from `.bashrc`.
-  - `CLOUDFLARE_ACCOUNT_ID=56adffd40534f7fe110fc661a40bbf53`
+  - `CLOUDFLARE_ACCOUNT_ID` - keep this in the local environment or GitHub secrets, not in repo docs.
   - `CLOUDFLARE_API_TOKEN` - the token on disk may have been revoked in the Cycle 1 rollback. If `npx wrangler whoami` fails, create a new project-scoped token at <https://dash.cloudflare.com/profile/api-tokens> using the "Edit Cloudflare Workers" template (add D1 Edit + Pages Edit + Zone DNS Edit permissions). Rotate into `~/.config/mk-agent/env` and keep the old one working until swap.
-- **Account**: matt.m.kissinger@gmail.com. Zone: `sheepdogsim.com` (Free plan).
+- **Account**: Cloudflare account for `sheepdogsim.com` (Free plan). Keep account identifiers and login email out of repo docs.
 - **Wrangler**: `npx wrangler@latest` (>= 4.84 expected; pin if needed).
 - **Node**: 22+ required.
 - **gh CLI** is authed as matthew-kissinger; can push, merge, and manage repo secrets.
@@ -47,7 +47,7 @@ All the raw material for the migration is on `main` as of commit `62430fa`:
 ```bash
 source ~/.config/mk-agent/env
 cd ~/X/games-3d/sds
-npx wrangler whoami                  # should print matt.m.kissinger@gmail.com
+npx wrangler whoami                  # should print the expected Cloudflare account
 npx wrangler d1 list                 # is sds-db there?
 npx wrangler pages project list      # is sds-frontend there?
 npx wrangler deployments list --name sds-worker 2>/dev/null || echo "no worker"

@@ -9,17 +9,31 @@
  * card never blocks the entrance: Play, world browsing, and the corner nav
  * all stay live around it.
  */
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { pastoral, alpha } from '../ui/tokens';
+import { useResponsive } from '../hooks/usePlatform.js';
 import { RailPortal } from '../ui/RailPortal.js';
 import { shouldOfferTutorial, markTutorialDone } from './tutorialMachine.js';
 import { startTutorial } from './startTutorial.js';
 
+function emitTutorialEvent(name: string, props: Record<string, string> = {}) {
+    void import('../../telemetry.js').then(({ emitEvent }) => {
+        emitEvent(name, props);
+    });
+}
+
 export function TutorialOffer({ dogId }: { dogId?: string }) {
     const { t } = useTranslation();
+    const { isCompact } = useResponsive();
     const [offered] = useState(() => shouldOfferTutorial());
     const [hidden, setHidden] = useState(false);
+
+    useEffect(() => {
+        if (offered && !hidden) {
+            emitTutorialEvent('tutorial_offer_shown', dogId ? { dogId } : {});
+        }
+    }, [dogId, hidden, offered]);
 
     if (!offered || hidden) return null;
 
@@ -39,6 +53,7 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
         color: pastoral.ink,
         pointerEvents: 'auto',
         fontFamily: 'system-ui, -apple-system, sans-serif',
+        marginTop: isCompact ? '64px' : 0,
     };
 
     const btnBase: CSSProperties = {
@@ -60,6 +75,7 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button
                     onClick={() => {
+                        emitTutorialEvent('tutorial_offer_accepted', dogId ? { dogId } : {});
                         setHidden(true);
                         void startTutorial({ dogId });
                     }}
@@ -69,6 +85,7 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
                 </button>
                 <button
                     onClick={() => {
+                        emitTutorialEvent('tutorial_offer_skipped', dogId ? { dogId } : {});
                         markTutorialDone();
                         setHidden(true);
                     }}

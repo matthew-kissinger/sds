@@ -1,5 +1,7 @@
 # Final Launch Review - Sheep Dog Sim v2.4.0
 
+Historical Cycle 110 review packet. Superseded for current beta release work by [`release-checklist.md`](release-checklist.md) and [`v2.6.0-beta-release-notes.md`](v2.6.0-beta-release-notes.md).
+
 Status: Matt approved web deploy/tag/repo updates after the fresh in-game screenshot pass. This packet remains the launch audit trail and post-launch verification checklist.
 
 ## Candidate

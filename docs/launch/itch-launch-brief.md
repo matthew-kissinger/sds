@@ -1,6 +1,6 @@
 # itch Launch Brief - Sheep Dog Sim
 
-Status: ready for Matt review; do not publish until Cycle 110 approval.
+Status: deferred for the `v2.6.0` web-only beta. Keep this packet maintained, but do not publish or upload until Matt explicitly reopens itch.
 
 ## Current Build
 
@@ -27,7 +27,7 @@ Use:
 
 ## Short Description
 
-Free browser herding game with solo challenges, survival wolves, 2-4 player rooms, mobile controls, and flocks up to 5,000 sheep.
+Free browser herding game with three public scenes, solo challenges, 2-4 player rooms, mobile controls, and flocks up to 5,000 sheep.
 
 ## Tags
 
@@ -39,12 +39,12 @@ simulation, casual, browser, 3d, multiplayer, animals, dog, sheep, herding, open
 
 ## Screenshots
 
-Fresh launch captures are ready:
+Current launch captures are available:
 
 - `assets/scenes/entrance/field.webp`
 - `assets/scenes/entrance/rolling-hills.webp`
 - `assets/scenes/entrance/open-country.webp`
-- `assets/scenes/entrance/newsheepdogland.webp`
+- `assets/scenes/entrance/newsheepdogland.webp` - use only if the page clearly labels Newsheepdogland as a gated lab, not a public scene.
 
 Optional later additions:
 
@@ -71,9 +71,9 @@ Replace `<itch-user>` with the real itch account before use.
 
 ## Publication Status
 
-`after-human-review`
+`deferred`
 
-The build, copy, and four-scene screenshots are ready. Publication still needs Matt to approve the dashboard update and uploaded build smoke.
+The beta channel is web-only for now. Before itch reopens, refresh copy to the current `v2.6.0` beta stance, keep survival/wolves out of the short description, approve the dashboard update, and smoke-test the uploaded build.
 
 ## Rollback
 

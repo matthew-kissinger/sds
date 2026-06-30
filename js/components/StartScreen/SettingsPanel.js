@@ -363,6 +363,11 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
     const [padCapture, setPadCapture] = useState(null); // { kind: 'button'|'axis', action }
     const [padConflict, setPadConflict] = useState(null); // { kind, action }
     const [stickPreview, setStickPreview] = useState(0);
+    const footerLinkStyle = {
+        color: 'rgba(247,241,230,0.4)',
+        fontSize: '0.75rem',
+        textDecoration: 'none'
+    };
 
     // Memoized so the capture/preview effects do not re-arm on unrelated
     // renders (the preview interval itself re-renders this component).
@@ -1126,20 +1131,38 @@ export function SettingsPanel({ settings, onSettingsChange, onBack }) {
                     fullWidth: true,
                     onClick: onBack
                 }, t('common.backToMenu')),
-                createElement('a', {
-                    key: 'about',
-                    href: '/about',
-                    target: '_blank',
-                    rel: 'noopener',
+                createElement('div', {
+                    key: 'links',
                     style: {
-                        display: 'block',
-                        textAlign: 'center',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        flexWrap: 'wrap',
+                        gap: '0.75rem',
                         marginTop: '0.75rem',
-                        color: 'rgba(247,241,230,0.4)',
-                        fontSize: '0.75rem',
-                        textDecoration: 'none'
                     }
-                }, t('settings.aboutLink'))
+                }, [
+                    createElement('a', {
+                        key: 'about',
+                        href: '/about',
+                        target: '_blank',
+                        rel: 'noopener',
+                        style: footerLinkStyle
+                    }, t('settings.aboutLink')),
+                    createElement('a', {
+                        key: 'support',
+                        href: '/support',
+                        target: '_blank',
+                        rel: 'noopener',
+                        style: footerLinkStyle
+                    }, 'Support'),
+                    createElement('a', {
+                        key: 'privacy',
+                        href: '/privacy',
+                        target: '_blank',
+                        rel: 'noopener',
+                        style: footerLinkStyle
+                    }, 'Privacy')
+                ])
             ])
         ])
     );

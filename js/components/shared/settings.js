@@ -103,6 +103,9 @@ export function getDefaultSettings() {
         // Accessibility ([P1-SETTINGS-A11Y]): daltonizer-safe medal/rank colors.
         colorblindMode: false,
 
+        // Privacy
+        telemetryEnabled: true,
+
         // Debug
         showStats: false
     };

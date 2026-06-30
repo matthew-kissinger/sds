@@ -1,20 +1,22 @@
 # Sheep Dog Sim
 
-> A free browser-based herding game where you guide a sheepdog across one fenced pasture and three hand-built islands, including a survival island with wolves. No signup, no ads, no microtransactions. Current source is AGPL-3.0-or-later and current assets are CC BY-SA 4.0.
+> A free browser-based herding game where you guide a sheepdog across three public scenes. No signup, no ads, no microtransactions. Current source is AGPL-3.0-or-later and current assets are CC BY-SA 4.0.
 
 The site is the game. Open the URL, herd some sheep, close the tab. Single-player and 2-4 player real-time multiplayer, with an interactive tutorial in five languages (English, Spanish, Portuguese, Japanese, Simplified Chinese), nine achievements, and rebindable keyboard and gamepad controls. Built on Three.js with WebGL fallback, progressive WebGPU on supported hardware, and a Cloudflare Workers + Durable Objects + D1 backend. The full source is public on GitHub; hosted or modified versions must publish corresponding source under AGPL and preserve attribution.
 
 ## Game
 
-- [Play Sheep Dog Sim](https://sheepdogsim.com/): the game. Three.js + WebGL canvas; mobile + desktop; gamepad supported.
+- [Play Sheep Dog Sim](https://sheepdogsim.com/): the game. Three public scenes, Three.js + WebGL canvas; mobile + desktop; gamepad supported.
 - [About](https://sheepdogsim.com/about): project origin, proof status, tech stack, source, and license.
+- [Support](https://sheepdogsim.com/support): beta support, bug reports, and playtest feedback.
+- [Privacy](https://sheepdogsim.com/privacy): browser storage, telemetry, multiplayer, and leaderboard data note.
 
-## Biomes
+## Public scenes and lab
 
 - [Home Field](https://sheepdogsim.com/scenes/home-field): flat fenced pasture with a single gate. The starter biome.
 - [Rolling Hills](https://sheepdogsim.com/scenes/rolling-hills): 180-metre sunset island with rolling heightfield and a lightning corral.
 - [Open Country](https://sheepdogsim.com/scenes/open-country): 380-metre wild island with a multi-stage gather-and-portal objective.
-- [Newsheepdogland](https://sheepdogsim.com/scenes/newsheepdogland): boot-shaped survival island with a homestead pen, a day/night cycle, and wolves after dark. The WebGPU-scale survival scene.
+- [Newsheepdogland](https://sheepdogsim.com/scenes/newsheepdogland): gated lab for directed beta testing of larger scene scale, homestead routing, day/night pressure, and experimental flock systems.
 
 ## Source and reuse
 
@@ -24,4 +26,4 @@ The site is the game. Open the URL, herd some sheep, close the tab. Single-playe
 
 ## Contact
 
-- Email: matt.m.kissinger@gmail.com
+- Contact: https://github.com/matthew-kissinger

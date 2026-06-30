@@ -20,10 +20,10 @@ const SCENE_META = {
         ogImageAlt: 'Sheep Dog Sim Open Country capture facing the portal'
     },
     newsheepdogland: {
-        title: 'Newsheepdogland - Sheep Dog Sim Survival Island',
-        description: 'Boot-shaped survival island with a homestead pen, day/night pressure, wolves, and WebGPU-scale scenery.',
+        title: 'Newsheepdogland Lab - Sheep Dog Sim',
+        description: 'Gated lab for directed beta testing of larger scene scale, homestead routing, day/night pressure, and large-flock systems.',
         ogImage: '/assets/scenes/social/newsheepdogland.webp',
-        ogImageAlt: 'Sheep Dog Sim Newsheepdogland survival island capture'
+        ogImageAlt: 'Sheep Dog Sim Newsheepdogland gated lab capture'
     }
 };
 

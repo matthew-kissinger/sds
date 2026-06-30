@@ -16,7 +16,7 @@ Out of scope:
 
 ## Reporting
 
-Email **matt.m.kissinger@gmail.com** with a write-up, a PoC if you have one, and the worker version (`sds-worker` current version is visible in `wrangler deployments list`). Please don't open a public issue for anything that could put other players at risk.
+Use the private contact route listed on [Matthew Kissinger's GitHub profile](https://github.com/matthew-kissinger) with a write-up, a PoC if you have one, and the worker version (`sds-worker` current version is visible in `wrangler deployments list`). Please don't open a public issue for anything that could put other players at risk.
 
 I aim to acknowledge within a few days. The project is a side project and I can't guarantee an SLA, but I will credit reporters in the release notes (or on request, keep the disclosure private).
 

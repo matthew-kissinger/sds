@@ -4,11 +4,11 @@ Use these as source copy for site metadata, itch, Steam, GitHub, social profiles
 
 ## Primary
 
-Free browser herding game with solo challenges, 2-4 player multiplayer, survival wolves, mobile controls, gamepad support, and flocks up to 5,000 sheep.
+Free browser herding game with three public scenes, solo challenges, 2-4 player multiplayer, mobile controls, gamepad support, and flocks up to 5,000 sheep.
 
 ## Store Short
 
-Herd sheep across four browser-playable scenes, from a quiet starter pasture to a survival island with wolves after dark.
+Herd sheep across three public browser scenes, from a quiet starter pasture to island challenges with huge flocks and online rooms.
 
 ## Social Short
 

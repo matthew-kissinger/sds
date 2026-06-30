@@ -4,26 +4,26 @@
 
 [![Three.js 0.185](https://img.shields.io/badge/three.js-0.185-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/)
 
-**Sheep Dog Sim is a free browser herding game with solo challenges, 2-4 player online multiplayer, a gated survival-island sandbox with wolves, mobile controls, gamepad support, and flocks that scale up to 5,000 sheep.** Play at [sheepdogsim.com](https://sheepdogsim.com). No install, no signup, no ads.
+**Sheep Dog Sim is a free browser herding game with three public scenes, solo challenges, 2-4 player online multiplayer, mobile controls, gamepad support, and flocks that scale up to 5,000 sheep.** Play at [sheepdogsim.com](https://sheepdogsim.com). No install, no signup, no ads.
 
 Current code is AGPL-3.0-or-later. Current non-code assets are CC BY-SA 4.0. Hosted or modified versions must publish corresponding source and preserve attribution.
 
 ## Current Captures
 
-| Newsheepdogland | Home Field | Rolling Hills | Open Country |
+| Home Field | Rolling Hills | Open Country | Newsheepdogland lab |
 |---|---|---|---|
-| ![Newsheepdogland survival island WebGPU capture](assets/scenes/entrance/newsheepdogland.webp) | ![Home Field pasture capture](assets/scenes/entrance/field.webp) | ![Rolling Hills island capture](assets/scenes/entrance/rolling-hills.webp) | ![Open Country portal island capture](assets/scenes/entrance/open-country.webp) |
+| ![Home Field pasture capture](assets/scenes/entrance/field.webp) | ![Rolling Hills island capture](assets/scenes/entrance/rolling-hills.webp) | ![Open Country portal island capture](assets/scenes/entrance/open-country.webp) | ![Newsheepdogland gated lab capture](assets/scenes/entrance/newsheepdogland.webp) |
 
 ## What You Can Play
 
-Sheep Dog Sim is built around pressure, flock shape, and terrain. Get behind the sheep, push gently, block breaks, and drive the flock toward the objective before it spills into water, trees, gates, wolves, or its own momentum.
+Sheep Dog Sim is built around pressure, flock shape, and terrain. Get behind the sheep, push gently, block breaks, and drive the flock toward the objective before it spills into water, trees, gates, or its own momentum.
 
 Scenes:
 
 - **Home Field** - flat fenced starter pasture with one gate.
 - **Rolling Hills** - 180 m golden-hour island with shoreline water and a lightning corral.
 - **Open Country** - 380 m island with a multi-stage gather-and-portal objective.
-- **Newsheepdogland** - boot-shaped survival island tech sandbox with a homestead pen, a day/night loop, and wolves after dark. It remains publicly gated while the survival loop is reconsidered.
+- **Newsheepdogland** - gated large-scene lab with a homestead pen and day/night pressure. It remains out of the public beta scene set while the larger loop is reconsidered.
 
 Modes:
 
@@ -32,7 +32,6 @@ Modes:
 - **Solo Extreme** - 1,000 sheep.
 - **Solo Insane** - 3,000 sheep.
 - **Solo Chaos** - 5,000 sheep.
-- **Survival** - Newsheepdogland sandbox mode for development and deep-link testing while public access remains gated.
 - **Multiplayer** - 2-4 player real-time co-op, competitive, timed rooms, split-screen, and sandbox/editor flows.
 
 ## Why This Repo Exists
@@ -81,7 +80,7 @@ URL helpers:
 - `?scene=field`
 - `?scene=rolling-hills`
 - `?scene=open-country`
-- `?scene=newsheepdogland`
+- `?scene=newsheepdogland` - gated lab/deep-link testing only
 - `?renderer=webgpu`
 - `?renderer=webgl`
 - `?cinematic=1`
@@ -128,8 +127,8 @@ Full details: [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.m
 - Canonical web game: [sheepdogsim.com](https://sheepdogsim.com)
 - Production backend: Cloudflare Worker `sds-worker` with D1 `sds-db`
 - PR preview backend: isolated Worker `sds-worker-preview` with D1 `sds-db-preview`
-- Itch target: `npm run build:itchio`, kept as a secondary web distribution lane
-- Native target: Electron Windows package path exists, but public Steam submission still needs current package proof, signing/store decisions, metadata, screenshots/capsules, install/uninstall QA, and human approval
+- Itch target: deferred; `npm run build:itchio` remains available for future owner-approved distribution work
+- Native target: Electron Windows package path exists, but public Steam submission remains a long-term target pending beta demand, current package proof, signing/store decisions, metadata, screenshots/capsules, install/uninstall QA, and human approval
 
 The repo is currently in a launch-readiness program:
 
@@ -142,7 +141,7 @@ The repo is currently in a launch-readiness program:
 
 ## Release State
 
-The current player-visible release line is `v2.5.0`. It builds on the `v2.4.0` launch refresh with Cycle 111's bark-as-core-skill pass, first-session tutorial routing, easier leaderboard discovery, completion-screen polish, and the continued Newsheepdogland sandbox gate.
+The current player-visible release line is `v2.5.0`. The current beta target is `v2.6.0`: a web-only public beta posture with three public scenes, support/privacy surfaces, leaderboard-season planning, community/playtest scaffolding, and the continued Newsheepdogland lab gate.
 
 No store upload, Steam submission, paid platform action, or third-party portal publication is implied by this README. Those remain separate owner-approved actions.
 

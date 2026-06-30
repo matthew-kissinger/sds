@@ -1,11 +1,11 @@
 # Steam Store Brief - Sheep Dog Sim
 
-Status: draft for Matt review. Public Steam submission is blocked until signing, assets, support/privacy URLs, install/uninstall proof, and Steam account actions are complete.
+Status: long-term target, not a `v2.6.0` beta launch task. Public Steam submission is blocked until beta demand, signing, assets, install/uninstall proof, Steam account actions, and Matt review are complete.
 
 ## Product
 
 - Title: `Sheep Dog Sim`
-- Candidate version: `v2.4.0`
+- Candidate version: future post-beta build, not `v2.6.0` web beta
 - Platform to list first: Windows only
 - Build path: Electron desktop package
 - Public website: `https://sheepdogsim.com`
@@ -13,13 +13,15 @@ Status: draft for Matt review. Public Steam submission is blocked until signing,
 
 ## Short Description
 
-Herd sheep across four browser-born 3D scenes, from a quiet starter pasture to a survival island with wolves after dark.
+Herd sheep across three browser-born 3D scenes, from a quiet starter pasture to island challenges with huge flocks and online rooms.
 
 ## Long Description
 
 Sheep Dog Sim is a 3D herding game about reading flock motion, cutting off escapes, and driving sheep home with a fast border-collie-style dog.
 
-Play quiet practice runs, chase leaderboard times, push huge flocks in extreme solo modes, or survive Newsheepdogland after dark when wolves start thinning the flock. Online rooms support 2-4 player co-op and competitive herding through the same Cloudflare backend used by the web version.
+Play quiet practice runs, chase leaderboard times, push huge flocks in extreme solo modes, or join 2-4 player online rooms through the same Cloudflare backend used by the web version.
+
+Newsheepdogland and survival wolves are not first-page Steam promises while that scene remains a gated lab.
 
 The desktop build packages the current web game into a Windows app. It supports keyboard and mouse, gamepad input, local settings, fullscreen, WebGL by default, and explicit WebGPU on supported hardware.
 
@@ -55,7 +57,7 @@ Needed before submission:
 - Home Field practice with dog, sheep, and pen visible.
 - Rolling Hills golden-hour herding with HUD visible.
 - Open Country portal/gathering screenshot.
-- Newsheepdogland survival/wolves screenshot.
+- Newsheepdogland screenshot only if the page explicitly labels it as coming later or if the scene is ungated before Steam prep resumes.
 - Multiplayer room or in-game co-op screenshot, only if the Steam build is intended to advertise online multiplayer.
 
 Steam review expects gameplay screenshots, not concept art or marketing-text images.
@@ -91,16 +93,19 @@ Current saves/settings are local browser/Electron storage. Do not claim Steam Cl
 
 ## Privacy and Support
 
-Blocked until Matt approves:
+Draft web URLs now exist:
 
-- Privacy policy URL covering telemetry, multiplayer identity, leaderboard submissions, Worker logs, and crash/log handling.
-- Support URL or support email for Steam players.
+- Privacy: `https://sheepdogsim.com/privacy`
+- Support: `https://sheepdogsim.com/support`
+
+Before Steam work reopens, verify that these pages cover the packaged desktop build, crash/log handling, and any Steam-specific support obligations.
 
 ## Review Risks
 
 - Unsigned Windows binaries may trigger trust friction.
 - Steam page must not describe web-only features that are not in the Windows build.
 - Store screenshots and capsules must accurately show current gameplay.
+- Do not claim four public scenes, survival wolves, Steam leaderboards, Steam networking, Steam Cloud, or Steam achievements until those claims are true in the candidate build.
 - External links inside the Steam description should be avoided.
 - Multiplayer should be described as Cloudflare-backed online rooms, not Steam networking.
 - If the game is listed as free, the pricing/revenue expectations should be deliberate.
@@ -109,4 +114,4 @@ Blocked until Matt approves:
 
 `blocked`
 
-Reason: current packaged app proof is green, but public Steam submission still requires paid/account actions, final assets, signing/support/privacy decisions, install/uninstall proof, and Matt review.
+Reason: Steam is the ultimate target if beta succeeds, but the current plan is web-only. Public Steam submission still requires paid/account actions, final assets, signing/support/privacy decisions, install/uninstall proof, and Matt review.

@@ -295,7 +295,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
-        about: 'about.html'
+        about: 'about.html',
+        support: 'support.html',
+        privacy: 'privacy.html'
       },
       output: {
         manualChunks: {

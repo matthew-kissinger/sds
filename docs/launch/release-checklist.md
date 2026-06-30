@@ -1,8 +1,10 @@
 # Sheep Dog Sim Launch Checklist
 
-Use this after Matt approves a web release action. The current web release target is `v2.5.0` for Cycle 111.
+Use this after Matt approves a web release action. The current web release target is the `v2.6.0` web beta.
 
 ## Pre-Tag Verification
+
+Bundle note: the support/privacy pages plus settings and pause-menu disclosure links intentionally ratchet the lazy `other` chunk-family budget from 690 KiB to 692 KiB for the `v2.6.0` beta disclosure surface.
 
 ```bash
 git status --short
@@ -10,9 +12,14 @@ npm run build
 npm test
 npm run lint
 npm run typecheck
+npx playwright test --project=chromium --grep-invert @local-only --reporter=line
+```
+
+Optional checks, only if the corresponding channel is explicitly reopened:
+
+```bash
 npm run build:itchio
 npm run native:check
-npx playwright test --project=chromium --grep-invert @local-only --reporter=line
 ```
 
 If native desktop publication is approved:
@@ -26,16 +33,16 @@ npm --prefix native/desktop-electron run proof:webgpu
 ## Tag
 
 ```bash
-git tag -a v2.5.0 -m "release: v2.5.0"
-git push origin v2.5.0
+git tag -a v2.6.0 -m "release: v2.6.0"
+git push origin v2.6.0
 ```
 
 ## GitHub Release
 
 1. Open GitHub Releases for `matthew-kissinger/sds`.
-2. Draft a release for tag `v2.5.0`.
-3. Use `docs/launch/v2.5.0-release-notes.md` as source copy.
-4. Attach desktop artifacts only if Cycle 109 says they are approved for distribution.
+2. Draft a release for tag `v2.6.0`.
+3. Use `docs/launch/v2.6.0-beta-release-notes.md` as source copy once the beta release notes are finalized.
+4. Do not attach desktop artifacts unless Matt explicitly approves native distribution.
 5. Publish only after production deploy is green.
 
 ## Production Deploy Verification
@@ -54,9 +61,13 @@ powershell -NoProfile -Command "Invoke-WebRequest https://sheepdogsim.com/sitema
 powershell -NoProfile -Command "Invoke-WebRequest https://sds-worker.matt-m-kissinger.workers.dev/healthz -UseBasicParsing | Select-Object StatusCode,Content"
 ```
 
-Also inspect the deployed HTML and game flow for the new `v2.5.0` bark/onboarding changes.
+Also inspect the deployed HTML and game flow for the `v2.6.0` beta claims: three public scenes, Newsheepdogland gated lab, support/privacy pages, mobile first-session polish, public lobby discovery, and leaderboard posture.
 
 ## Itch Update
+
+Deferred for the `v2.6.0` web beta. Do not upload or publish unless Matt explicitly reopens itch.
+
+If reopened:
 
 1. Run `npm run build:itchio`.
 2. Upload the generated `dist/` contents using the existing itch page workflow.
@@ -66,7 +77,7 @@ Also inspect the deployed HTML and game flow for the new `v2.5.0` bark/onboardin
 
 ## Steam Continuation
 
-Do not continue unless Cycle 109 is approved.
+Do not continue during the `v2.6.0` web beta setup. Steam remains a long-term target only.
 
 Required before submission:
 
@@ -87,5 +98,5 @@ gh run list --workflow Deploy --limit 10
 
 - Revert the launch commit and push to `main` to redeploy the prior bundle.
 - If only Worker behavior regresses, use Wrangler deployment rollback for `sds-worker`.
-- If only itch regresses, restore the previous itch upload/channel state in the itch dashboard.
-- Do not delete the `v2.5.0` tag after public release unless Matt explicitly approves a tag correction.
+- If only itch regresses after a separately approved itch upload, restore the previous itch upload/channel state in the itch dashboard.
+- Do not delete the `v2.6.0` tag after public release unless Matt explicitly approves a tag correction.
