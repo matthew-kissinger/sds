@@ -395,6 +395,17 @@ export function installCinemaApi(game) {
         resumeSimulation() { cinema.paused = false; },
         paused: false,
 
+        /**
+         * LOD/cull focus override. Grass density, tree LOD, and the compute
+         * cull normally center on the dog (runFrame's playerPosition); a
+         * flyover or orbital shot that leaves the dog behind gets wrong
+         * culling in frame. Set this to a Vector3 (typically
+         * `cinema.camera.position`, which tracks the posed camera by
+         * reference) to center LOD on the lens instead; null restores the
+         * gameplay behavior.
+         */
+        lodFocus: null,
+
         /** Wraps SheepDogSimulation.startSoloGame for Playwright shot drives. */
         startSolo(dogId = 'jep', mode = 'classic') {
             game.startSoloGame?.(dogId, mode);

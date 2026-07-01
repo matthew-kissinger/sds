@@ -2910,7 +2910,11 @@ class SheepDogSimulation {
 
             // Update grass with full context
             const camera = this.sceneManager.getCamera();
-            const playerPosition = this.sheepdog?.mesh?.position;
+            // Cinematic capture: when the shot director sets lodFocus (a
+            // Vector3, normally the cinematic camera's position), grass/tree
+            // LOD and the compute cull center there instead of on the dog, so
+            // flyover and orbital shots cull for what the lens actually sees.
+            const playerPosition = window.__sdsCinema?.lodFocus ?? this.sheepdog?.mesh?.position;
 
             if (this.terrainBuilder) {
                 this.terrainBuilder.updateGrassAnimation(
