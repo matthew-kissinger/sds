@@ -46,36 +46,41 @@ Everything here is real gameplay or in-engine camera work from the current build
 1:18 A real victory
 ```
 
-## Your Discord (announcement channel)
+## Three.js Discord showcase thread (update post)
 
-Attach `sds-v2.6.1-discord.mp4`. Last announcement was v2.3.0, so this one
-carries everything since.
-
-```
-v2.6 web beta is live at https://sheepdogsim.com
-
-It has been a while since v2.3.0, so here is what landed since:
-
-- Bark is a core skill now: directional steering, a visible cooldown, a sound-wave cone when it fires, and its own step in the tutorial (v2.5).
-- The beta centers on three public scenes: Home Field, Rolling Hills, and Open Country. The fourth island stays in the lab until it is ready (v2.6).
-- New art pass on the pasture: fence kit, gate, farmhouse, homestead props, and a hybrid grass default. The runtime moved to Three.js r185 (v2.4).
-- Leaderboards now lead with the easy scored boards, and ranked runs are split from unranked practice (v2.5).
-- Support and privacy pages, a telemetry opt-out in settings, and a public lobby discovery fix (v2.6, v2.6.1).
-
-The clip is 23 seconds of real gameplay from the current build. Longer cut on YouTube: <link after upload>.
-```
-
-## Three.js Discord (showcase)
-
-Attach `sds-v2.6.1-discord.mp4`.
+Attach `sds-v2.6.1-discord.mp4`. The thread's last update post was v1.0
+(2025-12-02), so this covers the whole v1.0 to v2.6 arc. Written to match
+Matt's prior posts in that thread: "Update!" opener, plain section headers
+with colons, bare `thing - detail` lines, concrete numbers, links at the
+bottom. (Matt's own posts use an opener exclamation mark; that is his idiom,
+kept deliberately.)
 
 ```
-Sheep Dog Sim, a browser herding sim where you are the dog. Three.js r185 on the WebGPURenderer path (WebGL fallback), flocks up to 5,000 instanced sheep, a compute cull pass driving tree LOD with octahedral impostors past 200m, and a deterministic sim shared between the browser and a Cloudflare Durable Object for 2-4 player rooms.
+Update! v2.6 web beta is out. A lot has changed since v1.0:
 
-Play: https://sheepdogsim.com
+Worlds and modes:
+Three public scenes now - Home Field (flat fenced pasture), Rolling Hills (180m island at dusk), Open Country (380m island with a multi-stage portal objective)
+Solo Chaos - 5,000 sheep, up from the old 1,000 cap
+Bark is a core skill - directional steering, cooldown, taught in the tutorial
+A fourth island exists but stays in the lab until it is ready
+
+Rendering:
+WebGPURenderer is the default desktop path now (Three.js r185, WebGL fallback)
+Far trees are octahedral impostors selected by a GPU compute cull pass
+New art pass - fence kit, gate, farmhouse, hybrid grass default
+First load went from 8.8s to 0.9s at 20 Mbps
+
+Multiplayer:
+Moved off WebRTC onto Cloudflare Workers + Durable Objects
+60Hz authoritative server sim with client prediction - the same deterministic sim code runs in the browser and in the Durable Object
+MessagePack delta protocol - only the sheep that changed go over the wire
+Leaderboards, with ranked runs split from practice
+
+The clip is 23 seconds of real gameplay from the current build. Full trailer: <YouTube link>
+
+Play: https://sheepdogsim.com/
+itch.io: https://matthewkissinger.itch.io/sheep-dog-sim
 Source: https://github.com/matthew-kissinger/sds
-
-Trailer cut from real gameplay; longer version on YouTube: <link after upload>.
 ```
 
 ## Checklist before posting
