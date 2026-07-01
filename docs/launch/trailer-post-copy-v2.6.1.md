@@ -60,7 +60,8 @@ Update! v2.6 web beta is out. A lot has changed since v1.0:
 
 Worlds and modes:
 Three public scenes now - Home Field (flat fenced pasture), Rolling Hills (180m island at dusk), Open Country (380m island with a multi-stage portal objective)
-Solo Chaos - 5,000 sheep, up from the old 1,000 cap
+Solo ladder runs from Just Play (30 sheep, no timer) up to Solo Chaos (5,000, up from the old 1,000 cap)
+Counting Sheep - round-based counting mode with incremental and exponential curves, bank your count to finish, scored on its own leaderboards
 Bark is a core skill - directional steering, cooldown, taught in the tutorial
 A fourth island exists but stays in the lab until it is ready
 
@@ -75,6 +76,9 @@ Moved off WebRTC onto Cloudflare Workers + Durable Objects
 60Hz authoritative server sim with client prediction - the same deterministic sim code runs in the browser and in the Durable Object
 MessagePack delta protocol - only the sheep that changed go over the wire
 Leaderboards, with ranked runs split from practice
+
+Quality of life:
+First-run tutorial, nine achievements, key and gamepad rebinding, colorblind mode
 
 The clip is 23 seconds of real gameplay from the current build. Full trailer: <YouTube link>
 
