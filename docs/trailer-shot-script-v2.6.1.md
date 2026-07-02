@@ -6,8 +6,14 @@ is committed code plus Matt's raw OBS takes.
 
 | Cut | File | Length | Spec | Size |
 |---|---|---|---|---|
-| Discord | `tools/trailer/output/sds-v2.6.1-discord.mp4` | 23.0s | 1080p30 H.264 + AAC | 17.5 MB (bitrate-capped under the 25 MB attachment limit) |
-| YouTube | `tools/trailer/output/sds-v2.6.1-youtube.mp4` | 89.9s | 1080p30 H.264 + AAC | 327 MB master |
+| Discord | `tools/trailer/output/sds-v2.6.1-discord.mp4` | 23.0s | 1080p30 H.264 + AAC | 17.4 MB (bitrate-capped under the 25 MB attachment limit) |
+| YouTube | `tools/trailer/output/sds-v2.6.1-youtube.mp4` | 89.9s | 1440p60 H.264 CRF 16 + AAC | 895 MB upload master |
+
+The YouTube master is deliberately 2560x1440 at 60fps: dense per-blade grass
+boils at YouTube's 1080p AVC bitrate no matter how clean the upload, while
+1440p+ lands on the higher-bitrate VP9 ladder. Scenic orbitals are captured
+at 45 Mbps in-page; take clips conform at their native 60fps. The Discord cut
+stays 1080p30 because the attachment cap is the binding constraint there.
 
 Machine-readable version of everything below: `tools/trailer/output/cuts-manifest.json`
 (regenerate with `node tools/trailer/assemble.mjs --cut=both --manifest-only`).

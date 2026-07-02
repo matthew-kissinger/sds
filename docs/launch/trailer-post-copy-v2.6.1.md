@@ -8,8 +8,8 @@
 
 | Platform | Video | Thumbnail |
 |---|---|---|
-| YouTube (standalone trailer) | `sds-v2.6.1-youtube.mp4` (89.9s, 327 MB) | `thumb-yt-carve.jpg` (recommended), `thumb-yt-island.jpg` or `thumb-yt-clean.jpg` as alternates |
-| Your Discord (announcement) | `sds-v2.6.1-discord.mp4` (23s, 17.5 MB, attaches inline) | none needed |
+| YouTube (standalone trailer) | `sds-v2.6.1-youtube.mp4` (89.9s, 1440p60, 895 MB upload master) | `thumb-yt-carve.jpg` (recommended), `thumb-yt-island.jpg` or `thumb-yt-clean.jpg` as alternates |
+| Your Discord (announcement) | `sds-v2.6.1-discord.mp4` (23s, 17.4 MB, attaches inline) | none needed |
 | Three.js Discord showcase | `sds-v2.6.1-discord.mp4` (same file) | none needed |
 
 All audio is the game's own soundtrack (first-party, CC BY-SA 4.0). No OBS

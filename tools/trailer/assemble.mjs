@@ -37,7 +37,10 @@ const ROOT = resolve(__dirname, '../..');
 const OUT = resolve(ROOT, 'tools/trailer/output');
 const CLIPS = join(OUT, 'clips');
 const MUSIC = resolve(ROOT, 'assets/sounds_compressed/music_start.mp3');
-const W = 1920, H = 1080, FPS = 30;
+const W = 1920, H = 1080;
+// Cuts declare their own frame rate; conforms run at the take rate (60) so
+// the 60fps YouTube master never upsamples gameplay.
+const CONFORM_FPS = 60;
 const CUT = (process.argv.find((a) => a.startsWith('--cut=')) ?? '--cut=both').slice(6);
 const RECONFORM = process.argv.includes('--reconform');
 
@@ -95,7 +98,7 @@ function conformTakes() {
         const out = join(CLIPS, `${c.id}.mp4`);
         if (existsSync(out) && !RECONFORM) continue;
         const src = findTake(c.take);
-        const vf = `${c.vf ? `${c.vf},` : ''}fps=${FPS},setsar=1`;
+        const vf = `${c.vf ? `${c.vf},` : ''}fps=${CONFORM_FPS},setsar=1`;
         const args = [
             '-y', '-ss', String(c.in), '-t', String(c.dur), '-i', src,
             '-vf', vf, '-an',
@@ -204,9 +207,10 @@ async function buildDiscordPlan() {
     return {
         name: 'discord',
         out: 'sds-v2.6.1-discord.mp4',
-        // Cap the bitrate so the file stays under Discord's 25MB attachment
-        // limit and plays inline for everyone.
-        encode: ['-crf', '23', '-maxrate', '7500k', '-bufsize', '15M'],
+        // 1080p30, bitrate-capped so the file stays under Discord's 25MB
+        // attachment limit and plays inline for everyone.
+        fps: 30,
+        encode: ['-crf', '23', '-maxrate', '7500k', '-bufsize', '15M', '-preset', 'medium'],
         music: { file: MUSIC },
         segments: [
             { clip: 'rh-island-establish', from: 0.0, to: 2.8, fadeIn: true },
@@ -292,6 +296,12 @@ async function buildYoutubePlan() {
     return {
         name: 'youtube',
         out: 'sds-v2.6.1-youtube.mp4',
+        // Upload master: 1440p60. Dense grass boils at YouTube's 1080p AVC
+        // bitrate; a 1440p upload lands on the higher-bitrate VP9 ladder.
+        // The lanczos upscale happens after compositing on the 1080 canvas.
+        fps: 60,
+        scaleOut: '2560:1440',
+        encode: ['-crf', '16', '-preset', 'slow'],
         music: { file: MUSIC },
         segments,
         captions,
@@ -304,6 +314,7 @@ async function buildYoutubePlan() {
 
 function assemble(plan) {
     const FADE = 0.35;
+    const fps = plan.fps ?? 30;
     const inputs = [];
     const inputIndex = new Map();
     const addInput = (args, key) => {
@@ -341,10 +352,10 @@ function assemble(plan) {
         if (s.clip) {
             // Mild uniform grade on gameplay only; cards stay untouched.
             const idx = inputIndex.get(s.clip);
-            filters.push(`[${idx}:v]trim=${s.from}:${s.to},setpts=PTS-STARTPTS,fps=${FPS},scale=${W}:${H},setsar=1,eq=contrast=1.03:saturation=1.09${fades ? `,${fades}` : ''},format=yuv420p[${label}]`);
+            filters.push(`[${idx}:v]trim=${s.from}:${s.to},setpts=PTS-STARTPTS,fps=${fps},scale=${W}:${H},setsar=1,eq=contrast=1.03:saturation=1.09${fades ? `,${fades}` : ''},format=yuv420p[${label}]`);
         } else {
             const idx = inputIndex.get(s.cardFile);
-            filters.push(`[${idx}:v]trim=0:${s.dur},setpts=PTS-STARTPTS,fps=${FPS},scale=${W}:${H},setsar=1${fades ? `,${fades}` : ''},format=yuv420p[${label}]`);
+            filters.push(`[${idx}:v]trim=0:${s.dur},setpts=PTS-STARTPTS,fps=${fps},scale=${W}:${H},setsar=1${fades ? `,${fades}` : ''},format=yuv420p[${label}]`);
         }
         total += d;
         segLabels.push(`[${label}]`);
@@ -363,7 +374,7 @@ function assemble(plan) {
         filters.push(`[${vLast}][c${i}]overlay=x=0:y='${slide}*(1-min(1,(t-${from})/0.45))':enable='between(t,${from},${to})'[${next}]`);
         vLast = next;
     });
-    filters.push(`[${vLast}]format=yuv420p[vout]`);
+    filters.push(`[${vLast}]${plan.scaleOut ? `scale=${plan.scaleOut}:flags=lanczos,` : ''}format=yuv420p[vout]`);
     // Music bed: normalize to -14 LUFS for web platforms, then fade. loudnorm
     // upsamples internally, so pin the rate back for the AAC encode.
     filters.push(`[${musicIdx}:a]atrim=0:${total.toFixed(2)},loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000,afade=t=in:st=0:d=1,afade=t=out:st=${(total - 2.5).toFixed(2)}:d=2.5[aout]`);
@@ -374,7 +385,7 @@ function assemble(plan) {
         ...inputs.flat(),
         '-filter_complex', filters.join(';'),
         '-map', '[vout]', '-map', '[aout]',
-        '-c:v', 'libx264', ...(plan.encode ?? ['-crf', '19']), '-preset', 'medium',
+        '-c:v', 'libx264', ...(plan.encode ?? ['-crf', '19', '-preset', 'medium']),
         '-c:a', 'aac', '-b:a', '192k',
         '-movflags', '+faststart',
         '-shortest',
