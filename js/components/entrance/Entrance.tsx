@@ -355,7 +355,7 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
                 <div style={{ fontSize: 11, color: pastoral.inkSoft }}>{flow.dog.trait}</div>
               </div>
             </button>
-            <button onClick={handlePlay} disabled={comingSoon} aria-disabled={comingSoon} style={{
+            <button onClick={handlePlay} disabled={comingSoon} aria-disabled={comingSoon} data-nav-default="" style={{
               flex: 1, height: 52, borderRadius: 16, border: 'none', cursor: comingSoon ? 'not-allowed' : 'pointer',
               background: comingSoon ? alpha(pastoral.ink, 10) : pastoral.accentMeadow,
               color: comingSoon ? pastoral.inkSoft : pastoral.cream, fontSize: 18, fontWeight: 700,

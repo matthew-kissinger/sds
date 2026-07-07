@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 import { createElement, useEffect, useState } from 'react';
 import { getKeyBindings, getKeyDisplayName } from '../shared/settings.js';
+import { isTutorialSessionActive } from '../Tutorial/index.js';
 
 const STORAGE_KEY = 'sds-bark-hint-used';
 const AUTO_DISMISS_MS = 9000;
@@ -60,7 +61,7 @@ export function BarkHint({ active = false, deferUntilGameSurface = true }) {
         return () => cancelAnimationFrame(frame);
     }, [active, deferUntilGameSurface]);
 
-    const visible = active && surfaceReady && !dismissed;
+    const visible = active && surfaceReady && !dismissed && !isTutorialSessionActive();
 
     useEffect(() => {
         if (!visible) return undefined;

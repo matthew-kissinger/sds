@@ -82,23 +82,23 @@ export default {
 
     // Practice Paddock (Cycle 26 v2.1.0)
     practice: {
-        hint: 'WASD or arrow keys to move · Shift to sprint'
+        hint: 'WASD to move · Shift to sprint · ↑/↓ to zoom'
     },
 
     // First-run tutorial (P1-TUTORIAL): offer card + in-run prompts.
     tutorial: {
         offerTitle: 'First time herding?',
-        offerBody: 'Take a guided run on Home Field. Move, sprint, swap the camera, bark, and pen 3 sheep.',
+        offerBody: 'Take a guided run on Home Field. Move, sprint, swap and zoom the camera, bark, and pen 3 sheep.',
         offerStart: 'Show me',
         offerSkip: 'No thanks',
         skip: 'Skip tutorial',
         herdProgress: '{{penned}} of {{goal}} penned',
         step: {
-            move: 'Move your dog with WASD or the arrow keys.',
+            move: 'Move your dog with WASD.',
             moveTouch: 'Drag the joystick to move your dog.',
             sprint: 'Hold Shift to sprint. Sprinting drains stamina.',
             sprintTouch: 'Hold the sprint button for a burst of speed. It drains stamina.',
-            camera: 'Press C to change the camera view.',
+            camera: 'Press C to change the camera view. Use ↑/↓ to zoom.',
             cameraTouch: 'Tap the camera chip at the top to change the view.',
             bark: 'Press your bark key when the flock is ahead. Watch the sound wave and cooldown.',
             barkTouch: 'Tap the bark button when the flock is ahead. Watch the sound wave and cooldown.',
@@ -215,7 +215,7 @@ export default {
             classicDesc: 'High isometric overhead view'
         },
         gamepadSupport: 'Gamepad Support',
-        gamepadDesc: 'Controllers are automatically detected. Use left stick to move, triggers to sprint.',
+        gamepadDesc: 'Controllers are automatically detected. Use left stick to move, A/B to zoom, and triggers to sprint.',
         // Gamepad config ([P4-GAMEPAD-UI])
         gamepadDeadzone: 'Stick deadzone',
         gamepadDeadzoneDesc: 'Stick input below this is ignored',

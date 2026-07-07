@@ -5,6 +5,7 @@ import { useGameState } from '../hooks/useGameState.js';
 import { getKeyBindings, getKeyDisplayName } from '../shared/settings.js';
 import { Icon } from '../ui/Icon';
 import { pastoral, alpha } from '../ui/tokens';
+import { isTutorialSessionActive } from '../Tutorial/index.js';
 
 function readBarkBinding() {
     return getKeyBindings().bark || 'Space';
@@ -22,7 +23,7 @@ export function BarkMeter({ active = false }) {
         return () => window.removeEventListener('keybindings-changed', onBindingsChanged);
     }, []);
 
-    if (!active) return null;
+    if (!active || isTutorialSessionActive()) return null;
 
     const ready = gameData.barkReady === true;
     const ratio = Math.max(0, Math.min(1, gameData.barkCooldownRatio || 0));

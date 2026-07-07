@@ -17,6 +17,8 @@ import { subscribeMenuGamepad } from '../../input/menuGamepad.js';
 import { stepIndex, navAction } from '../../input/menuNav.js';
 
 const FOCUSABLE = 'button:not([disabled]):not([data-nav-skip]), a[href]:not([data-nav-skip]), [data-nav-focusable]';
+const DEFAULT_FOCUS = '[data-nav-default]';
+const MODAL_SCOPE = '[data-nav-modal]';
 
 export interface MenuNavOptions {
     enabled?: boolean;
@@ -40,6 +42,9 @@ export function useMenuNavigation(
         const itemsNow = (): HTMLElement[] => {
             const root = containerRef.current;
             if (!root) return [];
+            const modalScopes = Array.from(document.querySelectorAll<HTMLElement>(MODAL_SCOPE))
+                .filter((el) => el.offsetParent !== null);
+            if (modalScopes.some((el) => !root.contains(el))) return [];
             return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE))
                 .filter((el) => el.offsetParent !== null);
         };
@@ -60,20 +65,26 @@ export function useMenuNavigation(
             paint(els, clamped);
         };
 
+        const defaultIndex = (els: HTMLElement[]) => els.findIndex((el) => el.matches(DEFAULT_FOCUS));
+
         const move = (dir: number) => {
             const els = itemsNow();
             if (!els.length) return;
             const active = document.activeElement as HTMLElement | null;
             let cur = active ? els.indexOf(active) : -1;
             if (cur < 0) cur = idxRef.current;
-            if (cur < 0) { focusAt(els, dir > 0 ? 0 : els.length - 1); return; }
-            focusAt(els, stepIndex(cur, els.length, dir));
+            focusAt(els, stepIndex(cur, els.length, dir, defaultIndex(els)));
         };
 
         const activate = () => {
             const els = itemsNow();
+            const active = document.activeElement as HTMLElement | null;
+            const activeIndex = active ? els.indexOf(active) : -1;
+            const preferred = defaultIndex(els);
             const el = (idxRef.current >= 0 ? els[idxRef.current] : null)
-                || (document.activeElement as HTMLElement | null);
+                || (activeIndex >= 0 ? els[activeIndex] : null)
+                || (preferred >= 0 ? els[preferred] : null)
+                || els[0];
             if (el && typeof el.click === 'function') el.click();
         };
 

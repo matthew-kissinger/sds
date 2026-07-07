@@ -622,6 +622,12 @@ class SheepDogSimulation {
         // Wire camera controller to all input sources + restore persisted mode.
         this.cameraController = this.sceneManager.getCameraController();
         this.inputHandler.setCameraController(this.cameraController);
+        this.inputHandler.setCameraZoomEnabledPredicate(() =>
+            !this.menuController.isMenuActive()
+            && !this.isLocalMultiplayer
+            && this.gameState?.isGameActive?.() === true
+            && !this.inputHandler.isPausedState()
+        );
         this.mobileControls.setCameraController(this.cameraController);
         // Cycle 6 Phase 5: per-scene camera memory. Lookup order:
         //   1. camera-mode-${sceneId}     (per-scene override, this scene's last value)

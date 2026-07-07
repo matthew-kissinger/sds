@@ -58,28 +58,31 @@ afterEach(() => {
 });
 
 describe('CameraController construction defaults', () => {
-    it('boots in FOLLOW mode with the legacy distance default of 80', () => {
+    it('boots in FOLLOW mode with the follow zoom default inside the active range', () => {
         const c = new CameraController(makeCamera(), { isMobile: false });
         // Default boot mode is Follow (Cycle 21 Phase 5).
         expect(c.getMode()).toBe(CameraMode.FOLLOW);
-        // The constructor seeds the legacy `distance` field to 80 regardless of
-        // mode; the per-mode follow zoom (22) is only applied on an actual
-        // setMode transition, not at construction.
-        expect(c.getZoom()).toBe(80);
+        expect(c.getZoom()).toBe(22);
+        expect(c.getZoomState()).toEqual({
+            mode: CameraMode.FOLLOW,
+            distance: 22,
+            min: 6,
+            max: 45,
+        });
     });
 });
 
 describe('FOLLOW mode terrain clamps', () => {
     it('lifts camera.y above a midpoint ridge by at least the clearance', () => {
         const c = new CameraController(makeCamera(), { isMobile: false });
-        // Tall ridge only in the z-band between the settled camera (z ~ -80,
-        // since the boot distance is 80 and facing is +Z) and the dog at the
+        // Tall ridge only in the z-band between the settled camera (z ~ -22,
+        // since the boot follow distance is 22 and facing is +Z) and the dog at the
         // origin. Dog ground and camera ground are both 0, so the only thing
         // that can lift the camera is the ridge-along-the-sightline clamp
         // (_sampleMaxTerrainAlong), not the camera-ground clamp.
-        const RIDGE = 60; // taller than the natural rig height (~40) so it bites
+        const RIDGE = 60; // taller than the natural follow rig height so it bites
         c.setHeightfield(
-            heightfieldStub((x, z) => (z < -20 && z > -60 ? RIDGE : 0))
+            heightfieldStub((x, z) => (z < -6 && z > -18 ? RIDGE : 0))
         );
 
         // Settle the smoothed follow rig so the camera reaches full distance and
@@ -335,6 +338,25 @@ describe('per-mode zoom clamps and localStorage persistence', () => {
         expect(c.getZoom()).toBe(40);
         c.handleWheel(-120); // zoom in
         expect(c.getZoom()).toBe(35);
+    });
+
+    it('handleKeyboardZoom uses the wheel-sized zoom nudge', () => {
+        const c = new CameraController(makeCamera(), { isMobile: false });
+        c.setMode(CameraMode.FOLLOW);
+        c.setZoom(22);
+        c.handleKeyboardZoom({ zoomIn: true });
+        expect(c.getZoom()).toBe(17);
+        c.handleKeyboardZoom({ zoomOut: true });
+        expect(c.getZoom()).toBe(22);
+    });
+
+    it('can set a temporary zoom without overwriting persisted preferences', () => {
+        const c = new CameraController(makeCamera(), { isMobile: false });
+        c.setMode(CameraMode.FOLLOW);
+        localStorage.setItem('sds.cameraZoom.follow', '33');
+        c.setZoom(16, { persist: false });
+        expect(c.getZoom()).toBe(16);
+        expect(localStorage.getItem('sds.cameraZoom.follow')).toBe('33');
     });
 });
 

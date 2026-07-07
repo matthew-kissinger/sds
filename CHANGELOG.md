@@ -4,6 +4,24 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.6.2] - 2026-07-07
+
+### Changed
+
+- Controller navigation now works on the entrance menu and first-run tutorial offer, with Start/A confirming the active menu choice.
+- Active solo play now supports camera zoom through laptop ArrowUp/ArrowDown keys and standard gamepad A/B buttons.
+- The guided tutorial starts on Home Field from a close Follow camera behind the dog, then teaches camera switching and zoom from that readable framing.
+
+### Fixed
+
+- The first-run tutorial offer is treated as the active controller menu surface while visible, preventing controller confirm from falling through to the underlying Play button.
+- Bark hint and bark meter chrome stand down during the tutorial so the bottom tutorial prompt stays readable.
+
+### Validation
+
+- `npm test`, `npm run build`, `npm run typecheck`, focused controller/camera/UI specs, and production-preview Playwright probes passed.
+- Browser probes verified tutorial-offer controller accept, Start-to-play, ArrowUp/ArrowDown zoom, gamepad A/B zoom, and close tutorial Follow framing.
+
 ## [2.6.1] - 2026-06-30
 
 ### Fixed

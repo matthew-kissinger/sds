@@ -152,4 +152,42 @@ describe('InputHandler consumption', () => {
         pressKey('ArrowUp');
         expect(handler.actions.moveUp).toBe(true);
     });
+
+    it('uses ArrowUp and ArrowDown as gameplay camera zoom keys when they are free', () => {
+        const handler = new InputHandler();
+        const handleKeyboardZoom = vi.fn();
+        handler.setCameraController({
+            cycleMode: () => 'follow',
+            applyYawDelta: () => {},
+            mouseYawScale: 0.005,
+            handleKeyboardZoom,
+        });
+        handler.setCameraZoomEnabledPredicate(() => true);
+
+        pressKey('ArrowUp');
+        pressKey('ArrowDown');
+
+        expect(handleKeyboardZoom).toHaveBeenNthCalledWith(1, { zoomIn: true, zoomOut: false });
+        expect(handleKeyboardZoom).toHaveBeenNthCalledWith(2, { zoomIn: false, zoomOut: true });
+    });
+
+    it('lets custom arrow-key movement bindings win over camera zoom', () => {
+        const handler = new InputHandler();
+        const handleKeyboardZoom = vi.fn();
+        handler.setCameraController({
+            cycleMode: () => 'follow',
+            applyYawDelta: () => {},
+            mouseYawScale: 0.005,
+            handleKeyboardZoom,
+        });
+        handler.setCameraZoomEnabledPredicate(() => true);
+        window.dispatchEvent(new CustomEvent('keybindings-changed', {
+            detail: { ...DEFAULT_KEY_BINDINGS, moveUp: 'ArrowUp' },
+        }));
+
+        pressKey('ArrowUp');
+
+        expect(handler.actions.moveUp).toBe(true);
+        expect(handleKeyboardZoom).not.toHaveBeenCalled();
+    });
 });

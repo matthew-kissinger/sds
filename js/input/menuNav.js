@@ -11,15 +11,20 @@
 /**
  * Wrap an index by `dir` (-1 prev / +1 next) over `count` items.
  * A negative `current` (nothing focused yet) seeds to the first item when
- * moving forward, or the last when moving back.
+ * moving forward, or the last when moving back. A valid preferred index wins
+ * that first seed so a menu can land on its primary action.
  * @param {number} current
  * @param {number} count
  * @param {number} dir
+ * @param {number} [preferredIndex]
  * @returns {number} the new index, or -1 when there is nothing to focus.
  */
-export function stepIndex(current, count, dir) {
+export function stepIndex(current, count, dir, preferredIndex = -1) {
     if (count <= 0) return -1;
-    if (current < 0) return dir > 0 ? 0 : count - 1;
+    if (current < 0) {
+        if (preferredIndex >= 0 && preferredIndex < count) return preferredIndex;
+        return dir > 0 ? 0 : count - 1;
+    }
     return (current + dir + count) % count;
 }
 

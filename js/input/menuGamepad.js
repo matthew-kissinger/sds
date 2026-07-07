@@ -9,10 +9,10 @@
  * SEPARATE from the gameplay gamepad poll in main.js runFrame, which does not
  * tick on the pre-game entrance and must stay the sole driver during play.
  *
- * Standard mapping: d-pad 12-15, A=0, B=1, left stick axes 0/1.
+ * Standard mapping: d-pad 12-15, A=0, B=1, Start=9, left stick axes 0/1.
  */
 
-const BTN = { A: 0, B: 1, DUP: 12, DDOWN: 13, DLEFT: 14, DRIGHT: 15 };
+const BTN = { A: 0, B: 1, START: 9, DUP: 12, DDOWN: 13, DLEFT: 14, DRIGHT: 15 };
 const STICK_THRESHOLD = 0.55;
 const STICK_REPEAT_MS = 180;
 
@@ -47,6 +47,7 @@ function tick() {
     if (!pad) { prev = {}; stickNextAt = 0; return; }
 
     if (edge(pad, BTN.A)) emit('activate');
+    if (edge(pad, BTN.START)) emit('activate');
     if (edge(pad, BTN.B)) emit('back');
     if (edge(pad, BTN.DUP)) emit('up');
     if (edge(pad, BTN.DDOWN)) emit('down');

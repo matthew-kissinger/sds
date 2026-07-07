@@ -26,6 +26,10 @@ const bridge = vi.hoisted(() => ({
     frameHandler: null as null | (() => void),
 }));
 
+const tutorial = vi.hoisted(() => ({
+    active: false,
+}));
+
 vi.mock('../../js/GameBridge.js', () => ({
     getGameState: () => bridge.gameState,
     getSceneManager: () => bridge.sceneManager,
@@ -35,6 +39,10 @@ vi.mock('../../js/GameBridge.js', () => ({
             bridge.frameHandler = null;
         };
     },
+}));
+
+vi.mock('../../js/components/Tutorial/index.js', () => ({
+    isTutorialSessionActive: () => tutorial.active,
 }));
 
 import { GameTimer } from '../../js/components/GameHUD/GameTimer';
@@ -54,6 +62,7 @@ afterEach(() => {
     bridge.gameState = null;
     bridge.sceneManager = null;
     bridge.frameHandler = null;
+    tutorial.active = false;
 });
 
 describe('GameTimer (smoke)', () => {
@@ -175,6 +184,12 @@ describe('BarkHint (smoke)', () => {
 
     it('renders nothing when inactive', () => {
         const { container } = render(<BarkHint active={false} />);
+        expect(container.firstChild).toBeNull();
+    });
+
+    it('stands down while the guided tutorial owns the bottom prompt', () => {
+        tutorial.active = true;
+        const { container } = render(<BarkHint active={true} deferUntilGameSurface={false} />);
         expect(container.firstChild).toBeNull();
     });
 

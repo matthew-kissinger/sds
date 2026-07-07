@@ -14,6 +14,7 @@ const DEFAULT_BINDINGS = {
     bark: 'Space',
     cameraCycle: 'KeyC'
 };
+const CAMERA_ZOOM_KEYS = new Set(['ArrowUp', 'ArrowDown']);
 
 /**
  * Enhanced input handler for keyboard, mobile touch controls, and gamepad
@@ -43,6 +44,7 @@ export class InputHandler {
         // Camera controller wired in from main.js — used for the `C` hotkey
         // (cycle modes) and right-mouse-drag yaw input in Free mode.
         this.cameraController = null;
+        this.cameraZoomEnabled = () => false;
         this.rightMouseDown = false;
 
         // Cycle 61 P3: one-shot bark command edge. Keyboard Space and the mobile
@@ -131,6 +133,15 @@ export class InputHandler {
             if (action && action in this.actions) {
                 this.actions[action] = true;
                 event.preventDefault();
+            }
+
+            if (!action && CAMERA_ZOOM_KEYS.has(code) && this.cameraController && this.cameraZoomEnabled()) {
+                this.cameraController.handleKeyboardZoom?.({
+                    zoomIn: code === 'ArrowUp',
+                    zoomOut: code === 'ArrowDown'
+                });
+                event.preventDefault();
+                return;
             }
 
             // Cycle 61 P3: bark is a one-shot command, not a held action. Edge-
@@ -245,6 +256,10 @@ export class InputHandler {
 
     setCameraController(controller) {
         this.cameraController = controller;
+    }
+
+    setCameraZoomEnabledPredicate(predicate) {
+        this.cameraZoomEnabled = typeof predicate === 'function' ? predicate : () => false;
     }
 
     // Set mobile controls reference

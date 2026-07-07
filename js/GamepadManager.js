@@ -458,7 +458,7 @@ export class GamepadManager {
         
         notification.innerHTML = `
             Gamepad ${connected ? 'Connected' : 'Disconnected'}
-            ${connected ? '<br><small>Use left stick to move, right trigger to sprint</small>' : ''}
+            ${connected ? '<br><small>Left stick moves, A/B zoom, Start confirms menus</small>' : ''}
         `;
         
         document.body.appendChild(notification);

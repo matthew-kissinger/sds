@@ -38,6 +38,12 @@ describe('TutorialOffer (P1-TUTORIAL)', () => {
         expect(screen.getByText('tutorial.offerSkip')).toBeTruthy();
     });
 
+    it('participates in controller menu navigation as the active modal surface', () => {
+        render(<TutorialOffer dogId="jep" />);
+        expect(screen.getByTestId('tutorial-offer').hasAttribute('data-nav-modal')).toBe(true);
+        expect(screen.getByText('tutorial.offerStart').hasAttribute('data-nav-default')).toBe(true);
+    });
+
     it('renders nothing once the flag is set (never auto-offers again)', () => {
         localStorage.setItem(TUTORIAL_DONE_KEY, '1');
         const { container } = render(<TutorialOffer dogId="jep" />);

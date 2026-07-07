@@ -82,23 +82,23 @@ export default {
 
     // Practice Paddock (Cycle 26 v2.1.0)
     practice: {
-        hint: 'WASD o flechas para moverte · Shift para esprintar'
+        hint: 'WASD para moverte · Shift para esprintar · ↑/↓ para zoom'
     },
 
     // Tutorial de primera partida (P1-TUTORIAL): tarjeta de oferta + indicaciones durante la partida.
     tutorial: {
         offerTitle: '¿Primera vez pastoreando?',
-        offerBody: 'Haz una partida guiada en Home Field. Muévete, esprinta, cambia la cámara, ladra y encierra 3 ovejas.',
+        offerBody: 'Haz una partida guiada en Home Field. Muévete, esprinta, cambia y acerca la cámara, ladra y encierra 3 ovejas.',
         offerStart: 'Enséñame',
         offerSkip: 'No, gracias',
         skip: 'Saltar tutorial',
         herdProgress: '{{penned}} de {{goal}} encerradas',
         step: {
-            move: 'Mueve a tu perro con WASD o las flechas.',
+            move: 'Mueve a tu perro con WASD.',
             moveTouch: 'Arrastra el joystick para mover a tu perro.',
             sprint: 'Mantén Shift para esprintar. Esprintar gasta resistencia.',
             sprintTouch: 'Mantén el botón de esprint para un impulso de velocidad. Gasta resistencia.',
-            camera: 'Pulsa C para cambiar la vista de cámara.',
+            camera: 'Pulsa C para cambiar la vista de cámara. Usa ↑/↓ para zoom.',
             cameraTouch: 'Toca el botón de cámara en la parte superior para cambiar la vista.',
             bark: 'Pulsa tu tecla de ladrido cuando el rebaño esté delante. Observa la onda de sonido y el enfriamiento.',
             barkTouch: 'Toca el botón de ladrido cuando el rebaño esté delante. Observa la onda de sonido y el enfriamiento.',
@@ -204,7 +204,7 @@ export default {
             classicDesc: 'Vista isométrica elevada'
         },
         gamepadSupport: 'Compatibilidad con Mando',
-        gamepadDesc: 'Los mandos se detectan automáticamente. Usa el stick izquierdo para moverte y los gatillos para esprintar.',
+        gamepadDesc: 'Los mandos se detectan automáticamente. Usa el stick izquierdo para moverte, A/B para zoom y los gatillos para esprintar.',
         // Gamepad config ([P4-GAMEPAD-UI])
         gamepadDeadzone: 'Zona muerta del stick',
         gamepadDeadzoneDesc: 'La entrada del stick por debajo de este valor se ignora',

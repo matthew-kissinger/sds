@@ -141,6 +141,14 @@ export class CameraController {
             }
         } catch { /* localStorage unavailable; keep defaults */ }
 
+        const activeRange = this._zoomRangeForMode(this.mode);
+        this.minDistance = activeRange.min;
+        this.maxDistance = activeRange.max;
+        this.distance = Math.max(
+            activeRange.min,
+            Math.min(activeRange.max, this._zoomByMode[this.mode] ?? this.distance)
+        );
+
         // Competitive gate orientation (Classic mode).
         this.competitiveDirection = null;
 
@@ -295,16 +303,18 @@ export class CameraController {
         return this._zoomRangeByMode?.[mode] ?? { min: this.minDistance, max: this.maxDistance };
     }
 
-    setZoom(distance) {
+    setZoom(distance, { persist = true } = {}) {
         const r = this._zoomRangeForMode(this.mode);
         this.distance = Math.max(r.min, Math.min(r.max, distance));
         if (this._zoomByMode) {
             this._zoomByMode[this.mode] = this.distance;
-            try {
-                if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem(`sds.cameraZoom.${this.mode}`, String(this.distance));
-                }
-            } catch { /* ignore */ }
+            if (persist) {
+                try {
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.setItem(`sds.cameraZoom.${this.mode}`, String(this.distance));
+                    }
+                } catch { /* ignore */ }
+            }
         }
         // Keep legacy fields aligned with active mode so external code
         // that reads minDistance/maxDistance sees the live range.
@@ -341,6 +351,11 @@ export class CameraController {
         const sign = Math.sign(deltaY) || 0;
         if (sign === 0) return;
         this.setZoom(this.distance + sign * this.zoomWheelStep);
+    }
+
+    handleKeyboardZoom({ zoomIn, zoomOut } = {}) {
+        if (zoomIn) this.setZoom(this.distance - this.zoomWheelStep);
+        if (zoomOut) this.setZoom(this.distance + this.zoomWheelStep);
     }
 
     /**

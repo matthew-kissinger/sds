@@ -82,23 +82,23 @@ export default {
 
     // Practice Paddock (Cycle 26 v2.1.0)
     practice: {
-        hint: 'WASDまたは矢印キーで移動 · Shiftでダッシュ'
+        hint: 'WASDで移動 · Shiftでダッシュ · ↑/↓でズーム'
     },
 
     // 初回プレイのチュートリアル（P1-TUTORIAL）：案内カードとプレイ中のガイド。
     tutorial: {
         offerTitle: '牧羊は初めてですか？',
-        offerBody: 'Home Fieldでガイド付きランに挑戦。移動、ダッシュ、カメラ切り替え、吠える操作を覚えて、羊を3匹囲いに入れましょう。',
+        offerBody: 'Home Fieldでガイド付きランに挑戦。移動、ダッシュ、カメラ切り替えとズーム、吠える操作を覚えて、羊を3匹囲いに入れましょう。',
         offerStart: 'やってみる',
         offerSkip: '今はやめておく',
         skip: 'チュートリアルをスキップ',
         herdProgress: '{{goal}}匹中{{penned}}匹を囲いに入れた',
         step: {
-            move: 'WASDまたは矢印キーで犬を動かします。',
+            move: 'WASDで犬を動かします。',
             moveTouch: 'ジョイスティックをドラッグして犬を動かします。',
             sprint: 'Shiftを押し続けるとダッシュします。ダッシュはスタミナを消費します。',
             sprintTouch: 'ダッシュボタンを押し続けると一気に加速します。スタミナを消費します。',
-            camera: 'Cキーでカメラビューを切り替えます。',
+            camera: 'Cキーでカメラビューを切り替えます。↑/↓でズームします。',
             cameraTouch: '上部のカメラチップをタップしてビューを切り替えます。',
             bark: '群れが前にいるときに吠えるキーを押しましょう。音の波とクールダウンを見てください。',
             barkTouch: '群れが前にいるときに吠えるボタンをタップしましょう。音の波とクールダウンを見てください。',
@@ -204,7 +204,7 @@ export default {
             classicDesc: '高所からの俯瞰ビュー'
         },
         gamepadSupport: 'ゲームパッド対応',
-        gamepadDesc: 'コントローラーは自動検出されます。左スティックで移動、トリガーでダッシュします。',
+        gamepadDesc: 'コントローラーは自動検出されます。左スティックで移動、A/Bでズーム、トリガーでダッシュします。',
         // Gamepad config ([P4-GAMEPAD-UI])
         gamepadDeadzone: 'スティックのデッドゾーン',
         gamepadDeadzoneDesc: 'この値未満のスティック入力は無視されます',

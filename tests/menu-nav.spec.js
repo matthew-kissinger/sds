@@ -23,6 +23,10 @@ describe('stepIndex (Cycle 60 P2)', () => {
     it('seeds the last item when nothing is focused and moving back', () => {
         expect(stepIndex(-1, 4, -1)).toBe(3);
     });
+    it('seeds a preferred item when nothing is focused', () => {
+        expect(stepIndex(-1, 4, 1, 2)).toBe(2);
+        expect(stepIndex(-1, 4, -1, 2)).toBe(2);
+    });
     it('returns -1 when there is nothing to focus', () => {
         expect(stepIndex(0, 0, 1)).toBe(-1);
     });

@@ -9,10 +9,11 @@
  * card never blocks the entrance: Play, world browsing, and the corner nav
  * all stay live around it.
  */
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { pastoral, alpha } from '../ui/tokens';
 import { useResponsive } from '../hooks/usePlatform.js';
+import { useMenuNavigation } from '../hooks/useMenuNavigation.js';
 import { RailPortal } from '../ui/RailPortal.js';
 import { shouldOfferTutorial, markTutorialDone } from './tutorialMachine.js';
 import { startTutorial } from './startTutorial.js';
@@ -28,12 +29,21 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
     const { isCompact } = useResponsive();
     const [offered] = useState(() => shouldOfferTutorial());
     const [hidden, setHidden] = useState(false);
+    const navRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (offered && !hidden) {
             emitTutorialEvent('tutorial_offer_shown', dogId ? { dogId } : {});
         }
     }, [dogId, hidden, offered]);
+
+    const declineTutorial = () => {
+        emitTutorialEvent('tutorial_offer_skipped', dogId ? { dogId } : {});
+        markTutorialDone();
+        setHidden(true);
+    };
+
+    useMenuNavigation(navRef, { enabled: offered && !hidden, onBack: declineTutorial });
 
     if (!offered || hidden) return null;
 
@@ -67,7 +77,7 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
 
     return (
         <RailPortal order={10}>
-        <div style={card} role="dialog" aria-label={t('tutorial.offerTitle')} data-testid="tutorial-offer">
+        <div ref={navRef} style={card} role="dialog" aria-label={t('tutorial.offerTitle')} data-testid="tutorial-offer" data-nav-modal="">
             <div style={{ fontSize: 15, fontWeight: 700 }}>{t('tutorial.offerTitle')}</div>
             <div style={{ fontSize: 13, color: pastoral.inkSoft, marginTop: 4, lineHeight: 1.35 }}>
                 {t('tutorial.offerBody')}
@@ -79,16 +89,13 @@ export function TutorialOffer({ dogId }: { dogId?: string }) {
                         setHidden(true);
                         void startTutorial({ dogId });
                     }}
+                    data-nav-default=""
                     style={{ ...btnBase, flex: 1, border: 'none', background: pastoral.accentMeadow, color: pastoral.cream }}
                 >
                     {t('tutorial.offerStart')}
                 </button>
                 <button
-                    onClick={() => {
-                        emitTutorialEvent('tutorial_offer_skipped', dogId ? { dogId } : {});
-                        markTutorialDone();
-                        setHidden(true);
-                    }}
+                    onClick={declineTutorial}
                     style={{ ...btnBase, border: `1px solid ${pastoral.glassWarmBorder}`, background: alpha(pastoral.ink, 5), color: pastoral.ink }}
                 >
                     {t('tutorial.offerSkip')}

@@ -35,6 +35,7 @@ import { TutorialOverlay } from './TutorialOverlay.js';
 /** Scene + mode the tutorial always runs on: the flat fenced starter pasture. */
 const TUTORIAL_SCENE_ID = 'field';
 const TUTORIAL_MODE = 'practice';
+const TUTORIAL_FOLLOW_ZOOM = 16;
 
 let session = null;
 
@@ -74,6 +75,17 @@ function teardown(reason) {
         s.root.unmount();
         s.container.remove();
     }, 0);
+}
+
+function frameTutorialCamera(game) {
+    const controller = game.sceneManager?.getCameraController?.();
+    if (!controller) return;
+    controller.setMode?.('follow');
+    controller.setZoom?.(TUTORIAL_FOLLOW_ZOOM, { persist: false });
+    controller.followInitialized = false;
+    controller.smoothedFloorY = -Infinity;
+    const dog = game.gameState?.getSheepdog?.();
+    if (dog) game.sceneManager?.updateCamera?.(dog, 1 / 60);
 }
 
 /**
@@ -117,6 +129,7 @@ export async function startTutorial(opts = {}) {
         // the build out of the attract field), then start Just Play on it.
         await game.swapScene(TUTORIAL_SCENE_ID, { noCrossfade: true, f: true });
         await game.menuController?.selectSolo?.(dogId, TUTORIAL_MODE);
+        frameTutorialCamera(game);
     } catch (err) {
         console.error('[TUTORIAL] failed to start the guided run:', err);
         teardown('cancelled');

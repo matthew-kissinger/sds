@@ -82,23 +82,23 @@ export default {
 
     // Practice Paddock (Cycle 26 v2.1.0)
     practice: {
-        hint: 'WASD ou setas para mover · Shift para correr'
+        hint: 'WASD para mover · Shift para correr · ↑/↓ para zoom'
     },
 
     // Tutorial de primeira jogada (P1-TUTORIAL): cartão de oferta + instruções durante a partida.
     tutorial: {
         offerTitle: 'Primeira vez pastoreando?',
-        offerBody: 'Faça uma partida guiada em Home Field. Mova-se, corra, troque a câmera, lata e leve 3 ovelhas ao curral.',
+        offerBody: 'Faça uma partida guiada em Home Field. Mova-se, corra, troque e aproxime a câmera, lata e leve 3 ovelhas ao curral.',
         offerStart: 'Me mostre',
         offerSkip: 'Não, obrigado',
         skip: 'Pular tutorial',
         herdProgress: '{{penned}} de {{goal}} no curral',
         step: {
-            move: 'Mova seu cão com WASD ou as setas.',
+            move: 'Mova seu cão com WASD.',
             moveTouch: 'Arraste o joystick para mover seu cão.',
             sprint: 'Segure Shift para correr. Correr gasta resistência.',
             sprintTouch: 'Segure o botão de corrida para um impulso de velocidade. Ele gasta resistência.',
-            camera: 'Pressione C para mudar a visão da câmera.',
+            camera: 'Pressione C para mudar a visão da câmera. Use ↑/↓ para zoom.',
             cameraTouch: 'Toque no botão de câmera no topo para mudar a visão.',
             bark: 'Pressione sua tecla de latido quando o rebanho estiver à frente. Observe a onda sonora e o tempo de recarga.',
             barkTouch: 'Toque no botão de latido quando o rebanho estiver à frente. Observe a onda sonora e o tempo de recarga.',
@@ -204,7 +204,7 @@ export default {
             classicDesc: 'Vista isométrica elevada'
         },
         gamepadSupport: 'Suporte a Controle',
-        gamepadDesc: 'Controles são detectados automaticamente. Use o analógico esquerdo para mover e os gatilhos para correr.',
+        gamepadDesc: 'Controles são detectados automaticamente. Use o analógico esquerdo para mover, A/B para zoom e os gatilhos para correr.',
         // Gamepad config ([P4-GAMEPAD-UI])
         gamepadDeadzone: 'Zona morta do analógico',
         gamepadDeadzoneDesc: 'A entrada do analógico abaixo deste valor é ignorada',
