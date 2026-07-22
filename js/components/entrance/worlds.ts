@@ -206,9 +206,9 @@ export const WAYS: Way[] = [
 export const formatSheep = (n: number): string => n.toLocaleString('en-US');
 
 /**
- * The entrance leads with Rolling Hills (Cycle 89). Newsheepdogland is switched
+ * The entrance leads with Home Field. Newsheepdogland is switched
  * off pending a regression burn-down; it stays one "Next world" step away as a
  * "Coming soon" tile (badge + disabled Play). Dog and difficulty persist
  * per-player; the landing world is fixed and never a coming-soon world.
  */
-export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'rolling-hills'));
+export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'field'));
