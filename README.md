@@ -122,6 +122,8 @@ Worker: Cloudflare Workers + Durable Objects + D1
 
 The deterministic boundary matters. Never import DOM, `window`, Three.js, or `js/` modules into `shared/`. Multiplayer drift is caught by sim-baseline fixtures and Worker/client tests.
 
+This netcode approach - a deterministic shared simulation authoritative on Durable Objects - is the open-source sibling of the netcode that ships in [OBJEKT-62](https://objekt62.com), the author's closed-source game.
+
 Full details: [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md), [docs/INTERFACE_FENCE.md](docs/INTERFACE_FENCE.md).
 
 ## Deployment State
