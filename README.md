@@ -45,7 +45,7 @@ Most browser 3D games are either thin demos or closed-source ports. Sheep Dog Si
 - deterministic `shared/` boid, movement, obstacle, objective, terrain, and scene modules imported byte-identically by the browser and Worker;
 - Vitest, Playwright, sim-baseline goldens, refactor-baseline characterization tests, and an ESLint boundary around `shared/`.
 
-Related R&D: [sds-gpu-boids](https://github.com/matthew-kissinger/sds-gpu-boids) — a standalone WebGPU compute-shader flock sandbox (experimental GPU boid logic, 100k+ agents) exploring the next generation of the herding simulation.
+Related R&D: [sds-gpu-boids](https://github.com/matthew-kissinger/sds-gpu-boids) — a standalone WebGPU compute-shader flock sandbox (experimental GPU boid logic, 100k+ agents) exploring the next generation of the herding simulation. An experimental build is live for testing at [matthew-kissinger.github.io/sds-gpu-boids](https://matthew-kissinger.github.io/sds-gpu-boids/).
 
 ## Run Locally
 
