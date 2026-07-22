@@ -21,11 +21,10 @@ const SCENES = {
     'newsheepdogland': newsheepdogland
 };
 
-// Cycle 89: default back to Rolling Hills while Newsheepdogland's runtime
-// perf is tuned; the survival island stays registered as an experimental
-// (WIP) world. Older modes still pin their own scene ids when they need a
-// specific biome.
-export const DEFAULT_SCENE_ID = 'rolling-hills';
+// Home Field is the global fallback for plain opens and any mode that does not
+// explicitly pin a scene. Other scenes remain available through the entrance
+// selector and scene deep links.
+export const DEFAULT_SCENE_ID = 'field';
 
 /**
  * @param {string} [id] Scene id; defaults to DEFAULT_SCENE_ID.
