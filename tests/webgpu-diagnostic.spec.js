@@ -520,7 +520,7 @@ describe('webgpu diagnostic sky fog state', () => {
       active: true,
       requestedSceneId: 'missing',
       sceneId: DEFAULT_SCENE_ID,
-      skyPresetName: 'dusk',
+      skyPresetName: 'pastoral-noon',
       fallbackReason: 'unknown-scene',
     });
   });
