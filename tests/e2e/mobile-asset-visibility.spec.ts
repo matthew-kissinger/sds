@@ -39,15 +39,15 @@ async function seedIdentity(ctx: BrowserContext) {
 }
 
 const WORLD_STEPS_FROM_DEFAULT: Record<string, number> = {
-    'field': 3,
-    'rolling-hills': 0,
-    'open-country': 1,
+    'field': 0,
+    'rolling-hills': 1,
+    'open-country': 2,
 };
 
 // Cycle 51 world-first entrance: the world is armed via the prev/next switcher,
-// not a ?scene= deep-link. The default is Rolling Hills (Cycle 89); the SEO
-// fallback main also contains scene names, so use the known carousel offset
-// instead of querying visible text.
+// not a ?scene= deep-link. Home Field is the default; the SEO fallback main
+// also contains scene names, so use the known carousel offset instead of
+// querying visible text.
 async function armWorld(page: Page, sceneId: string) {
     const steps = WORLD_STEPS_FROM_DEFAULT[sceneId];
     const nextBtn = page.getByRole('button', { name: /Next world/i });

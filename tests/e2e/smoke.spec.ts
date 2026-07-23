@@ -92,13 +92,9 @@ test.describe('SDS smoke', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    // Rolling Hills is the default entrance world (Cycle 89). Step back once
-    // to Home Field before selecting Classic; dispatchEvent('click') fires
-    // React onClick synchronously without depending on Playwright's
-    // hover/stability heuristic.
-    const prevWorld = page.getByRole('button', { name: 'Previous world' });
-    await expect(prevWorld).toBeVisible({ timeout: 30_000 });
-    await prevWorld.dispatchEvent('click');
+    // Home Field is the default entrance world. Select Classic directly;
+    // dispatchEvent('click') fires React onClick synchronously without
+    // depending on Playwright's hover/stability heuristic.
     const classic = page.getByRole('button', { name: /Classic\s+\d/i });
     await expect(classic).toBeVisible({ timeout: 30_000 });
     await classic.dispatchEvent('click');
