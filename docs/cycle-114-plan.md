@@ -29,6 +29,15 @@ So it is a genuine rule violation with low visible urgency. Phase 6 fixes it and
 
 This doc fixes the *shape* of the changes (where new code slots in, acceptance criteria), not every implementation choice. Where it names a technique, treat it as the researched starting point, not a mandate. Each agent picking up a phase should measure on the actual target (RTX 3070 desktop, mid-tier mobile) before committing, and pick the simplest thing that reads correctly rather than the most impressive.
 
+**The grass scatter has a second, non-obvious dual path, and it is the sharpest trap in this cycle.** `isExcluded` is called from three sites, not one: `js/GrassSystem.js:1654` (`createChunk`, the per-chunk WebGL path), `:1483` (`_gatherChunkClumps`, the consolidated compute-cull path that WebGPU actually renders), and `:1807` (`createMeadowQuadChunk`). The first two are **deliberately RNG-order-identical mirrors**. The comment at `:1473-1477` says so outright: "Two-phase to mirror createChunk's RNG order EXACTLY... so the consolidated field layout is byte-identical to the per-chunk path."
+
+So any change to the density formula must land in **both** `:1484-1492` and `:1667-1675`, in a way that consumes randoms in the same order, or the WebGPU field silently diverges from the WebGL one. This is not a material-level WebGL-versus-WebGPU concern; it is inside `GrassSystem` itself, and it is the failure most likely to ship unnoticed, because both paths will look plausible in isolation.
+
+Two facts that make Phase 1 much cheaper than it looks, both from the same reconnaissance:
+
+- **Scatter acceptance is already probabilistic.** `js/GrassSystem.js:1667-1675` computes `densityFactor = max(0, 1 - distFromCenter / grassRadius)` and then `if (this.random() > densityFactor * 0.8 + 0.2) continue;`. A falloff is one more factor in that expression, not new machinery.
+- **A per-instance height channel already exists and is consumed on both paths.** `_tallHeightMul(x, z)` at `:1952-1960` folds into Y scale at `:1738-1743` on the per-chunk path and is packed as the `transforms` z component at `:1505` for the compute-cull path, applied in TSL at `js/world/webgpuGrassBladeNodeMaterial.js:43-51`. So the height taper needs no shader work at all.
+
 **The dual-path rule governs this whole cycle.** Nearly every render system here has a WebGL implementation and a WebGPU node-material twin, and production boots WebGPU. A phase that lands on one path only is a half-fix and fails its own acceptance. Each phase below names both files. Where a phase is deliberately single-path, it says why.
 
 ## Open questions resolved before writing code
@@ -57,9 +66,25 @@ Today `isExcluded(x, z)` returns a hard boolean, so each zone sits inside a knif
 
 **The pen's rectangle is also the wrong size, and it is hardcoded.** The farmhouse yard is declared on the scene (`shared/scenes/field.js:74-77`, an 80m by 80m rect at `x[140,220] z[120,200]`), but the pen is not: [`../js/TerrainBuilder.js`](../js/TerrainBuilder.js):1165 calls `addExclusionZone(-35, 35, 98, 138)` with literal numbers, while the scene declares `pasture: { minX: -30, maxX: 30, minZ: 102, maxZ: 130 }`. So a 60m by 28m fence stands inside a 70m by 40m bald patch: grass stops 5m outside each side fence, 2m in front of the gate line and 10m behind the back fence. Even with a perfect falloff, a hardcoded rect that does not match its own fence will still read wrong.
 
-1. **Derive the pen zone from the scene** rather than from the literal. The Cycle 7 comment above that line explains why the call is guarded on `sceneDef.pasture`; the numbers themselves were never migrated. Use the declared `pasture` rect. This is a behaviour change to grass placement on Home Field and it will move the goldens, which Phase 8 handles.
+1. **Derive the pen zone from the scene** rather than from the literal. The Cycle 7 comment above that line explains why the call is guarded on `sceneDef.pasture`; the numbers themselves were never migrated. This is a behaviour change to grass placement on Home Field and it will move the goldens, which Phase 8 handles.
+
+   **There are five different pen rectangles in this repo and no two agree.** Know all of them before picking one:
+
+   | Where | Rect | Size |
+   |---|---|---|
+   | `js/TerrainBuilder.js:1165`, what the grass mesh is actually built with | `x[-35,35] z[98,138]` | 70 x 40 |
+   | `shared/scenes/field.js:31-37`, the declaration | `x[-30,30] z[102,130]` | 60 x 28 |
+   | `js/FencePresets.js:851-860`, where the fence actually stands | `x[-30,30] z[100,128]` | 60 x 28 |
+   | `js/world/sandbox.js:95-100`, re-added at every mode start | the declaration | 60 x 28 |
+   | `shared/TreePlacement.js:213-214`, governing trees | `\|x\|<35, z 100..135` | 70 x 35 |
+
+   Note the declaration is itself 2m off from the fence: the fence is built at `bounds.maxZ` (100) and extends `depth` (28), so it spans `z[100,128]`, while the scene says `z[102,130]`. **Derive from where the fence actually is**, and say so in a comment, because "use the scene's pasture" sounds obviously right and is quietly wrong by two metres.
+
+   `shared/TreePlacement.js` is under `shared/` and is **frozen**. Do not touch it. Its comment claims its rect is "the exact rect of the single-player pasture", which it is not; record that as carryover rather than fixing it here.
+
+   One more thing worth knowing before you assume the current numbers are load-bearing: `js/main.js:1934-1938` calls `setDynamicBounds` at every mode start, and `js/world/sandbox.js:77` clears `exclusionZones` and re-adds the declared rect. No grass rebuild follows, so the swap is invisible today. After this phase it may stop being invisible. Check it.
 2. **Add a keep-probability function** beside `isExcluded` in [`../js/GrassSystem.js`](../js/GrassSystem.js). For each zone compute the signed distance from `(x, z)` to the zone's edge (for `type: 'rect'`, the standard axis-aligned box SDF; for `type: 'rotated'`, the same after the existing inverse rotation at lines 1998-2010, which already transforms the point into the zone's local frame). Inside the zone the keep probability is 0; from the edge outward it rises over a falloff band via smoothstep. Take the minimum keep across all zones so overlapping zones compose.
-3. **Keep `isExcluded` as the hard test** and have it delegate, so the shoreline cull at lines 1990-1993 and any other caller keep their current exact behaviour. Only the scatter path consumes the probability.
+3. **Keep `isExcluded` as the hard test** and have it delegate, so the shoreline cull at lines 1990-1993 and any other caller keep their current exact behaviour. Only the scatter path consumes the probability. This matters more than it reads: `isExcluded` also carries the island-boundary cull at `:1974-1981` and the shoreline-Y cull at `:1990-1993` (`baseY < SHORELINE_Y_MIN`). Softening it wholesale would put grass on water. **Only the zone loop at `:1997-2020` is the prop-exclusion concern.**
 4. **Consume it at scatter.** [`../js/GrassSystem.js`](../js/GrassSystem.js) line 1654 becomes a probabilistic reject against `this.random()`. Note this consumes randoms in a different pattern than today, which will move the golden frames. That is expected, not a regression, and Phase 8 re-baselines with the reason recorded.
 5. **Taper height as well as density** near the edge, using the existing per-blade `heightScale` at line 645. Density alone thins to a speckle; a height taper makes the thinning read as grass being worn down rather than as missing instances.
 6. **Name the falloff width once** as a module constant with a comment explaining the number, per Q2.
