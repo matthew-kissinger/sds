@@ -10,6 +10,47 @@ The web-only `v2.6.2` beta hotfix release line is current: the `v2.6.0` beta pos
 
 ## Recently Completed
 
+### Cycle 115 - `fence-and-homestead` (closed 2026-07-25)
+
+- **Shipped: 5/5 implementation phases.** The fence has an authoring source for the first time, every gate can open, the pen gate has a worn approach, and the homestead lights at dusk.
+- Plan: [docs/archive/cycles/cycle-115-plan.md](archive/cycles/cycle-115-plan.md).
+- Commits on `main`: `ccadcb98` (plan), `73a12417` (P1-P5), `faebc141` (gate default), `14102fd2` (review fixes).
+
+**The roadmap described a different cycle, and that was the first finding**
+
+A four-agent reality check against the shipping build found three of the roadmap's five bullets already shipped. The distinct hung gate exists (`Gate_Assembly-v1.0.0.glb`, 8 meshes, 3 materials, iron hinges, two leaves on pivots). The farmhouse is already a modular kit-bash, near-verbatim to the roadmap's wording, and **its D10 checkpoint already fired and already resolved to external in Cycle 105**, so re-authoring it was explicitly out. Its materials shipped in Cycle 114 Phase 4. The trough and both hay bales ship and are placed across four scenes. Building against the roadmap text would have rebuilt working assets and re-authored a model Matt had approved.
+
+**What landed**
+
+- **P1/P2 the fence kit has a source.** It existed only as an opaque binary GLB, which is why weathering (no `COLOR_0`), sag (a straight bar) and chamfer (85 irregular hand-authored Y rings) were all blocked on the same absence rather than three problems. `tools/bake-fence.mjs` follows `bake-rocks.mjs`; geometry lives in `tools/bake-fence/kitPieces.mjs` as pure JS so the same code runs in the harness, in Node, and in a spec. Two consecutive bakes are byte-identical because every draw goes through `mulberry32`. `Fence_Kit-v2.0.0.glb` at 25.8 KB against v1's 40.3 KB, shipped alongside v1 so the revert is one constant. Silhouette held to a measured 6mm against a 20mm tolerance the bake itself enforces, refusing to write above it. The 32x4 palette PNG is lifted verbatim rather than re-encoded, so no hue drift.
+- **P2 wear and sag** live in one `js/world/fenceWear.js` so the baked kit and the procedural fallback cannot drift. The sag is in the rail's LOCAL frame, so `_slopeRailToTerrain` carries the droop with the chord instead of shearing it. A real hazard was found and fixed in passing: Draco quantization delivers positions as normalized Int16 with the metres-per-unit scale on the node, so a droop written in metres would have landed at an arbitrary fraction.
+- **P3 every gate can open.** The leaf rig was trapped in a Newsheepdogland branch, so every other scene rendered its gate frozen in the asset's baked pose. `js/world/gateLeafController.js` gives every gate a controller, and the fallback exposes one too so consumers need no null branch.
+- **P4 the approach serves the PEN gate at (0,100)**, not the farmhouse yard, because the yard sits at x 156-188 outside the play bounds and there is no yard on the gate approach at all. Expressed through the terrain's existing dirt mask rather than a new material.
+- **P5 a lamp at dusk, and it is not a light**, on the lantern geometry the farmhouse GLB already carries.
+
+**Three defects caught after shipping, two of them mine**
+
+- **Gates built CLOSED, which put sheep through them.** Sheep retire by walking to a target inside the pen, so they cross the gate line, and closed leaves span the full 8m opening. Shipped in `73a12417`, flagged by the implementing agent in its own report, fixed in `faebc141`. Phase 3's brief was "only makes it possible"; the default now preserves prior behaviour and the capability to close is what is new.
+- **The gate approach never followed a scene swap.** Resolved once in the constructor, so a builder that booted on Home Field painted its dirt fan across Rolling Hills and Open Country. Fixed in `14102fd2`.
+- **The bundle authorization was again written after the change**, in the wrong section. Cycle 114 drew the identical criticism. Recorded rather than smoothed.
+
+**Carryover**
+
+1. **No browser probe, again.** Phase 6 was the phase that would have looked at Home Field, and it did not run. The fence wear, the sag, the three farmhouse materials, the dog's contact shadow, the approach and the lamp are all unviewed across two cycles now. **This is the top of the next cycle's list.**
+2. **Goldens not re-baselined across two cycles.** Home Field's cells have moved twice (ground colour, grass placement, the fence, the approach). Run `validation:screenshots -- --diff` and read the numbers before rewriting anything.
+3. **The live seam gate is still red on Open Country** and nobody has re-run it on a committed tree.
+4. **The bundle is +19.7 kB (+3.0%) across two cycles** with two ratchet bumps. A third is a bundle cycle, not a bump.
+5. **The gate approach reaches only the two terrain shaders**, so grass standing on the worn strip stays green over dirt. Cosmetic-scale, and the same class of disagreement Cycle 114 Phase 2 fixed for the ground field.
+6. **Competitive layouts place up to four gates and only one gets an approach**, because `resolveGateApproach` reads the scene's single-player pen.
+7. **The WebGPU clump hue keys off `positionWorld` per fragment** while both WebGL paths key off the clump origin, so hue varies per pixel rather than per clump on the path production boots. Found by the Cycle 114 review, not yet acted on.
+8. **No frame-time number for a real `PointLight`.** Phase 5 shipped emissive on a sound argument but did not measure the alternative it was told to measure.
+9. **Two lighting-rig bugs found in passing**, both out of scope and both real: on the production WebGPU path the `AmbientLight` is constructed and never added to the scene, and the production `DirectionalLight` never tracks time of day.
+
+**Notes**
+
+- The briefing's claim that node materials are self-lit and would never see a new light is **only true on the WebGL path**. On WebGPU, terrain and meadow quads are `MeshLambertNodeMaterial` and sheep and tree leaves are `MeshStandardNodeMaterial`, all genuinely lit. A `PointLight` would have been visible on one path and not the other, which is a sharper argument for emissive than invisibility was. The Cycle 116 plan is corrected.
+- No version bump. D20 rolls continuously.
+
 ### Cycle 114 - `grounding-pass` (closed 2026-07-25)
 
 - **Shipped: 7/8 phases green, 1 recorded as failed-honestly.** Props stop sitting on the world and start sitting in it. All shader and placement work, no new geometry, per D11.
