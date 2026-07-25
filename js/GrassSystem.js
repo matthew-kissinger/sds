@@ -927,6 +927,7 @@ export class GrassSystem {
             // said, and the fragment stage below (where the default is mediump)
             // has always declared it.
             precision highp float;
+            precision highp int;
 
             uniform float time;
             uniform sampler2D noiseTexture;
@@ -1165,6 +1166,7 @@ export class GrassSystem {
             // in the deleted js/shaders/grass mirrors, never in the shader that
             // compiles.
             precision highp float;
+            precision highp int;
 
             attribute vec4 bladeData;
 

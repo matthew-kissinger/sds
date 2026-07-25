@@ -103,12 +103,17 @@ describe('shader precision — grass (Cycle 12 Phase 4)', () => {
         };
     };
 
+    // Both stages assert FLOAT and INT, which is what the deleted mirrors
+    // asserted. Dropping INT when the assertions moved would have quietly
+    // narrowed the guarantee while the commit message called it restored.
     it('grass desktop vertex declares precision highp', () => {
         expect(grassShaders().desktopVertex).toMatch(PRECISION_FLOAT);
+        expect(grassShaders().desktopVertex).toMatch(PRECISION_INT);
     });
 
     it('grass mobile vertex declares precision highp', () => {
         expect(grassShaders().mobileVertex).toMatch(PRECISION_FLOAT);
+        expect(grassShaders().mobileVertex).toMatch(PRECISION_INT);
     });
 
     it('grass fragment declares precision highp', () => {

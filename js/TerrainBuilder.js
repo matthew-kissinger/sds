@@ -1200,19 +1200,41 @@ export class TerrainBuilder {
         // Cycle 114 Phase 1: Cycle 7 guarded the call on `sceneDef.pasture` but
         // never migrated the numbers, so a 60m x 28m fence stood inside a 70m x
         // 40m bald rectangle: grass stopped 5m outside each side fence, 2m in
-        // front of the gate line and a full 10m behind the back fence. The
-        // exclusion now comes from the rect the scene actually declares, so the
-        // bare ground matches the pen that is standing on it. This moves grass
-        // placement on Home Field, which moves the goldens; that is the intended
-        // change, re-baselined in Phase 8.
+        // front of the gate line and a full 10m behind the back fence.
+        //
+        // The exclusion is derived from where the pen fence ACTUALLY STANDS,
+        // which is not the same rect the scene declares. `pasture` gives the
+        // pen its DIMENSIONS but not its origin: js/FencePresets.js builds
+        // createPenStructure({ width, depth }, 'north') at z = bounds.maxZ and
+        // puts the back fence at depth, so the pen occupies
+        // z[bounds.maxZ, bounds.maxZ + depth] while the scene declares
+        // z[pasture.minZ, pasture.maxZ]. On Home Field that is z[100,128]
+        // against a declared z[102,130), a two-metre offset. Excluding the
+        // declared rect would leave grass inside the front of the pen and a
+        // bald strip behind its back fence, which is the same class of defect
+        // this phase exists to remove, just smaller.
+        //
+        // Derive rather than hardcode, so a scene that moves its bounds or
+        // resizes its pasture keeps the bare ground under its own fence.
+        //
+        // This moves grass placement on Home Field, which moves the goldens;
+        // that is the intended change.
         const pasture = this.sceneDef?.pasture;
-        if (pasture) {
+        const penBounds = this.sceneDef?.bounds;
+        if (pasture && penBounds) {
+            const halfWidth = (pasture.maxX - pasture.minX) / 2;
+            const depth = pasture.maxZ - pasture.minZ;
+            const centerX = (pasture.maxX + pasture.minX) / 2;
             this.grassSystem.addExclusionZone(
-                pasture.minX,
-                pasture.maxX,
-                pasture.minZ,
-                pasture.maxZ
+                centerX - halfWidth,
+                centerX + halfWidth,
+                penBounds.maxZ,
+                penBounds.maxZ + depth
             );
+        } else if (pasture) {
+            // No bounds on the scene def: fall back to the declared rect rather
+            // than skipping the exclusion entirely.
+            this.grassSystem.addExclusionZone(pasture.minX, pasture.maxX, pasture.minZ, pasture.maxZ);
         }
 
         // Initialize the grass system
