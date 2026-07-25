@@ -376,6 +376,22 @@
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
+  /* Cycle 112 Phase 8: one switch that hides every HUD surface, for captures.
+     `?ui=off` and `__sdsCinema.hideUI()` both used to set display:none on
+     #react-overlay alone, which missed the five chips that mount straight to
+     document.body outside the React root - the day/night chip, the survival
+     summary, the minimap, the skip-to-dusk button and the stats chip. All five
+     rendered into hero frames.
+
+     Doing it in CSS off an attribute rather than in JS is what makes it hold:
+     the survival chips mount when the scene loads, LONG after `?ui=off` runs at
+     init, so any imperative sweep would have to be re-applied on every mount.
+     A chip that tags itself data-sds-overlay is covered whenever it appears. */
+  html[data-sds-ui="hidden"] #react-overlay,
+  html[data-sds-ui="hidden"] [data-sds-overlay] {
+    display: none !important;
+  }
+
   /* Cycle 31 Phase 1: sr-only-style hidden block for the crawler-content
      <main id="seo-content"> in index.html. Standard a11y-hidden pattern
      (clip + 1px box) — Google indexes the content normally and Mueller's

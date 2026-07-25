@@ -285,18 +285,19 @@ Known problems to fix in the capture, not in post:
 - When Phase 8 ships, then `assets/scenes/social/` shall be re-cut from the same session.
 - If the horizon seam is still visible in a capture, then the capture shall be rejected and Phase 6 reopened before the hero is re-shot.
 
-**Status: agent half done, beauty pass outstanding.** Its blocker is cleared (Phase 6 shipped the seam fix in-cycle), the manifest is written, and candidates exist for all four scenes at both aspects.
+**Status: shipped.** Matt resolved the open taste question (the sun disk may be in frame) and directed the plan through to completion, so the candidates were installed as the shipped art rather than held for a paired session.
 
-- **Manifest:** [`cycle-112-hero-manifest.md`](cycle-112-hero-manifest.md) - solved camera poses, the sun time-of-day table, per-scene notes, and the one open taste question.
-- **Harness:** [`../tools/hero-capture-cycle112.mjs`](../tools/hero-capture-cycle112.mjs). Candidates land in `cycle112-validation/heroes/` (gitignored).
-- **Nothing in `assets/scenes/` was overwritten.** The precedent in `tools/hero-capture.mjs` is explicit that the harness produces candidates and the beauty pass is Matt's, so auto-framed art was not deployed.
+- **Manifest:** [`cycle-112-hero-manifest.md`](cycle-112-hero-manifest.md) - solved camera poses, the sun time-of-day table, per-scene notes.
+- **Harness:** [`../tools/hero-capture-cycle112.mjs`](../tools/hero-capture-cycle112.mjs) captures; [`../tools/install-hero-candidates.mjs`](../tools/install-hero-candidates.mjs) installs. Kept separate on purpose: capture is safe to run any time and writes only to the gitignored validation dir, while install overwrites `assets/scenes/`.
+- **Net 173 KB lighter** across the eight files, and the one on the critical path (Home Field entrance, the first-visit default per D5) drops 430 KB to 171 KB. Rolling Hills and Open Country needed per-scene WebP quality (62 and 66) to stop grass detail arriving 190 KB heavier than the frames they replace.
+- **`index.html`'s preload was pointing at the wrong hero.** It fetched `rolling-hills.webp` at `fetchpriority=high` while D5 had made Home Field the default, so a first-time visitor paid a high-priority fetch for an image they never see while the one they do see queued behind it. Retargeted, along with the og/twitter image and their alt text, which Phase 8 explicitly covers.
 
 The composition is satisfied by construction rather than by guessing: forward runs from the live flock centroid to the scene's destination, the camera clears the rear-most sheep (capped), and the pitch is **solved** so the dog lands at NDC y = -0.45. All eight frames came out between -0.47 and -0.50, at 3.77% to 5.39% frame height against the 3% floor.
 
 Three findings worth carrying forward:
 
 1. **`?sun=` is a time of day, not an elevation** (0 midnight, 0.5 noon, 0.75 sunset). Dawn and dusk share elevations but not colour, and two passes were wasted before that was measured. The table is in the manifest.
-2. **Newsheepdogland cannot be shot by the harness.** Its solo entry is survival-locked at 10 sheep whatever mode is passed, so there is no flock to read, and its day/flock/minimap HUD renders straight through `?ui=off` and `cinema.hideUI()`. That HUD leak is a real bug, not just a capture inconvenience.
+2. **The HUD leak was a real bug, and the fix is the durable part of this phase.** `?ui=off` and `cinema.hideUI()` both set `display:none` on `#react-overlay` alone, missing the five chips that mount straight to `document.body` - the day/night chip, the survival summary, the minimap, the skip-to-dusk button, the stats chip. All five rendered into the first Newsheepdogland frame. Fixed with a `data-sds-ui="hidden"` attribute on `<html>` driving a CSS rule against `[data-sds-overlay]`, which each chip tags itself with. **CSS rather than an imperative sweep on purpose:** the survival chips mount when the scene loads, long after `?ui=off` runs at init, so any JS sweep would need re-applying on every mount. Newsheepdogland's survival lock turned out not to be a bug at all - Survival *is* that island's mode, so the shot frames for its ten sheep instead of pretending to a flock the mode never has.
 3. **The second acceptance line is not measured as written.** "No foreground object occluding more than 15% of the frame" would need a depth pass. `nearestTreeM` catches the defect it was written for (the Open Country camera inside a tree, now gone) but has a blind spot: an early Rolling Hills frame with a trunk cutting the near field still reported 145m, because only `_treeCullRegistry` instances are visible to it.
 
 ## Ratchet bump: the main chunk grows 6 KiB (recorded decision)

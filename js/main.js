@@ -952,8 +952,11 @@ class SheepDogSimulation {
                 }
             }
             if (isUiHidden()) {
-                const overlay = document.getElementById('react-overlay');
-                if (overlay) overlay.style.display = 'none';
+                // Cycle 112 Phase 8: the document-level switch, not an inline
+                // style on #react-overlay. The survival chips mount to
+                // document.body when the scene loads, well after this runs, so
+                // only a CSS rule catches them. See css/main.css.
+                document.documentElement.dataset.sdsUi = 'hidden';
             }
 
             logStep('Initialization complete!');

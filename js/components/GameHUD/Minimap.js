@@ -97,6 +97,7 @@ export function mountMinimap({ points, pen } = {}) {
 
     const wrap = document.createElement('div');
     wrap.id = 'sds-minimap';
+    wrap.dataset.sdsOverlay = 'hud';
     wrap.style.cssText = [
         'position:fixed', 'top:' + _topOffset(), 'right:8px', 'z-index:' + Z.chips,
         'pointer-events:none', 'user-select:none',

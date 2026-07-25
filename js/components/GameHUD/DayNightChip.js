@@ -36,6 +36,7 @@ export function mountDayNightChip() {
     if (_el) return;
     const el = document.createElement('div');
     el.id = 'sds-daynight-chip';
+    el.dataset.sdsOverlay = 'hud';
     // Cycle 65/66: top-LEFT, BELOW the SheepCounter panel (score + stamina bar)
     // which lives in HudLayout's topLeft slot, so the chip never overlays the
     // stamina bar (Matt, Cycle 66 playtest). Cycle 87 Phase 6: the clearance
@@ -226,6 +227,7 @@ export function showSurvivalSummary({ day = 1, score = 0, onRestart, sceneId = '
     if (_summaryEl) return;
     const el = document.createElement('div');
     el.id = 'sds-survival-summary';
+    el.dataset.sdsOverlay = 'hud';
     el.style.cssText = [
         'position:fixed', 'inset:0', 'z-index:' + Z.modal, 'display:flex',
         'align-items:center', 'justify-content:center',

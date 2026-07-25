@@ -42,6 +42,7 @@ export function createSkipToDusk(game) {
 
     const btn = document.createElement('button');
     btn.id = 'sds-skip-dusk';
+    btn.dataset.sdsOverlay = 'hud';
     btn.type = 'button';
     btn.textContent = isTouch ? 'SKIP TO DUSK' : 'SKIP TO DUSK  ·  F';
     btn.style.cssText = [

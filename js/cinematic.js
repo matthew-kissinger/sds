@@ -128,14 +128,17 @@ export function installCinemaApi(game) {
         get renderer() { return game.sceneManager?.getRenderer() ?? null; },
 
         // Convenience helpers.
+        // Cycle 112 Phase 8: flips the document-level switch rather than
+        // hiding #react-overlay directly. The old version left the five chips
+        // that mount to document.body (day/night, survival summary, minimap,
+        // skip-to-dusk, stats) rendering into every capture. See the
+        // [data-sds-ui="hidden"] rule in css/main.css for why this is CSS.
         hideUI() {
-            const overlay = document.getElementById('react-overlay');
-            if (overlay) overlay.style.display = 'none';
+            document.documentElement.dataset.sdsUi = 'hidden';
             cinema.hideWorldMarkers();
         },
         showUI() {
-            const overlay = document.getElementById('react-overlay');
-            if (overlay) overlay.style.display = '';
+            delete document.documentElement.dataset.sdsUi;
             cinema.showWorldMarkers();
         },
         hideWorldMarkers() {

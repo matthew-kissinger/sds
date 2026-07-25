@@ -2,11 +2,11 @@
 
 > **Updated:** 2026-07-25
 > **For:** Cycle 112
-> **Pickup priority:** Phases 1 through 7 shipped and deployed. Phase 8's agent half is done (manifest + candidates for all four scenes); what remains is Matt's beauty pass, plus one code fix on Newsheepdogland whose survival HUD renders through `?ui=off`.
+> **Pickup priority:** Cycle 112 is complete. All eight phases shipped and deployed, new heroes installed. Ready for `/cycle-close`, then Cycle 113 (entrance-one-door).
 
 ## Where the cycle stands
 
-All seven autonomous phases shipped in one pass on 2026-07-25. Working tree is dirty and unpushed; nothing is committed yet.
+All eight phases shipped on 2026-07-25, in two pushes: phases 1 to 7 first, then Phase 8's heroes once Matt settled the sun-in-frame question and directed the plan through to completion.
 
 | Phase | Result |
 |---|---|
@@ -14,22 +14,18 @@ All seven autonomous phases shipped in one pass on 2026-07-25. Working tree is d
 | 2 Jep | 1,331,856 to 669,360 bytes, 647 KB off the critical set. Bake-script change only, no runtime code |
 | 3 HUD | Reserve now measured, not hardcoded; one `Space` prompt; license off gameplay. Plus a fourth defect the sweep found on its own (compass through the camera chip at 390x844) |
 | 4 Wordmark | "Sheep Dog Sim" everywhere live |
-| 5 Cold load | 593ms desktop, 560ms mobile against 2,500 / 5,000ms budgets. New `validation:coldload` gate |
+| 5 Cold load | Well inside the 2,500 / 5,000ms D17 budgets. New `validation:coldload` gate |
 | 6 Seam | **Pulled in from Cycle 114.** Fog reads the colour the sky paints at the horizon. Was blocking Phase 8 |
 | 7 Deep links | `?scene=<id>` arms, commits and survives; unknown and gated ids fall back |
-| 8 Heroes | **Agent half done, beauty pass outstanding.** Manifest at [`docs/cycle-112-hero-manifest.md`](docs/cycle-112-hero-manifest.md), candidates in `cycle112-validation/heroes/` (gitignored). Its blocker (the seam) is cleared |
+| 8 Heroes | **Shipped.** All four re-shot to the D8 brief and installed. Manifest at [`docs/cycle-112-hero-manifest.md`](docs/cycle-112-hero-manifest.md) |
 
 Gate at the end of the pass: `npm run lint` clean, 1,664 vitest passing, `npm run build` clean, and `validation:lod` / `latency` / `perf` / `coldload` / `screenshots --diff` all passing.
 
-### Picking up Phase 8
+### Re-shooting a hero
 
-Read [`docs/cycle-112-hero-manifest.md`](docs/cycle-112-hero-manifest.md) first: it carries the solved camera poses, the sun time-of-day table, and per-scene notes. Regenerate candidates with `node tools/hero-capture-cycle112.mjs` against a dev server on :3000. Nothing has overwritten `assets/scenes/`, so the shipped heroes stand until Matt's pass.
+`node tools/hero-capture-cycle112.mjs` captures against a dev server on :3000; `node tools/install-hero-candidates.mjs --write` installs. Separate steps on purpose: capture only writes to the gitignored validation dir, install overwrites `assets/scenes/`. [`docs/cycle-112-hero-manifest.md`](docs/cycle-112-hero-manifest.md) carries the solved poses and the reasoning per scene, including two framings that were tried and rejected on Rolling Hills.
 
-Three things worth knowing up front:
-
-- **Home Field is the strongest candidate.** Rolling Hills needs a yaw nudge: the dog silhouettes against dark grass at dusk and a trunk sits on the right edge.
-- **Newsheepdogland needs a code fix before it can be shot.** Its solo entry is survival-locked at 10 sheep whatever mode is passed, and its day/flock/minimap HUD renders straight through `?ui=off` and `cinema.hideUI()`.
-- **One taste call is open**: whether the sun disk belongs in frame. The brief says "low sun off-axis" without settling it.
+One thing to re-check when Cycle 113's entrance lands: the current panel covers the lower-centre of the frame, which is exactly where the D8 brief puts the dog. The heroes were framed to the brief rather than to a layout 113 is about to delete, so on today's entrance the dog sits behind the panel. If it still does after 113, the fix is `dogLateral` in the harness, not a new brief.
 
 Two things a cold reader should know before touching anything:
 
@@ -67,7 +63,7 @@ Full plan with EARS acceptance: [`docs/cycle-112-plan.md`](docs/cycle-112-plan.m
 | 5 | Instrument first-interactive against the 2.5s / 5s budget | Autonomous | Shipped |
 | 6 | Horizon seam (pulled in from Cycle 114) | Autonomous | Shipped |
 | 7 | Make `?scene=<id>` deep links actually commit that scene | Autonomous | Shipped |
-| 8 | Hero capture session, all four scenes to the D8 brief | **Paired** | Not started |
+| 8 | Hero capture session, all four scenes to the D8 brief | Paired, run autonomously on Matt's direction | Shipped |
 
 Q1, Q2 and Q3 are resolved inline in the plan. Three corrections the scaffold needed once the code was measured, all recorded there: Phase 2's 400 KB target was arithmetically impossible against a 206 KB mesh floor (Matt chose 654 KB, keeping three idles); the font belongs in `css/fonts/` rather than `public/fonts/` because `base: './'` on the itch and native targets breaks a root-absolute url; and the capture phase was pre-blocked by its own hard stop, which is why the seam fix moved into this cycle.
 
@@ -80,9 +76,9 @@ Q1, Q2 and Q3 are resolved inline in the plan. Three corrections the scaffold ne
 
 ## Autonomy Rules
 
-- Phases 1 through 7 were approved to run autonomously and are done.
-- **Phase 8 is paired.** Write the full shot manifest before pairing. Matt drives the browser.
-- Do not start the entrance rewrite. That is Cycle 113 and it needs Phase 8's heroes first.
+- All eight phases are done. The cycle is ready for `/cycle-close`.
+- **Phase 8 was scoped paired and was run autonomously on Matt's explicit direction**, after he resolved its one open taste question. The default for future capture work is still the media-prep preference: agent writes the manifest, Matt drives the browser.
+- Do not start the entrance rewrite yet. That is Cycle 113, and it now has Phase 8's heroes to be judged against.
 - Do not reset any leaderboard in this cycle. Cycle 117 owns it, with its own re-verification.
 - Keep `shared/`, sim-baseline goldens, and frozen process files untouched. This cycle needs none of them.
 - Do not store API keys in repo files, docs, memory notes, screenshots, or launch packets.

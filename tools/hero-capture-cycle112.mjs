@@ -94,9 +94,15 @@ const SHOTS = [
     id: 'rolling-hills',
     mode: 'classic',
     destination: { x: 110, z: 60 },      // the corral
-    dogAhead: 11, dogLateral: -4, camHeight: 3.2, targetLift: 10, clearFlockBy: 20, ridgeClearance: 6, maxPullback: 70,
-    sun: 0.705,
-    note: 'Camera runs up the diagonal so the rolling ground reads across frame.',
+    // Dog on the RIGHT here, unlike the others: at -4 it landed directly under
+    // a trunk, dark on dark, with the trunk running through it.
+    dogAhead: 11, dogLateral: 5, camHeight: 3.2, targetLift: 10, clearFlockBy: 20, ridgeClearance: 6, maxPullback: 70,
+    sun: 0.66,
+    note: 'Camera runs up the diagonal so the rolling ground reads across '
+        + 'frame. Brighter than the others (t=0.66, 29 deg) on purpose: at the '
+        + 'shared 0.70 the dog went to a silhouette against dark dusk grass. A '
+        + '-12 deg yaw nudge was tried to move an edge trunk and made it worse, '
+        + 'putting a trunk mid-frame and the dog under a canopy.',
   },
   {
     id: 'open-country',
@@ -110,13 +116,15 @@ const SHOTS = [
   },
   {
     id: 'newsheepdogland',
-    // NOT survival: it starts at 10 sheep, so there is no flock to read
-    // mid-frame, and its day/flock/minimap HUD renders straight through
-    // ?ui=off and cinema.hideUI(). 'hard' is the 300-sheep rung on this
-    // island's own ladder.
-    mode: 'timed',
+    // Survival, and framed for it. The solo entry is survival-locked on this
+    // island whatever mode is passed, and that is correct rather than a bug:
+    // Survival IS Newsheepdogland's mode, and it starts with a small flock you
+    // grow each day you survive. So the shot pulls in tight enough for ten
+    // sheep to read instead of pretending to a 200-head flock the mode never
+    // has. The HUD that used to render through ?ui=off is fixed in css/main.css.
+    mode: 'survival',
     destination: { x: 610, z: -1000 },   // the homestead gate, mountain beyond
-    dogAhead: 11, dogLateral: -4, camHeight: 3.2, targetLift: 12, clearFlockBy: 22, ridgeClearance: 5, maxPullback: 80,
+    dogAhead: 10, dogLateral: -3.5, camHeight: 2.8, targetLift: 12, clearFlockBy: 14, ridgeClearance: 5, maxPullback: 46,
     sun: 0.70,
     note: 'Evening, not night - the wolves are a night mechanic and the brief '
         + 'is calm. The northern mountain sits beyond the gate.',
@@ -182,7 +190,15 @@ async function captureShot(browser, shot, aspect) {
       const dx = shot.destination.x - flock.x;
       const dz = shot.destination.z - flock.z;
       const len = Math.hypot(dx, dz) || 1;
-      const ux = dx / len, uz = dz / len;
+      // Optional yaw nudge off the flock-to-destination line. Rolling Hills
+      // needed it: on the pure line a trunk sat on the right edge and the dog
+      // silhouetted against dark grass. Kept small so the destination stays in
+      // frame - this is a nudge, not a re-aim.
+      const yaw = ((shot.yawOffsetDeg ?? 0) * Math.PI) / 180;
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      const ux0 = dx / len, uz0 = dz / len;
+      const ux = ux0 * cy - uz0 * sy;
+      const uz = ux0 * sy + uz0 * cy;
       const rx = -uz, rz = ux;                       // camera-right
 
       // Camera sits behind the flock's REAR EDGE, not behind its centroid. A

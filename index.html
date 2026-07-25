@@ -32,9 +32,13 @@
     <meta name="msapplication-TileColor" content="#00BFFF">
     <meta name="application-name" content="Sheep Dog Sim">
 
-    <!-- Cycle 82: high-priority preload of the entrance's first backdrop.
-         The entrance lands on Rolling Hills, so the first frame is instant. -->
-    <link rel="preload" as="image" href="/assets/scenes/entrance/rolling-hills.webp" fetchpriority="high">
+    <!-- Cycle 82: high-priority preload of the entrance's first backdrop, so
+         the first frame is instant.
+         Cycle 112 Phase 8: retargeted to Home Field. D5 made it the first-visit
+         default (DEFAULT_WORLD_INDEX in js/components/entrance/worlds.ts), so
+         this had been spending a fetchpriority=high slot on an image a new
+         visitor never sees, while the one they do see waited behind it. -->
+    <link rel="preload" as="image" href="/assets/scenes/entrance/field.webp" fetchpriority="high">
 
     <!-- Open Graph Tags -->
     <meta property="og:type" content="website">
@@ -43,11 +47,11 @@
     <meta property="og:description" content="Free browser herding with three public scenes, solo modes, 2-4 player rooms, mobile controls, gamepad support, and 5,000-sheep chaos.">
     <meta property="og:url" content="https://sheepdogsim.com/">
     <meta property="og:logo" content="https://sheepdogsim.com/assets/images/favicon.png">
-    <meta property="og:image" content="https://sheepdogsim.com/assets/scenes/social/rolling-hills.webp">
+    <meta property="og:image" content="https://sheepdogsim.com/assets/scenes/social/field.webp">
     <meta property="og:image:type" content="image/webp">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Sheep Dog Sim Rolling Hills capture: the sheepdog herding a flock across sunset island terrain.">
+    <meta property="og:image:alt" content="Sheep Dog Sim Home Field capture: the sheepdog holding a flock in a fenced pasture under a low sun.">
     <meta property="og:locale" content="en_US">
     <meta property="og:locale:alternate" content="es_ES">
     <meta property="og:locale:alternate" content="pt_BR">
@@ -58,8 +62,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Sheep Dog Sim - Herd sheep in your browser">
     <meta name="twitter:description" content="Free browser herding with three public scenes, solo modes, 2-4 player rooms, mobile controls, gamepad support, and 5,000-sheep chaos.">
-    <meta name="twitter:image" content="https://sheepdogsim.com/assets/scenes/social/rolling-hills.webp">
-    <meta name="twitter:image:alt" content="Sheep Dog Sim Rolling Hills capture: the sheepdog herding a flock across sunset island terrain.">
+    <meta name="twitter:image" content="https://sheepdogsim.com/assets/scenes/social/field.webp">
+    <meta name="twitter:image:alt" content="Sheep Dog Sim Home Field capture: the sheepdog holding a flock in a fenced pasture under a low sun.">
 
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -74,7 +78,7 @@
         "operatingSystem": "Any",
         "applicationCategory": "Game",
         "url": "https://sheepdogsim.com/",
-        "image": "https://sheepdogsim.com/assets/scenes/social/rolling-hills.webp",
+        "image": "https://sheepdogsim.com/assets/scenes/social/field.webp",
         "screenshot": [
             "https://sheepdogsim.com/assets/scenes/entrance/rolling-hills.webp",
             "https://sheepdogsim.com/assets/scenes/entrance/open-country.webp",

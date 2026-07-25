@@ -31,6 +31,7 @@ export function mountStatsChip(sample) {
 
     const el = document.createElement('div');
     el.id = 'sds-stats-chip';
+    el.dataset.sdsOverlay = 'hud';
     el.style.cssText = [
         'position:fixed', 'left:8px', 'bottom:8px', 'z-index:2147483647',
         'font:600 11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace',
