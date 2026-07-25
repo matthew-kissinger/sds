@@ -14,7 +14,7 @@ All eight phases shipped on 2026-07-25, in two pushes: phases 1 to 7 first, then
 | 2 Jep | 1,331,856 to 669,360 bytes, 647 KB off the critical set. Bake-script change only, no runtime code |
 | 3 HUD | Reserve now measured, not hardcoded; one `Space` prompt; license off gameplay. Plus a fourth defect the sweep found on its own (compass through the camera chip at 390x844) |
 | 4 Wordmark | "Sheep Dog Sim" everywhere live |
-| 5 Cold load | Well inside the 2,500 / 5,000ms D17 budgets. New `validation:coldload` gate |
+| 5 Cold load | **488ms on sheepdogsim.com** against a 2,500ms budget. New `validation:coldload` gate. Quote the production number, not the dev-server one |
 | 6 Seam | **Pulled in from Cycle 114.** Fog reads the colour the sky paints at the horizon. Was blocking Phase 8 |
 | 7 Deep links | `?scene=<id>` arms, commits and survives; unknown and gated ids fall back |
 | 8 Heroes | **Shipped.** All four re-shot to the D8 brief and installed. Manifest at [`docs/cycle-112-hero-manifest.md`](docs/cycle-112-hero-manifest.md) |

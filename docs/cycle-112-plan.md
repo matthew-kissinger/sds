@@ -164,14 +164,19 @@ Per D17 the working budget is **2.5s desktop, 5s phone, cold**. There is no inst
 
 **Shipped.** `js/boot/loadTimeline.js` records `firstInteractive` and `roundPlayable` on a first-write-wins basis (a second round in the same session would otherwise overwrite a cold measurement with a warm one) and publishes them on `window.__sdsBootTimeline`. `tools/validation/cold-load.mjs` takes a fresh browser context per run so the cache, service worker and storage all start genuinely empty, and gates the median of `--runs`.
 
-Measured against the D17 budget, dev server, 3 runs:
+Measured against the D17 budget, 3 runs each:
 
-| Profile | firstInteractive | Budget | roundPlayable |
-|---|---:|---:|---:|
-| desktop | 593ms | 2,500ms | 2,555ms |
-| mobile | 560ms | 5,000ms | 3,197ms |
+| Where | firstInteractive | Budget |
+|---|---:|---:|
+| **sheepdogsim.com, desktop** | **488ms** | 2,500ms |
+| dev server, desktop | 593ms to 1,255ms | 2,500ms |
+| dev server, mobile profile | 560ms | 5,000ms |
 
-`roundPlayable` is reported but not gated by default (`--enforceRound` opts in): it tracks scene size and hardware far more than the payload this cycle changed. A dev-server number is also not a production number, so treat it as a regression signal rather than the figure to quote.
+**Quote the production number.** The dev-server figure is unminified, unbundled and re-transforms on the first request after any source edit; it drifted from 593ms to 1,255ms across this cycle purely from that and from machine load during the capture work, with no payload change to explain it. It is a regression signal, not a figure.
+
+The production run also confirms the preload fix: exactly one hero fetch (`field.webp`), where before two copies shipped and the preloaded one was never requested.
+
+`roundPlayable` is reported but not gated by default (`--enforceRound` opts in): it tracks scene size and hardware far more than the payload this cycle changed.
 
 ## Phase 6 - Horizon seam (~4hr) - PULLED FORWARD FROM CYCLE 114
 
