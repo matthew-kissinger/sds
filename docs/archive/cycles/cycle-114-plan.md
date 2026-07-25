@@ -213,10 +213,22 @@ Scope this honestly: the colour is already correct at boot, so this is not a vis
 
 **Acceptance (EARS):**
 
-- When the seam detector runs against Cycle 112's before images, then it shall score them worse than the after images from the same scene and camera.
+- ~~When the seam detector runs against Cycle 112's before images, then it shall score them worse than the after images from the same scene and camera.~~ **NOT MET. Recorded as failed rather than tuned.** See below.
 - When the seam detector runs on the current build, then it shall exit non-zero if the step across the horizon line exceeds the stated threshold.
 - When Phase 7 ships, then `npm run validation:all` shall include the seam gate.
-- If the detector cannot separate Cycle 112's before and after images, then the phase shall report failure rather than lower the threshold until it passes.
+- If the detector cannot separate Cycle 112's before and after images, then the phase shall report failure rather than lower the threshold until it passes. **This is the branch that fired.**
+
+### Phase 7 outcome: detector shipped, gate unestablished
+
+The detector is rewritten and is strictly better than what it replaces. Band placement is a pure, testable concern (`bandsFromCameraLines` derives the sky and fully-fogged-ground strips from the horizon, terrain-edge and `fog.far` camera lines), the score is a median **per-channel** step across those bands rather than absolute brightness anywhere in frame, rows between the horizon and the terrain edge are never sampled, and anything unmeasurable is a **fail** rather than a pass, so the gate cannot go green by measuring nothing. 20 specs pin it.
+
+**Its own validation gate does not pass, and no threshold was moved to make it.** Three of the four pairs in `cycle112-validation/horizon-seam/` have **no horizon in frame**: they were shot on the Classic top-down isometric camera, where Home Field is ground edge to edge and the two islands run water off the top of the frame. There is no sky-meets-anything line to stand a detector on.
+
+Those three pairs also do not encode a fog difference. Whole-frame mean `|before - after|` measures 0.67, 1.47 and 1.10 code values with no structure at any row, and Cycle 112's own `horizon-seam.json` records their A/B as under half an 8-bit code value. That is sim animation between two shots.
+
+**This does not touch Cycle 112's proof of the fog fix**, which was a separately captured pair on Home Field with only `fog.color` differing, plus a CPU model agreeing with an independent measurement to 0.004. It does mean this directory is not a before/after corpus a detector can be established against, and Cycle 112 said as much at the time when it shipped the tool as reporting-only.
+
+**What establishing it actually needs:** a horizon-bearing pair from a Follow or Free camera, which is a capture session rather than a threshold. Carried to `BACKLOG.md`.
 
 ## Phase 8 - Gate, re-baseline, docs, close (~2hr)
 
@@ -307,7 +319,7 @@ Durable stops apply, see [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md). Cycle-speci
 - [ ] When the farmhouse finishes loading, then its meshes shall reference exactly three distinct materials, not one.
 - [ ] When the dog stands still on a bald exclusion patch, then the terrain shall darken beneath it by the same falloff the grass uses.
 - [ ] When Phase 6 ships, then the WebGPU terrain material shall not composite a fog colour that was frozen at material creation.
-- [ ] When the seam detector runs against Cycle 112's before images, then it shall score them worse than the after images from the same scene and camera.
+- [x] When the seam detector runs against Cycle 112 before images and cannot separate them, then the phase shall report failure rather than lower the threshold. FIRED, recorded in Phase 7.
 - [ ] When the goldens are re-baselined, then the delta shall be shown to be confined to the ground and the props this cycle touched.
 - [ ] When the cycle closes, then no new geometry shall have shipped, per D11.
 

@@ -10,6 +10,49 @@ The web-only `v2.6.2` beta hotfix release line is current: the `v2.6.0` beta pos
 
 ## Recently Completed
 
+### Cycle 114 - `grounding-pass` (closed 2026-07-25)
+
+- **Shipped: 7/8 phases green, 1 recorded as failed-honestly.** Props stop sitting on the world and start sitting in it. All shader and placement work, no new geometry, per D11.
+- Plan: [docs/archive/cycles/cycle-114-plan.md](archive/cycles/cycle-114-plan.md). Roadmap context: [docs/front-door-roadmap.md](front-door-roadmap.md).
+- Commits on `main`: `2f1725e6` (plan), `156b134f` (plan corrections), `648abf47` (P1-P6), `5f0310f1` (P7).
+
+**What landed**
+
+- **P1 grass stops at a soft edge.** `isExcluded` was a hard boolean, so the pen and the farmhouse yard each stood inside a knife-edge rectangle. It delegates now to a keep probability over the 2D box SDF, with a matching height taper so the thinning reads as worn rather than as missing instances. The pen's rect was also hardcoded at `(-35, 35, 98, 138)` while the scene declared a 60x28 pasture, so a 70x40 bald patch surrounded a smaller fence; it comes from the scene now.
+- **P2 grass reads the ground it stands on.** Both grass paths computed `sin(x*0.2)*cos(z*0.15)`, a regular plaid, over a terrain whose own variation has been rotated hash value-noise since Cycle 91. Two fields that disagree is why grass read as a carpet laid over the surface rather than as the surface. New [`js/world/groundShading.js`](../js/world/groundShading.js) is the single authority for all four paths that draw ground, and it **generates** the GLSL from its constants rather than mirroring it, so the numbers cannot drift. The stale `js/shaders/grass/*.glsl` mirrors are deleted: they were fetched every scene load and then discarded, because the inline shaders always won.
+- **P3 fence posts stop being a picket line.** Seeded per-post yaw, lean and height across all three placement paths. The lean is the term that shows, since a post is near enough rotationally symmetric. Caps are derived rather than chosen: `LEAN_MAX` sits at a third of the angle where a post walks off its top rail.
+- **P4 the farmhouse gets a roof, walls and trim.** The review called it one flat material. The GLB is actually 55 role-named meshes sharing one palette atlas, and roof, gables, porch roof and body walls all sample the same swatch, so it reads as one colour from the eaves down. Three materials cloned from the loaded one by a named role table, verified against every mesh in the shipped file.
+- **P5 the dog has weight.** Contact darkening on the same oriented rounded-rect footprint the grass interaction already evaluates, on grass and terrain sharing one radius so it does not change shape at the grass line. Dog only.
+- **P6 the WebGPU terrain stops carrying its own fog.** It composited a second fog over `scene.fog` from a colour frozen at material creation, which is what `scene-and-render.md` forbids. Deleted rather than replaced: `MeshLambertNodeMaterial` takes Three's own fog node, which is what the WebGL twin has always done. The far band gets marginally less hazy and the bound is analytic, peaking at `k/4`, which is 0.031 to 0.037 by scene; the interior is unchanged exactly, since both ramps read zero inside it.
+- **P7 the horizon detector knows where the horizon is** (see below).
+
+**Two defects found while gating, both of which would have shipped invisibly**
+
+- The **WebGPU grass had no contact term at all**. `buildGroundContactNode` was imported and never called, so P5 was WebGL-only on the path production actually boots. Lint's unused-import error was the only thread leading to it.
+- **`_syncGroundContact` was never written.** Both terrain materials carried the shader term *and* a comment saying "picked up per-frame by `TerrainBuilder#_syncGroundContact`", and no such method existed, so `uContactStrength` never left zero and the terrain half was dead on both paths. A shader term whose driving uniform is never written is indistinguishable from one that works. [`tests/ground-contact-sync.spec.js`](../tests/ground-contact-sync.spec.js) pins both.
+
+**Also found:** Cycle 12 Phase 4's shader-precision guarantee had been vacuous for years. It asserted against the `js/shaders/grass/*.glsl` mirrors nobody rendered, while the inline shaders that actually compile declared no precision at all. Restored on the shaders that compile.
+
+**P7 recorded as failed-honestly, and nothing was tuned to hide it**
+
+The detector is rewritten and is strictly better than what it replaces: band placement is a pure testable concern derived from the projected camera lines, the score is a median per-channel step across those bands rather than absolute brightness anywhere, and anything unmeasurable is a fail rather than a pass. 20 specs pin it.
+
+Its own validation gate does not pass. Three of the four pairs in `cycle112-validation/horizon-seam/` have **no horizon in frame** (Classic top-down isometric: Home Field is ground edge to edge, the islands run water off the top), and they do not encode a fog difference either, measuring 0.67 to 1.47 code values whole-frame with no structure at any row. That is sim animation between two shots. This does not touch Cycle 112's separate proof of the fog fix; it does mean the directory is not a corpus a detector can be established against.
+
+**Carryover**
+
+1. **Establishing the seam gate** needs a horizon-bearing before/after pair from a Follow or Free camera. That is a capture session, not a threshold.
+2. **The per-material fog pattern is systemic.** P6 fixed one of seven. `js/atmosphere/skyFogSamplePacket.js` feeds a boot-frozen `fogColor` to grass blade, meadow quad, water, sheep wool, tree branch, tree leaf and kiln impostor, each compositing its own distance fog independently of `scene.fog`. Same low-urgency shape as the terrain was (correct at boot, drifts only under a moving sun, so Newsheepdogland alone), but seven of them is a pattern rather than an exception. A cycle of its own.
+3. **The bundle ratchet was bumped**, `mainKB` 644 to 654 and the `main` budget 645 to 655, authorized mid-cycle in the plan's Frozen files section with the measurement behind it. Main grew 10 KiB raw (1.55%) and 3.8 kB gzipped, from the generated GLSL that makes cross-path drift impossible. Revert path is two numbers.
+4. **No browser probe was run.** Every visual acceptance line is verified by unit test, by analytic bound, or by reading the shader. Nobody has looked at Home Field. The grass falloff, the post lean, the three farmhouse materials and the dog's contact shadow are all unviewed.
+5. **`shared/TreePlacement.js` holds a sixth pen-rect variant** (`z > 100 && z < 135 && |x| < 35`) with a comment claiming it is "the exact rect of the single-player pasture", which it is not. Frozen, so left alone.
+6. **Cycle 115's roadmap entry describes work that largely already shipped.** See the note recorded there.
+
+**Notes**
+
+- Golden re-baseline was **not** run: `validation:all` needs a GPU browser and the phases that move the goldens (1, 2, 5) are ground-colour changes whose delta is intended. Deferred with the browser probe.
+- No version bump. D20 rolls continuously.
+
 ### Cycle 113 - `entrance-one-door` (closed 2026-07-25)
 
 - **Shipped: 7/7 phases.** The front door now asks one question. `Entrance.tsx` went from 449 lines and 47 inline style objects to 253 and none.

@@ -1,65 +1,47 @@
-# Next Session - Cycle 114, grounding-pass
+# Next Session - Cycle 115, fence-and-homestead
 
 > **Updated:** 2026-07-25
-> **For:** Cycle 114
-> **Pickup priority:** The Cycle 114 plan is a scaffolded stub. Fill in Goal + Phases from the roadmap's 114 section, then run `/cycle-start`.
+> **For:** Cycle 115
+> **Pickup priority:** The Cycle 115 plan is authored against a reality check, not against the roadmap. Read "What the reality check changed" before touching anything, because most of the roadmap's asks already ship.
 
 ## Current State
 
-Cycle 113 (`entrance-one-door`) closed 2026-07-25. All seven phases shipped and deployed. Plan archived at [`docs/archive/cycles/cycle-113-plan.md`](docs/archive/cycles/cycle-113-plan.md); the close entry with full detail is at the top of [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Cycle 114 (`grounding-pass`) closed 2026-07-25. Seven phases green, one recorded as failed-honestly. Plan archived at [`docs/archive/cycles/cycle-114-plan.md`](docs/archive/cycles/cycle-114-plan.md); the close entry with full detail is at the top of [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
-The front door is fixed. A first-time visitor now meets a hero with a readable dog in it, the world's name on the photograph, one summary line and one Play. `Entrance.tsx` went from 449 lines and 47 inline style objects to 253 and none; the tutorial moved inside the first round, which is what removed the second primary button; the loading screen became the same room rather than a second one. Production build reads first-interactive at 214ms.
+Grass now thins toward the pen and the farmhouse yard instead of stopping at a knife edge, and it reads the same low-frequency ground field the terrain has used since Cycle 91 rather than its own plaid. Fence posts lean and vary. The farmhouse has three materials instead of one. The dog darkens the ground under it, on grass and on bare earth alike. The WebGPU terrain stopped compositing a second fog over `scene.fog`.
 
-That was the last of the three cycles about the door itself. 114 turns to what is behind it.
+**Nobody has looked at any of it.** Every visual acceptance line in 114 was verified by unit test, analytic bound, or reading the shader. See carryover 1.
 
-## Cycle 114 shape (from the roadmap)
+## The most important thing to read first
 
-Full context: [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md), "Cycle 114". All shader and placement work, no new models per D11. It buys most of the perceived asset quality before any modelling starts in 115.
+[`docs/cycle-115-plan.md`](docs/cycle-115-plan.md)'s "What the reality check changed" table. A four-agent pass over the shipping build found that **three of the roadmap's five Cycle 115 bullets already ship**, and one of them (the farmhouse checkpoint) already fired and already resolved to external in Cycle 105. Building against the roadmap text would rebuild working assets and re-author a model Matt already approved.
 
-- Grass falloff at exclusion edges instead of a hard rectangular cut. The Home Field pen and the farmhouse yard both sit on bald patches today.
-- Per-instance rotation and height jitter on fence posts.
-- Split the farmhouse's single flat material into roof, wall and trim.
-- Lower grass blade contrast, per-clump hue variation, and a low-frequency ground albedo underneath, so grass reads as a surface rather than as static.
-- Ground contact darkening under the dog so it separates from the field at any camera distance.
-- **Re-inspect the horizon skirt before spending a phase on it.** The colour half shipped in Cycle 112 Phase 6 (fog reads the painted sky horizon). What remains is the geometric rim at the terrain plane's 2000m edge, which stopped being visible once the colours converged. It may already be done.
+What is actually missing is narrower: the fence kit has **no authoring source anywhere** (it exists only as an opaque binary GLB, so weathering, sag and chamfer cannot be touched without rebuilding it), Home Field's gate renders **frozen in its baked-open pose** because the leaf rig is trapped in a Newsheepdogland branch, and there is **no point or spot light anywhere in the repo**, so a dusk lamp cannot be a real light.
 
-## The pattern Cycle 113 set
+## Carryover from Cycle 114
 
-Anything this cycle touches in the UI migrates onto [`css/entrance.css`](css/entrance.css)'s shape, not onto more inline style objects. The rules are written down in [`DECISIONS.md`](DECISIONS.md) under "The entrance stylesheet is the D16 reference pattern", and [`tests/ui/entranceStylesheet.spec.ts`](tests/ui/entranceStylesheet.spec.ts) is the template for enforcing them on a new surface. D16 still applies: new code only, others migrate when touched for their own reasons.
+1. **No browser probe was run, and it is the top of the list.** The grass falloff, the post lean, the three farmhouse materials and the dog's contact shadow are all unviewed. The golden re-baseline was deferred with it, since Phases 1, 2 and 5 all move ground colour. Run `npm run validation:screenshots -- --diff` and read the numbers before re-baselining, the way Cycle 112 did.
+2. **Establishing the horizon-seam gate** needs a horizon-bearing before/after pair from a Follow or Free camera. `tools/validation/horizon-seam.mjs` is rewritten and good, but its own validation could not be established: three of the four Cycle 112 fixture pairs have no horizon in frame and do not encode a fog difference. That is a capture session, not a threshold.
+3. **The per-material fog pattern is systemic.** Cycle 114 Phase 6 fixed one of seven. `js/atmosphere/skyFogSamplePacket.js` feeds a boot-frozen `fogColor` to grass blade, meadow quad, water, sheep wool, tree branch, tree leaf and kiln impostor, each compositing its own distance fog independently of `scene.fog`. Correct at boot, drifts only under a moving sun, so Newsheepdogland alone. Worth a cycle of its own. **Cycle 118 will fix the water one as part of the rewrite.**
+4. **The bundle ratchet was bumped** (`mainKB` 644 to 654, `main` budget 645 to 655) under an authorization recorded in the Cycle 114 plan's Frozen files section. Main grew 10 KiB raw, 3.8 kB gzipped, from the generated GLSL that makes cross-path drift impossible. If that trade is wrong, revert the two numbers and the cycle fails its bundle gate honestly.
+5. **`shared/TreePlacement.js` holds a sixth pen-rect variant** (`z > 100 && z < 135 && |x| < 35`), with a comment claiming it is "the exact rect of the single-player pasture", which it is not. Frozen, so Cycle 114 left it alone.
+6. **The hero review is Matt's, and still open** (inherited from 112 and 113). Every measurable part of the D8 brief is met and gated by [`tools/validation/entrance-hero-clearance.mjs`](tools/validation/entrance-hero-clearance.mjs); the taste call has not been made.
+7. **The name field has no new home.** D6 took it off the entrance and said it belongs at first score submission. That surface is unbuilt, so a player who never opens Settings submits as "Shepherd".
+8. **Loading-to-live camera framing.** Needs a camera-pose handshake from the engine. A cycle of its own, not a phase.
 
-## Carryover from Cycle 113
+## What is waiting after 115
 
-1. **The hero review is Matt's, and still open** (inherited from 112). Every measurable part of the D8 brief is met and now gated by [`tools/validation/entrance-hero-clearance.mjs`](tools/validation/entrance-hero-clearance.mjs), but the taste call has not been made. Re-shoot with `node tools/hero-capture-cycle112.mjs` then `node tools/install-hero-candidates.mjs --write`; poses and the two framings already tried and rejected are in [`docs/cycle-112-hero-manifest.md`](docs/cycle-112-hero-manifest.md). **If a hero is re-shot, re-derive its `objectPosition` in [`js/components/entrance/worlds.ts`](js/components/entrance/worlds.ts)** - `tests/ui/heroCrop.spec.ts` will fail until you do, which is the point.
-2. **The name field has no new home.** D6 took it off the entrance and said it belongs at first score submission. That surface is unbuilt, so a player who never opens Settings submits as "Shepherd".
-3. **Loading-to-live camera framing.** Deliberately out of scope in 113 Phase 5. It needs a camera-pose handshake from the engine and is a cycle of its own, not a phase.
-4. **A real horizon-seam gate.** `tools/validation/horizon-seam.mjs` ships as an A/B reporting tool that always exits 0, because its band detector scored Rolling Hills *worse* after the fix by locking onto unrelated terrain. A real gate needs a detector that knows where the horizon line is.
-5. **The golden gate ran unattended for 8 cycles while failing.** It lives in `validation:all`, which is not in CI. Either run `validation:all` at every cycle close or move the golden diff into CI. Untouched by 113, which changed no render path.
-6. **[`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) carries 19 em-dashes** that every scaffolded plan inherits, against [`.claude/rules/prose-and-voice.md`](.claude/rules/prose-and-voice.md). Stripped from the 114 scaffold by hand; the template itself was left alone rather than edited without a phase authorizing it.
-7. **~~Unarchived cycle plans.~~ Resolved.** Seven closed plans were sitting in `docs/`; all are archived now, and the five that never got `BACKLOG` entries (106 to 110) are backfilled from their own close reports. Worth knowing why they looked unrun: they had no ticked acceptance boxes, no commits naming them and no backlog entry, yet every deliverable exists and `CHANGELOG.md` records the program shipping as `v2.4.0`. Closed in substance, never in ceremony. `docs/` now holds only the active plan, which is also what the close hook expects.
-
-## A note for the close ritual
-
-This file cites other cycles by path in the carryover section above, and that used to break the close. `/cycle-close`'s reconciliation hook resolved the active cycle by taking the first `docs/cycle-N-plan.md` string anywhere in this document, so those citations made it reconcile Cycle 110 rather than the active one, and report an already-closed cycle's acceptance items as live. It now reads the required `**For:**` header instead, per [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md), with the Reference Table row as a fallback. Pinned by [`tests/cycle-close-reconcile.spec.ts`](tests/cycle-close-reconcile.spec.ts).
-
-Keep that header accurate. It is the declaration everything else follows, and citing other plans by path in the body is now safe.
-
-## Known repo hygiene issue
-
-Several Cycle 112 commits flipped files from LF to CRLF as a side effect of the editing method, not of any intended change. `af9dc8a2` carries ~2,500 lines of pure line-ending flip and `03dfd9dc` ~1,940, across 16 files. Content in those commits is correct; only the terminators moved. Cycle 113 caught two further flips before they landed (`sceneComponents.tsx`, `.gitignore`) by diffing `--numstat` against `--numstat --ignore-cr-at-eol` on every staged set, which is worth keeping as a habit. The repo has no `.gitattributes` and already carries mixed endings across hundreds of files, so this is drift on top of existing drift. Worth a deliberate `.gitattributes` pass if it starts causing diff noise; not worth rewriting pushed history for.
-
-## Review Entry Points
-
-1. [`docs/cycle-114-plan.md`](docs/cycle-114-plan.md) - the stub to fill in.
-2. [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md) - where this cycle sits in the seven-cycle program.
-3. [`DECISIONS.md`](DECISIONS.md) - the 21-decision register, "Front door alignment", plus the new D16 reference-pattern entry. Constraints, not suggestions; cite by number.
-4. [`docs/archive/cycles/cycle-113-plan.md`](docs/archive/cycles/cycle-113-plan.md) - what just shipped and why.
+- **Cycle 116 `gate-legibility`** is reconned and is **shared-free**: it can be built entirely as a client-side cue layer. It depends on Cycle 115 Phase 3 (the gate leaf controller). Note there is no `PointLight` or `SpotLight` in the repo and the node materials are self-lit from atmosphere uniforms, so the "lantern" and "warm rim light" must be shader or emissive effects, not lights. `FencePresets.addThresholdEffect` already exists and is dead code.
+- **Cycle 117 `island-pasture`** is reconned and has **two hard stops**, both recorded in its task notes. D12's factual premise about the leaderboard looks contradicted by the repo's own record, and there is no sim mechanism that keeps sheep inside a free-standing pasture rect on an island. Read both before planning it.
+- **Cycle 118 `water-rewrite`** is reconned and is independent of 113 to 117.
 
 ## Autonomy Rules
 
-- Cycle 114 is not authored yet. Do not start writing shader or placement code before the plan has Goal + Phases and Matt has confirmed direction.
-- D11 is explicit: **no new geometry this cycle.** The fence kit and the farmhouse kit-bash are Cycle 115. If a grounding fix seems to need a new model, that is the signal to stop and surface it.
-- Do not reset any leaderboard. Cycle 117 owns it, with its own re-verification step.
-- Keep `shared/`, sim-baseline goldens, and frozen process files untouched unless the plan explicitly authorizes it.
+- Do not re-author the farmhouse. The D10 checkpoint already fired and resolved to external in Cycle 105.
+- Do not change the fence silhouette. It would move every placement and invalidate the heroes.
+- Do not add the repo's first real light without measuring it first.
+- Do not reset any leaderboard. Cycle 117 owns it, and its premise needs re-verifying before anything is deleted.
+- Keep `shared/`, sim-baseline goldens, and frozen process files untouched unless the plan explicitly authorizes it, with a migration story.
 - Do not store API keys in repo files, docs, memory notes, screenshots, or launch packets.
 - Do not publish paid, irreversible, or public marketplace submissions without explicit approval.
 - Do not bump the version. D20 says roll continuously.
@@ -68,11 +50,12 @@ Several Cycle 112 commits flipped files from LF to CRLF as a side effect of the 
 
 | Topic | Source |
 |---|---|
-| Active cycle plan | [`docs/cycle-114-plan.md`](docs/cycle-114-plan.md) |
+| Active cycle plan | [`docs/cycle-115-plan.md`](docs/cycle-115-plan.md) |
 | Portable agent rules | [`AGENTS.md`](AGENTS.md) |
 | The seven-cycle program | [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md) |
 | Locked decisions | [`DECISIONS.md`](DECISIONS.md) |
 | UI pattern for new surfaces | [`css/entrance.css`](css/entrance.css) + [`tests/ui/entranceStylesheet.spec.ts`](tests/ui/entranceStylesheet.spec.ts) |
+| Ground shading authority | [`js/world/groundShading.js`](js/world/groundShading.js) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
 | Pickup contract | [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) |
@@ -80,4 +63,4 @@ Several Cycle 112 commits flipped files from LF to CRLF as a side effect of the 
 
 ## Stop Conditions
 
-Stop and surface before continuing if the grounding pass would touch `shared/` or the wire protocol, if it would need a new model (that is Cycle 115, per D11), if validation discovers a gameplay regression, if a deploy target is red, or if any frozen-file edit is needed outside the active plan's authorization.
+Stop and surface before continuing if the work would touch `shared/` or the wire protocol without an authorization and a migration story, if it would re-author the farmhouse or change the fence silhouette, if adding a real light regresses the mid tier, if a deploy target is red, or if any frozen-file edit is needed outside the active plan's authorization.
