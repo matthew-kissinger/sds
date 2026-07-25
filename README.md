@@ -134,14 +134,15 @@ Full details: [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.m
 - Itch target: deferred; `npm run build:itchio` remains available for future owner-approved distribution work
 - Native target: Electron Windows package path exists, but public Steam submission remains a long-term target pending beta demand, current package proof, signing/store decisions, metadata, screenshots/capsules, install/uninstall QA, and human approval
 
-The repo is currently in a launch-readiness program:
+The launch-readiness program (Cycles 106 to 110: docs and repo hygiene, SEO and site
+content, release-candidate proof, native and Steam readiness, itch and portals) closed in
+June 2026 and shipped as `v2.4.0`. Cycle 111 followed with core bark, onboarding,
+leaderboard motivation and completion UX.
 
-- Cycle 106 - docs and repo hygiene
-- Cycle 107 - SEO and site content
-- Cycle 108 - release-candidate proof
-- Cycle 109 - native desktop and Steam readiness
-- Cycle 110 - itch, portals, and final launch review
-- Cycle 111 - core bark, onboarding, leaderboard, and completion UX
+The repo is currently in a front-door program (Cycles 112 to 118): the entrance, the art
+that sells it, grounding and props, gate legibility, and a water rewrite. Cycles 112 and
+113 have shipped. See `docs/front-door-roadmap.md` for the shape and `docs/BACKLOG.md`
+for what each closed cycle delivered.
 
 ## Release State
 

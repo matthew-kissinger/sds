@@ -9,7 +9,7 @@
 You're a fresh agent (Claude / Codex / Cursor / etc.) on this repo with no session context. Read in this order:
 
 1. **[`../NEXT_SESSION.md`](../NEXT_SESSION.md)** — current pickup state. Tells you which cycle is active, when the snapshot was taken, and where to start.
-2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open. At this snapshot Cycle 111 is the current completed release handoff: [`cycle-111-plan.md`](cycle-111-plan.md).
+2. **The active cycle plan** — path is in NEXT_SESSION when a cycle is open. Closed plans live in [`archive/cycles/`](archive/cycles/); `docs/` holds only the plan currently in flight.
 3. **[`../AGENTS.md`](../AGENTS.md)** — portable agent baseline (build/test/dev commands, code style, the `shared/` deterministic boundary).
 4. **[`../CLAUDE.md`](../CLAUDE.md)** — Claude-specific overlay (slash commands, hooks, memory). Skip if you're a non-Claude agent.
 5. **[`../.claude/rules/`](../.claude/rules/)** — durable project rules (deterministic-sim boundary, scene/render rules, cycle process, multiplayer contract).
@@ -66,12 +66,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) | Reference | Cycle plan stub. New cycle plans inherit from this. |
 | [`BACKLOG.md`](BACKLOG.md) | Reference | Closed-cycle headlines + deferred items. Append-only. |
 | [`NEXT_SESSION_CONTRACT.md`](NEXT_SESSION_CONTRACT.md) | Reference | What `NEXT_SESSION.md` is for and how it's refreshed. |
-| [`cycle-106-plan.md`](cycle-106-plan.md) | Reference / Explanation | Launch-readiness cycle 106: docs and repo hygiene. |
-| [`cycle-107-plan.md`](cycle-107-plan.md) | Reference / Explanation | Launch-readiness cycle 107: SEO and site content refresh. |
-| [`cycle-108-plan.md`](cycle-108-plan.md) | Reference / Explanation | Launch-readiness cycle 108: release-candidate proof. |
-| [`cycle-109-plan.md`](cycle-109-plan.md) | Reference / Explanation | Launch-readiness cycle 109: native desktop and Steam readiness. |
-| [`cycle-110-plan.md`](cycle-110-plan.md) | Reference / Explanation | Launch-readiness cycle 110: itch, portals, and final launch review. |
-| [`cycle-111-plan.md`](cycle-111-plan.md) | Reference / Explanation | Core bark, first-session onboarding, leaderboard motivation, completion UX, and Newsheepdogland sandbox guard. |
+| [`archive/cycles/`](archive/cycles/) | Reference / Explanation | Every closed cycle plan, including the 106-110 launch-readiness program and 111 core-bark. Headlines are in [`BACKLOG.md`](BACKLOG.md). |
 
 ## Launch Review Packet
 

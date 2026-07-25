@@ -44,7 +44,7 @@ The web-only `v2.6.2` beta hotfix release line is current: the `v2.6.0` beta pos
 2. **The name field has no new home.** D6 took it off the entrance; "first score submission" is where it belongs and that is unbuilt.
 3. **Loading-to-live camera framing.** Named out of scope in P5; it needs a camera-pose handshake from the engine and is a cycle of its own.
 4. **[`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) carries 19 em-dashes** that every scaffold inherits, against [`.claude/rules/prose-and-voice.md`](../.claude/rules/prose-and-voice.md). Stripped from the 114 scaffold; the template itself left alone rather than edited without a phase authorizing it.
-5. **~~cycle-110 and cycle-111 plans are unarchived.~~ Resolved, and the count was wrong.** Seven plans were sitting in `docs/`, not two. Cycles 105 and 111 were genuinely closed (both carry entries below) and are now archived. Cycles **106 to 110 were never run**: each has 0 of 3 acceptance items checked, no commits referencing it, and no close entry. They are an authored-ahead launch sequence (launch docs, SEO refresh, release-candidate proof, native/Steam readiness, itch and portals) that the front-door program overtook at 112. They are not closed, so they are not archived; their disposition is an open question for Matt.
+5. **~~cycle-110 and cycle-111 plans are unarchived.~~ Resolved. The count was wrong and so was my first reading of it.** Seven plans were sitting in `docs/`, not two, and all seven were closed cycles. Cycles 106 to 110 looked unrun (0 of 3 acceptance boxes ticked, no commits naming them, no entry here), but every deliverable they promised exists, all five `cycleN-validation/close-report.md` files are green, and `CHANGELOG.md` records the whole program shipping as `v2.4.0` in `a9c36e55`. They were closed in substance and never in ceremony. All seven are archived now and the five missing entries are backfilled above from their own close reports. Numbers left alone: `CHANGELOG.md`, `native/desktop-electron/README.md`, `docs/native-desktop-package-cycle-109.md` and five validation directories all cite them.
 6. **A real horizon-seam gate** and **the golden suite's 8 stale cycles** both carry forward from 112 untouched.
 
 ### Cycle 112 - `front-door-foundations` (closed 2026-07-25)
@@ -92,6 +92,57 @@ Plan archived at [`docs/archive/cycles/cycle-111-plan.md`](archive/cycles/cycle-
 ### Preview Worker provisioning (completed 2026-06-26)
 
 The preview multiplayer backend is provisioned. Created Cloudflare D1 `sds-db-preview` (`6d5b0fce-952f-4d94-8936-b51fc559496c`), bootstrapped all 11 migrations, set repo Actions variable `CF_PREVIEW_D1_ID`, deployed `sds-worker-preview`, and set a preview-only `JWT_SECRET`. Live proof: `https://sds-worker-preview.matt-m-kissinger.workers.dev/healthz` returns ok and `api/leaderboards?scene=field&limit=1` reads from the preview D1.
+
+> **Backfilled 2026-07-25.** Cycles 106 to 110 ran and closed green on 2026-06-26 and shipped as `v2.4.0` (`a9c36e55`), but no `BACKLOG` entries were written at the time and their plan checkboxes were never ticked. The five entries below are reconstructed from each cycle's own `cycleN-validation/close-report.md`, which is where the real record has been all along. The plans are archived now; cycle numbers are unchanged, because `CHANGELOG.md`, `native/desktop-electron/README.md`, `docs/native-desktop-package-cycle-109.md` and five `cycleN-validation/` directories all reference them by number.
+
+### Cycle 110 - `itch-portals-and-launch-review` (closed 2026-06-26, recorded 2026-07-25)
+
+- Shipped: green. The final pre-review launch packet.
+- Plan: [docs/archive/cycles/cycle-110-plan.md](archive/cycles/cycle-110-plan.md). Close report: `cycle110-validation/close-report.md`.
+- Refreshed itch submission docs and descriptions, ran a current itch build, and created the itch launch brief.
+- Refreshed portal docs and created [`docs/launch/portal-target-matrix.md`](launch/portal-target-matrix.md).
+- Inspected GitHub repo metadata and deliberately made no remote changes.
+- Created [`docs/launch/final-launch-review.md`](launch/final-launch-review.md), the single review entry point.
+- `npm run build:itchio` pass; `dist/` 47,389,494 bytes across 222 files.
+- Notes: closed by handing back to Matt for review, which is what stopped the autonomous 106-110 sequence.
+
+### Cycle 109 - `native-steam-store-readiness` (closed 2026-06-26, recorded 2026-07-25)
+
+- Shipped: green for private proof, **blocked for public submission by design**.
+- Plan: [docs/archive/cycles/cycle-109-plan.md](archive/cycles/cycle-109-plan.md). Close report: `cycle109-validation/close-report.md`.
+- Refreshed Steamworks requirements (fee, review timing, release sequencing, graphical assets, SteamPipe, depots) and produced a Steam store brief plus a recommendation.
+- Moved native metadata and docs from Cycle 54 / `2.2.0` to `2.4.0`; built the Windows installer, portable exe, blockmap and unpacked app.
+- Fixed stale proof-harness assumptions (hard-coded `200` sheep HUD text, optional 404 handling), then re-ran packaged WebGL and WebGPU proofs green. This is the "Cycle 109 evidence" [`native/desktop-electron/README.md`](../native/desktop-electron/README.md) cites.
+- Notes: binaries are `NotSigned` per `Get-AuthenticodeSignature`. **No external action taken**: no Steam fee paid, no app created, no depot uploaded, no store page submitted, no certificate used, no public native binary published.
+
+### Cycle 108 - `release-candidate-proof` (closed 2026-06-26, recorded 2026-07-25)
+
+- Shipped: green. The `v2.4.0` release candidate.
+- Plan: [docs/archive/cycles/cycle-108-plan.md](archive/cycles/cycle-108-plan.md). Close report: `cycle108-validation/close-report.md`.
+- Recorded the version decision, aligned root and native package versions to `2.4.0`, and created the release-candidate packet and launch checklist.
+- Verified production Pages, production Worker, preview Worker, sitemap, robots and key scene pages.
+- Full battery green: `npm test`, `npm run lint`, `npm run build`, `npm run typecheck`, `npm run build:itchio`, `npm run native:check`, and `npx playwright test --project=chromium --grep-invert @local-only` (7 passed, 2 skipped).
+- Notes: the candidate was deliberately **not** tagged, released, deployed or submitted anywhere at close. Full local `npm run test:e2e` exceeded a 10-minute window; the documented release e2e lane passed separately.
+
+### Cycle 107 - `seo-site-content-refresh` (closed 2026-06-26, recorded 2026-07-25)
+
+- Shipped: green, pending Cycle 108's full validation battery.
+- Plan: [docs/archive/cycles/cycle-107-plan.md](archive/cycles/cycle-107-plan.md). Close report: `cycle107-validation/seo-close-report.md`.
+- Created [`docs/launch/seo-content-matrix.md`](launch/seo-content-matrix.md) as the source of truth for public copy.
+- Updated home and about metadata, JSON-LD, FAQ answers, crawler and noscript copy; refreshed the four static scene pages and the dynamic metadata in `js/utils/seo.js`.
+- Removed the public Newsheepdogland experimental / performance-tuning wording.
+- Updated `public/manifest.webmanifest`, `public/llms.txt`, `public/sitemap.xml`, and extended `tests/seo.spec.js` to catch stale public copy and sitemap dates.
+- Notes: social images are 1920x1080 gameplay captures rather than dedicated 1200x630 cards. Flagged then as a possible later asset pass; Cycle 112 re-shot them.
+
+### Cycle 106 - `launch-docs-and-repo-hygiene` (closed 2026-06-26, recorded 2026-07-25)
+
+- Shipped: green. Made the repo tell the truth again.
+- Plan: [docs/archive/cycles/cycle-106-plan.md](archive/cycles/cycle-106-plan.md). Close report: `cycle106-validation/close-report.md`.
+- Rewrote `README.md` around the current game, stack, deployment posture and launch sequence, and `PRESSKIT.md` with current facts, screenshots, license, URLs and contact.
+- Added the `2.4.0` release-candidate section to `CHANGELOG.md` without creating a public tag.
+- Replaced a stale `NEXT_SESSION.md` with a current-only pickup surface, and added launch-roadmap pointers to `docs/README.md` and this file.
+- Authored the Cycle 106-110 plan files as one autonomous sequence, plus `cycle106-validation/doc-inventory.md`.
+- Notes: docs and process only, so the app battery was deliberately deferred to Cycle 108.
 
 ### Cycle 105 - `three-r185-and-asset-pipeline` (r185 + Kiln asset pack integration) (closed 2026-06-26)
 
