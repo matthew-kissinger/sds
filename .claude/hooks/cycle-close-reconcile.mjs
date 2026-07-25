@@ -24,7 +24,18 @@
 
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
+
+// Pure parsing lives in ./lib so it can be unit-tested. It cannot live in this
+// file: esbuild will not parse the shebang above in an imported module, so
+// `import ... from 'cycle-close-reconcile.mjs'` is a syntax error.
+// See tests/cycle-close-reconcile.spec.ts.
+import {
+    resolveActiveCycle,
+    isUnfilledScaffold,
+    extractAcceptanceLines,
+} from './lib/cycle-plan-resolve.mjs';
 
 const repoRoot = process.cwd();
 
@@ -32,45 +43,17 @@ function locateActivePlan() {
     const nextSession = join(repoRoot, 'NEXT_SESSION.md');
     if (!existsSync(nextSession)) return null;
     const ns = readFileSync(nextSession, 'utf8');
-    const m = ns.match(/docs\/cycle-(\d+)-plan\.md/);
-    if (!m) return null;
-    const planPath = join(repoRoot, 'docs', `cycle-${m[1]}-plan.md`);
-    if (!existsSync(planPath)) return null;
-    return { cycleN: m[1], planPath };
-}
+    const resolved = resolveActiveCycle(ns);
+    if (!resolved) return null;
+    const planPath = join(repoRoot, 'docs', `cycle-${resolved.cycleN}-plan.md`);
+    if (!existsSync(planPath)) return { ...resolved, planPath, missing: true };
 
-function extractAcceptanceLines(planText) {
-    // Cycle 33 Phase 4: a cycle plan typically has TWO sections that
-    // match `## (Success|Acceptance) criteria` — the generic
-    // `## Acceptance criteria — EARS format` block (copied from
-    // CYCLE_TEMPLATE.md, no checkboxes) and the actual
-    // `## Success criteria (cycle close)` block (the real `- [ ]`
-    // list). The previous implementation used `String.search()` which
-    // returns the first match, so it parsed the explanation block,
-    // found zero items, and silently no-oped. Iterate over every
-    // match and pick the first one that contains `- [ ]` items.
-    const sectionRe = /^##+\s+(?:Success|Acceptance) criteria.*$/gim;
-    const lineRe = /^\s*-\s\[(\s|x|X)\]\s+(.+?)$/gm;
-    const matches = [...planText.matchAll(sectionRe)];
-    if (matches.length === 0) return [];
-    for (const m of matches) {
-        const start = m.index ?? 0;
-        const after = planText.slice(start);
-        const nextSectionIdx = after.slice(1).search(/\n##\s+\S/m);
-        const block = nextSectionIdx === -1 ? after : after.slice(0, nextSectionIdx + 1);
-        const items = [];
-        let lineMatch;
-        // Reset state on each block so each section starts at zero.
-        lineRe.lastIndex = 0;
-        while ((lineMatch = lineRe.exec(block)) !== null) {
-            items.push({
-                checked: lineMatch[1].toLowerCase() === 'x',
-                text: lineMatch[2].trim(),
-            });
-        }
-        if (items.length > 0) return items;
-    }
-    return [];
+    // Cross-check: if the naive scan disagrees with the declaration, the
+    // document cites other plans by path. Harmless now, but it is exactly the
+    // ambiguity that produced the wrong answer before, so name it.
+    const naive = ns.match(/docs\/cycle-(\d+)-plan\.md/);
+    const disagrees = naive && naive[1] !== resolved.cycleN;
+    return { ...resolved, planPath, disagrees: disagrees ? naive[1] : null };
 }
 
 // Run a shell command, capture output, never throw. Used to probe repo
@@ -201,18 +184,47 @@ function formatRow(label, status, detail) {
 function main() {
     const active = locateActivePlan();
     if (!active) {
-        console.log('cycle-close-reconcile: no active plan found in NEXT_SESSION.md.');
+        console.log('cycle-close-reconcile: no active cycle declared in NEXT_SESSION.md.');
+        console.log('  Expected a `> **For:** Cycle N` header line (docs/NEXT_SESSION_CONTRACT.md).');
         process.exit(0);
     }
-    const { cycleN, planPath } = active;
+    const { cycleN, planPath, source, guessed, disagrees, missing } = active;
+
+    if (missing) {
+        console.log(`cycle-close-reconcile: NEXT_SESSION names Cycle ${cycleN} (via ${source}), but`);
+        console.log(`  docs/cycle-${cycleN}-plan.md does not exist. Nothing to reconcile.`);
+        process.exit(0);
+    }
+    if (guessed) {
+        console.log(`[warn] No "For: Cycle N" header and no Reference Table row; guessed Cycle ${cycleN}`);
+        console.log('       from the first plan path in the document. Fix the NEXT_SESSION header.');
+    }
+    if (disagrees) {
+        console.log(`[note] NEXT_SESSION declares Cycle ${cycleN} but cites cycle-${disagrees}-plan.md first.`);
+        console.log('       Reading the declaration, not the document order.');
+    }
+
     const plan = readFileSync(planPath, 'utf8');
+
+    // The case that produced this guard: /cycle-close fired on a cycle that had
+    // just been scaffolded and never authored. Reconciling the template's own
+    // placeholder acceptance lines would have reported them as real items.
+    if (isUnfilledScaffold(plan)) {
+        console.log(`\n=== Cycle ${cycleN}: nothing to close ===\n`);
+        console.log(`  docs/cycle-${cycleN}-plan.md is still an unfilled CYCLE_TEMPLATE scaffold.`);
+        console.log('  Author its Goal + Phases and run the cycle before closing it.');
+        console.log('\n  If you meant to close the PREVIOUS cycle, it is already closed:');
+        console.log('  check docs/archive/cycles/ and the top of docs/BACKLOG.md.');
+        process.exit(0);
+    }
+
     const items = extractAcceptanceLines(plan);
     if (items.length === 0) {
         console.log(`cycle-close-reconcile: cycle-${cycleN} plan has no Success/Acceptance section.`);
         process.exit(0);
     }
 
-    console.log(`\n=== Cycle ${cycleN} reconciliation (${items.length} acceptance items) ===\n`);
+    console.log(`\n=== Cycle ${cycleN} reconciliation (${items.length} acceptance items, via ${source}) ===\n`);
 
     const counts = { pass: 0, fail: 0, unknown: 0, manual: 0, alreadyChecked: 0 };
     for (const item of items) {
@@ -242,4 +254,9 @@ function main() {
     process.exit(0);
 }
 
-main();
+// Only run when invoked as a script. The resolution and scaffold-detection
+// helpers above are imported by tests/cycle-close-reconcile.spec.ts, and
+// importing this file must not reconcile anything or call process.exit.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+    main();
+}

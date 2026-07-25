@@ -35,7 +35,13 @@ Anything this cycle touches in the UI migrates onto [`css/entrance.css`](css/ent
 4. **A real horizon-seam gate.** `tools/validation/horizon-seam.mjs` ships as an A/B reporting tool that always exits 0, because its band detector scored Rolling Hills *worse* after the fix by locking onto unrelated terrain. A real gate needs a detector that knows where the horizon line is.
 5. **The golden gate ran unattended for 8 cycles while failing.** It lives in `validation:all`, which is not in CI. Either run `validation:all` at every cycle close or move the golden diff into CI. Untouched by 113, which changed no render path.
 6. **[`docs/CYCLE_TEMPLATE.md`](docs/CYCLE_TEMPLATE.md) carries 19 em-dashes** that every scaffolded plan inherits, against [`.claude/rules/prose-and-voice.md`](.claude/rules/prose-and-voice.md). Stripped from the 114 scaffold by hand; the template itself was left alone rather than edited without a phase authorizing it.
-7. **[`docs/cycle-110-plan.md`](docs/cycle-110-plan.md) and [`docs/cycle-111-plan.md`](docs/cycle-111-plan.md) are still sitting unarchived in `docs/`.**
+7. **Cycles 106 to 110 were never run, and need a disposition.** Each carries 0 of 3 acceptance items checked, no commits referencing it, and no BACKLOG close entry. They are an authored-ahead launch sequence (launch docs, SEO refresh, release-candidate proof, native and Steam readiness, itch and portals) that the front-door program overtook when it started at 112. The launch work itself still looks wanted, so the likely answer is renumbering them after 118 rather than deleting them, but that is Matt's call. They stay in `docs/` until it is made, because archiving an unrun plan would record it as closed. Cycles 105 and 111 were genuinely closed and have now been archived.
+
+## A note for the close ritual
+
+This file cites other cycles by path in the carryover section above, and that used to break the close. `/cycle-close`'s reconciliation hook resolved the active cycle by taking the first `docs/cycle-N-plan.md` string anywhere in this document, so those citations made it reconcile Cycle 110 rather than the active one, and report an already-closed cycle's acceptance items as live. It now reads the required `**For:**` header instead, per [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md), with the Reference Table row as a fallback. Pinned by [`tests/cycle-close-reconcile.spec.ts`](tests/cycle-close-reconcile.spec.ts).
+
+Keep that header accurate. It is the declaration everything else follows, and citing other plans by path in the body is now safe.
 
 ## Known repo hygiene issue
 

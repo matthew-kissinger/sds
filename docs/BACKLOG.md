@@ -44,7 +44,7 @@ The web-only `v2.6.2` beta hotfix release line is current: the `v2.6.0` beta pos
 2. **The name field has no new home.** D6 took it off the entrance; "first score submission" is where it belongs and that is unbuilt.
 3. **Loading-to-live camera framing.** Named out of scope in P5; it needs a camera-pose handshake from the engine and is a cycle of its own.
 4. **[`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) carries 19 em-dashes** that every scaffold inherits, against [`.claude/rules/prose-and-voice.md`](../.claude/rules/prose-and-voice.md). Stripped from the 114 scaffold; the template itself left alone rather than edited without a phase authorizing it.
-5. **[`docs/cycle-110-plan.md`](cycle-110-plan.md) and [`docs/cycle-111-plan.md`](cycle-111-plan.md) are still unarchived.**
+5. **~~cycle-110 and cycle-111 plans are unarchived.~~ Resolved, and the count was wrong.** Seven plans were sitting in `docs/`, not two. Cycles 105 and 111 were genuinely closed (both carry entries below) and are now archived. Cycles **106 to 110 were never run**: each has 0 of 3 acceptance items checked, no commits referencing it, and no close entry. They are an authored-ahead launch sequence (launch docs, SEO refresh, release-candidate proof, native/Steam readiness, itch and portals) that the front-door program overtook at 112. They are not closed, so they are not archived; their disposition is an open question for Matt.
 6. **A real horizon-seam gate** and **the golden suite's 8 stale cycles** both carry forward from 112 untouched.
 
 ### Cycle 112 - `front-door-foundations` (closed 2026-07-25)
@@ -81,7 +81,7 @@ Plan archived at [`docs/archive/cycles/cycle-112-plan.md`](archive/cycles/cycle-
 
 ### Cycle 111 - `core-bark-onboarding` (closed 2026-06-28)
 
-Plan remains at [`docs/cycle-111-plan.md`](cycle-111-plan.md). Cycle 111 shipped the bark-as-core-skill pass, first-session tutorial routing, leaderboard motivation, completion-screen polish, calm bark audio replacement, and a Newsheepdogland sandbox guard. Release notes are at [`docs/launch/v2.5.0-release-notes.md`](launch/v2.5.0-release-notes.md).
+Plan archived at [`docs/archive/cycles/cycle-111-plan.md`](archive/cycles/cycle-111-plan.md). Cycle 111 shipped the bark-as-core-skill pass, first-session tutorial routing, leaderboard motivation, completion-screen polish, calm bark audio replacement, and a Newsheepdogland sandbox guard. Release notes are at [`docs/launch/v2.5.0-release-notes.md`](launch/v2.5.0-release-notes.md).
 
 - **Bark as a core skill.** `shared/BarkImpulse.js` now applies a stronger bounded hybrid of dog-facing wave direction and radial pressure. Desktop/mobile HUDs show readiness and cooldown, and bark fires a subtle world-space wave.
 - **Calm bark audio.** Runtime bark MP3s are short, immediate, and dog-specific. Source/license details are recorded in [`docs/bark-audio-assets.md`](bark-audio-assets.md).
@@ -95,7 +95,7 @@ The preview multiplayer backend is provisioned. Created Cloudflare D1 `sds-db-pr
 
 ### Cycle 105 - `three-r185-and-asset-pipeline` (r185 + Kiln asset pack integration) (closed 2026-06-26)
 
-Plan remains at [`docs/cycle-105-plan.md`](cycle-105-plan.md). PR #68 merged to `main` at `3300b1c7` and GitHub Actions Deploy run `28227099919` succeeded. This resolves the older "three r185 upstream-blocked" carryover: SDS now ships `three@0.185.0` with the r185 audit/examples evidence recorded under `cycle105-validation/`.
+Plan archived at [`docs/archive/cycles/cycle-105-plan.md`](archive/cycles/cycle-105-plan.md). PR #68 merged to `main` at `3300b1c7` and GitHub Actions Deploy run `28227099919` succeeded. This resolves the older "three r185 upstream-blocked" carryover: SDS now ships `three@0.185.0` with the r185 audit/examples evidence recorded under `cycle105-validation/`.
 
 - **r185 render foundation.** Three.js r185 is integrated with recorded audit notes, example/release observations, focused render fixes, and final validation in PR #68 (`git diff --check`, lint, typecheck, `npm test`, `npm run build`, focused homestead/refactor-baseline specs, release Playwright buckets).
 - **Fence and gate asset replacement.** The rejected first fence candidate remains evidence only. The accepted Kiln fence kit is live, the authored `Gate_Assembly-v1.0.0.glb` replaces the temporary side-post marker path, and NSL no longer overlaps the authored gate with the old procedural `HomesteadGateDoor`. Fence posts and rails now batch through terrain-aware instanced segment meshes.
