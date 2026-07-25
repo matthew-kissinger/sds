@@ -34,11 +34,34 @@
 
     <!-- Cycle 82: high-priority preload of the entrance's first backdrop, so
          the first frame is instant.
-         Cycle 112 Phase 8: retargeted to Home Field. D5 made it the first-visit
-         default (DEFAULT_WORLD_INDEX in js/components/entrance/worlds.ts), so
-         this had been spending a fetchpriority=high slot on an image a new
-         visitor never sees, while the one they do see waited behind it. -->
-    <link rel="preload" as="image" href="/assets/scenes/entrance/field.webp" fetchpriority="high">
+
+         Cycle 112 Phase 8 fixed two things about it.
+
+         1. It pointed at Rolling Hills while D5 had already made Home Field the
+            first-visit default (DEFAULT_WORLD_INDEX in
+            js/components/entrance/worlds.ts), so a new visitor spent a
+            fetchpriority=high slot on an image they never see.
+
+         2. As a static <link>, Vite rewrote the href to a hashed copy it
+            emitted into /assets/, while the entrance requests the
+            static-copied /assets/scenes/entrance/ path. Two copies shipped and
+            the preload warmed the one nothing asked for: the fetch was pure
+            waste and the real image still loaded cold. Injecting it from an
+            inline script keeps the URL verbatim, so it matches what
+            worlds.ts requests. Importing the image in worlds.ts instead does
+            NOT work - assets/ is served by vite-plugin-static-copy, so the dev
+            server answers `?import` with raw image bytes rather than a module
+            and the entrance fails to boot. -->
+    <script>
+        (function () {
+            var l = document.createElement('link');
+            l.rel = 'preload';
+            l.as = 'image';
+            l.fetchPriority = 'high';
+            l.href = '/assets/scenes/entrance/field.webp';
+            document.head.appendChild(l);
+        })();
+    </script>
 
     <!-- Open Graph Tags -->
     <meta property="og:type" content="website">
