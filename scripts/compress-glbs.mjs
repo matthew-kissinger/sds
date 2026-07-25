@@ -56,7 +56,17 @@ const TEXTURE_FORMATS = [{ match: /^tree\d(_lod1)?\.glb$/i, format: 'webp', qual
 // transforms compose, which for a dog would restore the 19-clip source and
 // silently undo the manifest. The size-based skip below happens to protect
 // Jep today, but it is a coincidence of thresholds, not a contract.
-const OWNED_ELSEWHERE = [/^Jep\.glb$/i, /^Pip\.glb$/i, /^Sally\.glb$/i, /^Shiloh\.glb$/i, /^George_Washington\.glb$/i];
+//
+// The v2 fence kit is baked by tools/bake-fence.mjs (Cycle 115 Phase 1), which
+// runs the same draco + meshopt chain and then writes its own pristine copy to
+// `_originals`. That backup is gitignored, so on a fresh clone this script
+// would adopt the ALREADY-compressed file as the "original" and re-encode it,
+// compounding the quantisation for nothing. v1 stays eligible: it is the revert
+// target and this script is what produced its current state.
+const OWNED_ELSEWHERE = [
+  /^Jep\.glb$/i, /^Pip\.glb$/i, /^Sally\.glb$/i, /^Shiloh\.glb$/i, /^George_Washington\.glb$/i,
+  /^Fence_Kit-v2\.\d+\.\d+\.glb$/i,
+];
 
 /** True when `relPath` is baked by another script and must not be touched here. */
 function isOwnedElsewhere(relPath) {

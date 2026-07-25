@@ -6,6 +6,7 @@ import { CloudLayer } from './CloudLayer.js';
 import { SunSystem } from './SunSystem.js';
 import { DayNightCycle } from './DayNightCycle.js';
 import { fogColorMatchingSky } from './paintedHorizon.js';
+import { duskLampFactor } from './duskLamp.js';
 import { log as probeLog } from '../diagnostics/glProbe.js';
 import {
   SKY_PRESETS,
@@ -114,6 +115,15 @@ export class Atmosphere {
     this.ambientLight = null;
     /** @private */
     this.ambientBaseIntensity = 1.0;
+
+    /**
+     * Materials that light up after sundown. Bound by the scene body once the
+     * geometry that carries them exists; see `bindDuskLamps`. Declared before
+     * the `applyPreset` call below, which drives them.
+     * @private
+     * @type {Array<{ emissiveIntensity: number, userData?: object }>}
+     */
+    this.duskLamps = [];
 
     /** @private */
     this.weather = {
@@ -241,6 +251,12 @@ export class Atmosphere {
 
     // Force LUT bake immediately so downstream samplers see real numbers.
     this.sky.update(0, this.sun.dirVec);
+    // A preset IS a time of day for the three scenes with no day/night cycle.
+    // Home Field's `pastoral-noon` puts the sun at +70 deg and the lamp out;
+    // Rolling Hills' `dusk` puts it at +8 deg and a lamp part way up. Without
+    // this line a static scene would sit on whatever the last sample left
+    // behind, which for a fresh Atmosphere is nothing at all.
+    this.applyDuskLamps();
     return true;
   }
 
@@ -299,6 +315,7 @@ export class Atmosphere {
       ? azimuth
       : this.sun.getAzimuth();
     this.sun.setAngles(nextElevation, nextAzimuth);
+    this.applyDuskLamps();
   }
 
   /**
@@ -398,6 +415,32 @@ export class Atmosphere {
   }
 
   /**
+   * Bind the materials that light up after sundown, replacing any previous set.
+   *
+   * Cycle 115 Phase 5. Same shape as `bindAmbientLight` directly above, and for
+   * the same reason: the orchestrator already knows where the sun is on every
+   * frame that matters, so a consumer that wants to react to sundown should
+   * hand itself over rather than poll. The scene body binds once per load
+   * (`js/boot/initWorld.js`), and `Atmosphere` is rebuilt per scene load, so a
+   * torn-down scene's materials cannot outlive their binding.
+   *
+   * A bound material opts in by carrying `userData.duskLampPeakIntensity`, the
+   * `emissiveIntensity` it wants at full dark. Materials without it are left
+   * alone, so this cannot accidentally light something that only wanted to be
+   * in the list. The curve and its numbers live in
+   * [`duskLamp.js`](duskLamp.js), which also records why this is an emissive
+   * fake and not a real light.
+   *
+   * @param {Array<{ emissiveIntensity: number, userData?: object }>} [materials]
+   * @returns {number} how many materials are now bound
+   */
+  bindDuskLamps(materials) {
+    this.duskLamps = Array.isArray(materials) ? materials.filter(Boolean) : [];
+    this.applyDuskLamps();
+    return this.duskLamps.length;
+  }
+
+  /**
    * Convenience: enable + start the day/night cycle.
    * @param {{ secondsPerDay?: number, initialT?: number }} [options]
    */
@@ -473,6 +516,10 @@ export class Atmosphere {
       this.scene.fog = null;
     }
     this.fog = null;
+    // The materials belong to the scene body, which disposes itself. Drop the
+    // references so a disposed Atmosphere cannot keep a torn-down scene's
+    // materials alive.
+    this.duskLamps = [];
   }
 
   /** @private */
@@ -505,6 +552,27 @@ export class Atmosphere {
       exposure: this.toneMappingExposure,
       darken: this.weather.fogDarkenMultiplier ?? 1.0,
     });
+  }
+
+  /**
+   * Push the current sun elevation at every bound lamp.
+   *
+   * Runs from `applyPreset` (static scenes), `applyDayNightSample` (which is
+   * both the per-frame cycle tick and what `setTimeOfDay` calls) and `setSun`,
+   * which is every path that can move the sun. Early-outs on the empty list so
+   * the scenes with no lamp (Rolling Hills and Open Country ship no farmhouse
+   * at all) pay nothing per frame.
+   *
+   * @private
+   */
+  applyDuskLamps() {
+    if (this.duskLamps.length === 0) return;
+    const factor = duskLampFactor(this.sun.getElevation());
+    for (const material of this.duskLamps) {
+      const peak = material.userData?.duskLampPeakIntensity;
+      if (!Number.isFinite(peak)) continue;
+      material.emissiveIntensity = peak * factor;
+    }
   }
 
   /** @private */
@@ -580,6 +648,11 @@ export class Atmosphere {
 
     // Hold currentPresetName at the dominant side for diagnostics.
     this.currentPresetName = dominantName;
+
+    // Last, because it reads the sun angles this method set at the top. This is
+    // the day-loop path (Newsheepdogland) and the `setTimeOfDay` path (the
+    // cinematic capture rig, the skip-to-dusk cutscene).
+    this.applyDuskLamps();
   }
 }
 

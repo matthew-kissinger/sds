@@ -38,6 +38,7 @@
     "bake-tree-lod1": "node tools/bake-tree-lod1.mjs",
     "bake-tree-mobile-budgets": "node tools/bake-mobile-tree-budgets.mjs",
     "bake-rocks": "node tools/bake-rocks.mjs",
+    "bake-fence": "node tools/bake-fence.mjs",
     "gallery": "node tools/asset-gallery.mjs",
     "gen:meshy": "node tools/asset-gen/meshy.mjs",
     "gen:integrate": "node tools/asset-gen/integrate.mjs",

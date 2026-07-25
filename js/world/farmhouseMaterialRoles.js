@@ -32,12 +32,24 @@
  * Three groups, not one per role. The temptation is a material per part, but
  * three is what separates at gameplay distance and three is what the model
  * still reads as one object under.
+ *
+ * Cycle 115 Phase 5 adds a fourth, and it is a genuine exception rather than a
+ * drift back toward one-per-part. `Mesh_LanternGlow` is the only mesh in the
+ * file that has to change over the course of a day, and `emissiveIntensity` is
+ * a per-material property, so sharing trim's material would light every window
+ * frame, porch column and hay bale in the kit along with the wick. Its albedo
+ * treatment is trim's numbers exactly, so at noon the lantern is
+ * indistinguishable from what Cycle 114 shipped; the only difference is an
+ * emissive term that reads zero until the sun goes down. The bracket and the
+ * cap stay on trim: they are painted iron, they do not burn.
  */
 
 /**
- * Role table. Name prefixes, matched in the order roof, wall, trim, so the
- * more specific `Mesh_PorchRoof` lands in roof before `Mesh_Porch` claims it
- * for trim. Ordering is load-bearing; do not sort these alphabetically.
+ * Role table. Name prefixes, matched in the order roof, lantern, wall, trim, so
+ * the more specific `Mesh_PorchRoof` lands in roof before `Mesh_Porch` claims
+ * it for trim, and `Mesh_LanternGlow` lands in lantern before `Mesh_Lantern`
+ * claims it (with its bracket and cap) for trim. Ordering is load-bearing; do
+ * not sort these alphabetically.
  *
  * One named table rather than inline string tests scattered through a loop:
  * a re-export that renames a mesh has exactly one place to be fixed, and
@@ -54,10 +66,19 @@ export const FARMHOUSE_MATERIAL_ROLES = Object.freeze({
         'Mesh_Gable',
         'Mesh_PorchRoof',
     ]),
+    // The wick pane, and nothing else. An 8cm x 12cm x 8cm box hanging off the
+    // porch bracket at local (2.24, 1.70, 1.25). Small enough that it costs one
+    // draw call it was already paying, big enough to read as a point of warm
+    // light from across the homestead once it is emissive.
+    lantern: Object.freeze([
+        'Mesh_LanternGlow',
+    ]),
     // The structural mass: timber walls plus the masonry that reads as part of
     // the same block (stone base, chimney stack, hearth). Keeping masonry with
-    // the walls rather than giving it a fourth group is deliberate - it already
-    // has its own atlas swatch, so it separates without its own material.
+    // the walls rather than giving it a group of its own is deliberate - it
+    // already has its own atlas swatch, so it separates without its own
+    // material. Contrast the lantern above, which needed one because its
+    // emissive has to move and the atlas cannot move it.
     wall: Object.freeze([
         'Mesh_Body_Wall',
         'Mesh_Body_Floor',
@@ -85,7 +106,7 @@ export const FARMHOUSE_MATERIAL_ROLES = Object.freeze({
 });
 
 /** Match order for {@link classifyFarmhouseMesh}. Roof first, see above. */
-const ROLE_MATCH_ORDER = Object.freeze(['roof', 'wall', 'trim']);
+const ROLE_MATCH_ORDER = Object.freeze(['roof', 'lantern', 'wall', 'trim']);
 
 /**
  * Meshes deliberately left on the loaded material. `ShadowProxy` is the flat
@@ -130,6 +151,29 @@ export const FARMHOUSE_ROLE_TREATMENTS = Object.freeze({
     trim: Object.freeze({
         colorMultiplier: Object.freeze([1.20, 1.14, 1.00]),
         roughnessMultiplier: 0.80,
+    }),
+    // Trim's albedo numbers, deliberately copied rather than referenced, so
+    // that an unlit lantern is the same object Cycle 114 shipped and the only
+    // thing Phase 5 changed is what happens after sundown.
+    //
+    // `emissiveColor` is LINEAR RGB, same working space as `colorMultiplier`
+    // above and same space `Color.setRGB` writes in by default, so it does not
+    // go through an sRGB decode. (1.00, 0.47, 0.16) is a warm flame: hot enough
+    // in red to clip through the ACES curve and read as a source rather than as
+    // a painted-orange surface, low enough in blue to stay firelight rather
+    // than porch bulb.
+    //
+    // `duskLampPeakIntensity` is the `emissiveIntensity` at full dark. Emissive
+    // is added AFTER lighting and before tone mapping on both paths, so 2.2 x
+    // (1.00, 0.47, 0.16) = (2.20, 1.03, 0.35) resolves to a clipped warm core
+    // with amber falloff at the pane edges. The lamp is 8cm across; at
+    // gameplay distance it is a handful of pixels and wants to be over-driven,
+    // not correct.
+    lantern: Object.freeze({
+        colorMultiplier: Object.freeze([1.20, 1.14, 1.00]),
+        roughnessMultiplier: 0.80,
+        emissiveColor: Object.freeze([1.00, 0.47, 0.16]),
+        duskLampPeakIntensity: 2.2,
     }),
 });
 
@@ -196,6 +240,20 @@ function deriveRoleMaterial(sourceMaterial, role) {
     }
     material.userData = { ...(material.userData ?? {}), farmhouseMaterialRole: role };
 
+    // Cycle 115 Phase 5. Assign rather than multiply, because unlike colour
+    // this is not modulating something the atlas already carries: the GLB
+    // declares no emissive factor at all, so there is nothing to be honest
+    // against. Intensity starts at 0 so a scene that never binds the lamp
+    // renders exactly the Cycle 114 house. `js/atmosphere/Atmosphere.js`
+    // raises it off the sun's elevation once bound; the peak rides on the
+    // material so the binder needs no table of its own.
+    if (treatment.emissiveColor && material.emissive?.setRGB) {
+        const [er, eg, eb] = treatment.emissiveColor;
+        material.emissive.setRGB(er, eg, eb);
+        material.emissiveIntensity = 0;
+        material.userData.duskLampPeakIntensity = treatment.duskLampPeakIntensity;
+    }
+
     trio[role] = material;
     return material;
 }
@@ -217,9 +275,9 @@ function assignMeshRoleMaterial(mesh, role) {
 }
 
 /**
- * Split the farmhouse's single shared material into the roof, wall and trim
- * trio. Call this on an instantiated farmhouse root (the clone that goes into
- * the scene), before anything else walks its materials.
+ * Split the farmhouse's single shared material into the roof, wall, trim and
+ * lantern set. Call this on an instantiated farmhouse root (the clone that goes
+ * into the scene), before anything else walks its materials.
  *
  * Dual-path note: this deliberately touches no node material. The farmhouse
  * has never had a hand-written WebGPU twin - it renders through three's own
@@ -231,32 +289,49 @@ function assignMeshRoleMaterial(mesh, role) {
  * `js/world/webgpuMaterialAdapter.js` only rewrites tree and rock materials
  * (`builder.models.trees` / `treesLod1` / `rocks`, by the material names
  * `branches` and `leaves`), so it never sees the farmhouse and cannot collapse
- * the trio. The split lands on both paths by construction.
+ * the set. The split lands on both paths by construction.
+ *
+ * Cycle 115 Phase 5 leans on the same fact for the lantern, one layer deeper:
+ * Three's EMISSIVE material scope resolves to `materialReference('emissive')`
+ * and `materialReference('emissiveIntensity')`
+ * (`node_modules/three/src/nodes/accessors/MaterialNode.js`), and
+ * `MaterialReferenceNode.updateReference` resolves those against the rendered
+ * object's ORIGINAL material every frame, not against the converted copy. So
+ * writing `emissiveIntensity` on the standard material animates the lamp on the
+ * WebGPU path as well, with no node material and no twin to keep in step.
  *
  * Two material counts come back, because they legitimately differ.
  * `roleMaterialCount` is the house body's split and is the number that has to
- * read 3. `distinctMaterialCount` also counts the material still carried by
+ * read 4. `distinctMaterialCount` also counts the material still carried by
  * anything in {@link FARMHOUSE_UNROLED_MESH_PREFIXES}, so on the shipped GLB it
- * reads 4: the trio plus the untouched `ShadowProxy` footprint slab.
+ * reads 5: the four role materials plus the untouched `ShadowProxy` slab.
+ *
+ * The lamp materials also land on `root.userData.duskLampMaterials` for
+ * `js/boot/initWorld.js` to hand to `Atmosphere.bindDuskLamps`. On the root's
+ * userData rather than in the summary on purpose: the summary is JSON-serialised
+ * into the WebGPU boot diagnostic (`js/rendering/productionWebGpuBoot.js`), and
+ * a live `Material` in there would drag its textures through `toJSON`.
  *
  * @param {object} root - the farmhouse Object3D (or anything with `traverse`)
  * @returns {{
  *   applied: boolean,
  *   visitedMeshes: number,
- *   assigned: {roof: number, wall: number, trim: number},
+ *   assigned: {roof: number, lantern: number, wall: number, trim: number},
  *   unroledMeshes: number,
  *   unknownMeshNames: string[],
  *   roleMaterialNames: string[],
  *   roleMaterialCount: number,
  *   materialNames: string[],
  *   distinctMaterialCount: number,
+ *   duskLampMaterialCount: number,
  * }} summary, suitable for a boot diagnostic
  */
 export function applyFarmhouseMaterialRoles(root) {
-    const assigned = { roof: 0, wall: 0, trim: 0 };
+    const assigned = { roof: 0, lantern: 0, wall: 0, trim: 0 };
     const unknownMeshNames = [];
     const allMaterials = new Set();
     const roleMaterials = new Set();
+    const duskLampMaterials = new Set();
     let visitedMeshes = 0;
     let unroledMeshes = 0;
     let replaced = 0;
@@ -274,6 +349,7 @@ export function applyFarmhouseMaterialRoles(root) {
             roleMaterialCount: 0,
             materialNames: [],
             distinctMaterialCount: 0,
+            duskLampMaterialCount: 0,
         };
     }
 
@@ -282,7 +358,11 @@ export function applyFarmhouseMaterialRoles(root) {
         visitedMeshes += 1;
 
         const role = classifyFarmhouseMesh(child.name);
-        if (role === 'roof' || role === 'wall' || role === 'trim') {
+        // Membership rather than a hand-listed OR, so a fifth role is one line
+        // in the table above and not two edits in two files. Every counter is
+        // seeded to 0, so `undefined` means "not a role we assign" and lands in
+        // the unroled / unknown branches below exactly as before.
+        if (assigned[role] !== undefined) {
             replaced += assignMeshRoleMaterial(child, role);
             assigned[role] += 1;
         } else if (role === 'unroled') {
@@ -297,6 +377,11 @@ export function applyFarmhouseMaterialRoles(root) {
             if (!material) continue;
             allMaterials.add(material);
             if (material.userData?.farmhouseMaterialRole) roleMaterials.add(material);
+            // Keyed on the property the binder reads, not on the role name, so
+            // any future role that declares a peak is collected for free.
+            if (Number.isFinite(material.userData?.duskLampPeakIntensity)) {
+                duskLampMaterials.add(material);
+            }
         }
     });
 
@@ -306,6 +391,8 @@ export function applyFarmhouseMaterialRoles(root) {
             + `and kept the shared material: ${unknownMeshNames.slice(0, 8).join(', ')}`
         );
     }
+
+    root.userData = { ...(root.userData ?? {}), duskLampMaterials: [...duskLampMaterials] };
 
     return {
         applied: replaced > 0,
@@ -317,5 +404,6 @@ export function applyFarmhouseMaterialRoles(root) {
         roleMaterialCount: roleMaterials.size,
         materialNames: [...allMaterials].map(nameOf).sort(),
         distinctMaterialCount: allMaterials.size,
+        duskLampMaterialCount: duskLampMaterials.size,
     };
 }

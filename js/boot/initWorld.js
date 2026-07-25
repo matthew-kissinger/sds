@@ -264,7 +264,16 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
 
         // Add farm house
         logStep('Adding farm house');
-        await game.terrainBuilder.addFarmHouse(game.currentScene);
+        const farmHouse = await game.terrainBuilder.addFarmHouse(game.currentScene);
+
+        // Cycle 115 Phase 5: the porch lantern comes on after sundown. The
+        // material split (js/world/farmhouseMaterialRoles.js) parked the lamp
+        // materials on the root's userData; the atmosphere drives their
+        // emissive intensity off the sun's elevation. Unconditional, because
+        // passing nothing is how a scene with no farmhouse clears the previous
+        // binding. Resolves to a no-op on Rolling Hills and Open Country, which
+        // ship no farmhouse at all.
+        game.atmosphere?.bindDuskLamps?.(farmHouse?.userData?.duskLampMaterials);
 
         logStep('Adding homestead props');
         await game.terrainBuilder.addHomesteadPlayfieldProps(game.currentScene);

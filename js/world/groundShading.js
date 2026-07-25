@@ -125,6 +125,63 @@ export const GROUND_CONTACT = Object.freeze({
     strength: 0.2,
 });
 
+/**
+ * The worn approach to a pen gate (Cycle 115 Phase 4).
+ *
+ * The roadmap asked for a dirt approach across the homestead yard. The yard is
+ * at x 156-188, z 132-153 around the farmhouse at (180, 160), outside the
+ * +/-100 play bounds, so there is no yard between the player and the gate to
+ * lay a path across. The threshold the game is actually about is the PEN gate,
+ * at (0, 100) on Home Field, so that is what this serves.
+ *
+ * Not a new material and not a decal. The terrain already carries a dirt colour
+ * and a dirtMask keyed off the shared ground field above; the approach is a
+ * shaped contribution to that same mask, one more reason for the ground to read
+ * as dirt where traffic would have worn it. Both terrain paths take the MAXIMUM
+ * of the two contributions rather than the sum, so a natural dirt patch that
+ * happens to fall on the approach does not stack into a mud slick.
+ *
+ * The shape is a tapered band: narrow at the mouth, fanning out into the field,
+ * strongest at the threshold, easing to nothing at its far end. That is what
+ * converging traffic wears - everything funnels through the opening and spreads
+ * once it is through - and it doubles as an arrow pointing at the gate.
+ *
+ * Every extent is a MULTIPLE OF THE GATE'S OWN WIDTH, so the only per-scene
+ * numbers the shaders need are the mouth position, the outward axis and that
+ * width. A scene with a wider gate gets a proportionally wider approach for
+ * free, and no scene-id branch appears in render code.
+ */
+export const GROUND_APPROACH = Object.freeze({
+    // x gate width. How far the worn ground reaches out into the field. 2.8 x
+    // 8m = 22.4m on Home Field, about a ninth of the way to the far fence: long
+    // enough to read as an approach from the Classic camera, short enough that
+    // the pasture is still a pasture.
+    reach: 2.8,
+    // x gate width. How far it reaches BACK through the gate line into the pen,
+    // so the dirt does not stop dead at the fence. The pen interior is bald by
+    // design (its exclusion zone), so this only has to cover the threshold.
+    backReach: 0.45,
+    // x gate width, half-widths. Narrow at the mouth (the opening is the
+    // funnel), wider at the far end (traffic spreads once it is through).
+    mouthHalfWidth: 0.7,
+    farHalfWidth: 1.5,
+    // x gate width. Soft edge on the band, so the dirt meets the pasture the
+    // way Cycle 114's exclusion falloff does rather than at a knife edge.
+    feather: 0.4,
+    // 0..1 along the band. Full wear from inside the pen out to here, then
+    // easing to nothing at the far tip.
+    wearStart: 0.22,
+    // Peak fraction toward the terrain's own dirt colour, at full wear. Shared
+    // by both terrain paths so the approach reads the same on each even though
+    // their ambient dirt-patch strengths differ (0.4 on WebGL, a per-scene 0.26
+    // to 0.34 on WebGPU).
+    dirtBlend: 0.62,
+    // Fraction of grass clumps that survive at full wear. Deliberately not
+    // zero: the acceptance is that grass THINS over the approach rather than
+    // stopping at an edge, and a bald strip is only a differently-shaped edge.
+    grassKeepMin: 0.18,
+});
+
 const glslFloat = (value) => {
     const text = String(value);
     return /[.eE]/.test(text) ? text : `${text}.0`;
@@ -199,6 +256,48 @@ float sdsGroundContact(vec2 worldXZ, vec3 contactPosition, vec2 contactFacing) {
     vec2 side = vec2(fwd.y, -fwd.x);
     vec2 delta = worldXZ - contactPosition.xz;
     return sdsGroundContactFalloff(dot(delta, fwd), dot(delta, side));
+}
+`;
+
+/**
+ * GLSL for the worn gate approach. Injected into the WebGL terrain fragment
+ * shader. `mouth` is the gate's world (x, z), `axis` is the unit XZ direction
+ * pointing out of the pen and into the field, `gateWidth` is the gate's own
+ * width in metres and scales every extent.
+ *
+ * Both smoothsteps are written out longhand as t * t * (3 - 2t) on a clamped
+ * ramp rather than called through GLSL's smoothstep(), because the TSL twin
+ * below has to be the same expression node-for-node and the existing contact
+ * falloff already sets that precedent in this file.
+ */
+export const GROUND_APPROACH_GLSL = `
+// Worn gate approach - generated from js/world/groundShading.js.
+// Do not hand-edit the constants here; change GROUND_APPROACH instead.
+float sdsGroundApproachWear(vec2 worldXZ, vec2 mouth, vec2 axis, float gateWidth) {
+    // A zero width would divide by zero and NaN the whole terrain colour, and a
+    // NaN multiplied by a zero strength is still a NaN. Clamp, never branch.
+    float w = max(gateWidth, 0.001);
+    vec2 side = vec2(axis.y, -axis.x);
+    vec2 rel = worldXZ - mouth;
+    float along = dot(rel, axis);
+    float across = abs(dot(rel, side));
+    float reach = w * ${glslFloat(GROUND_APPROACH.reach)};
+    float back = w * ${glslFloat(GROUND_APPROACH.backReach)};
+    float t = clamp((along + back) / (reach + back), 0.0, 1.0);
+    float halfWidth = mix(w * ${glslFloat(GROUND_APPROACH.mouthHalfWidth)}, w * ${glslFloat(GROUND_APPROACH.farHalfWidth)}, t);
+    // Tapered rounded-rect SDF in the approach's own frame. Not a true distance
+    // (the lateral term is measured perpendicular to the axis, not normal to
+    // the slanted edge) but monotone and smooth, which is all the feather needs.
+    float outAlong = max(-back - along, along - reach);
+    float outAcross = across - halfWidth;
+    float sdf = length(max(vec2(outAcross, outAlong), 0.0)) + min(max(outAcross, outAlong), 0.0);
+    float e = clamp(sdf / (w * ${glslFloat(GROUND_APPROACH.feather)}) + 1.0, 0.0, 1.0);
+    float band = 1.0 - e * e * (3.0 - 2.0 * e);
+    float u = clamp((t - ${glslFloat(GROUND_APPROACH.wearStart)}) / ${glslFloat(1 - GROUND_APPROACH.wearStart)}, 0.0, 1.0);
+    return band * (1.0 - u * u * (3.0 - 2.0 * u));
+}
+float sdsGroundApproachDirt(vec2 worldXZ, vec2 mouth, vec2 axis, float gateWidth) {
+    return sdsGroundApproachWear(worldXZ, mouth, axis, gateWidth) * ${glslFloat(GROUND_APPROACH.dirtBlend)};
 }
 `;
 
@@ -281,6 +380,44 @@ export function buildGroundContactNode(TSL, worldXZ, { position, facing }) {
     const side = vec2(fwd.y, fwd.x.negate());
     const delta = vec2(worldXZ.x.sub(position.x), worldXZ.y.sub(position.z));
     return buildGroundContactFalloffNode(TSL, dot(delta, fwd), dot(delta, side));
+}
+
+/**
+ * The worn gate approach as a TSL node. The node-for-node twin of
+ * GROUND_APPROACH_GLSL above: same constants, same expression order, so the two
+ * terrain paths cannot drift.
+ *
+ * @param {object} TSL
+ * @param {object} worldXZ vec2 node of world (x, z)
+ * @param {{mouth: object, axis: object, gateWidth: object}} uniforms vec2, vec2, float nodes
+ * @returns {object} 0..1 wear
+ */
+export function buildGroundApproachWearNode(TSL, worldXZ, { mouth, axis, gateWidth }) {
+    const { abs, clamp, dot, float, length, max, min, mix, vec2 } = TSL;
+    const w = max(gateWidth, 0.001);
+    const side = vec2(axis.y, axis.x.negate());
+    const rel = vec2(worldXZ.x.sub(mouth.x), worldXZ.y.sub(mouth.y));
+    const along = dot(rel, axis);
+    const across = abs(dot(rel, side));
+    const reach = w.mul(GROUND_APPROACH.reach);
+    const back = w.mul(GROUND_APPROACH.backReach);
+    const t = clamp(along.add(back).div(reach.add(back)), 0.0, 1.0);
+    const halfWidth = mix(w.mul(GROUND_APPROACH.mouthHalfWidth), w.mul(GROUND_APPROACH.farHalfWidth), t);
+    const outAlong = max(back.negate().sub(along), along.sub(reach));
+    const outAcross = across.sub(halfWidth);
+    const sdf = length(vec2(max(outAcross, 0.0), max(outAlong, 0.0)))
+        .add(min(max(outAcross, outAlong), 0.0));
+    const e = clamp(sdf.div(w.mul(GROUND_APPROACH.feather)).add(1.0), 0.0, 1.0);
+    const band = float(1.0).sub(e.mul(e).mul(float(3.0).sub(e.mul(2.0))));
+    const u = clamp(t.sub(GROUND_APPROACH.wearStart).div(1 - GROUND_APPROACH.wearStart), 0.0, 1.0);
+    return band.mul(float(1.0).sub(u.mul(u).mul(float(3.0).sub(u.mul(2.0)))));
+}
+
+/**
+ * The approach's contribution to the terrain's dirt blend, as a TSL node.
+ */
+export function buildGroundApproachDirtNode(TSL, worldXZ, uniforms) {
+    return buildGroundApproachWearNode(TSL, worldXZ, uniforms).mul(GROUND_APPROACH.dirtBlend);
 }
 
 // --- CPU reference implementations. Used by tests and by any placement-time
@@ -397,4 +534,159 @@ export function groundContactAt(sample, dog, facing) {
     const dx = sample.x - dog.x;
     const dz = sample.z - dog.z;
     return groundContactFalloff(dx * fx + dz * fz, dx * fz - dz * fx);
+}
+
+/**
+ * The unit XZ forward vector for a grass/terrain interactor.
+ *
+ * Cycle 114. This exists because two callers resolved it independently and one
+ * of them got it wrong. `GrassSystem.updateInteractors` has always handled three
+ * entity shapes; `TerrainBuilder._syncGroundContact` shipped handling only the
+ * first, so the dog (which carries none of it) fell through to the default and
+ * the terrain's contact shadow never rotated with the animal standing on it.
+ *
+ * The three shapes, and why they differ:
+ *
+ * - `facingDirection`, a scalar angle in radians. Sheep and boids. Forward is
+ *   `(cos, sin)`.
+ * - `facing`, a pre-supplied vector, when a caller has one already.
+ * - `currentRotation`, a scalar yaw. The sheepdog. Forward is `(sin, cos)`,
+ *   which is the convention its MESH uses, and is deliberately NOT the same
+ *   mapping as `facingDirection`. Swapping them rotates the dog's contact
+ *   footprint by 90 degrees, which reads as the shadow pointing sideways.
+ *
+ * Falls back to +Z rather than a zero-length vector: zero-length NaNs the
+ * oriented rounded-rect maths in all four shaders, which renders as a hole
+ * rather than as a shadow.
+ *
+ * @param {{facingDirection?: number, facing?: {x: number, z: number}, currentRotation?: number}} entity
+ * @returns {{x: number, z: number}} unit vector
+ */
+export function resolveEntityFacing(entity) {
+    if (!entity) return { x: 0, z: 1 };
+    if (typeof entity.facingDirection === 'number') {
+        return { x: Math.cos(entity.facingDirection), z: Math.sin(entity.facingDirection) };
+    }
+    if (entity.facing && typeof entity.facing.x === 'number' && typeof entity.facing.z === 'number') {
+        const len = Math.hypot(entity.facing.x, entity.facing.z);
+        if (len > 0) return { x: entity.facing.x / len, z: entity.facing.z / len };
+        return { x: 0, z: 1 };
+    }
+    if (typeof entity.currentRotation === 'number') {
+        return { x: Math.sin(entity.currentRotation), z: Math.cos(entity.currentRotation) };
+    }
+    return { x: 0, z: 1 };
+}
+
+/**
+ * Where a scene's worn gate approach sits, derived from the scene definition
+ * rather than declared on it (Cycle 115 Phase 4).
+ *
+ * Derived, because `shared/scenes/types.js` is fence-frozen and this needs no
+ * new field: a pen with a mouth already tells us everything. The gate gives the
+ * mouth and the width; the pasture rect gives the inside, and the direction
+ * from the pen's centre out through the gate is the direction the traffic
+ * comes from. No scene-id branch, and any future scene that declares a pen and
+ * a gate gets an approach for free.
+ *
+ * Returns null when the scene has no pen gate to approach. That covers Rolling
+ * Hills and Open Country (no gate at all) and Newsheepdogland, whose gate
+ * carries a `facingDeg` but no pasture rect, so there is no inside to point
+ * away from. Its homestead approach is its own problem with its own geometry.
+ *
+ * Known limit: this reads the SCENE's pen. Competitive mode reassigns pastures
+ * at runtime (js/world/sandbox.js#updateBounds), and the approach does not
+ * follow them - it stays where the scene's single-player pen is.
+ *
+ * @param {{gate?: {position?: {x: number, z: number}, width?: number}, pasture?: {centerZ?: number, minX: number, maxX: number, minZ: number, maxZ: number}}} [sceneDef]
+ * @returns {{mouth: {x: number, z: number}, axis: {x: number, z: number}, gateWidth: number} | null}
+ */
+export function resolveGateApproach(sceneDef) {
+    const gate = sceneDef?.gate;
+    const pasture = sceneDef?.pasture;
+    if (!gate?.position || !pasture) return null;
+    const gateWidth = gate.width;
+    if (!(gateWidth > 0)) return null;
+    const penX = (pasture.minX + pasture.maxX) / 2;
+    const penZ = pasture.centerZ ?? (pasture.minZ + pasture.maxZ) / 2;
+    const dx = gate.position.x - penX;
+    const dz = gate.position.z - penZ;
+    const len = Math.hypot(dx, dz);
+    // A gate at the pen's own centre has no outward direction. Nothing declares
+    // one today; returning null beats emitting a NaN axis into a shader.
+    if (!(len > 1e-3)) return null;
+    return {
+        mouth: { x: gate.position.x, z: gate.position.z },
+        axis: { x: dx / len, z: dz / len },
+        gateWidth,
+    };
+}
+
+/**
+ * The worn approach on the CPU. The twin of GROUND_APPROACH_GLSL and
+ * buildGroundApproachWearNode; this one is what the grass scatter reads, since
+ * thinning grass is a placement decision, not a per-fragment one.
+ *
+ * @param {number} x world X
+ * @param {number} z world Z
+ * @param {{mouth: {x: number, z: number}, axis: {x: number, z: number}, gateWidth: number} | null} approach
+ * @returns {number} 0..1 wear
+ */
+export function groundApproachWear(x, z, approach) {
+    if (!approach) return 0;
+    const w = Math.max(approach.gateWidth, 0.001);
+    const ax = approach.axis.x, az = approach.axis.z;
+    const relX = x - approach.mouth.x;
+    const relZ = z - approach.mouth.z;
+    const along = relX * ax + relZ * az;
+    const across = Math.abs(relX * az - relZ * ax);
+    const reach = w * GROUND_APPROACH.reach;
+    const back = w * GROUND_APPROACH.backReach;
+    const t = Math.min(1, Math.max(0, (along + back) / (reach + back)));
+    const halfWidth = lerp(w * GROUND_APPROACH.mouthHalfWidth, w * GROUND_APPROACH.farHalfWidth, t);
+    const outAlong = Math.max(-back - along, along - reach);
+    const outAcross = across - halfWidth;
+    const sdf = Math.hypot(Math.max(outAcross, 0), Math.max(outAlong, 0))
+        + Math.min(Math.max(outAcross, outAlong), 0);
+    const e = Math.min(1, Math.max(0, sdf / (w * GROUND_APPROACH.feather) + 1));
+    const band = 1 - e * e * (3 - 2 * e);
+    const u = Math.min(1, Math.max(0, (t - GROUND_APPROACH.wearStart) / (1 - GROUND_APPROACH.wearStart)));
+    return band * (1 - u * u * (3 - 2 * u));
+}
+
+/**
+ * A stable 0..1 hash of a world position.
+ *
+ * For placement decisions that must NOT consume a shared random stream. The
+ * grass scatter runs one PRNG across the whole field, so any extra draw shifts
+ * every clump scattered after it: a thinning term that reads this instead
+ * changes the ground it is about and nothing else. It is also the more honest
+ * decision for a static effect - the same spot thins the same way regardless of
+ * what order the scatter reached it in.
+ *
+ * Same hash the shaders use (GROUND_VARIATION.hashVector / hashScale), fed raw
+ * metres rather than lattice integers, which is what makes it a dither rather
+ * than a noise field.
+ *
+ * @param {number} x world X
+ * @param {number} z world Z
+ * @returns {number} 0..1
+ */
+export function groundPositionHash01(x, z) {
+    return hash2(x, z);
+}
+
+/**
+ * The fraction of grass clumps that survive the approach at (x, z). 1 off the
+ * approach, GROUND_APPROACH.grassKeepMin at full wear.
+ *
+ * @param {number} x world X
+ * @param {number} z world Z
+ * @param {{mouth: {x: number, z: number}, axis: {x: number, z: number}, gateWidth: number} | null} approach
+ * @returns {number} 0..1
+ */
+export function groundApproachGrassKeep(x, z, approach) {
+    const wear = groundApproachWear(x, z, approach);
+    if (wear <= 0) return 1;
+    return 1 - (1 - GROUND_APPROACH.grassKeepMin) * wear;
 }

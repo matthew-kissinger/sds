@@ -14,6 +14,9 @@ import {
     GROUND_CONTACT_GLSL,
     GROUND_VARIATION_GLSL,
     GRASS_VARIATION_TINT,
+    groundApproachGrassKeep,
+    groundPositionHash01,
+    resolveEntityFacing,
 } from './world/groundShading.js';
 
 // Cycle 20 Phase 2 v3 (2026-05-04): minimum displaced-terrain Y under which
@@ -491,6 +494,23 @@ export class GrassSystem {
 
         // Exclusion zones (farm house, pasture, etc.)
         this.exclusionZones = [];
+
+        // Cycle 115 Phase 4: the worn approach to the pen gate, pushed in by
+        // TerrainBuilder before init() so the scatter can thin over it. Null on
+        // every scene without a pen gate, and on those the scatter is
+        // byte-identical to pre-Cycle-115.
+        /** @type {{mouth: {x: number, z: number}, axis: {x: number, z: number}, gateWidth: number} | null} */
+        this.gateApproach = null;
+    }
+
+    /**
+     * Declare the worn approach to this scene's pen gate. Must be called before
+     * `init()`; the scatter reads it once, at build time.
+     *
+     * @param {{mouth: {x: number, z: number}, axis: {x: number, z: number}, gateWidth: number} | null} approach
+     */
+    setGateApproach(approach) {
+        this.gateApproach = approach ?? null;
     }
 
     /**
@@ -1595,10 +1615,12 @@ export class GrassSystem {
             if (this.random() > densityFactor * 0.8 + 0.2) continue;
             // Cycle 114 Phase 1: same soft exclusion band as createChunk, drawn
             // in the same place in the random stream so the consolidated field
-            // stays byte-identical to the per-chunk one.
-            const exclusionKeep = this.exclusionKeepProbability(x, z);
-            if (exclusionKeep < 1 && this.random() > exclusionKeep) continue;
-            valid.push({ x, z, exclusionKeep });
+            // stays byte-identical to the per-chunk one. Cycle 115 Phase 4 moved
+            // both that band and the gate approach behind one call, for the same
+            // reason: this line and createChunk's twin must stay equivalent.
+            const groundKeep = this._rollGroundKeep(x, z);
+            if (groundKeep <= 0) continue;
+            valid.push({ x, z, groundKeep });
             if (valid.length >= clumpCount) break;
         }
         for (const pos of valid) {
@@ -1609,7 +1631,7 @@ export class GrassSystem {
             const distanceScale = Math.max(0.5, 1 - d / (this.config.worldSize * 0.8));
             const scale = (0.7 + this.random() * 0.6) * distanceScale;
             const heightMul = this._tallHeightMul(pos.x, pos.z)
-                * this._exclusionHeightMul(pos.exclusionKeep);
+                * this._exclusionHeightMul(pos.groundKeep);
             offsets.push(pos.x, baseY, pos.z);
             transforms.push(yaw, scale, heightMul);
         }
@@ -1788,10 +1810,17 @@ export class GrassSystem {
             // a knife edge. The random is only drawn when the clump is actually
             // in a band (keep < 1), which keeps the scatter stream - and every
             // golden frame away from a zone - byte-identical to pre-Cycle-114.
-            const exclusionKeep = this.exclusionKeepProbability(x, z);
-            if (exclusionKeep < 1 && this.random() > exclusionKeep) continue;
+            //
+            // Cycle 115 Phase 4 moved that test, and the gate approach's, behind
+            // _rollGroundKeep. It draws the exact same randoms in the exact same
+            // order; the approach's own reject reads a position hash rather than
+            // adding a draw, which keeps the shift it causes to the chunks it
+            // actually touches. _gatherChunkClumps carries the identical line;
+            // the two must not drift.
+            const groundKeep = this._rollGroundKeep(x, z);
+            if (groundKeep <= 0) continue;
 
-            validPositions.push({ x, z, exclusionKeep });
+            validPositions.push({ x, z, groundKeep });
 
             if (validPositions.length >= clumpCount) break;
         }
@@ -1856,7 +1885,7 @@ export class GrassSystem {
             // same Y-only channel, for the same reason: shorter grass near the
             // pen, not smaller clumps.
             const heightMul = this._tallHeightMul(pos.x, pos.z)
-                * this._exclusionHeightMul(pos.exclusionKeep);
+                * this._exclusionHeightMul(pos.groundKeep);
             if (heightMul !== 1) {
                 dummy.scale.set(scale, scale * heightMul, scale);
             } else {
@@ -2196,9 +2225,69 @@ export class GrassSystem {
     }
 
     /**
+     * Cycle 115 Phase 4: roll a clump at (x, z) against EVERY reason the ground
+     * is worn - the exclusion zones' falloff bands (Cycle 114) and the approach
+     * to the pen gate - and return the keep value it survived with, or 0 if it
+     * did not. Survivors always score strictly above 0, so `> 0` is the whole
+     * test: `isExcluded` has already rejected every candidate inside a zone,
+     * which is the only case that scores 0, and the approach floors at
+     * GROUND_APPROACH.grassKeepMin.
+     *
+     * This is the single entry point both scatter mirrors call, and that is the
+     * point of it. `createChunk` and `_gatherChunkClumps` must consume the
+     * identical random stream in the identical order or the consolidated WebGPU
+     * field diverges from the per-chunk WebGL one. One function, called from one
+     * place in each, is the cheapest way to keep that true.
+     *
+     * The two tests draw their randomness from deliberately different places:
+     *
+     * - The exclusion band keeps Cycle 114's draw off `this.random()`, at
+     *   exactly the point in the stream it has always been drawn. Untouched.
+     * - The approach uses a HASH OF THE POSITION instead. One scatter stream
+     *   runs the whole field, so a per-candidate draw here would shift every
+     *   clump scattered after the first candidate that so much as grazed the
+     *   band. It is also the better decision on its own merits: a position hash
+     *   thins the same spot the same way regardless of what order the scatter
+     *   reached it in.
+     *
+     * That does NOT make the scatter downstream of the approach identical, and
+     * nothing short of restructuring both loops would. The candidate loop breaks
+     * early once it has `clumpCount` survivors, so rejecting more candidates
+     * makes it run further and draw more x/z pairs; measured on a 40m x 20m
+     * chunk straddling Home Field's gate, 300 clumps become 245, of which 238
+     * are positions the un-approached scatter also produced and 7 are new. The
+     * knock-on is inherent to Cycle 114's design, not to this phase, but a
+     * golden re-baseline should expect grass movement past the gate as well as
+     * on it.
+     *
+     * The surviving keep composes by MINIMUM, for the reason Cycle 114 gives
+     * for overlapping zones: a product would drive the overlap of the pen's
+     * band and the approach to near-zero and reintroduce the bald patch the
+     * falloff exists to remove.
+     *
+     * @param {number} x
+     * @param {number} z
+     * @returns {number} 0 if rejected, else the 0..1 keep it survived with
+     */
+    _rollGroundKeep(x, z) {
+        const exclusionKeep = this.exclusionKeepProbability(x, z);
+        if (exclusionKeep < 1 && this.random() > exclusionKeep) return 0;
+        if (!this.gateApproach) return exclusionKeep;
+        const approachKeep = groundApproachGrassKeep(x, z, this.gateApproach);
+        if (approachKeep < 1 && groundPositionHash01(x, z) > approachKeep) return 0;
+        return approachKeep < exclusionKeep ? approachKeep : exclusionKeep;
+    }
+
+    /**
      * Cycle 114 Phase 1: blade-height multiplier for a clump that survived the
-     * falloff band. Full height once past the band, EXCLUSION_EDGE_HEIGHT_MIN
-     * at the zone edge.
+     * thinning above. Full height where nothing wears the ground,
+     * EXCLUSION_EDGE_HEIGHT_MIN where it is fully worn (a zone edge, or the
+     * centre of the gate approach).
+     *
+     * Density alone thins to a speckle, which reads as instances gone missing;
+     * tapering height with it reads as grass worn down by traffic. That is as
+     * true of the approach as it is of the pen edge, which is why the approach
+     * feeds the same channel rather than inventing a second one.
      *
      * @param {number} [keep] the clump's keep probability
      * @returns {number}
@@ -2265,21 +2354,12 @@ export class GrassSystem {
                 // shader to orient the body-shaped trample zone. Falls back
                 // to (0, 1) (+Z forward) so a missing facing reads as "north"
                 // rather than zero-length (which would NaN the math).
-                let fx = 0, fz = 1;
-                if (typeof entity.facingDirection === 'number') {
-                    // Sheep / Boid: scalar angle in radians.
-                    fx = Math.cos(entity.facingDirection);
-                    fz = Math.sin(entity.facingDirection);
-                } else if (entity.facing && typeof entity.facing.x === 'number') {
-                    // Pre-supplied unit vector (caller may pass one explicitly).
-                    fx = entity.facing.x;
-                    fz = entity.facing.z;
-                } else if (typeof entity.currentRotation === 'number') {
-                    // Sheepdog: yaw mapped to forward via the same convention
-                    // the mesh uses (forward = (sin(yaw), 0, cos(yaw))).
-                    fx = Math.sin(entity.currentRotation);
-                    fz = Math.cos(entity.currentRotation);
-                }
+                // Cycle 114: shared with TerrainBuilder#_syncGroundContact via
+                // groundShading.js. These rules used to live only here, and the
+                // terrain's copy handled one of the three shapes, so the dog's
+                // contact never rotated. One resolver, no drift.
+                const entityFacing = resolveEntityFacing(entity);
+                const fx = entityFacing.x, fz = entityFacing.z;
                 const fIdx = this.interactorCount * 2;
                 this.interactorFacings[fIdx] = fx;
                 this.interactorFacings[fIdx + 1] = fz;

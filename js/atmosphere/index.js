@@ -24,6 +24,11 @@ export {
   createSkyFogSamplePacket,
   sampleSkyFogPacketFromSky,
 } from './skyFogSamplePacket.js';
+export {
+  DUSK_LAMP_FULL_ELEVATION_RAD,
+  DUSK_LAMP_OFF_ELEVATION_RAD,
+  duskLampFactor,
+} from './duskLamp.js';
 export { CloudLayer } from './CloudLayer.js';
 export { SunSystem } from './SunSystem.js';
 export { DayNightCycle } from './DayNightCycle.js';

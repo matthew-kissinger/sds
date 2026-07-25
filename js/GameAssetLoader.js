@@ -59,8 +59,10 @@ export class GameAssetLoader {
             'assets/models/Shiloh.glb',
             'assets/models/George_Washington.glb',
 
-            // Fence and gate kit (one shared-texture GLB for all four pieces)
-            'assets/models/Fence_Kit-v1.0.0.glb',
+            // Fence and gate kit (one shared-texture GLB for all four pieces).
+            // Must track KIT_PATH in js/FencePresets.js loadModels(): warming
+            // the wrong file leaves the real one a cold fetch at scene build.
+            'assets/models/Fence_Kit-v2.0.0.glb',
 
             // Environment details (Cycle 91 Phase 6: Mountain_Group preloads
             // removed with the dead mountain model loads)

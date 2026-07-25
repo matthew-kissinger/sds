@@ -128,19 +128,20 @@ describe('buildHomesteadGate — authored gate asset vs fallback door', () => {
     sb.fencePresets.models.gateAssembly = makeGateAssemblyWithLeafPivots();
 
     const group = sb.buildHomesteadGate(HOMESTEAD);
-    const door = group.getObjectByName('HomesteadGateAssetDoor');
-    const leftLeaf = group.getObjectByName('HomesteadGateDoorLeft');
-    const rightLeaf = group.getObjectByName('HomesteadGateDoorRight');
+    const assembly = group.getObjectByName('Gate_Assembly');
+    const leftLeaf = group.getObjectByName('GateLeafLeft');
+    const rightLeaf = group.getObjectByName('GateLeafRight');
 
-    expect(group.getObjectByName('Gate_Assembly')).toBeTruthy();
-    expect(group.getObjectByName('HomesteadGateDoor')).toBeUndefined();
-    expect(sb._homesteadDoor).toBe(door);
-    expect(door.rotation.y).toBeCloseTo(0, 6);
+    expect(assembly).toBeTruthy();
+    expect(group.getObjectByName('GateLeaf')).toBeUndefined();
+    // The day loop opens the homestead gate at dawn, so it builds at 1.
+    expect(sb._homesteadGateController.openFraction).toBe(1);
+    expect(assembly.parent.rotation.y).toBeCloseTo(0, 6);
     expect(leftLeaf.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
     expect(rightLeaf.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
     sb.setHomesteadGateOpen(false);
     sb.updateGate(1);
-    expect(door.rotation.y).toBeCloseTo(0, 6);
+    expect(assembly.parent.rotation.y).toBeCloseTo(0, 6);
     expect(leftLeaf.rotation.y).toBeCloseTo(0, 6);
     expect(rightLeaf.rotation.y).toBeCloseTo(0, 6);
   });
@@ -150,13 +151,133 @@ describe('buildHomesteadGate — authored gate asset vs fallback door', () => {
     sb.fencePresets.useGLBModels = false;
 
     const group = sb.buildHomesteadGate(HOMESTEAD);
-    const door = group.getObjectByName('HomesteadGateDoor');
+    const door = group.getObjectByName('GateLeaf');
 
     expect(door).toBeTruthy();
-    expect(sb._homesteadDoor).toBe(door);
+    expect(sb._homesteadGateController.leaves[0].node).toBe(door);
+    expect(door.rotation.y).toBeCloseTo(-Math.PI * 0.58, 6);
     sb.setHomesteadGateOpen(false);
     sb.updateGate(1);
     expect(door.rotation.y).toBeCloseTo(0, 6);
+  });
+});
+
+describe('every gate carries a leaf controller (Cycle 115 P3)', () => {
+  const BOUNDS = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 };
+  const GATE = { width: 8, position: { x: 0, z: 100 } };
+  const PASTURE = { minX: -20, maxX: 20, minZ: 100, maxZ: 130 };
+
+  function installGateAssembly(sb) {
+    sb.fencePresets.useGLBModels = true;
+    sb.fencePresets.models.gateAssembly = makeGateAssemblyWithLeafPivots();
+  }
+
+  it('poses Home Field\'s gate from the controller instead of the asset\'s baked-open pose', () => {
+    const { sb } = makeBuilder(false);
+    installGateAssembly(sb);
+    installFenceKit(sb);
+
+    sb.buildSinglePlayerStructures(BOUNDS, GATE, PASTURE, { perimeterFence: true });
+
+    const controllers = sb.getGateLeafControllers();
+    expect(controllers.length).toBe(1);
+    const [controller] = controllers;
+    expect(controller.leaves.length).toBe(2);
+    for (const leaf of controller.leaves) {
+      expect(leaf.closed).toBe(0);
+      expect(leaf.open).toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
+      // The asset ships swung open; the built gate must not be sitting there.
+      expect(leaf.node.rotation.y).toBeCloseTo(0, 6);
+    }
+    expect(controller.openFraction).toBe(0);
+  });
+
+  it('drives both leaves off one settable open fraction', () => {
+    const { sb } = makeBuilder(false);
+    installGateAssembly(sb);
+    installFenceKit(sb);
+
+    sb.buildSinglePlayerStructures(BOUNDS, GATE, PASTURE, { perimeterFence: true });
+    const [controller] = sb.getGateLeafControllers();
+
+    controller.setOpenFraction(0.5);
+    expect(controller.openFraction).toBe(0.5);
+    expect(controller.targetOpenFraction).toBe(0.5);
+    for (const leaf of controller.leaves) {
+      expect(leaf.node.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-36), 6);
+    }
+
+    // Out-of-range input clamps rather than flinging the leaves past the posts.
+    controller.setOpenFraction(4);
+    expect(controller.openFraction).toBe(1);
+    controller.setOpenFraction(-4);
+    expect(controller.openFraction).toBe(0);
+  });
+
+  it('separates target from current, and only moves on an explicit step', () => {
+    const { sb } = makeBuilder(false);
+    installGateAssembly(sb);
+    installFenceKit(sb);
+
+    sb.buildSinglePlayerStructures(BOUNDS, GATE, PASTURE, { perimeterFence: true });
+    const [controller] = sb.getGateLeafControllers();
+
+    controller.setTargetOpenFraction(1);
+    expect(controller.targetOpenFraction).toBe(1);
+    // Aiming alone must not pose anything: nothing here runs on a clock.
+    expect(controller.openFraction).toBe(0);
+    expect(controller.isSettled).toBe(false);
+    expect(controller.leaves[0].node.rotation.y).toBeCloseTo(0, 6);
+
+    // dt * rate = 0.1 * 3, so the first step covers 30% of the remaining gap.
+    expect(controller.step(0.1)).toBe(true);
+    expect(controller.openFraction).toBeCloseTo(0.3, 6);
+    expect(controller.leaves[0].node.rotation.y)
+      .toBeCloseTo(THREE.MathUtils.degToRad(-72) * 0.3, 6);
+
+    // A long frame caps at the target rather than overshooting.
+    controller.step(10);
+    expect(controller.openFraction).toBe(1);
+    expect(controller.isSettled).toBe(true);
+    expect(controller.step(1)).toBe(false);
+  });
+
+  it('exposes a controller on the no-asset fallback so consumers need no null branch', () => {
+    const { sb } = makeBuilder(false);
+    sb.fencePresets.useGLBModels = false;
+
+    sb.buildSinglePlayerStructures(BOUNDS, GATE, PASTURE, { perimeterFence: true });
+    const [controller] = sb.getGateLeafControllers();
+
+    expect(controller).toBeTruthy();
+    expect(controller.leaves.length).toBe(1);
+    expect(controller.leaves[0].closed).toBe(0);
+    expect(controller.leaves[0].open).toBeCloseTo(-Math.PI * 0.58, 6);
+    controller.setOpenFraction(1);
+    expect(controller.leaves[0].node.rotation.y).toBeCloseTo(-Math.PI * 0.58, 6);
+  });
+
+  it('gives every competitive gate its own controller', () => {
+    const { sb } = makeBuilder(false);
+    installGateAssembly(sb);
+    installFenceKit(sb);
+
+    const gates = ['north', 'south', 'east', 'west'].map((direction, i) => ({
+      direction,
+      width: 8,
+      position: {
+        x: direction === 'east' ? 100 : direction === 'west' ? -100 : 0,
+        z: direction === 'north' ? 100 : direction === 'south' ? -100 : 0,
+      },
+      pasture: { minX: -20 + i, maxX: 20 + i, minZ: -20, maxZ: 20 },
+    }));
+    sb.buildCompetitiveStructures(BOUNDS, gates);
+
+    const controllers = sb.getGateLeafControllers();
+    expect(controllers.length).toBe(4);
+    // Distinct instances: posing one gate must not pose its neighbours.
+    controllers[0].setOpenFraction(1);
+    expect(controllers[1].openFraction).toBe(0);
   });
 });
 

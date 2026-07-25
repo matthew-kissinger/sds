@@ -64,13 +64,34 @@ function webgpuMaterial() {
  */
 async function syncWith(material, entities) {
     const { TerrainBuilder } = await import('../js/TerrainBuilder.js');
-    const host = { terrain: { material } };
+    // Bind to the property TerrainBuilder ACTUALLY assigns the mesh to, read out
+    // of the source, rather than a name typed here. The first version of this
+    // helper hand-wrote `{ terrain: { material } }` and so certified the very
+    // bug it was written to prevent: the method read `this.terrain?.material`,
+    // TerrainBuilder stores `this.terrainMesh`, and the sync returned on its
+    // first line every frame while this spec went green.
+    const host = { [meshProperty()]: { material } };
     TerrainBuilder.prototype._syncGroundContact.call(host, entities);
     return material;
 }
 
-const DOG = { position: { x: 12, y: 1.5, z: -7 }, type: 'dog', facingDirection: 0 };
+/** The property name TerrainBuilder assigns the built terrain mesh to. */
+function meshProperty() {
+    const src = read('js/TerrainBuilder.js');
+    const m = src.match(/this\.(\w+)\s*=\s*terrain;/);
+    if (!m) throw new Error('could not find where TerrainBuilder stores the terrain mesh');
+    return m[1];
+}
+
+// The REAL production shapes, not invented ones. js/main.js:734 builds the dog
+// slot as { position, type: 'player', currentRotation } and the sheep wrappers
+// as { position, type: 'sheep', facingDirection }. The first version of this
+// file used `facingDirection` on the dog, which no dog object carries, so it
+// certified an entity shape production never produces and would have passed
+// while the terrain contact silently never rotated.
+const DOG = { position: { x: 12, y: 1.5, z: -7 }, type: 'player', currentRotation: 0 };
 const SHEEP = { position: { x: 3, y: 0, z: 4 }, type: 'sheep', facingDirection: 1 };
+const REMOTE_DOG = { position: { x: -5, y: 0, z: 2 }, type: 'dog', currentRotation: Math.PI };
 
 describe('_syncGroundContact drives the terrain contact uniforms', () => {
     it('writes the dog position and a non-zero strength on the WebGL path', async () => {
@@ -101,21 +122,27 @@ describe('_syncGroundContact drives the terrain contact uniforms', () => {
         expect(m.uniforms.uContactPosition.value.x).toBe(12);
     });
 
-    it('converts a scalar facing to a unit direction the way updateInteractors does', async () => {
-        const m = await syncWith(webglMaterial(), [{ ...DOG, facingDirection: Math.PI / 2 }]);
-        expect(m.uniforms.uContactFacing.value.x).toBeCloseTo(0, 6);
-        expect(m.uniforms.uContactFacing.value.y).toBeCloseTo(1, 6);
+    it('decodes the dog yaw as (sin, cos), the mapping its mesh uses', async () => {
+        const m = await syncWith(webglMaterial(), [{ ...DOG, currentRotation: Math.PI / 2 }]);
+        expect(m.uniforms.uContactFacing.value.x).toBeCloseTo(1, 6);
+        expect(m.uniforms.uContactFacing.value.y).toBeCloseTo(0, 6);
     });
 
-    it('normalises a vector facing', async () => {
-        const m = await syncWith(webglMaterial(), [{ ...DOG, facingDirection: { x: 0, z: 5 } }]);
+    it('handles a remote dog, which carries the same shape as the player', async () => {
+        const m = await syncWith(webglMaterial(), [REMOTE_DOG]);
+        expect(m.uniforms.uContactStrength.value).toBeGreaterThan(0);
+        expect(m.uniforms.uContactPosition.value.x).toBe(-5);
+    });
+
+    it('normalises a supplied vector facing', async () => {
+        const m = await syncWith(webglMaterial(), [{ position: DOG.position, type: 'player', facing: { x: 0, z: 5 } }]);
         expect(m.uniforms.uContactFacing.value.y).toBeCloseTo(1, 6);
     });
 
     it('falls back to +Z rather than a zero-length facing', async () => {
-        // A zero-length facing NaNs the oriented rounded-rect maths in both
+        // A zero-length facing NaNs the oriented rounded-rect maths in all four
         // shaders, which renders as a hole rather than a shadow.
-        const m = await syncWith(webglMaterial(), [{ position: DOG.position, type: 'dog' }]);
+        const m = await syncWith(webglMaterial(), [{ position: DOG.position, type: 'player' }]);
         expect(m.uniforms.uContactFacing.value.x).toBe(0);
         expect(m.uniforms.uContactFacing.value.y).toBe(1);
     });
@@ -158,5 +185,17 @@ describe('the contact term is actually wired into all four shader paths', () => 
         // Without this line the uniforms above are written exactly never.
         const src = read('js/TerrainBuilder.js');
         expect(src).toMatch(/updateGrassAnimation[\s\S]{0,400}_syncGroundContact\(/);
+    });
+
+    it('the sync reads the property the builder actually stores the mesh on', () => {
+        // This is the assertion that would have caught the second dead-contact
+        // bug. `_syncGroundContact` looked up `this.terrain`, which TerrainBuilder
+        // never assigns, so it returned on its first line forever. Two named
+        // things have to agree and neither is visible from the other.
+        const src = read('js/TerrainBuilder.js');
+        const prop = meshProperty();
+        expect(prop).toBe('terrainMesh');
+        const body = src.slice(src.indexOf('_syncGroundContact('));
+        expect(body.slice(0, 1200)).toContain(`this.${prop}?.material`);
     });
 });

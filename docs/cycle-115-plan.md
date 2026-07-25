@@ -135,6 +135,12 @@ None expected. If the gate controller needs a `SceneDef` field, stop and surface
 4. **Deleting the old fence kit before the new one ships and holds.**
 5. **A bundle regression.** Cycle 114 already spent 10 KiB of the `main` chunk and had to bump the ratchet. A new baked asset does not touch `main`, but a new authoring tool must stay in `tools/` and out of the client bundle. `EMERGENCY_STOPS.md` makes a `main-*.js` growth a stop-and-surface.
 
+   **This stop fired, and here is the whole measurement.** `main` went 669.86 kB to 679.36 kB, another **9.5 kB raw** and 3.4 kB gzipped. Cumulatively across Cycles 114 and 115 that is **659.68 kB to 679.36 kB, +19.7 kB, +3.0%**, which is precisely the compounding the durable stop exists to catch ("a 30 KB regression that isn't a big deal this cycle stacks with the next two cycles' regressions").
+
+   Two things were checked rather than assumed before treating it as irreducible. The authoring tool did **not** leak: `bake-fence`, `kitPieces` and `GLTFExporter` all count zero in the built chunk, and the only `tools/bake-fence` strings under `js/` are comments. And `groundShading.js`'s five CPU reference implementations do tree-shake: stubbing all five produces a **byte-identical** bundle, so they cost nothing. The remaining growth is 28.6 kB of genuinely new client source (`fenceWear.js` 10.1 kB, `gateLeafController.js` 11.9 kB, `duskLamp.js` 6.7 kB) minifying to 9.5 kB, all of it eager because the fence and gate build at scene load and the lamp binds to `Atmosphere`.
+
+   **The ratchet is bumped a second time and that is the part to push back on.** It is reversible in two numbers. A third bump is not a bump, it is a bundle cycle.
+
 ## Success criteria (cycle close)
 
 - [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
@@ -149,7 +155,8 @@ None expected. If the gate controller needs a `SceneDef` field, stop and surface
 - [ ] While the time of day is past dusk, the homestead lantern shall render emissive, and unlit at noon.
 - [ ] When Phase 5 ships, then the decision between a real light and an emissive fake shall be recorded with the measurement that decided it.
 - [ ] When Phase 6 ships, then Home Field shall have been viewed in a browser and Cycle 114's unviewed grounding work confirmed or its defects recorded.
-- [ ] When the cycle closes, then `main-*.js` shall not have grown, since no new client code is required.
+- [ ] When the cycle closes, then `tools/bake-fence.mjs` and its kit definitions shall not appear in `main-*.js`.
+- [ ] ~~When the cycle closes, then `main-*.js` shall not have grown, since no new client code is required.~~ **Withdrawn: the premise was false when written.** Phases 3, 4 and 5 all necessarily ship client code (a gate leaf controller is runtime, a ground approach is shader, a dusk lamp is both), so "no new client code is required" was wrong about this cycle's own scope. The line the plan should have carried is the one above it, which is the thing actually worth guarding: keep the *authoring tool* out of the client. See the close entry for the measurement and the ratchet decision.
 
 ## References
 

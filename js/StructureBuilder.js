@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { FencePresets, FenceConfigBuilder } from './FencePresets.js';
 import { sumObjectTreeTriangles } from './utils/TriangleCount.js';
 import { isPointInPolygon } from './gamestate/polygonSpawn.js';
+import { collectGateLeafControllers, getGateLeafController } from './world/gateLeafController.js';
+import { applyRailSag } from './world/fenceWear.js';
 
 /**
  * StructureBuilder - Structure builder with modular fence system
@@ -35,6 +37,14 @@ export class StructureBuilder {
         /** @type {import('../shared/terrain/Heightfield.js').Heightfield | null} */
         this.heightfield = null;
         this._tmpWorldPos = new THREE.Vector3();
+
+        // The day loop's gate. Set by buildHomesteadGate, cleared by
+        // clearAllStructures. Every OTHER scene's gate controller is reached
+        // through getGateLeafControllers() rather than a named field, because
+        // nothing in this builder decides when those gates move.
+        /** @type {import('./world/gateLeafController.js').GateLeafController | null} */
+        this._homesteadGateController = null;
+        this._homesteadGateOpen = false;
     }
 
     /**
@@ -139,8 +149,24 @@ export class StructureBuilder {
         postInstances.receiveShadow = true;
 
         const railCount = (spec.postCount - 1) * spec.railHeights.length;
+        // Sag the rails (Cycle 115 P2). Every rail in a segment spans the same
+        // `actualSpacing`, so ONE geometry carries the whole segment's droop
+        // and the instanced draw is unchanged. This is the only place the kit's
+        // rail geometry is cloned, which is what makes deforming it safe: the
+        // source in FencePresets.models stays straight for the next segment.
+        //
+        // `metresPerUnit` comes off the mesh's own node scale because the baked
+        // kit ships Draco-quantised: its positions are normalised shorts and
+        // that scale is what puts them back into metres. See applyRailSag.
+        const railGeometry = railMesh.geometry.clone();
+        const railUnitScale = new THREE.Vector3();
+        spec.railSource.localMatrix.decompose(new THREE.Vector3(), new THREE.Quaternion(), railUnitScale);
+        applyRailSag(railGeometry, spec.actualSpacing, {
+            longAxis: 'x',
+            metresPerUnit: railUnitScale.y || 1,
+        });
         const railInstances = new THREE.InstancedMesh(
-            railMesh.geometry.clone(),
+            railGeometry,
             railMesh.material,
             railCount
         );
@@ -352,6 +378,12 @@ export class StructureBuilder {
             });
             structureArray.length = 0;
         });
+
+        // The homestead gate's controller holds direct refs into the subtree we
+        // just detached. Dropping it here stops the day loop from easing a gate
+        // that is no longer in the scene after a swap (loadScene clears before
+        // initWorld rebuilds).
+        this._homesteadGateController = null;
     }
     
     /**
@@ -515,20 +547,18 @@ export class StructureBuilder {
         //     and hinged door stay coplanar on a slope. ---
         const gate = new THREE.Group();
         gate.name = 'HomesteadGateAssembly';
+        // Cycle 115 P3: the leaf rig used to be built HERE, which is why only
+        // this scene's gate could move. It now comes back on the gate group
+        // itself from createGateStructure, on both the authored-asset and the
+        // no-asset branch, so there is nothing left to branch on.
         const gateStructure = this.fencePresets.createGateStructure(width, 'horizontal');
-        const authoredGateAsset = !!gateStructure.getObjectByName?.('Gate_Assembly');
-        let door = authoredGateAsset ? this._buildAuthoredGateDoor(gateStructure) : null;
-        if (door) {
-            gate.add(door);
-        } else {
-            door = this._buildGateDoor(width);
-            door.position.set(-width / 2, 0, 0);
-            gate.add(door);
-        }
-        this._homesteadDoor = door;
+        gate.add(gateStructure);
+        this._homesteadGateController = getGateLeafController(gateStructure);
         this._homesteadGateOpen = true;
-        this._homesteadDoorOpenAngle = -Math.PI * 0.58;
-        if (door) this._setHomesteadDoorImmediate(true); // start open at dawn
+        // The day loop starts at dawn with the gate standing open. Every other
+        // scene keeps the builder's closed default; this is the one place that
+        // states an opinion, and it states it out loud.
+        this._homesteadGateController?.setOpenFraction(1);
         gate.position.set(g.x, 0, g.z);
         gate.rotation.y = (facingDeg * Math.PI) / 180;
         gate.userData.surfaceToTerrain = true; // single lift for the whole gate
@@ -569,121 +599,49 @@ export class StructureBuilder {
         return group;
     }
 
-    _buildAuthoredGateDoor(gateStructure) {
-        const leftLeaf = this._findParentWithChildMesh(gateStructure, 'Mesh_LeftGateWood');
-        const rightLeaf = this._findParentWithChildMesh(gateStructure, 'Mesh_RightGateWood');
-        if (!leftLeaf || !rightLeaf) return null;
-
-        leftLeaf.name = 'HomesteadGateDoorLeft';
-        rightLeaf.name = 'HomesteadGateDoorRight';
-
-        const controller = new THREE.Group();
-        controller.name = 'HomesteadGateAssetDoor';
-        controller.add(gateStructure);
-        controller.userData.gateLeaves = [
-            {
-                node: leftLeaf,
-                closed: 0,
-                open: leftLeaf.rotation.y,
-            },
-            {
-                node: rightLeaf,
-                closed: 0,
-                open: rightLeaf.rotation.y,
-            },
-        ];
-        return controller;
-    }
-
-    _findParentWithChildMesh(root, meshName) {
-        let found = null;
-        root.traverse(node => {
-            if (found || node.name !== meshName) return;
-            found = node.parent ?? null;
-        });
-        return found;
-    }
-
     /**
-     * A simple wooden gate door: three horizontal rails + a hinge stile + a far
-     * stile, all in the door's local frame with the hinge at local x = 0 so the
-     * group swings about Y. Rails span local x in [0, width].
-     * @param {number} width
-     * @returns {THREE.Group}
-     * @private
+     * Every gate leaf controller across the structures this builder currently
+     * owns, in build order. The seam a consumer that wants to pose gates by
+     * scene reaches for; this builder itself never decides when a gate opens.
+     * @returns {import('./world/gateLeafController.js').GateLeafController[]}
      */
-    _buildGateDoor(width) {
-        const door = new THREE.Group();
-        door.name = 'HomesteadGateDoor';
-        const mat = new THREE.MeshLambertMaterial({ color: 0x6b4a30 });
-        const len = Math.max(1, width - 0.4);
-        for (const h of [0.7, 1.5, 2.3]) {
-            const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.13, 0.1), mat);
-            rail.position.set(0.2 + len / 2, h, 0);
-            rail.castShadow = true;
-            door.add(rail);
+    getGateLeafControllers() {
+        const controllers = [];
+        for (const element of Object.values(this.structures).flat()) {
+            collectGateLeafControllers(element, controllers);
         }
-        const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.8, 0.16), mat);
-        hinge.position.set(0.2, 1.4, 0);
-        hinge.castShadow = true;
-        door.add(hinge);
-        const farStile = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.5, 0.14), mat);
-        farStile.position.set(width - 0.2, 1.3, 0);
-        farStile.castShadow = true;
-        door.add(farStile);
-        return door;
+        return controllers;
     }
 
     /**
      * Cycle 65: command the homestead gate open or closed. The actual swing is
-     * tweened in `update`; if the door is missing (non-day-loop scene) this is a
+     * tweened in `updateGate`; if the scene has no homestead gate this is a
      * no-op. Idempotent.
      * @param {boolean} open
      */
     setHomesteadGateOpen(open) {
-        if (!this._homesteadDoor) return;
+        const controller = this._homesteadGateController;
+        if (!controller) return;
         this._homesteadGateOpen = !!open;
+        const target = this._homesteadGateOpen ? 1 : 0;
+        // Reduced motion snaps; everything else aims and lets updateGate ease.
         if (this._reducedMotion) {
-            this._setHomesteadDoorImmediate(open);
+            controller.setOpenFraction(target);
+        } else {
+            controller.setTargetOpenFraction(target);
         }
     }
 
     /**
      * Cycle 65: tween the homestead gate door toward its target each frame.
      * Driven by the day loop's per-frame runner because StructureBuilder.update
-     * is not on the main loop. No-op without a door or under reduced motion.
+     * is not on the main loop. No-op without a gate or under reduced motion
+     * (where setHomesteadGateOpen has already snapped it).
      * @param {number} deltaTime
      */
     updateGate(deltaTime) {
-        if (!this._homesteadDoor || this._reducedMotion) return;
-        const leaves = this._homesteadDoor.userData?.gateLeaves;
-        if (Array.isArray(leaves) && leaves.length > 0) {
-            const k = Math.min(1, (Number.isFinite(deltaTime) ? deltaTime : 0.016) * 3);
-            for (const leaf of leaves) {
-                const target = this._homesteadGateOpen ? leaf.open : leaf.closed;
-                const cur = leaf.node.rotation.y;
-                if (Math.abs(target - cur) > 1e-4) {
-                    leaf.node.rotation.y = cur + (target - cur) * k;
-                }
-            }
-            return;
-        }
-        const target = this._homesteadGateOpen ? this._homesteadDoorOpenAngle : 0;
-        const cur = this._homesteadDoor.rotation.y;
-        if (Math.abs(target - cur) <= 1e-4) return;
-        const k = Math.min(1, (Number.isFinite(deltaTime) ? deltaTime : 0.016) * 3);
-        this._homesteadDoor.rotation.y = cur + (target - cur) * k;
-    }
-
-    _setHomesteadDoorImmediate(open) {
-        const leaves = this._homesteadDoor.userData?.gateLeaves;
-        if (Array.isArray(leaves) && leaves.length > 0) {
-            for (const leaf of leaves) {
-                leaf.node.rotation.y = open ? leaf.open : leaf.closed;
-            }
-            return;
-        }
-        this._homesteadDoor.rotation.y = open ? this._homesteadDoorOpenAngle : 0;
+        if (this._reducedMotion) return;
+        this._homesteadGateController?.step(deltaTime);
     }
 
     /**

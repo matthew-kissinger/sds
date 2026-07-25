@@ -4,6 +4,12 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { configureGLTFLoader } from './TerrainBuilder.js';
 import { mulberry32 } from '../shared/Random.js';
+import { applyRailSag, writeFenceVertexColors } from './world/fenceWear.js';
+import {
+    attachGateLeafController,
+    buildAuthoredGateLeaves,
+    GATE_LEAF_INITIAL_OPEN_FRACTION,
+} from './world/gateLeafController.js';
 
 /**
  * FencePresets - Modular fence asset system for reusable fence components
@@ -44,6 +50,27 @@ const POST_YAW_MAX = 0.20;      // rad, +/- : the post's facing about its own ax
 const POST_LEAN_MAX = 0.038;    // rad, +/- : ~2.2 degrees off plumb
 const POST_HEIGHT_MIN = 0.95;   // multiplier on the authored post height
 const POST_HEIGHT_MAX = 1.10;
+
+/**
+ * The procedural swing leaf's open yaw, carried over unchanged from the
+ * homestead fallback door it replaces (Cycle 65). Roughly 104 degrees: far
+ * enough past square that the leaf clearly reads open from the aerial camera,
+ * short enough that it does not fold back onto the fence run behind it.
+ */
+const PROCEDURAL_GATE_LEAF_OPEN_ANGLE = -Math.PI * 0.58;
+
+/** Node name for the procedural single-leaf door. */
+const PROCEDURAL_GATE_LEAF_NAME = 'GateLeaf';
+
+/**
+ * Bands along a procedural rail's long axis (Cycle 115 P2).
+ *
+ * Matches `FENCE_RAIL.segments` in `tools/bake-fence/kitPieces.mjs`, so the
+ * fallback resolves the same droop the baked rail does. Below four the
+ * parabola starts reading as a chevron; above it there is nothing left to see
+ * on a 60mm curve.
+ */
+const RAIL_SAG_SEGMENTS = 4;
 
 /** FNV-1a. Turns a stable run key into a 32-bit seed for mulberry32. */
 function hashString32(input) {
@@ -143,26 +170,43 @@ export class FencePresets {
         this.modelsLoaded = false;
         this.useGLBModels = true; // Toggle to use GLB vs procedural
 
-        // Materials - warm wood tones that contrast with green grass
+        // Materials - warm wood tones that contrast with green grass.
+        //
+        // `post` and `rail` read vertex colours (Cycle 115 P2) because the
+        // baked kit now carries its weathering in COLOR_0 and this fallback has
+        // to look like the same fence. Anything drawn with either of them MUST
+        // carry a `color` attribute: three declares the attribute either way,
+        // so a geometry without one renders black rather than untinted. The two
+        // cached geometries below are given theirs on the next lines, and
+        // every per-call rail geometry gets one as it is built.
         this.materials = {
             post: new THREE.MeshPhongMaterial({
                 color: 0x8B7355,  // Warm tan/beige wood
                 emissive: 0x2a1a08,
                 emissiveIntensity: 0.15,
-                shininess: 5
+                shininess: 5,
+                vertexColors: true
             }),
             rail: new THREE.MeshPhongMaterial({
                 color: 0x9C8465,  // Lighter warm wood
                 emissive: 0x3a2a10,
                 emissiveIntensity: 0.12,
-                shininess: 8
+                shininess: 8,
+                vertexColors: true
             }),
             gate: new THREE.MeshPhongMaterial({
                 color: 0xA89070,  // Even lighter for gates
                 emissive: 0x4a3a18,
                 emissiveIntensity: 0.18,
                 shininess: 10
-            })
+            }),
+            // The procedural swing leaf's timber. Its colour is inherited
+            // verbatim from the homestead fallback door (Cycle 65) so the
+            // no-asset path looks identical after the Cycle 115 promotion.
+            // Shared rather than built per call because clearAllStructures
+            // deliberately disposes geometry and never materials - a per-call
+            // material would leak one instance per scene load.
+            gateLeaf: new THREE.MeshLambertMaterial({ color: 0x6b4a30 })
         };
 
         // Cached geometries (fallback for when GLB not loaded)
@@ -170,6 +214,19 @@ export class FencePresets {
             post: new THREE.CylinderGeometry(this.postRadius, this.postRadius, this.fenceHeight, 8),
             rail: new THREE.BoxGeometry(this.postSpacing, this.railHeight, this.railWidth)
         };
+        // The cylinder is centred on its own origin, so its foot is half the
+        // authored height below it. Pass that as the ground reference and the
+        // gradient lands in the same place it does on the baked post.
+        writeFenceVertexColors(this.geometries.post, {
+            footY: -this.fenceHeight / 2,
+            BufferAttributeCtor: THREE.BufferAttribute
+        });
+        // A rail's origin is its own centre, not the ground, so it has no
+        // height to weather against and gets underside darkening only.
+        writeFenceVertexColors(this.geometries.rail, {
+            footY: null,
+            BufferAttributeCtor: THREE.BufferAttribute
+        });
     }
 
     /**
@@ -182,9 +239,17 @@ export class FencePresets {
         // One shared-texture kit GLB instead of four standalone files that each
         // re-embedded the same wood texture set. The kit's default scene holds
         // four identity-wrapper nodes; cloning a wrapper reproduces exactly what
-        // cloning the old per-file gltf.scene produced. Built by
-        // tools/merge-fence-kit.mjs; pre-merge pieces live in assets/_originals.
-        const KIT_PATH = 'assets/models/Fence_Kit-v1.0.0.glb';
+        // cloning the old per-file gltf.scene produced.
+        //
+        // v2 is baked from source by `tools/bake-fence.mjs` (Cycle 115 P1): a
+        // real 45 degree weather chamfer, a controllable ring count, and the
+        // COLOR_0 channel the weathering in `js/world/fenceWear.js` needs. v1
+        // was an opaque binary with no authoring source at all, which is what
+        // blocked all three of the cycle's asks. It is still on disk and still
+        // in `assets/_originals`, so reverting is this one constant plus its
+        // twin in `js/GameAssetLoader.js`. The palette texture is the SAME 32x4
+        // image, lifted verbatim out of v1 by the bake.
+        const KIT_PATH = 'assets/models/Fence_Kit-v2.0.0.glb';
         const GATE_PATH = 'assets/models/Gate_Assembly-v1.0.0.glb';
         const kitNodeNames = {
             fencePost: 'Fence_Post',
@@ -334,7 +399,16 @@ export class FencePresets {
                 }
             }
 
-            // Create rails between posts (3 levels based on fence segment model)
+            // Create rails between posts (3 levels based on fence segment model).
+            //
+            // These rails do NOT sag (Cycle 115 P2). Cloning a wrapper shares
+            // the source geometry with every other clone, so a droop written
+            // here would land on the kit itself and on every other segment.
+            // This branch is only reached when a kit piece is not a single
+            // mesh, which the kit contract in
+            // cycle105-validation/fence-kiln-spec.md forbids and the baked kit
+            // satisfies, so in practice `_buildInstancedFenceSegment` owns the
+            // rails and sags its own per-segment clone.
             for (const height of railHeights) {
                 for (let i = 0; i < postCount - 1; i++) {
                     const rail = this.cloneModel('fenceRail');
@@ -418,6 +492,11 @@ export class FencePresets {
         // Create rails (3 levels). Geometry's long axis is X for horizontal
         // and Z for vertical orientation; tagged geomAxis lets the slope
         // post-process build the right base-axis quaternion.
+        //
+        // Cycle 115 P2: each rail is segmented along its long axis and droops.
+        // A plain box has vertices only at its two ends, which is exactly where
+        // a catenary is flat, so an unsegmented box cannot express sag at all.
+        // Four bands is the same budget the baked rail carries.
         const railLevels = [0.5, 1.2, 1.9];
         const geomAxis = orientation === 'horizontal' ? 'x' : 'z';
         for (let level of railLevels) {
@@ -425,8 +504,17 @@ export class FencePresets {
                 const railGeo = new THREE.BoxGeometry(
                     orientation === 'horizontal' ? actualSpacing : this.railWidth,
                     this.railHeight,
-                    orientation === 'horizontal' ? this.railWidth : actualSpacing
+                    orientation === 'horizontal' ? this.railWidth : actualSpacing,
+                    orientation === 'horizontal' ? RAIL_SAG_SEGMENTS : 1,
+                    1,
+                    orientation === 'horizontal' ? 1 : RAIL_SAG_SEGMENTS
                 );
+                // Colours before sag: the underside term reads the normal, and
+                // the sag deliberately leaves normals alone.
+                writeFenceVertexColors(railGeo, { footY: null, BufferAttributeCtor: THREE.BufferAttribute });
+                // Boxes are authored in metres, so one geometry unit is one
+                // metre and the sag needs no unit conversion here.
+                applyRailSag(railGeo, actualSpacing, { longAxis: geomAxis, metresPerUnit: 1 });
                 const rail = new THREE.Mesh(railGeo, this.materials.rail);
 
                 if (orientation === 'horizontal') {
@@ -529,7 +617,66 @@ export class FencePresets {
     }
     
     /**
+     * A single procedural swing leaf: three horizontal rails + a hinge stile +
+     * a far stile, all in the leaf's local frame with the hinge at local x = 0
+     * so the group swings about Y. Rails span local x in [0, width].
+     *
+     * Promoted out of `StructureBuilder._buildGateDoor` in Cycle 115 P3.
+     * It used to be the homestead's private no-asset fallback, which meant a
+     * scene whose gate GLB failed to load got a gate with no door at all and
+     * nothing to hinge. Now both fallback branches below build one, so a
+     * consumer that opens a gate gets a visible result whether or not the
+     * authored assembly loaded.
+     *
+     * @param {number} width - Width of the gate opening
+     * @param {string} orientation - 'horizontal' or 'vertical'
+     * @returns {import('./world/gateLeafController.js').GateLeaf}
+     */
+    createProceduralGateLeaf(width, orientation = 'horizontal') {
+        const leaf = new THREE.Group();
+        leaf.name = PROCEDURAL_GATE_LEAF_NAME;
+        const mat = this.materials.gateLeaf;
+        const len = Math.max(1, width - 0.4);
+        for (const h of [0.7, 1.5, 2.3]) {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.13, 0.1), mat);
+            rail.position.set(0.2 + len / 2, h, 0);
+            rail.castShadow = true;
+            leaf.add(rail);
+        }
+        const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.8, 0.16), mat);
+        hinge.position.set(0.2, 1.4, 0);
+        hinge.castShadow = true;
+        leaf.add(hinge);
+        const farStile = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.5, 0.14), mat);
+        farStile.position.set(width - 0.2, 1.3, 0);
+        farStile.castShadow = true;
+        leaf.add(farStile);
+
+        // Closed is whatever yaw lays the leaf across the opening, which is NOT
+        // 0 for a vertical gate: the leaf's geometry runs along local +X, so a
+        // gate whose opening runs along Z needs the hinge parked at +width/2
+        // and the leaf turned a quarter turn to reach back across the gap. The
+        // controller stores absolute angles precisely so this composes.
+        const closed = orientation === 'vertical' ? Math.PI / 2 : 0;
+        if (orientation === 'vertical') {
+            leaf.position.set(0, 0, width / 2);
+        } else {
+            leaf.position.set(-width / 2, 0, 0);
+        }
+        return { node: leaf, closed, open: closed + PROCEDURAL_GATE_LEAF_OPEN_ANGLE };
+    }
+
+    /**
      * Create a gate structure
+     *
+     * Cycle 115 P3: the returned group always carries a leaf controller on
+     * `userData.gateLeafController`, on every branch below. Read it with
+     * `getGateLeafController(group)`; it is never null, so a consumer that
+     * wants to pose a gate needs no branch on which asset loaded. The gate
+     * builds CLOSED (`GATE_LEAF_INITIAL_OPEN_FRACTION`) - before this phase the
+     * authored assembly rendered in its baked-open pose forever, because
+     * nothing but Newsheepdogland's homestead branch ever touched the pivots.
+     *
      * @param {number} width - Width of the gate
      * @param {string} orientation - 'horizontal' or 'vertical'
      * @param {Object} config - Gate configuration
@@ -550,6 +697,16 @@ export class FencePresets {
                     gate.rotation.y = Math.PI / 2;
                 }
                 group.add(gate);
+                // Leaves come from the asset's own pivots, so the orientation
+                // rotation above rides on the parent and the hinge angles stay
+                // in the asset's frame. An assembly without the leaf meshes
+                // yields an empty (still non-null) controller rather than a
+                // procedural door laid on top of authored geometry.
+                attachGateLeafController(
+                    group,
+                    buildAuthoredGateLeaves(gate),
+                    GATE_LEAF_INITIAL_OPEN_FRACTION
+                );
                 return group;
             }
         }
@@ -579,6 +736,7 @@ export class FencePresets {
             // Visual threshold effect (glowing ground marker instead of asset)
             this.addThresholdEffect(group, width, orientation, gateColor);
 
+            this._addProceduralGateLeaf(group, width, orientation);
             return group;
         }
 
@@ -635,7 +793,19 @@ export class FencePresets {
         // Visual threshold effect
         this.addThresholdEffect(group, width, orientation, gateColor);
 
+        this._addProceduralGateLeaf(group, width, orientation);
         return group;
+    }
+
+    /**
+     * Build the procedural leaf, mount it, and hang the controller off the gate
+     * group. Shared by both no-asset branches so the two cannot drift.
+     * @private
+     */
+    _addProceduralGateLeaf(group, width, orientation) {
+        const leaf = this.createProceduralGateLeaf(width, orientation);
+        group.add(leaf.node);
+        return attachGateLeafController(group, [leaf], GATE_LEAF_INITIAL_OPEN_FRACTION);
     }
 
     /**

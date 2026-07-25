@@ -211,6 +211,12 @@ export async function regenerateGrass(builder, bounds, pasture) {
         builder.farmHouseExclusionArea.maxZ
     );
 
+    // Cycle 115 Phase 4: carry the scene's worn gate approach across the
+    // rebuild. This is a fresh GrassSystem, so without the line the terrain
+    // would keep shading the approach while the regenerated grass stopped
+    // thinning over it, and the two would disagree about the same ground.
+    builder.grassSystem.setGateApproach(builder.gateApproach ?? null);
+
     if (pasture) {
         if (pasture.edgeAngle !== undefined && pasture.edgeAngle !== 0) {
             const centerX = (pasture.minX + pasture.maxX) / 2;

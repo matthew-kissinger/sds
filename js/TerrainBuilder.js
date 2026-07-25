@@ -56,9 +56,12 @@ import {
 } from './world/sandbox.js';
 import { createWebGpuTerrainMaterial } from './world/webgpuTerrainMaterialAdapter.js';
 import {
+    GROUND_APPROACH_GLSL,
     GROUND_CONTACT,
     GROUND_CONTACT_GLSL,
     GROUND_VARIATION_GLSL,
+    resolveEntityFacing,
+    resolveGateApproach,
 } from './world/groundShading.js';
 import { TIER_PRESETS } from './HardwareTier.js';
 import { shouldApplyWebGpuRendererFlag } from './rendering/webgpuRuntimeMode.js';
@@ -249,6 +252,14 @@ export class TerrainBuilder {
             farField: { minX: -600, maxX: 600, minZ: -600, maxZ: 600 },
             horizon: { minX: -800, maxX: 800, minZ: -800, maxZ: 800 }
         };
+
+        // Cycle 115 Phase 4: where the worn approach to the pen gate sits, or
+        // null on a scene with no pen gate. Resolved once here because BOTH
+        // consumers need the same answer: the terrain material bends its dirt
+        // mask toward it, and the grass scatter thins over it. Deriving it twice
+        // is how the two would end up describing different ground.
+        /** @type {{mouth: {x: number, z: number}, axis: {x: number, z: number}, gateWidth: number} | null} */
+        this.gateApproach = resolveGateApproach(sceneDef);
 
         // Farm house position and exclusion area — from scene if provided.
         this.farmHousePosition = sceneDef?.farmHouse?.position ?? { x: 180, z: 160 };
@@ -970,7 +981,24 @@ export class TerrainBuilder {
                 // the menu and attract-mode terrain render exactly as before.
                 uContactPosition: { value: new THREE.Vector3(0, 0, 0) },
                 uContactFacing: { value: new THREE.Vector2(0, 1) },
-                uContactStrength: { value: 0 }
+                uContactStrength: { value: 0 },
+                // Cycle 115 Phase 4: the worn approach to the pen gate. Static
+                // for the life of the material (the gate does not move), but
+                // uniforms rather than baked literals so Cycle 116 can fade the
+                // approach in or out without recompiling the shader. Width
+                // defaults to 1 rather than 0 on a scene with no gate: the
+                // shader clamps it anyway, and a zero would be one edit away
+                // from NaN-ing the whole terrain colour.
+                uApproachMouth: { value: new THREE.Vector2(
+                    this.gateApproach?.mouth.x ?? 0,
+                    this.gateApproach?.mouth.z ?? 0
+                ) },
+                uApproachAxis: { value: new THREE.Vector2(
+                    this.gateApproach?.axis.x ?? 0,
+                    this.gateApproach?.axis.z ?? 1
+                ) },
+                uApproachWidth: { value: this.gateApproach?.gateWidth ?? 1 },
+                uApproachStrength: { value: this.gateApproach ? 1 : 0 }
             }
         ]);
         const createDefaultMaterial = () => new THREE.ShaderMaterial({
@@ -1005,12 +1033,17 @@ export class TerrainBuilder {
                 uniform vec3 uContactPosition;
                 uniform vec2 uContactFacing;
                 uniform float uContactStrength;
+                uniform vec2 uApproachMouth;
+                uniform vec2 uApproachAxis;
+                uniform float uApproachWidth;
+                uniform float uApproachStrength;
 
                 varying vec2 vUv;
                 varying vec3 vWorldPos;
 
                 ${GROUND_VARIATION_GLSL}
                 ${GROUND_CONTACT_GLSL}
+                ${GROUND_APPROACH_GLSL}
 
                 // Simple noise function
                 float hash(vec2 p) {
@@ -1058,9 +1091,23 @@ export class TerrainBuilder {
                     vec3 color = mix(baseColor1, baseColor2, n1);
                     color = mix(color, baseColor3, n2 * 0.5);
 
-                    // Add subtle dirt patches
+                    // Add subtle dirt patches.
+                    //
+                    // Cycle 115 Phase 4: the worn approach to the pen gate is a
+                    // shaped contribution to this SAME mask, not a second
+                    // material and not a decal - the ground in front of the gate
+                    // is the ground, with more reason to read as dirt. MAX
+                    // rather than sum: where a natural dirt patch already sits on
+                    // the approach the two do not stack into a mud slick, they
+                    // agree. Both the shape and the 0.62 peak blend come from
+                    // js/world/groundShading.js, so the WebGPU twin renders the
+                    // same approach even though its ambient dirt strength is a
+                    // per-scene 0.26-0.34 against this path's 0.4.
                     float dirtMask = smoothstep(0.55, 0.7, n1 * n2);
-                    color = mix(color, dirtColor, dirtMask * 0.4);
+                    float approachDirt = sdsGroundApproachDirt(
+                        vWorldPos.xz, uApproachMouth, uApproachAxis, uApproachWidth
+                    ) * uApproachStrength;
+                    color = mix(color, dirtColor, max(dirtMask * 0.4, approachDirt));
 
                     // Add fine detail variation
                     color *= 0.9 + n3 * 0.2;
@@ -1125,6 +1172,9 @@ export class TerrainBuilder {
                     fineDetail: [0.9, 0.2],
                     ao: [0.85, 0.15],
                 },
+                // Cycle 115 Phase 4. Null on a scene with no pen gate, which is
+                // how the node material knows to leave the dirt mask alone.
+                approach: this.gateApproach,
                 fog: true,
                 side: THREE.FrontSide,
                 polygonOffset: {
@@ -1237,6 +1287,14 @@ export class TerrainBuilder {
             this.grassSystem.addExclusionZone(pasture.minX, pasture.maxX, pasture.minZ, pasture.maxZ);
         }
 
+        // Cycle 115 Phase 4: the worn approach to the pen gate, from the same
+        // resolved geometry the terrain material shades. Pushed in rather than
+        // read off the SceneDef inside GrassSystem, because GrassSystem is only
+        // handed `sceneDef.grass` and giving it the whole def to reach one field
+        // would be a wider door than this needs. Must land before init(), which
+        // is when the scatter runs.
+        this.grassSystem.setGateApproach(this.gateApproach);
+
         // Initialize the grass system
         await this.grassSystem.init();
 
@@ -1296,26 +1354,27 @@ export class TerrainBuilder {
      * @param {Array<{position?: {x:number,y:number,z:number}, type?: string, facingDirection?: number|{x:number,z:number}}>} entities
      */
     _syncGroundContact(entities) {
-        const material = this.terrain?.material;
+        // `this.terrainMesh`, NOT `this.terrain`. TerrainBuilder has no
+        // `terrain` property: the mesh is declared null at :203 and assigned at
+        // :1210 as terrainMesh. The first version of this method read
+        // `this.terrain?.material`, found undefined, and returned on the next
+        // line every frame, so the contact term stayed exactly as dead as it was
+        // before the method existed. The spec did not catch it because it built
+        // its host with the wrong property name too.
+        const material = this.terrainMesh?.material;
         if (!material) return;
 
         const dog = entities?.find?.((e) => e && e.position && e.type !== 'sheep') ?? null;
 
-        // Facing matches updateInteractors: a scalar is a radian angle, an
-        // object is already a direction, absent falls back to +Z so a missing
-        // facing reads as north rather than zero-length (which would NaN the
-        // oriented rounded-rect maths in both shaders).
-        let fx = 0, fz = 1;
-        if (dog) {
-            if (typeof dog.facingDirection === 'number') {
-                fx = Math.cos(dog.facingDirection);
-                fz = Math.sin(dog.facingDirection);
-            } else if (dog.facingDirection && typeof dog.facingDirection.x === 'number') {
-                const len = Math.hypot(dog.facingDirection.x, dog.facingDirection.z) || 1;
-                fx = dog.facingDirection.x / len;
-                fz = dog.facingDirection.z / len;
-            }
-        }
+        // Facing goes through the shared resolver, NOT a local copy of the
+        // rules. The first version of this method handled only
+        // `facingDirection`, which is the SHEEP shape; the dog carries
+        // `currentRotation` and a different forward mapping, so it fell through
+        // to the +Z default and the terrain's contact never rotated with the
+        // animal standing on it. One authority now, in groundShading.js next to
+        // the falloff it feeds.
+        const facing = resolveEntityFacing(dog);
+        const fx = facing.x, fz = facing.z;
         const strength = dog ? GROUND_CONTACT.strength : 0;
 
         // WebGL: raw ShaderMaterial uniforms.

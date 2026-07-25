@@ -122,12 +122,16 @@ describe('farmhouse material roles - the shipped GLB is the contract', () => {
     it('splits the shipped meshes into the counts the house actually has', () => {
         // Pinned deliberately. These are the shipped numbers; a re-export that
         // moves them is a signal to re-read the model, not to edit this line.
+        //
+        // Cycle 115 Phase 5 moved exactly one mesh, `Mesh_LanternGlow`, out of
+        // trim (65) and into its own lantern role (1), so it can carry an
+        // emissive term the rest of the trim must not.
         const byRole = MESH_NODE_NAMES.reduce((acc, name) => {
             const role = classifyFarmhouseMesh(name);
             acc[role] = (acc[role] ?? 0) + 1;
             return acc;
         }, {});
-        expect(byRole).toEqual({ roof: 21, wall: 22, trim: 65, unroled: 1 });
+        expect(byRole).toEqual({ roof: 21, lantern: 1, wall: 22, trim: 64, unroled: 1 });
     });
 });
 
@@ -159,7 +163,14 @@ describe('farmhouse mesh classification', () => {
         // The door leaf is the one mesh in the file with no `Mesh_` prefix.
         expect(classifyFarmhouseMesh('Door')).toBe('trim');
         expect(classifyFarmhouseMesh('Mesh_DoorHandle')).toBe('trim');
-        expect(classifyFarmhouseMesh('Mesh_LanternGlow')).toBe('trim');
+    });
+
+    it('resolves the wick pane to lantern and leaves its ironwork on trim', () => {
+        // Order matters the same way `Mesh_PorchRoof` does above: trim's
+        // `Mesh_Lantern` prefix would otherwise swallow the glow pane.
+        expect(classifyFarmhouseMesh('Mesh_LanternGlow')).toBe('lantern');
+        expect(classifyFarmhouseMesh('Mesh_LanternBracket')).toBe('trim');
+        expect(classifyFarmhouseMesh('Mesh_LanternCap')).toBe('trim');
     });
 
     it('leaves the shadow footprint slab unroled and flags anything unrecognised', () => {
@@ -176,26 +187,27 @@ describe('farmhouse mesh classification', () => {
 });
 
 describe('applyFarmhouseMaterialRoles', () => {
-    it('turns one shared material into three, keeping the shadow proxy on the loaded one', () => {
+    it('turns one shared material into four, keeping the shadow proxy on the loaded one', () => {
         const source = makeSourceMaterial();
         const summary = applyFarmhouseMaterialRoles(makeFarmhouse(source));
 
         expect(summary.applied).toBe(true);
         expect(summary.visitedMeshes).toBe(109);
-        expect(summary.assigned).toEqual({ roof: 21, wall: 22, trim: 65 });
+        expect(summary.assigned).toEqual({ roof: 21, lantern: 1, wall: 22, trim: 64 });
         expect(summary.unknownMeshNames).toEqual([]);
 
-        // The house body: exactly three, not one.
-        expect(summary.roleMaterialCount).toBe(3);
+        // The house body: exactly four, not one.
+        expect(summary.roleMaterialCount).toBe(4);
         expect(summary.roleMaterialNames).toEqual([
+            'PaletteMaterial001_lantern',
             'PaletteMaterial001_roof',
             'PaletteMaterial001_trim',
             'PaletteMaterial001_wall',
         ]);
 
-        // Plus the untouched ShadowProxy, which is why the total reads four.
+        // Plus the untouched ShadowProxy, which is why the total reads five.
         expect(summary.unroledMeshes).toBe(1);
-        expect(summary.distinctMaterialCount).toBe(4);
+        expect(summary.distinctMaterialCount).toBe(5);
         expect(summary.materialNames).toContain('PaletteMaterial001');
     });
 
@@ -219,7 +231,7 @@ describe('applyFarmhouseMaterialRoles', () => {
             if (role) byRole[role] = child.material;
         }
 
-        for (const role of ['roof', 'wall', 'trim']) {
+        for (const role of ['roof', 'wall', 'trim', 'lantern']) {
             expect(byRole[role]).not.toBe(source);
             expect(byRole[role].map).toBe(source.map);
             expect(byRole[role].roughnessMap).toBe(source.roughnessMap);
@@ -338,11 +350,11 @@ describe('the trio survives WebGPU node-material adaptation as three', () => {
         expect(root.children.map((child) => child.material)).toEqual(before);
     });
 
-    it('presents three distinct material instances, which is what fromMaterial keys on', () => {
+    it('presents four distinct material instances, which is what fromMaterial keys on', () => {
         // three's NodeLibrary.fromMaterial builds one MeshStandardNodeMaterial
         // per source MeshStandardMaterial instance and copies every property
-        // across, so distinct instances with distinct colour and roughness are
-        // exactly what makes three node materials on the WebGPU path.
+        // across, so distinct instances are exactly what makes four node
+        // materials on the WebGPU path.
         const source = makeSourceMaterial();
         const root = makeFarmhouse(source);
         applyFarmhouseMaterialRoles(root);
@@ -352,12 +364,16 @@ describe('the trio survives WebGPU node-material adaptation as three', () => {
             if (child.material.userData?.farmhouseMaterialRole) roleMaterials.add(child.material);
         }
 
-        expect(roleMaterials.size).toBe(3);
-        expect(new Set([...roleMaterials].map((material) => material.uuid)).size).toBe(3);
+        expect(roleMaterials.size).toBe(4);
+        expect(new Set([...roleMaterials].map((material) => material.uuid)).size).toBe(4);
         expect(new Set([...roleMaterials].map((material) => material.type))).toEqual(
             new Set(['MeshStandardMaterial']),
         );
+        // Three distinct albedos across four materials, on purpose: the lantern
+        // carries trim's colour and roughness exactly, so an unlit lamp is the
+        // object Cycle 114 shipped. What separates it is emissive, below.
         expect(new Set([...roleMaterials].map((material) => material.color.getHex())).size).toBe(3);
         expect(new Set([...roleMaterials].map((material) => material.roughness)).size).toBe(3);
+        expect(new Set([...roleMaterials].map((material) => material.emissive.getHex())).size).toBe(2);
     });
 });

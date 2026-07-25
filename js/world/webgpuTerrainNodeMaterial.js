@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2 as ThreeVector2, Vector3 as ThreeVector3 } from 'three';
 import {
+  buildGroundApproachDirtNode,
   buildGroundContactNode,
   buildGroundNoiseNodes,
   buildGroundVariationNode,
@@ -12,7 +13,7 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
   terrain,
   heightTexture
 ) {
-  const { clamp, float, mix, positionWorld, smoothstep, texture, uniform, uv, vec2, vec3 } = TSL;
+  const { clamp, float, max, mix, positionWorld, smoothstep, texture, uniform, uv, vec2, vec3 } = TSL;
   const linearColor = (color) => color;
   const groundUv = uv();
   const worldXZ = vec2(positionWorld.x, positionWorld.z);
@@ -50,6 +51,40 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
   const midBlend = clamp(n1.mul(0.78).add(heightLift.mul(0.22)), 0.0, 1.0);
   const highBlend = clamp(n2.mul(0.38).add(heightLift.mul(0.24)), 0.0, 0.78);
   const dirtMask = smoothstep(0.54, 0.74, n1.mul(n2));
+  // Cycle 115 Phase 4: the worn approach to the pen gate. The WebGL twin in
+  // js/TerrainBuilder.js does exactly this against its own dirt mask. Shape and
+  // peak blend come from js/world/groundShading.js so the two paths cannot
+  // describe different ground; MAX rather than sum so a natural dirt patch that
+  // lands on the approach agrees with it instead of stacking into a mud slick.
+  //
+  // Uniforms rather than baked literals for the same reason the contact term
+  // uses them: Cycle 116 can drive the approach without a material rebuild. A
+  // scene with no gate leaves strength at 0 and width at 1 (never 0 - the
+  // shared node clamps, but a zero width is one edit from NaN-ing the terrain).
+  //
+  // The term stays in the graph on those gateless scenes rather than being
+  // branched out of it. It is about twenty ALU ops with no transcendental in
+  // them, sitting under six value-noise evaluations that each run four sines;
+  // shaping the graph per scene would buy a rounding error and cost the two
+  // render paths their one common shape.
+  const approach = terrain.approach ?? null;
+  const approachMouth = uniform(
+    typeof Vector2 === 'function'
+      ? new Vector2(approach?.mouth.x ?? 0, approach?.mouth.z ?? 0)
+      : [approach?.mouth.x ?? 0, approach?.mouth.z ?? 0]
+  );
+  const approachAxis = uniform(
+    typeof Vector2 === 'function'
+      ? new Vector2(approach?.axis.x ?? 0, approach?.axis.z ?? 1)
+      : [approach?.axis.x ?? 0, approach?.axis.z ?? 1]
+  );
+  const approachWidth = uniform(approach?.gateWidth ?? 1);
+  const approachStrength = uniform(approach ? 1 : 0);
+  const approachDirt = buildGroundApproachDirtNode(TSL, worldXZ, {
+    mouth: approachMouth,
+    axis: approachAxis,
+    gateWidth: approachWidth,
+  }).mul(approachStrength);
   const detailBase = terrain.detailBase ?? 0.88;
   const detailStrength = terrain.detailStrength ?? 0.20;
   const aoFloor = terrain.aoFloor ?? 0.86;
@@ -59,7 +94,7 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
   const baseColor = mix(
     mix(mix(low, mid, midBlend), high, highBlend),
     dirt,
-    dirtMask.mul(terrain.dirtStrength ?? 0.26)
+    max(dirtMask.mul(terrain.dirtStrength ?? 0.26), approachDirt)
   ).mul(detail).mul(ao);
 
   const material = new MeshLambertNodeMaterial();
@@ -157,6 +192,15 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
     position: contactPosition,
     facing: contactFacing,
     strength: contactStrength,
+  };
+  // The worn gate approach's handle, same shape and same reasoning. Nothing
+  // drives these per-frame today; they exist so Cycle 116 does not have to
+  // rebuild the material to fade the approach.
+  material.userData.gateApproachNodeUniforms = {
+    mouth: approachMouth,
+    axis: approachAxis,
+    width: approachWidth,
+    strength: approachStrength,
   };
   // Read by tests/terrain-scene-fog.spec.js as the standing answer to "where
   // does this material's fog come from": scene.fog, and only scene.fog.

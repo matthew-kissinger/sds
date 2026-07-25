@@ -74,6 +74,10 @@ export function createWebGpuTerrainNodeMaterialFactories(webGpuModules, options 
         heightfieldWorldSize: heightfield.worldSize ?? context.heightfieldWorldSize ?? terrainDefaults.heightfieldWorldSize ?? options.heightfieldWorldSize,
         colorScale: context.colorScale ?? terrainDefaults.colorScale ?? options.colorScale,
         side: context.side ?? terrainDefaults.side ?? options.side,
+        // Cycle 115 Phase 4: the worn gate approach, resolved by TerrainBuilder
+        // from the SceneDef's gate + pasture. Null (no gate) is the common case
+        // and leaves the dirt mask exactly as it was.
+        approach: context.approach ?? terrainDefaults.approach ?? options.approach ?? null,
         polygonOffset,
       }, heightTexture);
       material.userData.heightTexture = heightTexture;
