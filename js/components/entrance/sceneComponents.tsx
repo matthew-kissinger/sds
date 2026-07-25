@@ -69,16 +69,30 @@ export function DogAvatar({
   );
 }
 
-/** The calm pastoral loading bar, driven by the real per-stage build progress. */
-export function LoadingBar({
-  pct, label, accent, width = 360,
-}: { pct: number; label: string; accent?: string; width?: number }) {
+/**
+ * The calm pastoral loading bar, driven by the real per-stage build progress.
+ *
+ * Cycle 113 Phase 5: styling moved to css/entrance.css (`.sds-ent-bar*`). The
+ * one inline value left is the fill width, which is a datum rather than a
+ * style: it changes every build mark and there is no class that can express it.
+ * Keeping it here rather than in LoadingScreen is deliberate, so the surface
+ * itself carries no inline style at all, the same way WorldImage and DogAvatar
+ * hold their own dynamic values.
+ */
+export function LoadingBar({ pct, label }: { pct: number; label: string }) {
   return (
-    <div style={{ width: '100%', maxWidth: width }}>
-      <div style={{ height: 10, borderRadius: 999, background: pastoral.glassWarm, border: `1px solid ${pastoral.glassWarmBorder}`, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: accent ?? pastoral.accentMeadow, borderRadius: 999, transition: 'width 240ms cubic-bezier(0.25, 0.8, 0.35, 1)' }} />
+    <div className="sds-ent-bar">
+      <div
+        className="sds-ent-bar-track"
+        role="progressbar"
+        aria-label="Building the scene"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div className="sds-ent-bar-fill" style={{ width: `${pct}%` }} />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 13, color: pastoral.inkSoft }}>
+      <div className="sds-ent-bar-meta">
         <span>{label}</span>
         <span>{pct}%</span>
       </div>
