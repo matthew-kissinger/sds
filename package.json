@@ -75,7 +75,8 @@
     "validation:coldload": "node tools/validation/cold-load.mjs --runs=3",
     "validation:coldload:mobile": "node tools/validation/cold-load.mjs --profile=mobile --runs=3",
     "validation:seam": "node tools/validation/horizon-seam.mjs",
-    "validation:all": "npm run validation:lod && npm run validation:screenshots -- --capture && npm run validation:latency && npm run validation:perf && npm run validation:coldload",
+    "validation:seam:fixtures": "node tools/validation/horizon-seam.mjs --fixtures",
+    "validation:all": "npm run validation:lod && npm run validation:screenshots -- --capture && npm run validation:latency && npm run validation:perf && npm run validation:coldload && npm run validation:seam",
     "bake-heightmaps": "node scripts/bake-heightmap.mjs --scene rolling-hills --peakHeight 6 --seed 1 --out public/terrain/rolling-hills.bin && node scripts/bake-heightmap.mjs --scene field --peakHeight 0 --seed 0 --out public/terrain/field.bin && node scripts/bake-heightmap.mjs --scene open-country --peakHeight 5 --seed 42 --out public/terrain/open-country.bin",
     "bake-placement": "node tools/bake-placement.mjs"
   },
