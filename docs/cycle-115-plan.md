@@ -125,7 +125,23 @@ The roadmap's five bullets, checked against the repo:
 
 ## Frozen files
 
-None expected. If the gate controller needs a `SceneDef` field, stop and surface: `shared/scenes/types.js` is frozen.
+If the gate controller needs a `SceneDef` field, stop and surface: `shared/scenes/types.js` is frozen. That did not happen; no schema change was needed.
+
+### `tests/refactor-baseline/__fixtures__/bundle-sizes.json`
+
+**Authorized for the close, and added here after the fact, which is the second time this cycle pair has got the order wrong.**
+
+A reviewer put it plainly: the bump trips the durable bundle stop, the file is on [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md), and this section said "None expected" while the justification sat in Hard stops. The authorization protocol was narrated, not run. Cycle 114 drew the identical criticism and it was repeated here rather than learned from. Recording that is the point of writing it down.
+
+**What changes.** `mainKB` 654 to 664, `chunkBudgetsKiB.main` 655 to 665. Nothing else.
+
+**Why.** `main` went 669.86 kB to 679.36 kB, **+9.5 kB raw, +3.4 kB gzipped**. Cumulatively across Cycles 114 and 115: **659.68 kB to 679.36 kB, +19.7 kB, +3.0%**.
+
+**Checked rather than assumed, before treating it as irreducible.** The authoring tool did not leak: `bake-fence`, `kitPieces` and `GLTFExporter` all count zero in the built chunk, and the only `tools/bake-fence` strings under `js/` are comments. `groundShading.js`'s five CPU reference implementations tree-shake: stubbing all five produces a **byte-identical** bundle. The growth is 28.6 kB of genuinely new client source (`fenceWear.js`, `gateLeafController.js`, `duskLamp.js`) minifying to 9.5 kB, all eager because the fence and gate build at scene load and the lamp binds to `Atmosphere`.
+
+**The plan's own no-growth acceptance line was withdrawn** as false when written, and replaced with the line actually worth guarding: keep the authoring tool out of the client. See Success criteria.
+
+**Revert path.** Two numbers. A third bump is a bundle cycle, not a bump.
 
 ## Hard stops
 

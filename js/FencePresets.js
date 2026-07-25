@@ -673,9 +673,21 @@ export class FencePresets {
      * `userData.gateLeafController`, on every branch below. Read it with
      * `getGateLeafController(group)`; it is never null, so a consumer that
      * wants to pose a gate needs no branch on which asset loaded. The gate
-     * builds CLOSED (`GATE_LEAF_INITIAL_OPEN_FRACTION`) - before this phase the
-     * authored assembly rendered in its baked-open pose forever, because
-     * nothing but Newsheepdogland's homestead branch ever touched the pivots.
+     * builds at `GATE_LEAF_INITIAL_OPEN_FRACTION`, which is OPEN.
+     *
+     * That renders identically to the bug this phase replaced, and the
+     * difference is worth stating precisely because it is not visible in a
+     * screenshot: the pose is now the CONTROLLER'S. It is written from
+     * `leaf.open`, decomposed per leaf, rather than being whatever quaternion
+     * the GLB happened to bake and nothing ever touched. Before this phase only
+     * Newsheepdogland's homestead branch went near the pivots, so every other
+     * scene was stuck with the asset. Now any scene can pose its gate.
+     *
+     * The default is open rather than closed because closing one puts sheep
+     * through it: they retire by walking to a target INSIDE the pen, so they
+     * cross the gate line, and closed leaves span the full opening. Deciding
+     * what shuts a gate is Cycle 116 and 117's problem, and it has exactly one
+     * constant to change here.
      *
      * @param {number} width - Width of the gate
      * @param {string} orientation - 'horizontal' or 'vertical'

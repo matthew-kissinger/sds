@@ -474,3 +474,51 @@ describe('the approach is wired into both terrain paths', () => {
         expect(src).toContain('approach: this.gateApproach');
     });
 });
+
+describe('the approach follows a scene swap (Cycle 115 P4, review fix)', () => {
+    it('re-resolves on setSceneDef instead of inheriting the boot scene', async () => {
+        // The approach was resolved once in the TerrainBuilder constructor.
+        // setSceneDef is the documented seam for repointing a persisted builder
+        // at a new scene, which is the ordinary front-door swap path, and it
+        // refreshed the farmhouse fields but not this one. A builder that booted
+        // on Home Field therefore carried Home Field's gate mouth into Rolling
+        // Hills and painted a dirt fan across an island that has no gate.
+        const { TerrainBuilder } = await import('../js/TerrainBuilder.js');
+        const { field } = await import('../shared/scenes/field.js');
+        const { rollingHills } = await import('../shared/scenes/rolling-hills.js');
+
+        const host = Object.create(TerrainBuilder.prototype);
+        host.sceneDef = field;
+        host.farmHousePosition = { x: 0, z: 0 };
+        host.farmHouseExclusionArea = null;
+        host.grassSystem = null;
+
+        TerrainBuilder.prototype.setSceneDef.call(host, field);
+        expect(host.gateApproach, 'Home Field has a pen gate').toBeTruthy();
+
+        TerrainBuilder.prototype.setSceneDef.call(host, rollingHills);
+        expect(
+            host.gateApproach,
+            'Rolling Hills has no pen, so it must not inherit Home Field\'s approach'
+        ).toBeFalsy();
+
+        // And back again, so the clear is not one-way.
+        TerrainBuilder.prototype.setSceneDef.call(host, field);
+        expect(host.gateApproach).toBeTruthy();
+    });
+
+    it('pushes the re-resolved approach through to the grass system', async () => {
+        const { TerrainBuilder } = await import('../js/TerrainBuilder.js');
+        const { field } = await import('../shared/scenes/field.js');
+        const seen = [];
+        const host = Object.create(TerrainBuilder.prototype);
+        host.sceneDef = null;
+        host.farmHousePosition = { x: 0, z: 0 };
+        host.farmHouseExclusionArea = null;
+        host.grassSystem = { setGateApproach: (a) => seen.push(a) };
+
+        TerrainBuilder.prototype.setSceneDef.call(host, field);
+        expect(seen.length).toBe(1);
+        expect(seen[0]).toBe(host.gateApproach);
+    });
+});

@@ -2195,6 +2195,16 @@ export class TerrainBuilder {
         if (sceneDef?.farmHouse?.exclusionArea) {
             this.farmHouseExclusionArea = sceneDef.farmHouse.exclusionArea;
         }
+        // Cycle 115 Phase 4: re-resolve, do not inherit. The approach was
+        // resolved once in the constructor, and this is the documented seam for
+        // repointing a persisted TerrainBuilder at a different scene, which is
+        // the ordinary front-door swap path. Without this line a builder that
+        // booted on Home Field carries Home Field's gate mouth into Rolling
+        // Hills and Open Country and paints a dirt fan across their terrain at
+        // a gate neither of them has. Unconditional assignment, so a scene with
+        // no pen clears it rather than keeping the previous scene's.
+        this.gateApproach = resolveGateApproach(sceneDef);
+        this.grassSystem?.setGateApproach?.(this.gateApproach);
     }
 
     /**
