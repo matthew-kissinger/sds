@@ -10,6 +10,43 @@ The web-only `v2.6.2` beta hotfix release line is current: the `v2.6.0` beta pos
 
 ## Recently Completed
 
+### Cycle 113 - `entrance-one-door` (closed 2026-07-25)
+
+- **Shipped: 7/7 phases.** The front door now asks one question. `Entrance.tsx` went from 449 lines and 47 inline style objects to 253 and none.
+- Plan: [docs/archive/cycles/cycle-113-plan.md](archive/cycles/cycle-113-plan.md). Roadmap context: [docs/front-door-roadmap.md](front-door-roadmap.md).
+- Commits on `main`: `46903c0b` (P1+P2), `7c21c369` (P3), `f4f819f3` (P4), `a661b52f` (P5), `17e144f9` (P6), `de45d8ea` (docs), `1eccdca3` (e2e fix).
+
+**What landed**
+
+- **P1 [`css/entrance.css`](../css/entrance.css)**, the front door's own sheet in `@layer components`. Pastoral tokens only per D16 (no hex, no bare `rgba`, every tint a `color-mix` over a token); phone case as the base rule set with one 721px upgrade, matching `useViewport`'s own `compact` boundary; `:hover` / `:focus-visible` / `:active` on everything clickable; motion inside `prefers-reduced-motion: no-preference`.
+- **P2 `EntrancePicker.tsx`.** Families are their own row and a single-family world renders none; rungs are the first three of the armed world's ladder plus More (D7), with the armed rung always visible so a player returning from a Chaos run never opens the picker to three rungs, none of them theirs.
+- **P3 the One Door shell.** One summary line, one Play. D6 emptied the surface: the name field left entirely, sandbox / 2-player / leaderboard / achievements moved into one corner menu with the licence line, four corner icons became two, multiplayer kept its text-weight line.
+- **P4 the tutorial moved inside the first round (D4)** with no accept step at all, which is what removed the second primary button. `TutorialOffer`, `RailPortal` and the offer copy in five locales deleted with it.
+- **P5 the loading surface became the entrance holding still.** Same sheet, same glass, same dock position, world name unmoved across the cut. Zero inline styles; the bar reports itself as a progressbar for the first time.
+- **P6 clearance measured, not assumed.** New [`tools/validation/entrance-hero-clearance.mjs`](../tools/validation/entrance-hero-clearance.mjs); 12 of 12 gated cases clear at 1440x900, 1920x1080 and 390x844.
+- **P7** live probe 18/18 on the dev server, plus a production-build probe and a live sheepdogsim.com probe: panel top 79.3%, one Play, two corner controls, `object-position: 31% 50%` applied, Fraunces resolving, no name field, no licence on the surface, no console errors. Cold-load median **231ms** across four fresh contexts against the 2,500ms D17 budget.
+
+**Notes**
+
+- **The plan's own arithmetic was wrong and the measurement caught it.** Q3 set the panel's floor at 72% of frame height by comparing against the dog's *centre* band and forgetting the dog's own height. Counted properly the dogs span 70.8% to 78.0%, and a panel still carrying the world name settled at 70.1%, through all four dogs. Moving the name, tagline and carousel dots onto the photograph bought 59px and put the panel at 79.3%.
+- **The phone crop was a second, unrelated failure.** A 16:9 hero in a 390x844 portrait viewport shows only the middle 26% of its width; centred, Home Field's dog sat at -3.9% of the viewport and Rolling Hills' at 100%. Two heroes with no dog in them, in the case the cycle was told to design first. Fixed with a per-world `objectPosition` (31 / 68 / 64 / 33%), which is scene data rather than a branch in the renderer, and pinned offline by `tests/ui/heroCrop.spec.ts` so a re-shoot cannot leave it stale.
+- **The browser probe found a bug three green gates could not.** The P4 tutorial hook imported `'../Tutorial/index.js'`, correct from the old call site and wrong from `js/components/`; the dev server 500'd on the next boot. A bare dynamic import in a `.js` file is invisible to both tsc and vitest. The spec now resolves it for real.
+- **CI found a second one, and it should not have had to.** `smoke.spec.ts` also clicked a Classic rung directly and was missed by the grep that found the other three, so the first deploy's E2E job went red. `mp/room-hop-soak.spec.ts` had the same problem and would never have failed at all, because the mp project is excluded from the chromium run CI executes. A selector shared across five specs with no shared definition is a contract with nowhere to live; `tests/ui/entranceE2EContract.spec.ts` gives it one, and was verified to fail on the exact regression before being trusted. **Run `npx playwright test --project=chromium --grep-invert='@local-only'` locally before pushing a change to any entrance selector.**
+- **The first hit after a deploy is not a cold-load number.** It read 3,986ms; four fresh contexts a minute later gave a 231ms median. That is Cloudflare's edge cache filling, not the payload.
+- **Two stale e2e step tables retired.** `oc-perf` and `scene-swap-stability` still counted world-carousel clicks from the Rolling Hills landing after D5 moved the default to Home Field. Both are `@local-only`, so CI never ran them to find out. [`tests/e2e/helpers/entrance.ts`](../tests/e2e/helpers/entrance.ts) arms by name instead.
+- **One acceptance line revised rather than met.** "The overlay shall present no button" becomes "no primary action and no accept step": the overlay keeps a small Skip pill, which is the only way out of prompts that now appear unbidden.
+- **DECISIONS gains the entry D16 was missing**: what new code should actually look like, with `css/entrance.css` as the reference and `tests/ui/entranceStylesheet.spec.ts` as the template for enforcing it.
+- No version bump (D20 rolls continuously). 1,731 vitest green, lint and typecheck clean.
+
+**Carryover to Cycle 114**
+
+1. **The hero review is still Matt's** (inherited from 112). Every measurable part of D8 is met and now gated, but the taste call has not been made.
+2. **The name field has no new home.** D6 took it off the entrance; "first score submission" is where it belongs and that is unbuilt.
+3. **Loading-to-live camera framing.** Named out of scope in P5; it needs a camera-pose handshake from the engine and is a cycle of its own.
+4. **[`docs/CYCLE_TEMPLATE.md`](CYCLE_TEMPLATE.md) carries 19 em-dashes** that every scaffold inherits, against [`.claude/rules/prose-and-voice.md`](../.claude/rules/prose-and-voice.md). Stripped from the 114 scaffold; the template itself left alone rather than edited without a phase authorizing it.
+5. **[`docs/cycle-110-plan.md`](cycle-110-plan.md) and [`docs/cycle-111-plan.md`](cycle-111-plan.md) are still unarchived.**
+6. **A real horizon-seam gate** and **the golden suite's 8 stale cycles** both carry forward from 112 untouched.
+
 ### Cycle 112 - `front-door-foundations` (closed 2026-07-25)
 
 Plan archived at [`docs/archive/cycles/cycle-112-plan.md`](archive/cycles/cycle-112-plan.md). First cycle of the seven-cycle front-door program ([`front-door-roadmap.md`](front-door-roadmap.md)). Cleared the visible noise in front of the game and re-shot the art, so Cycle 113's entrance can be judged on its own merits rather than on a broken baseline.

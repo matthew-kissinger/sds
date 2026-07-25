@@ -215,7 +215,7 @@ Durable stops in [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) apply. Cycle-specifi
 - [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover. **All seven shipped.**
 - [x] When `npm test` runs at cycle close, all vitest specs shall pass. **1,731 passed, 11 skipped, 178 files.**
 - [x] When `npm run build` runs at cycle close, production build shall be clean. **Built in 8.66s, no errors; only the pre-existing >500KB chunk advisory.**
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions. **Green on `1eccdca3`: Test, E2E (Chromium), Migrate D1, Deploy Pages and Deploy Worker all success. The prior run went red on E2E; see the note below.**
 - [x] When the entrance first paints, then it shall present exactly one primary action and no more than one question. **Live probe: one button named Play, one summary line, two corner controls, picker collapsed.**
 - [x] When `grep -c "style={{" js/components/entrance/Entrance.tsx js/components/entrance/LoadingScreen.tsx` runs, it shall return 0 for both files. **Both 0; pinned by `Entrance.spec.tsx` and `LoadingScreen.spec.tsx`.**
 - [x] When Phase 4 ships, then no tutorial offer shall appear on the entrance and the tutorial shall arm inside the first round. **Live probe: fresh profile gets `[data-testid="tutorial-overlay"]` mid-round with no offer card; a profile with `sds:tutorialDone` gets neither.**
@@ -224,6 +224,10 @@ Durable stops in [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) apply. Cycle-specifi
 Live probe (dev server, 18 of 18): picker opens and closes, rung selection updates the summary, Escape closes, Play builds the armed world, deep links still arm (`rolling-hills` arms Rolling Hills; `nonsense` and the gated `newsheepdogland` fall back to Home Field), no overlapping entrance text and nothing outside the viewport at either 1440x900 or 390x844, Play reachable with the picker open.
 
 Production build probe (`vite preview`): first-interactive 214ms, panel top at 79.3%, Fraunces resolving on the world name, `object-position: 31% 50%` applied, no console errors.
+
+Live sheepdogsim.com probe after deploy: same geometry and selectors, no name field, no licence on the surface, no console errors. Cold-load median 231ms across four fresh contexts (the very first hit read 3,986ms, which is Cloudflare's edge cache filling rather than the payload).
+
+**The first deploy went red and that is part of the record.** `smoke.spec.ts` clicked a difficulty rung directly and was missed by the grep that caught the other three specs; `mp/room-hop-soak.spec.ts` had the same problem in a project CI does not even run. Both moved onto `tests/e2e/helpers/entrance.ts`, and `tests/ui/entranceE2EContract.spec.ts` now holds the contract offline so the next person cannot repeat it. The e2e suite was run locally before the second push.
 
 ## References
 
