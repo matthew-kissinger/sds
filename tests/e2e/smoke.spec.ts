@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { test, expect, type ConsoleMessage, type Page } from '@playwright/test';
+import { armWorld, pickRung, clickPlay } from './helpers/entrance';
 
 /**
  * Smoke tests for the current Geckos-based production path.
@@ -92,16 +93,11 @@ test.describe('SDS smoke', () => {
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    // Home Field is the default entrance world. Select Classic directly;
-    // dispatchEvent('click') fires React onClick synchronously without
-    // depending on Playwright's hover/stability heuristic.
-    const classic = page.getByRole('button', { name: /Classic\s+\d/i });
-    await expect(classic).toBeVisible({ timeout: 30_000 });
-    await classic.dispatchEvent('click');
-
-    const play = page.getByRole('button', { name: 'Play', exact: true });
-    await expect(play).toBeVisible({ timeout: 15_000 });
-    await play.dispatchEvent('click');
+    // Home Field is the default entrance world. Cycle 113 collapsed the rung
+    // behind the one summary line, so picking Classic means opening the picker
+    // first; the helper owns that and the D7 "three rungs plus More" case.
+    await pickRung(page, /Classic\s+\d/i);
+    await clickPlay(page);
 
     // The game injects a <canvas> into #canvas-container once the scene
     // is ready. Asset loading can take a while (models, textures, shaders).

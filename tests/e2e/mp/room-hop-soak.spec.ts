@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { test, expect, type Page } from '@playwright/test';
+import { armWorld, pickRung, clickPlay } from '../helpers/entrance';
 
 /**
  * [P3-SOAK] Room-hop / scene-swap memory soak.
@@ -71,27 +72,18 @@ async function seedIdentity(page: Page) {
   });
 }
 
-// Same world-first entrance drive as scene-swap-stability.spec.ts: the
-// entrance opens on Rolling Hills (Cycle 89 default); "Previous world" steps
-// back to field, the cheapest scene to rebuild repeatedly.
+// Same world-first entrance drive as scene-swap-stability.spec.ts, through the
+// shared helper since Cycle 113 collapsed the rung behind the summary line.
+// Home Field is the cheapest scene to rebuild repeatedly, and since D5 it is
+// also the landing world, so arming it is usually a no-op.
 async function bootSoloClassicOnField(page: Page) {
   await seedIdentity(page);
   await page.goto('/?perfMode=1', { waitUntil: 'domcontentloaded' });
 
-  const play = page.getByRole('button', { name: 'Play', exact: true });
-  await expect(play).toBeVisible({ timeout: 30_000 });
-
-  const prevBtn = page.getByRole('button', { name: /Previous world/i });
-  await expect(prevBtn).toBeVisible({ timeout: 30_000 });
-  await prevBtn.dispatchEvent('click');
-  await page.waitForTimeout(200);
-
-  const classic = page.getByRole('button', { name: /Classic\s+\d/i });
-  await expect(classic).toBeVisible({ timeout: 15_000 });
-  await classic.dispatchEvent('click');
-
-  await expect(play).toBeVisible({ timeout: 15_000 });
-  await play.dispatchEvent('click');
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible({ timeout: 30_000 });
+  await armWorld(page, 'Home Field');
+  await pickRung(page, /Classic\s+\d/i);
+  await clickPlay(page);
 
   await expect(page.locator('#canvas-container canvas')).toBeAttached({ timeout: 60_000 });
   await expect(async () => {
