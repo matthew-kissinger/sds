@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2 as ThreeVector2, Vector3 as ThreeVector3 } from 'three';
+import {
+  GRASS_VARIATION_TINT,
+  GROUND_CONTACT,
+  buildGrassHueOffsetNode,
+  buildGroundContactFalloffNode,
+  buildGroundVariationNode,
+} from './groundShading.js';
 
 export function createWebGpuGrassBladeNodeMaterial(
   { MeshBasicNodeMaterial, MeshStandardNodeMaterial, DoubleSide, Vector2 = ThreeVector2, Vector3 = ThreeVector3, TSL },
   grassBlade
 ) {
-  const { abs, attribute, cameraPosition, clamp, cos, dot, float, fract, instanceIndex, length, max, mix, normalize, positionGeometry, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
+  const { abs, attribute, cameraPosition, clamp, cos, dot, float, instanceIndex, length, max, mix, normalize, positionGeometry, positionLocal, positionView, positionWorld, pow, sin, smoothstep, time, uniform, vec2, vec3 } = TSL;
   const linearColor = (color) => color;
   const vector2 = (value) => (
     typeof Vector2 === 'function'
@@ -108,6 +115,7 @@ export function createWebGpuGrassBladeNodeMaterial(
   let interactionDirection = vec2(0.0, 0.0);
   let interactionStrengthTotal = float(0.0);
   let bodyFalloffTotal = float(0.0);
+  let contactShadeTotal = float(0.0);
   for (let i = 0; i < maxNodeInteractors; i++) {
     const interactorPosition = interactorPositions[i];
     const entityType = clamp(interactorTypes[i], 0.0, 1.0);
@@ -148,6 +156,22 @@ export function createWebGpuGrassBladeNodeMaterial(
     interactionDirection = mix(interactionDirection, splayDirection, dominance);
     interactionStrengthTotal = max(interactionStrengthTotal, candidateStrength);
     bodyFalloffTotal = max(bodyFalloffTotal, contactFalloff);
+    // Cycle 114 Phase 5: the dog's ground contact, on the same oriented
+    // rounded-rect footprint the interaction already evaluates. Reusing this
+    // loop's `along`/`across` rather than taking separate position/facing
+    // uniforms (the way the terrain material has to) means the contact tracks
+    // the live interactor sync for free and cannot fall out of step with the
+    // push it sits under.
+    //
+    // Dog only, never sheep: a 5,000-instance version is a different problem
+    // with a different budget, and the WebGL twin gates the same way with
+    // `if (entityType < 0.5)`. There are no branches in a node graph, so the
+    // gate is a mask with the step landing on the same 0.5.
+    const dogMask = float(1.0).sub(smoothstep(0.45, 0.55, entityType));
+    contactShadeTotal = max(
+      contactShadeTotal,
+      buildGroundContactFalloffNode(TSL, along, across).mul(activeInteractor).mul(dogMask)
+    );
   }
   const tipColor = mix(
     vec3(...linearColor(grassBlade.tipColor)),
@@ -161,15 +185,28 @@ export function createWebGpuGrassBladeNodeMaterial(
   );
   // Fragment-stage colour jitter keys off positionWorld (engine-varied), not the
   // worldX/worldZ derived from bladeWorld, which is ~0 in the fragment (see below).
-  const colorVariation = sin(positionWorld.x.mul(0.2)).mul(cos(positionWorld.z.mul(0.15))).mul(0.5).add(0.5);
+  //
+  // Cycle 114 Phase 2: this was sin(x * 0.2) * cos(z * 0.15), a regular plaid at
+  // roughly 31m by 42m laid over a terrain whose own variation is rotated hash
+  // value-noise at 83m and 38m. Two fields that disagree is why the grass read as
+  // a carpet over the ground rather than as the ground. It is now the SAME field
+  // the terrain computes (js/world/groundShading.js), at the same frequencies and
+  // the same 43-degree rotation, so a blade standing on a browner patch is itself
+  // browner.
+  const groundWorldXZ = vec2(positionWorld.x, positionWorld.z);
+  const colorVariation = buildGroundVariationNode(TSL, groundWorldXZ);
   const variation = vec3(
-    colorVariation.mul(0.08),
-    colorVariation.mul(0.05).sub(0.02),
-    colorVariation.mul(-0.03)
+    colorVariation.mul(GRASS_VARIATION_TINT.red),
+    colorVariation.mul(GRASS_VARIATION_TINT.green).add(GRASS_VARIATION_TINT.greenBias),
+    colorVariation.mul(GRASS_VARIATION_TINT.blue)
   );
-  const hueOffset = fract(sin(positionWorld.x.mul(12.9898).add(positionWorld.z.mul(78.233))).mul(43758.5453123))
-    .sub(0.5)
-    .mul(grassBlade.hueVariation ?? 0.04);
+  // Cycle 114 Phase 2: the hue offset was a hash of the raw fragment world
+  // position, so it varied per PIXEL - noise, not clumping. It is now quantised
+  // to roughly clump scale with a smaller residual for break-up, the same shape
+  // the WebGL paths use (they key theirs off the clump origin, which they have;
+  // the fragment stage here only has positionWorld, so the residual term reads a
+  // little finer). Same amplitude either way.
+  const hueOffset = buildGrassHueOffsetNode(TSL, groundWorldXZ, grassBlade.hueVariation ?? 0.04);
   const hueNudge = vec3(hueOffset.negate(), hueOffset, hueOffset.mul(0.5));
   const ao = mix(0.7, 1.0, height01);
   // World-space fragment->camera direction (dotted against world up + sun below).
@@ -209,7 +246,13 @@ export function createWebGpuGrassBladeNodeMaterial(
   const colorScale = grassBlade.colorScale ?? 1;
   const colorTint = grassBlade.colorTint ?? [1, 1, 1];
   const interactionShadow = float(1.0).sub(bodyFalloffTotal.mul(interactionShadowStrength).mul(smoothstep(0.15, 1.0, height01)));
-  const grassColor = gradient.add(hueNudge).add(variation).mul(interactionShadow).mul(ao).mul(viewBacklight)
+  // The WebGL twin composes exactly this product into vShadow:
+  //   vShadow = (1 - interaction push shade) * (1 - contactShade * strength)
+  // Same two factors, same order, same GROUND_CONTACT.strength, so the dog
+  // grounds identically on both paths and does not change depth when the
+  // renderer falls back.
+  const contactShadow = float(1.0).sub(contactShadeTotal.mul(GROUND_CONTACT.strength));
+  const grassColor = gradient.add(hueNudge).add(variation).mul(interactionShadow).mul(contactShadow).mul(ao).mul(viewBacklight)
     .add(sunTip)
     .add(tipColor.mul(verticalRim.mul(rimStrength).mul(tipMask)))
     .mul(vec3(...linearColor(colorTint)))

@@ -222,6 +222,12 @@ export async function recordProductionWebGpuBoot(gameInstance, state = null) {
             atmosphereDrawCount: atmosphereFrame?.atmosphereDrawCount ?? null,
         },
         sceneBody: {
+            // Cycle 114 Phase 4: diagnostic only, deliberately NOT in `checks`.
+            // Rolling Hills and Open Country have no farmhouse, so this reads
+            // null there and an `every(Boolean)` gate would fail those scenes.
+            // It exists so an on-device probe can read the roof/wall/trim split
+            // back after three's node-material adaptation.
+            farmhouseMaterialRoles: terrainBuilder?.farmhouseMaterialRoleSummary ?? null,
             terrainFactory: terrainBuilder?.webgpuTerrainMaterialSummary ?? null,
             grassFactory: grassSystem?.webgpuGrassBladeMaterialSummary ?? null,
             meadowFactory: grassSystem?.webgpuMeadowQuadMaterialSummary ?? null,

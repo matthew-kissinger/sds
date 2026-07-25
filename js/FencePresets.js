@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { configureGLTFLoader } from './TerrainBuilder.js';
+import { mulberry32 } from '../shared/Random.js';
 
 /**
  * FencePresets - Modular fence asset system for reusable fence components
@@ -14,6 +15,110 @@ import { configureGLTFLoader } from './TerrainBuilder.js';
  * - Configurable materials and colors
  * - GLB model support for fence components
  */
+
+/**
+ * Per-post jitter budget (Cycle 114 grounding pass).
+ *
+ * A run whose posts are all the same height, all perfectly plumb and all
+ * facing the same way reads as a picket line rather than as something a
+ * farmer dug into a field. Yaw alone is not enough: it is the lean that
+ * actually shows, because a post seen from the side is close to
+ * rotationally symmetric about its own axis.
+ *
+ * The caps are set by the RAILS, not by taste. Rails span between adjacent
+ * post CENTRES at fixed heights (0.5 / 1.2 / 1.9) and do not follow a post's
+ * lean or its top, so:
+ *
+ * - LEAN_MAX must keep the leaned post's cross-section over the top rail's
+ *   attachment point. The shipped post is ~0.42m square, so its half-width is
+ *   0.21m and the geometric limit at the 1.9m top rail is
+ *   atan(0.21 / 1.9) = 0.110 rad. We sit at about a third of that.
+ * - HEIGHT_MIN must keep the shortest post taller than the top rail. The
+ *   shipped post is 2.18m, so 0.95 * 2.18 = 2.07m against a top rail whose
+ *   upper edge lands near 1.95m.
+ *
+ * Widen either of these and the rails start detaching on long runs, which is
+ * the failure the phase was told to avoid.
+ */
+const POST_YAW_MAX = 0.20;      // rad, +/- : the post's facing about its own axis
+const POST_LEAN_MAX = 0.038;    // rad, +/- : ~2.2 degrees off plumb
+const POST_HEIGHT_MIN = 0.95;   // multiplier on the authored post height
+const POST_HEIGHT_MAX = 1.10;
+
+/** FNV-1a. Turns a stable run key into a 32-bit seed for mulberry32. */
+function hashString32(input) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < input.length; i++) {
+        hash ^= input.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return hash >>> 0;
+}
+
+/**
+ * @typedef {Object} FencePostJitter
+ * @property {number} yaw          Extra rotation about Y, on top of the run axis.
+ * @property {number} leanX        Rotation about X, radians.
+ * @property {number} leanZ        Rotation about Z, radians.
+ * @property {number} heightScale  Multiplier on the post's authored height.
+ */
+
+/**
+ * Deterministic per-post transform jitter for one fence run.
+ *
+ * Seeded off a stable string, never `Math.random()`, so a run is identical on
+ * every load and identical between clients. The key composes the caller's
+ * salt with the run's own intrinsic parameters (orientation and length), which
+ * is what makes it stable across a scene rebuild: nothing here counts calls or
+ * reads a mutable instance counter, so `clearAllStructures()` followed by a
+ * fresh build reproduces the same fence.
+ *
+ * Draws are arithmetic-only (no trig), so the sequence is bit-identical on
+ * every engine. The lean is drawn in the unit square and clamped into the unit
+ * disc: drawing the two lean axes independently and leaving them there would
+ * let a corner draw lean LEAN_MAX * sqrt(2) and would bias every post toward
+ * one of the four diagonals.
+ *
+ * @param {string} seedKey   Stable identity for this run.
+ * @param {number} postCount
+ * @returns {FencePostJitter[]}
+ */
+export function createFencePostJitter(seedKey, postCount) {
+    const rng = mulberry32(hashString32(`fence-post-jitter:${seedKey}`));
+    const jitter = [];
+    for (let i = 0; i < postCount; i++) {
+        const yaw = (rng() * 2 - 1) * POST_YAW_MAX;
+        let lx = rng() * 2 - 1;
+        let lz = rng() * 2 - 1;
+        const len2 = lx * lx + lz * lz;
+        if (len2 > 1) {
+            const inv = 1 / Math.sqrt(len2);
+            lx *= inv;
+            lz *= inv;
+        }
+        jitter.push({
+            yaw,
+            leanX: lx * POST_LEAN_MAX,
+            leanZ: lz * POST_LEAN_MAX,
+            heightScale: POST_HEIGHT_MIN + rng() * (POST_HEIGHT_MAX - POST_HEIGHT_MIN)
+        });
+    }
+    return jitter;
+}
+
+/**
+ * The run key a segment jitters against. The caller's salt only disambiguates
+ * runs that would otherwise collide: two runs with the same orientation and
+ * the same length (the pen's two side fences, the two halves of a centred gate
+ * run, a competitive field's east and west borders) would otherwise draw the
+ * same posts in the same order and read as a repeat.
+ * @param {string} salt
+ * @param {string} orientation
+ * @param {number} length
+ */
+function fenceRunSeedKey(salt, orientation, length) {
+    return `${salt}:${orientation}:${length.toFixed(3)}`;
+}
 
 export class FencePresets {
     constructor() {
@@ -164,11 +269,14 @@ export class FencePresets {
      * Create a straight border fence segment
      * @param {number} length - Length of the border
      * @param {string} orientation - 'horizontal' or 'vertical'
-     * @param {Object} options - Additional options
+     * @param {Object} [options] - Additional options
+     * @param {string} [options.seedKey] - Salt disambiguating this run's post
+     *   jitter from another run with the same orientation and length.
      * @returns {THREE.Group} - Border fence group
      */
-    createBorderSegment(length, orientation = 'horizontal', _options = {}) {
+    createBorderSegment(length, orientation = 'horizontal', options = {}) {
         const group = new THREE.Group();
+        const seedKey = fenceRunSeedKey(options.seedKey ?? 'run', orientation, length);
 
         // Use GLB posts and rails if available (builds fence from components)
         if (this.useGLBModels && this.models.fencePost && this.models.fenceRail) {
@@ -176,6 +284,7 @@ export class FencePresets {
             const postSpacing = this.postSpacing;
             const postCount = Math.ceil(length / postSpacing) + 1;
             const actualSpacing = length / (postCount - 1);
+            const postJitter = createFencePostJitter(seedKey, postCount);
 
             // The rail model is 1 unit long, centered at origin (for easy scaling)
             const railModelLength = 1.0;
@@ -185,6 +294,11 @@ export class FencePresets {
 
             if (postSource && railSource) {
                 group.name = 'FenceSegmentGLBInstanced';
+                // `postJitter` rides the spec because the instanced path builds
+                // one matrix per post inside StructureBuilder._buildInstancedFenceSegment;
+                // a count alone cannot express a per-instance transform. The
+                // consumer treats it as optional and falls back to the old
+                // uniform post if it is absent.
                 group.userData.fenceInstancingSpec = {
                     length,
                     orientation,
@@ -193,21 +307,28 @@ export class FencePresets {
                     railHeights,
                     railModelLength,
                     postSource,
-                    railSource
+                    railSource,
+                    postJitter
                 };
                 return group;
             }
 
-            // Create posts
+            // Create posts. The GLB post wrapper's origin is authored at
+            // ground contact (cycle105-validation/fence-kiln-spec.md), so a Y
+            // scale and a lean both pivot about the post's foot: the top moves,
+            // the buried end does not.
+            const baseYaw = orientation === 'horizontal' ? 0 : Math.PI / 2;
             for (let i = 0; i < postCount; i++) {
                 const post = this.cloneModel('fencePost');
                 if (post) {
+                    const jitter = postJitter[i];
                     if (orientation === 'horizontal') {
                         post.position.x = i * actualSpacing - length / 2;
                     } else {
-                        post.rotation.y = Math.PI / 2;
                         post.position.z = i * actualSpacing - length / 2;
                     }
+                    post.rotation.set(jitter.leanX, baseYaw + jitter.yaw, jitter.leanZ);
+                    post.scale.y = jitter.heightScale;
                     post.userData.surfaceToTerrain = true;
                     group.add(post);
                 }
@@ -259,17 +380,34 @@ export class FencePresets {
         // Fallback to procedural geometry
         const postCount = Math.ceil(length / this.postSpacing) + 1;
         const actualSpacing = length / (postCount - 1);
+        const postJitter = createFencePostJitter(seedKey, postCount);
 
-        // Create posts
+        // Create posts. Same jitter as the GLB paths, so a machine without the
+        // kit sees the same fence shape. One difference in the maths: the
+        // fallback cylinder is centred on its OWN origin rather than on its
+        // foot, so scaling and leaning about that origin would swing the buried
+        // end out from under the post. Placing the centre at foot + R*(0,
+        // half, 0) puts the foot back on its nominal (x, z) exactly.
+        const foot = new THREE.Vector3();
+        const centreOffset = new THREE.Vector3();
+        const postEuler = new THREE.Euler();
         for (let i = 0; i < postCount; i++) {
+            const jitter = postJitter[i];
             const post = new THREE.Mesh(this.geometries.post, this.materials.post);
-            post.position.y = this.fenceHeight / 2;
-
+            const offset = i * actualSpacing - length / 2;
             if (orientation === 'horizontal') {
-                post.position.x = i * actualSpacing - length / 2;
+                foot.set(offset, 0, 0);
             } else {
-                post.position.z = i * actualSpacing - length / 2;
+                foot.set(0, 0, offset);
             }
+
+            post.scale.y = jitter.heightScale;
+            postEuler.set(jitter.leanX, jitter.yaw, jitter.leanZ);
+            post.rotation.copy(postEuler);
+            centreOffset
+                .set(0, (this.fenceHeight * jitter.heightScale) / 2, 0)
+                .applyEuler(postEuler);
+            post.position.copy(foot).add(centreOffset);
 
             post.castShadow = true;
             post.receiveShadow = true;
@@ -337,11 +475,19 @@ export class FencePresets {
         const gateStart = gatePosition - gateWidth/2;
         const gateEnd = gatePosition + gateWidth/2;
         
-        // Create left segment
+        // Create left segment. The two halves of a centred gate run have the
+        // SAME length, so without distinct salts their post jitter would mirror
+        // across the gate - the one place a player stands close enough to read
+        // two posts against each other. The gate's own position and (in
+        // competitive layouts) its compass direction keep two opposite borders
+        // of the same length apart as well.
+        const runId = `${gateConfig.direction ?? ''}@${gatePosition}`;
         if (gateStart > -length/2) {
             const leftLength = gateStart + length/2;
-            const leftSegment = this.createBorderSegment(leftLength, orientation);
-            
+            const leftSegment = this.createBorderSegment(leftLength, orientation, {
+                seedKey: `gate-left${runId}`
+            });
+
             if (orientation === 'horizontal') {
                 leftSegment.position.x = -length/2 + leftLength/2;
             } else {
@@ -354,8 +500,10 @@ export class FencePresets {
         // Create right segment
         if (gateEnd < length/2) {
             const rightLength = length/2 - gateEnd;
-            const rightSegment = this.createBorderSegment(rightLength, orientation);
-            
+            const rightSegment = this.createBorderSegment(rightLength, orientation, {
+                seedKey: `gate-right${runId}`
+            });
+
             if (orientation === 'horizontal') {
                 rightSegment.position.x = gateEnd + rightLength/2;
             } else {
@@ -572,78 +720,84 @@ export class FencePresets {
     createPenStructure(dimensions, attachmentSide = 'north') {
         const group = new THREE.Group();
         const { width = 60, depth = 30 } = dimensions;
-        
+
+        // The pen's two side fences are the same length AND the same
+        // orientation, so they need distinct jitter salts. Without them both
+        // sides draw the same posts in the same order, and a pen is small
+        // enough that a player standing at the gate sees both at once.
+        const run = (role) => ({ seedKey: `pen-${attachmentSide}-${role}` });
+
         // Create three sides based on attachment side
         // The fourth side (entrance) connects to the field border with the gate
-        
+
         if (attachmentSide === 'north') {
             // Back fence (extends into field)
-            const backFence = this.createBorderSegment(width, 'horizontal');
+            const backFence = this.createBorderSegment(width, 'horizontal', run('back'));
             backFence.position.z = depth;
             group.add(backFence);
-            
+
             // Side fences extend from border into field
-            const leftFence = this.createBorderSegment(depth, 'vertical');
+            const leftFence = this.createBorderSegment(depth, 'vertical', run('left'));
             leftFence.position.x = -width/2;
             leftFence.position.z = depth/2;
             group.add(leftFence);
-            
-            const rightFence = this.createBorderSegment(depth, 'vertical');
+
+            const rightFence = this.createBorderSegment(depth, 'vertical', run('right'));
             rightFence.position.x = width/2;
             rightFence.position.z = depth/2;
             group.add(rightFence);
         } else if (attachmentSide === 'south') {
             // Back fence (extends into field)
-            const backFence = this.createBorderSegment(width, 'horizontal');
+            const backFence = this.createBorderSegment(width, 'horizontal', run('back'));
             backFence.position.z = -depth;
             group.add(backFence);
-            
+
             // Side fences extend from border into field
-            const leftFence = this.createBorderSegment(depth, 'vertical');
+            const leftFence = this.createBorderSegment(depth, 'vertical', run('left'));
             leftFence.position.x = -width/2;
             leftFence.position.z = -depth/2;
             group.add(leftFence);
-            
-            const rightFence = this.createBorderSegment(depth, 'vertical');
+
+            const rightFence = this.createBorderSegment(depth, 'vertical', run('right'));
             rightFence.position.x = width/2;
             rightFence.position.z = -depth/2;
             group.add(rightFence);
         } else if (attachmentSide === 'east') {
             // Back fence (extends into field) - width tall, at depth distance
-            const backFence = this.createBorderSegment(width, 'vertical');
+            const backFence = this.createBorderSegment(width, 'vertical', run('back'));
             backFence.position.x = depth;
             backFence.position.z = 0;
             group.add(backFence);
-            
+
             // Side fences extend from border into field - depth long
-            const topFence = this.createBorderSegment(depth, 'horizontal');
+            const topFence = this.createBorderSegment(depth, 'horizontal', run('top'));
             topFence.position.z = width/2;
             topFence.position.x = depth/2;
             group.add(topFence);
-            
-            const bottomFence = this.createBorderSegment(depth, 'horizontal');
+
+            const bottomFence = this.createBorderSegment(depth, 'horizontal', run('bottom'));
             bottomFence.position.z = -width/2;
             bottomFence.position.x = depth/2;
             group.add(bottomFence);
         } else { // west
             // Back fence (extends into field) - width tall, at depth distance
-            const backFence = this.createBorderSegment(width, 'vertical');
+            const backFence = this.createBorderSegment(width, 'vertical', run('back'));
             backFence.position.x = -depth;
             backFence.position.z = 0;
             group.add(backFence);
-            
+
             // Side fences extend from border into field - depth long
-            const topFence = this.createBorderSegment(depth, 'horizontal');
+            const topFence = this.createBorderSegment(depth, 'horizontal', run('top'));
             topFence.position.z = width/2;
             topFence.position.x = -depth/2;
             group.add(topFence);
-            
-            const bottomFence = this.createBorderSegment(depth, 'horizontal');
+
+            const bottomFence = this.createBorderSegment(depth, 'horizontal', run('bottom'));
             bottomFence.position.z = -width/2;
             bottomFence.position.x = -depth/2;
             group.add(bottomFence);
         }
-        
+
         return group;
     }
     
@@ -782,7 +936,9 @@ export class FenceConfigBuilder {
 
                 const leftFlankLen = gateLeftEdge - penLeftEdge;
                 if (leftFlankLen > 0.5) {
-                    const leftFlank = this.presets.createBorderSegment(leftFlankLen, 'horizontal');
+                    const leftFlank = this.presets.createBorderSegment(leftFlankLen, 'horizontal', {
+                        seedKey: 'gate-flank-left'
+                    });
                     leftFlank.position.set(
                         (penLeftEdge + gateLeftEdge) / 2,
                         0,
@@ -793,7 +949,9 @@ export class FenceConfigBuilder {
 
                 const rightFlankLen = penRightEdge - gateRightEdge;
                 if (rightFlankLen > 0.5) {
-                    const rightFlank = this.presets.createBorderSegment(rightFlankLen, 'horizontal');
+                    const rightFlank = this.presets.createBorderSegment(rightFlankLen, 'horizontal', {
+                        seedKey: 'gate-flank-right'
+                    });
                     rightFlank.position.set(
                         (gateRightEdge + penRightEdge) / 2,
                         0,
@@ -823,30 +981,35 @@ export class FenceConfigBuilder {
         northFence.position.set(0, 0, bounds.maxZ);
         fences.add(northFence);
         
-        // South fence
+        // South fence. A square field's east and west borders are the same
+        // length and orientation, so each border names itself in the jitter
+        // salt rather than sharing one run's posts.
         const southFence = this.presets.createBorderSegment(
             bounds.maxX - bounds.minX,
-            'horizontal'
+            'horizontal',
+            { seedKey: 'border-south' }
         );
         southFence.position.set(0, 0, bounds.minZ);
         fences.add(southFence);
-        
+
         // East fence
         const eastFence = this.presets.createBorderSegment(
             bounds.maxZ - bounds.minZ,
-            'vertical'
+            'vertical',
+            { seedKey: 'border-east' }
         );
         eastFence.position.set(bounds.maxX, 0, 0);
         fences.add(eastFence);
-        
+
         // West fence
         const westFence = this.presets.createBorderSegment(
             bounds.maxZ - bounds.minZ,
-            'vertical'
+            'vertical',
+            { seedKey: 'border-west' }
         );
         westFence.position.set(bounds.minX, 0, 0);
         fences.add(westFence);
-        
+
         // Add pasture pen attached to north border
         const pen = this.presets.createPenStructure({
             width: pasture.maxX - pasture.minX,
@@ -913,12 +1076,17 @@ export class FenceConfigBuilder {
         southFence.position.set(0, 0, bounds.minZ);
         fences.add(southFence);
         
-        // Side fences (no gates)
-        const eastFence = this.presets.createBorderSegment(bounds.maxZ - bounds.minZ, 'vertical');
+        // Side fences (no gates). Same length and orientation as each other, so
+        // each names itself in the jitter salt.
+        const eastFence = this.presets.createBorderSegment(bounds.maxZ - bounds.minZ, 'vertical', {
+            seedKey: 'border-east'
+        });
         eastFence.position.set(bounds.maxX, 0, 0);
         fences.add(eastFence);
-        
-        const westFence = this.presets.createBorderSegment(bounds.maxZ - bounds.minZ, 'vertical');
+
+        const westFence = this.presets.createBorderSegment(bounds.maxZ - bounds.minZ, 'vertical', {
+            seedKey: 'border-west'
+        });
         westFence.position.set(bounds.minX, 0, 0);
         fences.add(westFence);
         

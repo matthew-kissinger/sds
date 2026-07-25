@@ -69,7 +69,11 @@ describe('webgpu terrain material adapter', () => {
             expect(terrain.material.isShaderMaterial).toBe(true);
             expect(terrain.material.uniforms.baseColor1.value.getHex()).toBe(0x3d5c2e);
             expect(terrain.material.uniforms.dirtColor.value.getHex()).toBe(0x6b5d4a);
-            expect(terrain.material.fragmentShader).toContain('fbm(vWorldPos.xz * 0.02)');
+            // Cycle 114 Phase 2 replaced the terrain's private `fbm()` with the
+            // shared ground field from js/world/groundShading.js, so grass and
+            // terrain vary together instead of each inventing their own noise.
+            // Same role, one authority.
+            expect(terrain.material.fragmentShader).toContain('sdsGroundVariation01(vWorldPos.xz)');
             expect(terrain.material.fragmentShader).toContain('#include <fog_fragment>');
             expect(terrain.material.polygonOffset).toBe(true);
             expect(builder.webgpuTerrainMaterialSummary).toMatchObject({
@@ -192,8 +196,7 @@ describe('webgpu terrain material adapter', () => {
     it('can route terrain ground through the reusable WebGPU node material candidate', () => {
         const contexts = [];
         const nodeFactories = createWebGpuTerrainNodeMaterialFactories(
-            { MeshLambertNodeMaterial, DoubleSide, TSL },
-            { fogColor: [0.2933, 0.1629, 0.1348] }
+            { MeshLambertNodeMaterial, DoubleSide, TSL }
         );
         const scene = new THREE.Scene();
         const builder = new TerrainBuilder(scene, false, null, {
@@ -241,7 +244,6 @@ describe('webgpu terrain material adapter', () => {
                 detailStrength: 0.20,
                 aoFloor: 0.86,
                 aoStrength: 0.14,
-                fogBlendScale: 1,
             });
             expect(builder.webgpuTerrainGeometryBudget.skirtTriangles).toBe(0);
         } finally {
@@ -251,8 +253,7 @@ describe('webgpu terrain material adapter', () => {
 
     it('creates a flat height texture for WebGPU terrain without a heightfield', () => {
         const nodeFactories = createWebGpuTerrainNodeMaterialFactories(
-            { ...THREE, MeshLambertNodeMaterial, DoubleSide, TSL },
-            { fogColor: [0.2933, 0.1629, 0.1348] }
+            { ...THREE, MeshLambertNodeMaterial, DoubleSide, TSL }
         );
         const scene = new THREE.Scene();
         const builder = new TerrainBuilder(scene, false, null, {

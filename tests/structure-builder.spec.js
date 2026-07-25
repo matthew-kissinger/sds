@@ -97,6 +97,25 @@ function instancePosition(instancedMesh, index) {
   return position;
 }
 
+/**
+ * The post WRAPPER origin (the foot the terrain sample places), recovered from
+ * an instance matrix. Cycle 114 gave posts a seeded per-instance lean and
+ * height scale, so the mesh centre inside the wrapper no longer sits at a fixed
+ * offset above the foot. The fixture post mesh is authored 1m up inside its
+ * wrapper, so back that offset out through whatever rotation and scale the
+ * instance carries.
+ */
+function instancePostBase(instancedMesh, index) {
+  const matrix = new THREE.Matrix4();
+  const position = new THREE.Vector3();
+  const quaternion = new THREE.Quaternion();
+  const scale = new THREE.Vector3();
+  instancedMesh.getMatrixAt(index, matrix);
+  matrix.decompose(position, quaternion, scale);
+  const meshOffset = new THREE.Vector3(0, 1, 0).multiply(scale).applyQuaternion(quaternion);
+  return position.sub(meshOffset);
+}
+
 describe('buildHomesteadGate — authored gate asset vs fallback door', () => {
   const HOMESTEAD = {
     gate: { x: 0, z: 0, width: 8, facingDeg: 90 },
@@ -161,8 +180,11 @@ describe('GLB fence segment instancing', () => {
     expect(rails.count).toBe(6);
     expect(segment.userData.fenceInstanceCounts).toEqual({ posts: 3, rails: 6 });
 
-    expect(instancePosition(posts, 0).y).toBeCloseTo(8, 6);
-    expect(instancePosition(posts, 2).y).toBeCloseTo(18, 6);
+    // Each post's foot lands on its own terrain sample: sample(-5, 0) = 7 and
+    // sample(5, 0) = 17. Rails are not jittered, so their midpoint is still the
+    // endpoint-height mean plus the rail height: (7 + 17)/2 + 0.5 = 10.
+    expect(instancePostBase(posts, 0).y).toBeCloseTo(7, 6);
+    expect(instancePostBase(posts, 2).y).toBeCloseTo(17, 6);
     expect(instancePosition(rails, 0).y).toBeCloseTo(10, 6);
   });
 
@@ -175,14 +197,14 @@ describe('GLB fence segment instancing', () => {
     sb._surfaceToTerrain(segment);
 
     const flatPosts = segment.getObjectByName('Fence_Post_Instances');
-    expect(instancePosition(flatPosts, 0).y).toBeCloseTo(1, 6);
+    expect(instancePostBase(flatPosts, 0).y).toBeCloseTo(0, 6);
     expect(segment.userData.fenceInstancedWithTerrain).toBe(false);
 
     sb.setHeightfield(STUB_HF);
     sb._surfaceToTerrain(segment);
 
     const terrainPosts = segment.getObjectByName('Fence_Post_Instances');
-    expect(instancePosition(terrainPosts, 0).y).toBeCloseTo(8, 6);
+    expect(instancePostBase(terrainPosts, 0).y).toBeCloseTo(7, 6);
     expect(segment.userData.fenceInstancedWithTerrain).toBe(true);
   });
 });

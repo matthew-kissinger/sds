@@ -58,11 +58,12 @@ export function sampleSkyFogPacketFromSky({
   const horizonColor = colorArray(horizon);
   const zenithColor = colorArray(zenith);
   const sunColor = colorArray(sun);
-  // Cycle 112 Phase 6: this packet's fogColor feeds the WebGPU terrain's own
-  // distance-fog term, which mixes toward it inside the material and
-  // independently of scene.fog. It used to be `horizonColor * 0.82` - the raw
-  // LUT horizon, the same near-white value that produced the seam, just 18%
-  // darker.
+  // Cycle 112 Phase 6: this packet's fogColor feeds every WebGPU material that
+  // shades its own distance fog (grass blade, meadow quad, water, sheep wool,
+  // tree branch and leaf, kiln impostor), each mixing toward it inside the
+  // material and independently of scene.fog. It used to be
+  // `horizonColor * 0.82` - the raw LUT horizon, the same near-white value that
+  // produced the seam, just 18% darker.
   //
   // It now carries the identical value Atmosphere assigns to scene.fog.color:
   // both are PRE-tone-map inputs to tone-mapped materials, so both must be
@@ -70,6 +71,11 @@ export function sampleSkyFogPacketFromSky({
   // one function for both is what keeps the two fogs from pulling the far band
   // in different directions, and webgpuDiagnostic's `fogColorMatchesPacket`
   // check exists to catch them diverging again.
+  //
+  // Cycle 114 Phase 6 dropped one consumer: the terrain node material used to
+  // take this colour too, and froze it at material creation. It now reads
+  // scene.fog through Three's node fog like the WebGL terrain always has, so
+  // nothing has to hand it a snapshot.
   //
   // The tone curve is assumed to be the non-Apple default here because the
   // packet is baked before a renderer exists; Atmosphere gets the real operator

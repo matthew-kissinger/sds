@@ -148,10 +148,19 @@ export class StructureBuilder {
         railInstances.castShadow = true;
         railInstances.receiveShadow = true;
 
-        const postRotation = spec.orientation === 'vertical'
-            ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
-            : new THREE.Quaternion();
-        const unitScale = new THREE.Vector3(1, 1, 1);
+        // Posts carry a seeded per-instance yaw, lean and height scale
+        // (createFencePostJitter in js/FencePresets.js) so a run reads as dug
+        // fence rather than as a picket line. The run-axis yaw folds into the
+        // jitter's yaw; the GLB post wrapper's origin is authored at ground
+        // contact, so both the lean and the Y scale pivot about the post's foot
+        // and leave the buried end where the terrain put it. Rails are NOT
+        // jittered: they span between post centres at fixed heights, and the
+        // lean cap in FencePresets keeps every post's cross-section over its
+        // rail attachment points.
+        const baseYaw = spec.orientation === 'vertical' ? Math.PI / 2 : 0;
+        const postEuler = new THREE.Euler();
+        const postRotation = new THREE.Quaternion();
+        const postScale = new THREE.Vector3(1, 1, 1);
         const baseRailAxis = new THREE.Vector3(1, 0, 0);
         const matrix = new THREE.Matrix4();
         const instanceMatrix = new THREE.Matrix4();
@@ -191,7 +200,17 @@ export class StructureBuilder {
             const offset = i * spec.actualSpacing - spec.length / 2;
             setSegmentPoint(local, offset);
             terrainLocalPoint(liftedLocal, local);
-            matrix.compose(liftedLocal, postRotation, unitScale);
+            // Optional so a spec built before the jitter existed (or by a test
+            // that hand-rolls one) still composes the old uniform post.
+            const jitter = spec.postJitter?.[i];
+            postEuler.set(
+                jitter?.leanX ?? 0,
+                baseYaw + (jitter?.yaw ?? 0),
+                jitter?.leanZ ?? 0
+            );
+            postRotation.setFromEuler(postEuler);
+            postScale.set(1, jitter?.heightScale ?? 1, 1);
+            matrix.compose(liftedLocal, postRotation, postScale);
             instanceMatrix.multiplyMatrices(matrix, spec.postSource.localMatrix);
             postInstances.setMatrixAt(i, instanceMatrix);
         }

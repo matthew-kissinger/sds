@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
-import { loadShaderWithReplacements } from './shaders/ShaderLoader.js';
 import { geometryTriangleCount } from './utils/TriangleCount.js';
 import { TIER_PRESETS } from './HardwareTier.js';
 import { createWebGpuGrassMaterial } from './world/webgpuGrassMaterialAdapter.js';
@@ -9,9 +8,13 @@ import { mulberry32 } from '../shared/Random.js';
 import { getCoastlineField, sampleSignedDistance } from '../shared/CoastlineField.js';
 import { createGrassComputeCull } from './world/grassComputeCull.js';
 import { getWebGpuModules } from './world/webgpuModules.js';
-
-// Preload guard for the grass shader fetch below
-let grassShadersLoaded = false;
+import {
+    GRASS_HUE_GLSL,
+    GROUND_CONTACT,
+    GROUND_CONTACT_GLSL,
+    GROUND_VARIATION_GLSL,
+    GRASS_VARIATION_TINT,
+} from './world/groundShading.js';
 
 // Cycle 20 Phase 2 v3 (2026-05-04): minimum displaced-terrain Y under which
 // grass is excluded — keeps clumps off the water-merging strip past the
@@ -20,6 +23,35 @@ let grassShadersLoaded = false;
 // drops past Y=0.5 near the outer half of the falloff annulus where the
 // shore visually meets the water.
 const SHORELINE_Y_MIN = 0.5;
+
+// Cycle 114 Phase 1: metres over which grass thins OUTSIDE an exclusion zone's
+// edge instead of stopping dead at it. Every zone used to be a hard boolean, so
+// the pen and the farmhouse yard each sat inside a knife-edged bald rectangle -
+// the first defect the front-door review named. 4m is about two dog-lengths:
+// wide enough to read as ground worn down on the approach, narrow enough that
+// the pen's footprint still reads as a pen rather than as a soft smear.
+//
+// This is a module constant rather than a SceneDef field on purpose (Cycle 114
+// open question Q2). The scene-knobs rule in .claude/rules/scene-and-render.md
+// is about branching on scene ID, which this does not do: one falloff width
+// applied uniformly to every zone is a property of the effect, not of a scene.
+// It also keeps the fence-frozen shared/scenes/types.js untouched.
+const EXCLUSION_FALLOFF_M = 4.0;
+
+// Blade height at the very edge of an exclusion zone, as a fraction of full
+// height. Density alone thins to a speckle, which reads as instances gone
+// missing; tapering height as well reads as grass worn down by traffic.
+const EXCLUSION_EDGE_HEIGHT_MIN = 0.45;
+
+// Cycle 114 Phase 2: how far each scene's base and tip colours are pulled
+// toward its own mid. Home Field shipped #5a7a3e -> #8aa860 -> #c4d68c, a
+// base-to-tip luminance span of ~0.37, which reads as high-contrast striping at
+// gameplay distance and fights the ground underneath instead of sitting on it.
+// A mix toward the scene's OWN mid keeps the ramp shape and the per-scene
+// identity (Rolling Hills stays golden, Open Country stays pale) while cutting
+// the span to (1 - this) of what it was: one knob rather than four hand-tuned
+// hex triples, and no edit to the scene defs.
+const GRASS_RAMP_COMPRESSION = 0.4;
 
 const GRASS_PROFILES = Object.freeze({
     'sds-hybrid-v1': Object.freeze({
@@ -123,33 +155,16 @@ function applyGrassProfile(config, profile) {
     config.interaction.flattenAmount = profile.flattenAmount;
 }
 
-/**
- * Preload grass shaders - call this early in app initialization
- * @param {Object} config - Grass config with placeholder values
- */
-export async function preloadGrassShaders(config = {}) {
-    if (grassShadersLoaded) return;
-
-    const replacements = {
-        MAX_INTERACTORS: config.maxInteractors || 50,
-        INTERACTION_RADIUS: (config.interactionRadius || 3.5).toFixed(1),
-        SHEEP_INTERACTION_RADIUS: (config.sheepInteractionRadius || 1.5).toFixed(1),
-        INTERACTION_STRENGTH: (config.interactionStrength || 0.8).toFixed(1),
-        SHEEP_INTERACTION_STRENGTH: (config.sheepInteractionStrength || 0.3).toFixed(1)
-    };
-
-    try {
-        await Promise.all([
-            loadShaderWithReplacements('./js/shaders/grass/desktop-vertex.glsl', replacements),
-            loadShaderWithReplacements('./js/shaders/grass/mobile-vertex.glsl', replacements),
-            loadShaderWithReplacements('./js/shaders/grass/fragment.glsl', replacements)
-        ]);
-        grassShadersLoaded = true;
-        console.log('[SHADER] Grass shaders loaded');
-    } catch (error) {
-        console.warn('[SHADER] Failed to load grass shaders, using inline fallback:', error);
-    }
-}
+// Cycle 114 Phase 2: `preloadGrassShaders` and js/shaders/grass/*.glsl are gone.
+// The .glsl files were a mirror of the inline shaders, fetched at scene load and
+// then thrown away, because createGrassMaterial always picked the inline variant
+// (the mirrors never carried the polish varyings). Nothing outside this file
+// called the preloader either. They had already drifted a year behind, and this
+// phase would have had to hand-carry the ground field, the coherent hue and the
+// contact term into a fifth and sixth copy that nobody renders. A mirror nobody
+// renders is a mirror nobody keeps correct. The inline shaders below are now the
+// only grass shaders. js/shaders/ShaderLoader.js stays: OptimizedSheep still
+// loads js/shaders/sheep/*.glsl through it, and those ARE the live source.
 
 /**
  * GrassSystem - Advanced grass rendering with:
@@ -234,6 +249,21 @@ export class GrassSystem {
         const tipColor = sceneColors?.tip
             ? new THREE.Color(sceneColors.tip)
             : new THREE.Color(0.55, 0.82, 0.30);
+        // Cycle 114 Phase 2: compress the base-to-tip ramp toward the scene's own
+        // mid. lerpColors is linear, so the base-to-tip luminance span comes out
+        // at exactly (1 - GRASS_RAMP_COMPRESSION) of what the scene declared,
+        // which is the number the phase records. The mid is the anchor and does
+        // not move, so the ramp SHAPE (the break at vHeight 0.4) and the scene's
+        // colour identity both survive. Recorded per-scene on the config below so
+        // a spec can read the before and after without re-deriving the maths.
+        this.grassRampCompression = GRASS_RAMP_COMPRESSION;
+        this.grassRampBeforeCompression = {
+            base: baseColor.clone(),
+            mid: midColor.clone(),
+            tip: tipColor.clone(),
+        };
+        baseColor.lerp(midColor, GRASS_RAMP_COMPRESSION);
+        tipColor.lerp(midColor, GRASS_RAMP_COMPRESSION);
 
         // Cycle 18 Phase 1: explicit per-scene grass radius takes precedence
         // over the legacy `worldSize * densityRange` formula. When set on a
@@ -885,6 +915,19 @@ export class GrassSystem {
         const dog = I.dog;
         const sheep = I.sheep;
         return `
+            // Cycle 12 Phase 4 required highp on every grass stage, and
+            // tests/shader-precision.spec.js has asserted it ever since - but
+            // against js/shaders/grass/*.glsl, which were mirrors nobody
+            // rendered. The inline shaders that actually compile never carried
+            // the declaration, so the guarantee was vacuous here for years.
+            // Cycle 114 Phase 2 deleted the mirrors and moved the assertion
+            // onto these, which is what surfaced it. Restored rather than
+            // dropped: GLSL ES defaults vertex float to highp so nothing was
+            // visibly wrong, but relying on the default is not what the rule
+            // said, and the fragment stage below (where the default is mediump)
+            // has always declared it.
+            precision highp float;
+
             uniform float time;
             uniform sampler2D noiseTexture;
             uniform float windStrength;
@@ -912,6 +955,10 @@ export class GrassSystem {
             varying float vShadow;
             varying float vHueOffset;
 
+            ${GROUND_VARIATION_GLSL}
+            ${GRASS_HUE_GLSL}
+            ${GROUND_CONTACT_GLSL}
+
             // Smooth falloff for interaction
             float smoothFalloff(float dist, float radius) {
                 float t = clamp(dist / radius, 0.0, 1.0);
@@ -926,7 +973,6 @@ export class GrassSystem {
             void main() {
                 vUv = uv;
                 vHeight = bladeData.y;
-                vHueOffset = (hash11(float(gl_InstanceID) + 0.137) - 0.5) * 0.04;
 
                 // Stochastic LOD dither — collapse this blade to a degenerate
                 // triangle when its per-instance hash falls below the
@@ -945,8 +991,17 @@ export class GrassSystem {
                     vWorldPos = vec3(0.0);
                     vColorVariation = 0.0;
                     vShadow = 1.0;
+                    vHueOffset = 0.0;
                     return;
                 }
+
+                // Cycle 114 Phase 2: hue offset keyed off the CLUMP's world
+                // position rather than its instance id. A per-instance hash gives
+                // every neighbour an independent tint, which reads as television
+                // snow; quantising to roughly clump scale lets a patch of the
+                // meadow share a tint, which is what real grass does. Same total
+                // amplitude as before (0.04), just correlated.
+                vHueOffset = sdsGrassHueOffset(baseWorld.xz, 0.04);
 
                 vec3 pos = position;
                 vec4 worldPos4 = modelMatrix * instanceMatrix * vec4(pos, 1.0);
@@ -1013,6 +1068,15 @@ export class GrassSystem {
                 // zone follows the dog's actual mesh footprint as it turns,
                 // instead of being locked to a world-axis ellipse.
                 vec3 totalPush = vec3(0.0);
+                // Cycle 114 Phase 5: contact darkening under the DOG, accumulated
+                // alongside the push. Push magnitude is the wrong driver for
+                // "the dog has weight": it peaks at the body's EDGE and can fall
+                // off directly underneath, which is precisely where the shadow
+                // should be darkest. This is a separate proximity term on its own
+                // footprint, and it shares that footprint and its falloff radius
+                // with the terrain shader (js/world/groundShading.js) so the
+                // darkening does not change size when the dog steps off the grass.
+                float contactShade = 0.0;
                 for (int i = 0; i < ${this.config.maxInteractors}; i++) {
                     if (i >= interactorCount) break;
 
@@ -1059,6 +1123,12 @@ export class GrassSystem {
                         totalPush.xz += pushDir * pushStrength * windPower;
                         totalPush.y -= pushStrength * ${I.flattenAmount.toFixed(2)} * windPower;
                     }
+
+                    // Dog only. Never sheep: a 5,000-instance version is a
+                    // different problem with a different budget.
+                    if (entityType < 0.5) {
+                        contactShade = max(contactShade, sdsGroundContactFalloff(local.y, local.x));
+                    }
                 }
 
                 // Apply displacements
@@ -1066,11 +1136,18 @@ export class GrassSystem {
                 worldPos4.z += windDisp.y + totalPush.z;
                 worldPos4.y += totalPush.y;
 
-                // Color variation based on world position
-                vColorVariation = sin(vWorldPos.x * 0.2) * cos(vWorldPos.z * 0.15) * 0.5 + 0.5;
+                // Cycle 114 Phase 2: colour variation is the terrain's own ground
+                // field now, at the terrain's frequencies and rotation, instead of
+                // sin(x * 0.2) * cos(z * 0.15) - a regular plaid at roughly 31m by
+                // 42m. A varied ground under a plaid-varied grass layer is exactly
+                // why the grass read as a carpet laid over the surface rather than
+                // as the surface. Now a blade standing on a browner patch of
+                // ground is itself browner, for the same reason.
+                vColorVariation = sdsGroundVariation01(vWorldPos.xz);
 
-                // Subtle shadow from interaction
-                vShadow = 1.0 - clamp(length(totalPush) * 0.15, 0.0, 0.2);
+                // Subtle shadow from interaction, times the dog's contact.
+                vShadow = (1.0 - clamp(length(totalPush) * 0.15, 0.0, 0.2))
+                    * (1.0 - contactShade * ${GROUND_CONTACT.strength});
 
                 gl_Position = projectionMatrix * viewMatrix * worldPos4;
             }
@@ -1084,6 +1161,11 @@ export class GrassSystem {
         const I = this.config.interaction;
         const dog = I.dog;
         return `
+            // See getDesktopVertexShader: the precision declaration lived only
+            // in the deleted js/shaders/grass mirrors, never in the shader that
+            // compiles.
+            precision highp float;
+
             attribute vec4 bladeData;
 
             varying vec2 vUv;
@@ -1103,6 +1185,10 @@ export class GrassSystem {
             uniform float grassFadeStart;
             uniform float grassFadeEnd;
 
+            ${GROUND_VARIATION_GLSL}
+            ${GRASS_HUE_GLSL}
+            ${GROUND_CONTACT_GLSL}
+
             float smoothFalloff(float dist, float radius) {
                 float t = clamp(dist / radius, 0.0, 1.0);
                 return 1.0 - t * t * (3.0 - 2.0 * t);
@@ -1115,7 +1201,6 @@ export class GrassSystem {
             void main() {
                 vUv = uv;
                 vHeight = bladeData.y;
-                vHueOffset = (hash11(float(gl_InstanceID) + 0.137) - 0.5) * 0.04;
 
                 // Stochastic LOD dither (same as desktop) — smooth density
                 // gradient, no count-step ring visible to the player.
@@ -1128,8 +1213,12 @@ export class GrassSystem {
                     vWorldPos = vec3(0.0);
                     vColorVariation = 0.0;
                     vShadow = 1.0;
+                    vHueOffset = 0.0;
                     return;
                 }
+
+                // Cycle 114 Phase 2: clump-coherent hue, identical to desktop.
+                vHueOffset = sdsGrassHueOffset(baseWorld.xz, 0.04);
 
                 vec3 pos = position;
                 vec4 worldPos4 = modelMatrix * instanceMatrix * vec4(pos, 1.0);
@@ -1142,6 +1231,11 @@ export class GrassSystem {
                 // applied to the first interactor only — mobile keeps a
                 // single push to fit the iOS Safari uniform limit).
                 vec3 totalPush = vec3(0.0);
+                // Cycle 114 Phase 5: the contact term, same shared footprint and
+                // radius as desktop and as the terrain. Mobile only ever pushes
+                // interactor 0, which is always the player's dog (main.js pushes
+                // the player slot first), so there is no sheep to exclude here.
+                float contactShade = 0.0;
                 if (interactorCount > 0) {
                     vec3 entityPos = interactorPositions[0];
                     vec2 facing = interactorFacings[0];
@@ -1165,14 +1259,17 @@ export class GrassSystem {
                         totalPush.xz += pushDir * pushStrength * windPower;
                         totalPush.y -= pushStrength * ${I.flattenAmount.toFixed(2)} * windPower;
                     }
+                    contactShade = sdsGroundContactFalloff(local.y, local.x);
                 }
 
                 worldPos4.x += totalPush.x;
                 worldPos4.z += totalPush.z;
                 worldPos4.y += totalPush.y;
 
-                vColorVariation = sin(vWorldPos.x * 0.2) * cos(vWorldPos.z * 0.15) * 0.5 + 0.5;
-                vShadow = 1.0 - clamp(length(totalPush) * 0.1, 0.0, 0.15);
+                // Cycle 114 Phase 2: the shared ground field, same as desktop.
+                vColorVariation = sdsGroundVariation01(vWorldPos.xz);
+                vShadow = (1.0 - clamp(length(totalPush) * 0.1, 0.0, 0.15))
+                    * (1.0 - contactShade * ${GROUND_CONTACT.strength});
 
                 gl_Position = projectionMatrix * viewMatrix * worldPos4;
             }
@@ -1213,11 +1310,15 @@ export class GrassSystem {
                 // Per-blade hue offset (subtle G/-R/+B nudge for variety)
                 color += vec3(-vHueOffset, vHueOffset, vHueOffset * 0.5);
 
-                // Add natural color variation
+                // Add natural color variation. Cycle 114 Phase 2: the amplitudes
+                // are unchanged; what changed is that vColorVariation is now the
+                // terrain's own ground field, so a warmer, browner tint lands on
+                // the blades standing where the ground itself is warmer and
+                // browner. Constants live in js/world/groundShading.js.
                 vec3 variation = vec3(
-                    vColorVariation * 0.08,
-                    vColorVariation * 0.05 - 0.02,
-                    -vColorVariation * 0.03
+                    vColorVariation * ${GRASS_VARIATION_TINT.red},
+                    vColorVariation * ${GRASS_VARIATION_TINT.green} + (${GRASS_VARIATION_TINT.greenBias}),
+                    vColorVariation * (${GRASS_VARIATION_TINT.blue})
                 );
                 color += variation;
 
@@ -1490,7 +1591,12 @@ export class GrassSystem {
                 densityFactor = Math.max(0, 1 - d / this.config.grassRadius);
             }
             if (this.random() > densityFactor * 0.8 + 0.2) continue;
-            valid.push({ x, z });
+            // Cycle 114 Phase 1: same soft exclusion band as createChunk, drawn
+            // in the same place in the random stream so the consolidated field
+            // stays byte-identical to the per-chunk one.
+            const exclusionKeep = this.exclusionKeepProbability(x, z);
+            if (exclusionKeep < 1 && this.random() > exclusionKeep) continue;
+            valid.push({ x, z, exclusionKeep });
             if (valid.length >= clumpCount) break;
         }
         for (const pos of valid) {
@@ -1500,7 +1606,8 @@ export class GrassSystem {
             const d = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
             const distanceScale = Math.max(0.5, 1 - d / (this.config.worldSize * 0.8));
             const scale = (0.7 + this.random() * 0.6) * distanceScale;
-            const heightMul = this._tallHeightMul(pos.x, pos.z);
+            const heightMul = this._tallHeightMul(pos.x, pos.z)
+                * this._exclusionHeightMul(pos.exclusionKeep);
             offsets.push(pos.x, baseY, pos.z);
             transforms.push(yaw, scale, heightMul);
         }
@@ -1674,7 +1781,15 @@ export class GrassSystem {
             }
             if (this.random() > densityFactor * 0.8 + 0.2) continue;
 
-            validPositions.push({ x, z });
+            // Cycle 114 Phase 1: probabilistic reject inside an exclusion zone's
+            // falloff band, so grass thins toward the pen instead of stopping at
+            // a knife edge. The random is only drawn when the clump is actually
+            // in a band (keep < 1), which keeps the scatter stream - and every
+            // golden frame away from a zone - byte-identical to pre-Cycle-114.
+            const exclusionKeep = this.exclusionKeepProbability(x, z);
+            if (exclusionKeep < 1 && this.random() > exclusionKeep) continue;
+
+            validPositions.push({ x, z, exclusionKeep });
 
             if (validPositions.length >= clumpCount) break;
         }
@@ -1735,7 +1850,11 @@ export class GrassSystem {
             // Cycle 64: a tall-grass band scales blade HEIGHT (Y) only, leaving
             // the footprint unchanged so it reads as taller grass, not bigger
             // clumps. heightMul = 1 everywhere outside a declared tallZone.
-            const heightMul = this._tallHeightMul(pos.x, pos.z);
+            // Cycle 114 Phase 1 multiplies in the exclusion edge taper on the
+            // same Y-only channel, for the same reason: shorter grass near the
+            // pen, not smaller clumps.
+            const heightMul = this._tallHeightMul(pos.x, pos.z)
+                * this._exclusionHeightMul(pos.exclusionKeep);
             if (heightMul !== 1) {
                 dummy.scale.set(scale, scale * heightMul, scale);
             } else {
@@ -1994,32 +2113,97 @@ export class GrassSystem {
 
         // Check dynamic exclusion zones (farmhouse, pasture, etc.)
         // No more hardcoded zones - all exclusions are added via addExclusionZone()
+        //
+        // Cycle 114 Phase 1: this stays the HARD test and delegates to the signed
+        // distance below, so the shoreline cull above and every other caller keep
+        // their exact behaviour (a point is excluded iff it is inside a zone,
+        // edges inclusive, which is what the box SDF's `<= 0` means). Only the
+        // scatter path consumes the soft band.
         for (const zone of this.exclusionZones) {
-            if (zone.type === 'rotated') {
-                // Rotated rectangle - transform point to local coordinates
-                const dx = x - zone.centerX;
-                const dz = z - zone.centerZ;
-
-                // Rotate the point by -angle to align with the rectangle's local axes
-                const localX = dx * zone.cosAngle - dz * zone.sinAngle;
-                const localZ = dx * zone.sinAngle + dz * zone.cosAngle;
-
-                // Check if the transformed point is within the rectangle bounds
-                const halfWidth = zone.width / 2;
-                const halfDepth = zone.depth / 2;
-                if (localX >= -halfWidth && localX <= halfWidth &&
-                    localZ >= -halfDepth && localZ <= halfDepth) {
-                    return true;
-                }
-            } else {
-                // Axis-aligned rectangle
-                if (x >= zone.minX && x <= zone.maxX && z >= zone.minZ && z <= zone.maxZ) {
-                    return true;
-                }
-            }
+            if (this._exclusionZoneDistance(zone, x, z) <= 0) return true;
         }
 
         return false;
+    }
+
+    /**
+     * Cycle 114 Phase 1: signed distance in metres from (x, z) to an exclusion
+     * zone's edge. Negative inside, zero on the edge, positive outside.
+     *
+     * Rotated zones run the same inverse rotation the hard test always used
+     * (lines below mirror the pre-Cycle-114 `type: 'rotated'` branch), so the
+     * falloff band follows the rotated edge rather than an axis-aligned bounding
+     * box. Both shapes then share one rounded-rectangle SDF.
+     *
+     * @param {object} zone
+     * @param {number} x
+     * @param {number} z
+     * @returns {number} metres, negative inside
+     */
+    _exclusionZoneDistance(zone, x, z) {
+        let localX, localZ, halfWidth, halfDepth;
+        if (zone.type === 'rotated') {
+            const dx = x - zone.centerX;
+            const dz = z - zone.centerZ;
+            // Rotate the point by -angle to align with the rectangle's local axes.
+            localX = dx * zone.cosAngle - dz * zone.sinAngle;
+            localZ = dx * zone.sinAngle + dz * zone.cosAngle;
+            halfWidth = zone.width / 2;
+            halfDepth = zone.depth / 2;
+        } else {
+            halfWidth = (zone.maxX - zone.minX) / 2;
+            halfDepth = (zone.maxZ - zone.minZ) / 2;
+            localX = x - (zone.minX + zone.maxX) / 2;
+            localZ = z - (zone.minZ + zone.maxZ) / 2;
+        }
+        const qx = Math.abs(localX) - halfWidth;
+        const qz = Math.abs(localZ) - halfDepth;
+        return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0);
+    }
+
+    /**
+     * Cycle 114 Phase 1: probability that a clump scattered at (x, z) survives
+     * the exclusion zones. 0 inside a zone, 1 once past the falloff band, and
+     * monotonically increasing in between (smoothstep on the signed distance).
+     *
+     * Overlapping zones compose by MINIMUM, not by product: two zones whose
+     * bands overlap should thin the ground the way the nearer one does, and a
+     * product would drive the overlap to near-zero and reintroduce the bald
+     * patch the falloff exists to remove.
+     *
+     * The scatter is the right place for this (Cycle 114 open question Q1): the
+     * decision is static per instance, and the scatter loop already oversamples
+     * and rejects, so this drops into an existing reject with no per-fragment
+     * cost and no shader change on either path.
+     *
+     * @param {number} x
+     * @param {number} z
+     * @returns {number} 0..1
+     */
+    exclusionKeepProbability(x, z) {
+        let keep = 1;
+        for (const zone of this.exclusionZones) {
+            const distance = this._exclusionZoneDistance(zone, x, z);
+            if (distance <= 0) return 0;
+            if (distance >= EXCLUSION_FALLOFF_M) continue;
+            const t = distance / EXCLUSION_FALLOFF_M;
+            const zoneKeep = t * t * (3 - 2 * t);
+            if (zoneKeep < keep) keep = zoneKeep;
+        }
+        return keep;
+    }
+
+    /**
+     * Cycle 114 Phase 1: blade-height multiplier for a clump that survived the
+     * falloff band. Full height once past the band, EXCLUSION_EDGE_HEIGHT_MIN
+     * at the zone edge.
+     *
+     * @param {number} [keep] the clump's keep probability
+     * @returns {number}
+     */
+    _exclusionHeightMul(keep) {
+        if (!(keep >= 0) || keep >= 1) return 1;
+        return EXCLUSION_EDGE_HEIGHT_MIN + (1 - EXCLUSION_EDGE_HEIGHT_MIN) * keep;
     }
 
     /**

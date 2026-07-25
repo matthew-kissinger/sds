@@ -1061,6 +1061,10 @@ export function createTerrainHeightfieldDiagnosticState(skyFog = createSkyFogDia
         lowColor: [0.29, 0.38, 0.18],
         midColor: [0.43, 0.55, 0.25],
         highColor: [0.56, 0.53, 0.42],
+        // Evidence only since Cycle 114 Phase 6. The terrain material no longer
+        // reads a fog colour of its own (it takes scene.fog through Three's
+        // node fog), so this records what the diagnostic scene's fog IS rather
+        // than configuring anything.
         fogColor: skyFog.fogColor,
         heightfieldSampling: 'diagnostic-data-texture',
     };

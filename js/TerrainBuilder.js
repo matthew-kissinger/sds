@@ -33,6 +33,7 @@ import {
 } from './utils/TriangleCount.js';
 import { placeEnvironmentDetails } from './world/RockPlacement.js';
 import { getHomesteadPlayfieldPlacements } from './world/homesteadPlayfieldProps.js';
+import { applyFarmhouseMaterialRoles } from './world/farmhouseMaterialRoles.js';
 import {
     placeTrees,
     bakeTreeImpostor,
@@ -54,6 +55,11 @@ import {
     regenerateGrass as runRegenerateGrass
 } from './world/sandbox.js';
 import { createWebGpuTerrainMaterial } from './world/webgpuTerrainMaterialAdapter.js';
+import {
+    GROUND_CONTACT,
+    GROUND_CONTACT_GLSL,
+    GROUND_VARIATION_GLSL,
+} from './world/groundShading.js';
 import { TIER_PRESETS } from './HardwareTier.js';
 import { shouldApplyWebGpuRendererFlag } from './rendering/webgpuRuntimeMode.js';
 
@@ -210,6 +216,10 @@ export class TerrainBuilder {
         this.rockPositions = [];
         this.mountains = []; // Track mountains
         this.buildings = []; // Track buildings
+        // Cycle 114 Phase 4: last addFarmHouse() roof/wall/trim material split
+        // summary, for boot diagnostics. Null until a scene with a farmhouse
+        // loads (Rolling Hills and Open Country never set it).
+        this.farmhouseMaterialRoleSummary = null;
         this.homesteadPlayfieldProps = [];
         this.homesteadPlayfieldPropSummary = null;
         this._homesteadPlayfieldPropLoadPromises = new Map();
@@ -954,7 +964,13 @@ export class TerrainBuilder {
                 baseColor1: { value: terrainColors.baseColor1.clone() },
                 baseColor2: { value: terrainColors.baseColor2.clone() },
                 baseColor3: { value: terrainColors.baseColor3.clone() },
-                dirtColor: { value: terrainColors.dirtColor.clone() }
+                dirtColor: { value: terrainColors.dirtColor.clone() },
+                // Cycle 114 Phase 5: the dog's ground contact. Driven per-frame
+                // by _syncGroundContact; strength stays 0 until a dog exists, so
+                // the menu and attract-mode terrain render exactly as before.
+                uContactPosition: { value: new THREE.Vector3(0, 0, 0) },
+                uContactFacing: { value: new THREE.Vector2(0, 1) },
+                uContactStrength: { value: 0 }
             }
         ]);
         const createDefaultMaterial = () => new THREE.ShaderMaterial({
@@ -986,9 +1002,15 @@ export class TerrainBuilder {
                 uniform vec3 baseColor2;
                 uniform vec3 baseColor3;
                 uniform vec3 dirtColor;
+                uniform vec3 uContactPosition;
+                uniform vec2 uContactFacing;
+                uniform float uContactStrength;
 
                 varying vec2 vUv;
                 varying vec3 vWorldPos;
+
+                ${GROUND_VARIATION_GLSL}
+                ${GROUND_CONTACT_GLSL}
 
                 // Simple noise function
                 float hash(vec2 p) {
@@ -1020,8 +1042,15 @@ export class TerrainBuilder {
                 }
 
                 void main() {
-                    // Multi-scale noise for natural variation
-                    float n1 = fbm(vWorldPos.xz * 0.02);
+                    // Multi-scale noise for natural variation. Cycle 114 Phase 2:
+                    // the low-frequency term is now the shared ground field from
+                    // js/world/groundShading.js, the same one the WebGPU terrain
+                    // and both grass paths read. It replaces a local 4-octave fbm
+                    // at 0.02 that agreed with nothing else in the scene, so on
+                    // the WebGL fallback a blade could shade browner where the
+                    // ground it stood on shaded greener. n2/n3 stay as they were:
+                    // they are terrain detail, not the field grass reads.
+                    float n1 = sdsGroundVariation01(vWorldPos.xz);
                     float n2 = fbm(vWorldPos.xz * 0.05 + 100.0);
                     float n3 = noise(vWorldPos.xz * 0.1);
 
@@ -1039,6 +1068,12 @@ export class TerrainBuilder {
                     // Subtle darkening in "low" areas (faux AO)
                     float ao = 0.85 + 0.15 * n1;
                     color *= ao;
+
+                    // Cycle 114 Phase 5: the dog's contact darkening, on the same
+                    // oriented rounded-rect footprint and the same falloff radius
+                    // the grass uses, so the shadow does not change size when the
+                    // dog crosses from grass onto the bald pen. Dog only.
+                    color *= 1.0 - sdsGroundContact(vWorldPos.xz, uContactPosition, uContactFacing) * uContactStrength;
 
                     gl_FragColor = vec4(color, 1.0);
 
@@ -1161,8 +1196,23 @@ export class TerrainBuilder {
         // for Field's pen, but applied to every scene — leaving a bare
         // 70×40m patch on RH and on OC's spawn→portal corridor. Only
         // apply when the scene has a pasture.
-        if (this.sceneDef?.pasture) {
-            this.grassSystem.addExclusionZone(-35, 35, 98, 138);
+        //
+        // Cycle 114 Phase 1: Cycle 7 guarded the call on `sceneDef.pasture` but
+        // never migrated the numbers, so a 60m x 28m fence stood inside a 70m x
+        // 40m bald rectangle: grass stopped 5m outside each side fence, 2m in
+        // front of the gate line and a full 10m behind the back fence. The
+        // exclusion now comes from the rect the scene actually declares, so the
+        // bare ground matches the pen that is standing on it. This moves grass
+        // placement on Home Field, which moves the goldens; that is the intended
+        // change, re-baselined in Phase 8.
+        const pasture = this.sceneDef?.pasture;
+        if (pasture) {
+            this.grassSystem.addExclusionZone(
+                pasture.minX,
+                pasture.maxX,
+                pasture.minZ,
+                pasture.maxZ
+            );
         }
 
         // Initialize the grass system
@@ -1207,7 +1257,72 @@ export class TerrainBuilder {
     }
 
 
+    /**
+     * Push the dog's ground contact to whichever terrain material is live.
+     *
+     * Cycle 114 Phase 5. The grass gets its contact for free: it reuses the
+     * interactor uniforms `updateInteractors` already syncs every frame. The
+     * terrain has no interactor array, so it needs the dog handed to it, and
+     * without this the contact term multiplies by a strength that never leaves
+     * zero and the darkening is invisible on exactly the bald ground it exists
+     * to cover (the pen, the farmhouse yard).
+     *
+     * Dog only, never sheep, matching both shaders. `entities` is the same
+     * array `updateInteractors` consumes, where `type === 'sheep'` marks a
+     * sheep and everything else is a dog.
+     *
+     * @param {Array<{position?: {x:number,y:number,z:number}, type?: string, facingDirection?: number|{x:number,z:number}}>} entities
+     */
+    _syncGroundContact(entities) {
+        const material = this.terrain?.material;
+        if (!material) return;
+
+        const dog = entities?.find?.((e) => e && e.position && e.type !== 'sheep') ?? null;
+
+        // Facing matches updateInteractors: a scalar is a radian angle, an
+        // object is already a direction, absent falls back to +Z so a missing
+        // facing reads as north rather than zero-length (which would NaN the
+        // oriented rounded-rect maths in both shaders).
+        let fx = 0, fz = 1;
+        if (dog) {
+            if (typeof dog.facingDirection === 'number') {
+                fx = Math.cos(dog.facingDirection);
+                fz = Math.sin(dog.facingDirection);
+            } else if (dog.facingDirection && typeof dog.facingDirection.x === 'number') {
+                const len = Math.hypot(dog.facingDirection.x, dog.facingDirection.z) || 1;
+                fx = dog.facingDirection.x / len;
+                fz = dog.facingDirection.z / len;
+            }
+        }
+        const strength = dog ? GROUND_CONTACT.strength : 0;
+
+        // WebGL: raw ShaderMaterial uniforms.
+        const u = material.uniforms;
+        if (u?.uContactStrength) {
+            if (dog) u.uContactPosition.value.set(dog.position.x, dog.position.y ?? 0, dog.position.z);
+            u.uContactFacing.value.set(fx, fz);
+            u.uContactStrength.value = strength;
+        }
+
+        // WebGPU: node uniforms published on userData by the node material.
+        const nodes = material.userData?.groundContactNodeUniforms;
+        if (nodes) {
+            if (dog) {
+                const p = nodes.position.value;
+                if (p && typeof p.set === 'function') p.set(dog.position.x, dog.position.y ?? 0, dog.position.z);
+            }
+            const f = nodes.facing.value;
+            if (f && typeof f.set === 'function') f.set(fx, fz);
+            nodes.strength.value = strength;
+        }
+    }
+
     updateGrassAnimation(deltaTime, camera, playerPosition, entities) {
+        // Cycle 114 Phase 5: the terrain's contact rides the same per-frame hook
+        // as the grass's, so the two cannot drift apart by a frame and the
+        // shadow does not change shape as the dog crosses the grass line.
+        this._syncGroundContact(entities);
+
         // Use new grass system if available
         if (this.grassSystem) {
             // Update interactors (player + nearby sheep + other dogs)
@@ -1910,7 +2025,17 @@ export class TerrainBuilder {
         // homestead pen). Default stays 225 degrees.
         const rotDeg = sceneDef?.farmHouse?.rotationDeg;
         farmHouse.rotation.y = (rotDeg != null) ? (rotDeg * Math.PI) / 180 : Math.PI * 1.25;
-        
+
+        // Cycle 114 Phase 4: split the one shared palette-atlas material into a
+        // roof / wall / trim trio. The GLB already separates the meshes by role;
+        // what it does NOT do is give the roof its own atlas swatch - roof,
+        // gables, porch roof and body walls all sample the same mid-brown, which
+        // is why the house read as one tan mass. See farmhouseMaterialRoles.js
+        // for the swatch table and the per-role numbers. No geometry changes:
+        // D11 forbids them this cycle and none are needed. Runs before the
+        // traverse below so the shadow/fog policy lands on the new materials.
+        this.farmhouseMaterialRoleSummary = applyFarmhouseMaterialRoles(farmHouse);
+
         // House mesh casters produce oversized shadows in the dog-following
         // shadow box; restore house shadows later with a purpose-built proxy.
         farmHouse.traverse(child => {

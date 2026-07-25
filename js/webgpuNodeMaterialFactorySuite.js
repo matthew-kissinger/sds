@@ -76,10 +76,12 @@ function withSkyFogMaterialOptions(options = {}, skyFog = null) {
       ...(tuning.water ?? {}),
       ...waterOptions,
     },
+    // No fog block here, deliberately. Cycle 114 Phase 6 deleted the terrain's
+    // hand-rolled fog composite: it is a MeshLambertNodeMaterial, so Three
+    // fogs it from scene.fog with live reference() uniforms, and threading a
+    // boot-time skyFog colour in was what froze it. Every other entry below
+    // still needs one because those materials shade their own fog.
     terrain: {
-      fogColor: skyFog.fogColor,
-      fogNear: skyFog.fogNear,
-      fogFar: skyFog.fogFar,
       ...(tuning.terrain ?? {}),
       ...terrainOptions,
     },

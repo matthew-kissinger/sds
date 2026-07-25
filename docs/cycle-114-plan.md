@@ -252,11 +252,25 @@ Phases 1, 2 and 5 all edit [`../js/GrassSystem.js`](../js/GrassSystem.js), and 2
 
 ## Frozen files (cycle-specific additions)
 
-None. This is deliberate and worth stating.
+The durable fence list in [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) covers [`../shared/scenes/types.js`](../shared/scenes/types.js), the `shared/` sim cores, the sim-baseline fixtures and the refactor-baseline fixtures. **This cycle touches exactly one of them**, added here mid-cycle when it fired rather than pre-declared.
 
-The durable fence list in [`INTERFACE_FENCE.md`](INTERFACE_FENCE.md) covers [`../shared/scenes/types.js`](../shared/scenes/types.js), the `shared/` sim cores and the sim-baseline fixtures. **This cycle touches none of them**, which is what Q2 was really deciding: defaulting the exclusion falloff to a module constant instead of a `SceneDef` field keeps the schema untouched and needs no authorization.
+### `tests/refactor-baseline/__fixtures__/bundle-sizes.json`
 
-If a phase finds itself wanting a `SceneDef` field, that is a signal to stop and surface, not to add one quietly.
+**Authorized for Phase 8 only, for the `main` chunk numbers only.**
+
+**What changes.** `mainKB` 644 to 654, and `chunkBudgetsKiB.main` 645 to 655. Nothing else in the file.
+
+**Why.** Measured, not estimated. The `main` chunk at `HEAD` before this cycle is 659.68 kB raw (644.2 KiB, which is exactly where the baseline was set). After Phases 1 to 6 it is 669.86 kB (654.2 KiB). That is **+10 KiB raw, +1.55%**, and **+3.8 kB gzipped, +1.9%** (197.54 to 201.34).
+
+**Where the bytes went.** Two new modules ([`../js/world/groundShading.js`](../js/world/groundShading.js) 17.5 KB of source, [`../js/world/farmhouseMaterialRoles.js`](../js/world/farmhouseMaterialRoles.js) 13.5 KB) plus contact terms added to four shaders and per-post jitter in three fence paths. Most of that source is comments and strips at minification. What does not strip is the GLSL: `GROUND_VARIATION_GLSL`, `GRASS_HUE_GLSL` and `GROUND_CONTACT_GLSL` are template literals whose content ships verbatim, because generating the GLSL from the constants is what makes drift between the four render paths structurally impossible. That was a deliberate design choice in the Architecture section and this is its cost.
+
+**Alternative considered and rejected.** Hand-mirroring the GLSL in each shader instead of generating it would save most of the string weight and reinstate exactly the drift this cycle exists to remove. The five JS reference implementations in `groundShading.js` are used only by tests; the module has no top-level side effects, so they tree-shake and are not part of this 10 KiB.
+
+**The rule this satisfies.** [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) says a `main-*.js` chunk over the recorded baseline is a stop-and-surface, because "bundle bloat compounds across cycles. A 30 KB regression that isn't a big deal this cycle stacks with the next two." That reasoning is why this is written down with numbers rather than bumped quietly. The ratchet convention in the spec's own failure message is that bumps are deliberate, recorded decisions; this is the record.
+
+**If this is the wrong call**, revert the two numbers and the cycle fails its bundle gate honestly. Nothing else depends on the bump.
+
+**Everything else stays untouched**, which is what Q2 was really deciding: defaulting the exclusion falloff to a module constant instead of a `SceneDef` field keeps the schema clear and needs no authorization. If a phase finds itself wanting a `SceneDef` field, that is a signal to stop and surface, not to add one quietly.
 
 ## Hard stops
 

@@ -9,6 +9,12 @@
  * CPU to derive the scene fog colour. Those two must agree or the terrain's far
  * band and the sky meet in a visible seam, which is the defect that motivated
  * the extraction. Duplicating the table would have let them drift again.
+ *
+ * The `terrain` blocks used to carry fogStrength / horizonFogStrength /
+ * fogBlendScale as well. Cycle 114 Phase 6 deleted the terrain's hand-rolled
+ * fog composite (it double-fogged against scene.fog off a colour frozen at
+ * material creation), so those three knobs went with it. The terrain's fog is
+ * scene.fog now, on both render paths.
  */
 export const SKY_FOG_PRESET_TUNING = Object.freeze({
   'pastoral-noon': {
@@ -58,9 +64,6 @@ export const SKY_FOG_PRESET_TUNING = Object.freeze({
       aoFloor: 0.78,
       aoStrength: 0.16,
       dirtStrength: 0.30,
-      fogStrength: 0.20,
-      horizonFogStrength: 0.04,
-      fogBlendScale: 0.62,
     },
     grassBlade: {
       colorScale: 0.58,
@@ -152,9 +155,6 @@ export const SKY_FOG_PRESET_TUNING = Object.freeze({
       aoFloor: 0.72,
       aoStrength: 0.18,
       dirtStrength: 0.34,
-      fogStrength: 0.22,
-      horizonFogStrength: 0.06,
-      fogBlendScale: 0.68,
     },
     water: {
       colorScale: 0.58,
@@ -252,9 +252,6 @@ export const SKY_FOG_PRESET_TUNING = Object.freeze({
       aoFloor: 0.74,
       aoStrength: 0.18,
       dirtStrength: 0.32,
-      fogStrength: 0.20,
-      horizonFogStrength: 0.05,
-      fogBlendScale: 0.64,
     },
     water: {
       colorScale: 0.58,

@@ -97,9 +97,25 @@ describe('isUnfilledScaffold - a cycle nobody has written yet', () => {
     });
 
     it('recognises a freshly scaffolded plan', () => {
-        const scaffold = 'docs/cycle-114-plan.md';
-        if (!existsSync(resolve(process.cwd(), scaffold))) return; // authored already
-        expect(isUnfilledScaffold(read(scaffold))).toBe(true);
+        // Originally this read docs/cycle-114-plan.md, on the assumption that the
+        // active plan is a scaffold. That is only true between a cycle close and
+        // the next cycle being authored, so the spec failed the moment Cycle 114
+        // was written. Scaffold the template the way /cycle-close does instead:
+        // the property under test is about the template's shape, not about
+        // whichever cycle happens to be open.
+        const scaffolded = read('docs/CYCLE_TEMPLATE.md')
+            .replace(/\{\{number\}\}/g, '999')
+            .replace(/\{\{slug\}\}/g, 'a-new-cycle');
+        expect(isUnfilledScaffold(scaffolded)).toBe(true);
+    });
+
+    it('does not flag the active plan once it has been authored', () => {
+        // The other half of the same property, and the one that actually gates
+        // /cycle-close: an authored plan must not be mistaken for a scaffold, or
+        // the close reports "nothing to close" on a cycle that shipped.
+        const active = 'docs/cycle-114-plan.md';
+        if (!existsSync(resolve(process.cwd(), active))) return; // already archived
+        expect(isUnfilledScaffold(read(active))).toBe(false);
     });
 
     it('does not flag an authored plan', () => {

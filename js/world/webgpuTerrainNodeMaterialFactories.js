@@ -2,11 +2,14 @@
 // Copyright (c) 2026 Matthew Kissinger
 import { createWebGpuTerrainHeightfieldNodeMaterial } from './webgpuTerrainNodeMaterial.js';
 
+// Cycle 114 Phase 6 removed the `fogColor` fallback that used to sit here. The
+// terrain no longer carries a fog colour of its own at all: it reads scene.fog
+// through Three's node fog, the same way the WebGL terrain reads it through
+// <fog_fragment>. See js/world/webgpuTerrainNodeMaterial.js for the full note.
 const DEFAULT_TERRAIN_COLORS = Object.freeze({
   lowColor: [0.29, 0.38, 0.18],
   midColor: [0.43, 0.55, 0.25],
   highColor: [0.56, 0.53, 0.42],
-  fogColor: [0.2933, 0.1629, 0.1348],
 });
 
 function toArray(value, fallback) {
@@ -61,12 +64,6 @@ export function createWebGpuTerrainNodeMaterialFactories(webGpuModules, options 
         highColor: toArray(colors.baseColor3 ?? context.highColor ?? terrainDefaults.highColor, DEFAULT_TERRAIN_COLORS.highColor),
         dirtColor: toArray(colors.dirtColor ?? context.dirtColor ?? terrainDefaults.dirtColor, [0.42, 0.36, 0.29]),
         colorTint: toArray(context.colorTint ?? terrainDefaults.colorTint ?? options.colorTint, [1, 1, 1]),
-        fogColor: toArray(context.fogColor ?? terrainDefaults.fogColor ?? options.fogColor, DEFAULT_TERRAIN_COLORS.fogColor),
-        fogNear: context.fogNear ?? terrainDefaults.fogNear ?? options.fogNear,
-        fogFar: context.fogFar ?? terrainDefaults.fogFar ?? options.fogFar,
-        fogStrength: context.fogStrength ?? terrainDefaults.fogStrength ?? options.fogStrength,
-        horizonFogStrength: context.horizonFogStrength ?? terrainDefaults.horizonFogStrength ?? options.horizonFogStrength,
-        fogBlendScale: context.fogBlendScale ?? terrainDefaults.fogBlendScale ?? options.fogBlendScale,
         dirtStrength: context.noise?.dirtStrength ?? context.dirtStrength ?? terrainDefaults.dirtStrength ?? options.dirtStrength,
         detailBase: context.detailBase ?? terrainDefaults.detailBase ?? options.detailBase,
         detailStrength: context.detailStrength ?? terrainDefaults.detailStrength ?? options.detailStrength,

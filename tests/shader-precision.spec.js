@@ -22,7 +22,7 @@
  * should fail loudly here.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -74,21 +74,56 @@ describe('shader precision — atmosphere (Cycle 12 Phase 4)', () => {
     });
 });
 
+// Cycle 12 Phase 4 wrote these against js/shaders/grass/*.glsl. Cycle 114
+// Phase 2 deleted those three files: they were stale mirrors of the inline
+// shaders, fetched at every scene load and then discarded, because
+// createGrassMaterial has always picked the inline variant. The precision
+// requirement did not go away with them, so the assertions move to the
+// shaders that actually compile.
 describe('shader precision — grass (Cycle 12 Phase 4)', () => {
+    const grassShaders = () => {
+        const src = readFileSync(resolve(ROOT, 'js/GrassSystem.js'), 'utf8');
+        // The three getters each return one template literal. Take everything
+        // between the getter's opening backtick and its closing one.
+        const grab = (fnName) => {
+            // Match the DEFINITION, not a call site. `this.getFragmentShader()`
+            // appears above the method that defines it, and indexOf on the bare
+            // name lands there and then grabs the wrong template.
+            const at = src.indexOf(`\n    ${fnName}() {`);
+            if (at === -1) throw new Error(`${fnName} definition not found in js/GrassSystem.js`);
+            const open = src.indexOf('`', at);
+            const close = src.indexOf('`', open + 1);
+            if (open === -1 || close === -1) throw new Error(`${fnName} body not a template literal`);
+            return src.slice(open + 1, close);
+        };
+        return {
+            desktopVertex: grab('getDesktopVertexShader'),
+            mobileVertex: grab('getMobileVertexShader'),
+            fragment: grab('getFragmentShader'),
+        };
+    };
+
     it('grass desktop vertex declares precision highp', () => {
-        const src = readGlsl('js/shaders/grass/desktop-vertex.glsl');
-        expect(src).toMatch(PRECISION_FLOAT);
-        expect(src).toMatch(PRECISION_INT);
+        expect(grassShaders().desktopVertex).toMatch(PRECISION_FLOAT);
     });
 
     it('grass mobile vertex declares precision highp', () => {
-        const src = readGlsl('js/shaders/grass/mobile-vertex.glsl');
-        expect(src).toMatch(PRECISION_FLOAT);
-        expect(src).toMatch(PRECISION_INT);
+        expect(grassShaders().mobileVertex).toMatch(PRECISION_FLOAT);
     });
 
     it('grass fragment declares precision highp', () => {
-        const src = readGlsl('js/shaders/grass/fragment.glsl');
-        expect(src).toMatch(PRECISION_FLOAT);
+        expect(grassShaders().fragment).toMatch(PRECISION_FLOAT);
+    });
+
+    it('the deleted glsl mirrors stay deleted', () => {
+        // They were fetched every scene load and discarded. Restoring one would
+        // reintroduce a copy nobody renders and nobody keeps correct.
+        for (const rel of [
+            'js/shaders/grass/desktop-vertex.glsl',
+            'js/shaders/grass/mobile-vertex.glsl',
+            'js/shaders/grass/fragment.glsl',
+        ]) {
+            expect(existsSync(resolve(ROOT, rel)), `${rel} is back`).toBe(false);
+        }
     });
 });
