@@ -1,22 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * P1-TUTORIAL: the tutorial session controller.
+ * The tutorial session controller.
  *
- * startTutorial() starts a standard Just Play (practice, 30 sheep) run on
- * Home Field through the same MenuController path the entrance Play button
- * uses, then layers the tutorial prompts on top:
+ * Cycle 113 Phase 4 (D4): the tutorial moved inside the first round. It used to
+ * be an offer card on the entrance with a meadow-green "Show me", which was the
+ * second primary button on first paint and the thing D4 names as the worst part
+ * of that paint. An in-round card with two buttons would have moved that button
+ * rather than removed it, so there is no accept step at all now: a first-time
+ * player's prompts simply appear over whatever they chose to play, and retire
+ * themselves as the player does each thing. The machine already advances on
+ * observed movement, sprint, camera, bark and penned count, so it never needed
+ * consent to be useful, and it costs a player who ignores it nothing.
  *
- *   - mounts TutorialOverlay in its own React root (no App.js / GameHUD slot
- *     needed; the start surface unmounts itself once the game goes active),
- *   - pumps the machine one signal per rendered frame off the GameBridge
- *     'frame' bus (movement/sprint via InputHandler, camera mode via the
- *     camera controller, penned count via gameState.sheepRetired),
- *   - tears down when the machine finishes (completed or skipped) or when
- *     the run returns to the menu (cancelled, no flag persisted).
+ * Three entry points, one session:
  *
- * The scene swap is covered by the standard SceneSwapOverlay (we do not set
- * window.__sdsBootLoading), so no bespoke loading chrome is needed.
+ *   attachTutorial()               mount the prompts over the round that is
+ *                                  already running. Changes no scene, no mode
+ *                                  and no camera: the player picked those.
+ *   maybeAttachFirstRunTutorial()  the D4 gate. Attach only for a player who
+ *                                  has neither completed nor dismissed it.
+ *   startTutorial()                swap to Home Field, start Just Play, then
+ *                                  attach. This is the Settings "Replay
+ *                                  tutorial" hook and it takes no arguments.
+ *
+ * The session pumps the machine one signal per rendered frame off the
+ * GameBridge 'frame' bus (movement and sprint via InputHandler, camera mode via
+ * the camera controller, penned count via gameState.sheepRetired) and tears
+ * down when the machine finishes or the run returns to the menu.
  */
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -29,15 +40,17 @@ import {
     getSceneManager,
     subscribeGameEvent,
 } from '../../GameBridge.js';
-import { createTutorialMachine } from './tutorialMachine.js';
+import { createTutorialMachine, shouldOfferTutorial } from './tutorialMachine.js';
 import { TutorialOverlay } from './TutorialOverlay.js';
 
-/** Scene + mode the tutorial always runs on: the flat fenced starter pasture. */
+/** Scene + mode the REPLAY path always runs on: the flat fenced starter pasture. */
 const TUTORIAL_SCENE_ID = 'field';
 const TUTORIAL_MODE = 'practice';
 const TUTORIAL_FOLLOW_ZOOM = 16;
 
 let session = null;
+/** Set across startTutorial's awaits, since `session` only exists after them. */
+let starting = false;
 
 /** True while a tutorial run is live (used by PracticeHint to stand down). */
 export function isTutorialSessionActive() {
@@ -89,18 +102,17 @@ function frameTutorialCamera(game) {
 }
 
 /**
- * Start (or re-start) the guided first-run tutorial.
+ * Mount the prompt layer over the round that is already running.
  *
- * Safe to call from the entrance offer or from any later surface; if a
- * session is already live it is a no-op. The Settings panel re-trigger
- * (P1-SETTINGS-PANEL) calls exactly this export, with no arguments.
+ * Deliberately touches nothing about the round itself. The replay path below
+ * frames the camera because it also chose the scene and the mode; this path was
+ * handed a round the player chose, and moving their camera under them would be
+ * the overlay stopping being soft.
  *
- * @param {Object} [opts]
- * @param {string} [opts.dogId]  dog to run with; defaults to the player's
- *                               current selection, then 'jep'.
+ * @returns {boolean} true if a session was started (false if one was already live)
  */
-export async function startTutorial(opts = {}) {
-    if (session) return;
+export function attachTutorial() {
+    if (session) return false;
 
     const machine = createTutorialMachine();
     const container = document.createElement('div');
@@ -117,9 +129,41 @@ export async function startTutorial(opts = {}) {
         if (machine.getSnapshot().status === 'finished') teardown('finished');
     });
     // The run going back to the menu (pause -> main menu, restart-to-menu)
-    // aborts the tutorial without persisting the flag.
+    // aborts the tutorial without persisting the flag, so a player who bailed
+    // in the first ten seconds meets it once more rather than never again.
     session.unsubRestart = subscribeGameEvent('scene-restart-to-menu', () => teardown('cancelled'));
 
+    machine.start();
+    root.render(createElement(TutorialOverlay, { machine }));
+    session.unsubFrame = subscribeGameEvent('frame', () => machine.signal(readSignal()));
+    return true;
+}
+
+/**
+ * D4's gate: attach for a first-time player, do nothing for everyone else.
+ * Called from the entrance commit once the round is armed.
+ *
+ * @returns {boolean} true if the prompts were mounted
+ */
+export function maybeAttachFirstRunTutorial() {
+    if (!shouldOfferTutorial()) return false;
+    return attachTutorial();
+}
+
+/**
+ * Start (or re-start) the guided run on Home Field, scene swap and all.
+ *
+ * This is the Settings re-trigger hook (P1-SETTINGS-PANEL wires "Replay
+ * tutorial" to exactly this export, with no arguments). Safe to call from
+ * anywhere; if a session is already live or starting it is a no-op.
+ *
+ * @param {Object} [opts]
+ * @param {string} [opts.dogId]  dog to run with; defaults to the player's
+ *                               current selection, then 'jep'.
+ */
+export async function startTutorial(opts = {}) {
+    if (session || starting) return;
+    starting = true;
     try {
         const game = await waitForGameInstance();
         await game.waitForInitialization?.();
@@ -132,12 +176,9 @@ export async function startTutorial(opts = {}) {
         frameTutorialCamera(game);
     } catch (err) {
         console.error('[TUTORIAL] failed to start the guided run:', err);
-        teardown('cancelled');
         return;
+    } finally {
+        starting = false;
     }
-    if (!session) return; // torn down while the scene was building
-
-    machine.start();
-    root.render(createElement(TutorialOverlay, { machine }));
-    session.unsubFrame = subscribeGameEvent('frame', () => machine.signal(readSignal()));
+    attachTutorial();
 }

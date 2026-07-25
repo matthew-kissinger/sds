@@ -87,10 +87,6 @@ export default {
 
     // First-run tutorial (P1-TUTORIAL): offer card + in-run prompts.
     tutorial: {
-        offerTitle: 'First time herding?',
-        offerBody: 'Take a guided run on Home Field. Move, sprint, swap and zoom the camera, bark, and pen 3 sheep.',
-        offerStart: 'Show me',
-        offerSkip: 'No thanks',
         skip: 'Skip tutorial',
         herdProgress: '{{penned}} of {{goal}} penned',
         step: {

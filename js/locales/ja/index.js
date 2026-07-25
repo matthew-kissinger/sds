@@ -87,10 +87,6 @@ export default {
 
     // 初回プレイのチュートリアル（P1-TUTORIAL）：案内カードとプレイ中のガイド。
     tutorial: {
-        offerTitle: '牧羊は初めてですか？',
-        offerBody: 'Home Fieldでガイド付きランに挑戦。移動、ダッシュ、カメラ切り替えとズーム、吠える操作を覚えて、羊を3匹囲いに入れましょう。',
-        offerStart: 'やってみる',
-        offerSkip: '今はやめておく',
         skip: 'チュートリアルをスキップ',
         herdProgress: '{{goal}}匹中{{penned}}匹を囲いに入れた',
         step: {

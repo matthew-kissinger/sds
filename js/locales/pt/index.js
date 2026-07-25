@@ -87,10 +87,6 @@ export default {
 
     // Tutorial de primeira jogada (P1-TUTORIAL): cartão de oferta + instruções durante a partida.
     tutorial: {
-        offerTitle: 'Primeira vez pastoreando?',
-        offerBody: 'Faça uma partida guiada em Home Field. Mova-se, corra, troque e aproxime a câmera, lata e leve 3 ovelhas ao curral.',
-        offerStart: 'Me mostre',
-        offerSkip: 'Não, obrigado',
         skip: 'Pular tutorial',
         herdProgress: '{{penned}} de {{goal}} no curral',
         step: {

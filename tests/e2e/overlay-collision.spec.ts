@@ -5,12 +5,16 @@ import { test, expect } from '@playwright/test';
 /**
  * Cycle 87 Phase 6: overlay collision probe at a phone viewport (390x844).
  *
- * Forces the worst observed entrance pileup on screen at once - the
- * tutorial offer card, the renderer-fallback notice, and a persistent
- * sample toast (via the `?uiprobe=1` hook through the real hub) - and
- * asserts no two overlay bounding boxes intersect and everything stays
- * inside the viewport. Before Cycle 87 these three each picked their own
- * top-center anchor and stacked on top of each other.
+ * Forces the worst entrance pileup on screen at once - the renderer-fallback
+ * notice plus a persistent sample toast (via the `?uiprobe=1` hook through the
+ * real hub) - and asserts no two overlay bounding boxes intersect and
+ * everything stays inside the viewport. Before Cycle 87 these each picked their
+ * own top-center anchor and stacked on top of each other.
+ *
+ * Cycle 113 Phase 4 (D4) took the tutorial offer card out of this pileup: the
+ * tutorial moved inside the first round, so there is no longer a card on the
+ * entrance to collide with. The rail still carries two rows here, which is what
+ * this probe is actually about.
  */
 
 type Box = { x: number; y: number; width: number; height: number };
@@ -35,8 +39,6 @@ test.describe('overlay collisions (mobile viewport)', () => {
         isRegistered: false,
       };
       localStorage.setItem('playerIdentity', JSON.stringify(identity));
-      // Fresh tutorial state so the offer card shows.
-      localStorage.removeItem('sds:tutorialDone');
       sessionStorage.removeItem('sds:rendererFallbackNoticed');
     });
 
@@ -46,9 +48,9 @@ test.describe('overlay collisions (mobile viewport)', () => {
       waitUntil: 'domcontentloaded',
     });
 
-    // The offer card and the probe toast are both persistent; wait for both.
-    await expect(page.getByTestId('tutorial-offer')).toBeVisible({ timeout: 30_000 });
+    // The probe toast is persistent; the fallback notice rides the same rail.
     await expect(page.getByTestId('uiprobe-toast')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#sds-overlay-top-rail > *')).toHaveCount(2, { timeout: 30_000 });
 
     const boxes = await page.evaluate(() => {
       const out: Record<string, { x: number; y: number; width: number; height: number }> = {};
@@ -57,7 +59,7 @@ test.describe('overlay collisions (mobile viewport)', () => {
         const r = (el as HTMLElement).getBoundingClientRect();
         if (r.width > 0 && r.height > 0) out[name] = { x: r.x, y: r.y, width: r.width, height: r.height };
       };
-      // Every row in the shared rail (toasts + the offer card).
+      // Every row in the shared rail.
       const rail = document.getElementById('sds-overlay-top-rail');
       if (rail) {
         [...rail.children].forEach((row, i) => add(`rail-row-${i}`, row));

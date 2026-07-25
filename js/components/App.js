@@ -278,6 +278,16 @@ export async function initReactUI() {
                     } else {
                         await game.menuController?.selectSolo?.(chosenDogId, chosenModeId);
                     }
+                    // Cycle 113 Phase 4 (D4): the tutorial lives inside the
+                    // first round now. A first-time player gets the prompts
+                    // over whatever they chose to play; nobody is asked first,
+                    // which is what removed the second primary button from the
+                    // entrance. Lazily imported so the tutorial module stays
+                    // off the boot path, and best-effort: a failure here must
+                    // never cost the player the round they just started.
+                    import('../Tutorial/index.js')
+                        .then((m) => m.maybeAttachFirstRunTutorial())
+                        .catch(() => {});
                 } catch (err) {
                     console.error('[UI] scene build for Play failed:', err);
                     // Cycle 91 Phase 5: surface the failure instead of

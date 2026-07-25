@@ -1,22 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * P1-TUTORIAL: optional first-run tutorial (Home Field, Just Play, herd 3
- * sheep into the pen with contextual prompts for move / sprint / camera).
+ * The first-run tutorial: move, sprint, swap the camera, bark, pen 3 sheep.
+ *
+ * Cycle 113 Phase 4 (D4) moved it inside the first round. There is no offer
+ * card any more, and no TutorialOffer export: a first-time player gets the
+ * prompts over whatever they chose to play, and nobody is asked first.
  *
  * Public surface:
- *   - TutorialOffer        first-run offer card (the entrance mounts it)
- *   - startTutorial()      start the guided run programmatically. This is the
- *                          Settings re-trigger hook: P1-SETTINGS-PANEL wires a
- *                          "Replay tutorial" control in SettingsPanel.js to
- *                          exactly this export (no arguments needed).
+ *   - maybeAttachFirstRunTutorial()
+ *                          the D4 gate. The entrance commit calls this once the
+ *                          round is armed; it is a no-op for a player who has
+ *                          completed or dismissed the tutorial.
+ *   - attachTutorial()     mount the prompts over the running round, ungated.
+ *   - startTutorial()      swap to Home Field, start Just Play, then attach.
+ *                          The Settings "Replay tutorial" hook, no arguments.
+ *   - isTutorialSessionActive()
+ *                          live-session probe (PracticeHint stands down)
  *   - shouldOfferTutorial / isTutorialDone / markTutorialDone
  *                          sds:tutorialDone persistence helpers
- *   - isTutorialSessionActive
- *                          live-session probe (PracticeHint stands down)
  */
-export { TutorialOffer } from './TutorialOffer.js';
-export { startTutorial, isTutorialSessionActive } from './startTutorial.js';
+export {
+    attachTutorial,
+    maybeAttachFirstRunTutorial,
+    startTutorial,
+    isTutorialSessionActive,
+} from './startTutorial.js';
 export {
     shouldOfferTutorial,
     isTutorialDone,

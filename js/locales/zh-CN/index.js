@@ -87,10 +87,6 @@ export default {
 
     // 首次游玩教程（P1-TUTORIAL）：引导卡片与局内提示。
     tutorial: {
-        offerTitle: '第一次放牧？',
-        offerBody: '在 Home Field 来一场引导教学。学会移动、冲刺、切换和缩放镜头、吠叫，并把 3 只羊赶进羊圈。',
-        offerStart: '带我看看',
-        offerSkip: '不用了',
         skip: '跳过教程',
         herdProgress: '已入圈 {{penned}}/{{goal}}',
         step: {
