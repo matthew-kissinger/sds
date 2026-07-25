@@ -24,43 +24,27 @@ const DOG_OBSTACLE_STRENGTH = 4.0;
  */
 const ANIMATION_STATES = {
     IDLE: {
-        animations: ['Idle_1', 'Idle_2', 'Idle_3', 'Idle_4', 'Idle_6', 'Idle_7'],
+        animations: ['Idle_1', 'Idle_2', 'Idle_4'],
         priority: 0,
         transitionTime: 0.5
     },
     WALKING: {
-        animations: {
-            forward: 'Walk_F_IP',
-            left: 'Walk_L_IP',
-            right: 'Walk_R_IP'
-        },
+        animations: { forward: 'Walk_F_IP' },
         priority: 1,
         transitionTime: 0.3
     },
     TROTTING: {
-        animations: {
-            forward: 'Trot_F_IP',
-            left: 'Trot_L_IP',
-            right: 'Trot_R_IP'
-        },
+        animations: { forward: 'Trot_F_IP' },
         priority: 2,
         transitionTime: 0.25
     },
     RUNNING: {
-        animations: {
-            forward: 'Run_F_IP',
-            left: 'Run_L_IP',
-            right: 'Run_R_IP'
-        },
+        animations: { forward: 'Run_F_IP' },
         priority: 3,
         transitionTime: 0.2
     },
     SPRINTING: {
-        animations: {
-            forward: 'RunFast_F_IP',
-            left: 'RunFast_L_IP',
-            right: 'RunFast_R_IP'
-        },
+        animations: { forward: 'RunFast_F_IP' },
         priority: 4,
         transitionTime: 0.15
     },
@@ -70,8 +54,16 @@ const ANIMATION_STATES = {
         transitionTime: 0.2,
         duration: 4.58 // From animation data
     }
-    // NOTE: No sitting animation available in the dog models
-    // Available animations: Bark, Idle_1-7, Walk_F/L/R_IP, Trot_F/L/R_IP, Run_F/L/R_IP, RunFast_F/L/R_IP
+    // NOTE: No sitting animation available in the dog models.
+    //
+    // Cycle 112 Phase 2 trimmed this table to the clips the baked GLB actually
+    // ships (scripts/bake-dog-variants.mjs, JEP_KEEP_CLIPS). The L/R variants of
+    // each gait are gone: getMovementDirection() has always returned 'forward'
+    // unconditionally, so nothing could ever select them, and they cost ~65 KB
+    // each on the critical path. Idle_3/6/7 went as a deliberate trade.
+    //
+    // Both directions are pinned by tests/dog-asset-budget.spec.js: a clip named
+    // here must exist in the GLB, and a clip in the GLB must be named here.
 };
 
 /**
@@ -379,18 +371,11 @@ export class Sheepdog {
             }
             return stateConfig.animations[0];
         } else if (typeof stateConfig.animations === 'object') {
-            // Handle turning state
-            if (state === 'TURNING') {
-                const turnDirection = this.animationSystem.turnDirection;
-                if (turnDirection === 'left') {
-                    return stateConfig.animations.left;
-                } else if (turnDirection === 'right') {
-                    return stateConfig.animations.right;
-                }
-                return stateConfig.animations.left; // Default
-            }
-            
-            // Directional animations (WALKING, TROTTING, RUNNING, SPRINTING)
+            // Directional animations (WALKING, TROTTING, RUNNING, SPRINTING).
+            // `direction` is always 'forward' today (getMovementDirection pins
+            // it), and Cycle 112 Phase 2 dropped the unreachable L/R clips it
+            // would otherwise have selected. The lookup keeps its shape so a
+            // future turn-animation pass only has to re-add the clips.
             return stateConfig.animations[direction] || stateConfig.animations.forward;
         }
         

@@ -13,7 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useReducedMotion } from '../ui/useReducedMotion';
-import { WORLDS, DOGS, MODES, WAYS, DEFAULT_WORLD_INDEX, modesForWorld, familiesForWorld, type World, type Dog, type Mode, type Way, type ModeFamily } from './worlds';
+import { WORLDS, DOGS, MODES, WAYS, DEFAULT_WORLD_INDEX, worldIndexFromSearch, modesForWorld, familiesForWorld, type World, type Dog, type Mode, type Way, type ModeFamily } from './worlds';
 import { subscribeGameEvent } from '../../GameBridge.js';
 import { COUNTING_GAME_MODE, COUNTING_CURVES } from '../../../shared/countingModes.js';
 import { mapLoadStep, FIRST_LOAD_LABEL } from './loadStages';
@@ -74,8 +74,14 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   const reducedMotion = useReducedMotion();
 
   // The entrance always lands on the default world; only dog + mode + family
-  // persist per-player. Browsing worlds is session-local.
-  const [worldIndex, setWorldIndex] = useState(DEFAULT_WORLD_INDEX);
+  // persist per-player. Browsing worlds is session-local. The one exception is
+  // an explicit ?scene= deep link (Cycle 112 Phase 7): the engine has already
+  // built that scene as the backdrop, so arming anything else would show the
+  // player one world and start another. See worldIndexFromSearch for the
+  // unknown and coming-soon fallbacks.
+  const [worldIndex, setWorldIndex] = useState(() =>
+    worldIndexFromSearch(typeof window === 'undefined' ? '' : window.location.search),
+  );
   const [modeId, setModeId] = useState(() => readLS(LAST_MODE) ?? MODES[0].id);
   const [curveId, setCurveId] = useState(() => readLS(LAST_CURVE) ?? COUNTING_CURVES[0]);
   const [familyId, setFamilyId] = useState(() => readLS(LAST_FAMILY) ?? '');

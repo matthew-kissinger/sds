@@ -29,6 +29,19 @@ import {
   isKnownPreset,
 } from '../js/atmosphere/index.js';
 import { NIGHT_T } from '../shared/survival/dayClock.js';
+import { fogColorMatchingSky } from '../js/atmosphere/paintedHorizon.js';
+
+/** The fog colour a live sky implies, as a rounded array (matches the packet). */
+function fogArray(sky, presetName, darken = 1) {
+  const fog = fogColorMatchingSky(new THREE.Color(), {
+    horizon: sky.getHorizon(new THREE.Color()),
+    zenith: sky.getZenith(new THREE.Color()),
+    presetName,
+    toneMapping: 'aces',
+    darken,
+  });
+  return fog.toArray().map((v) => Number(v.toFixed(4)));
+}
 
 const REQUIRED = ['pastoral-noon', 'dusk', 'overcast', 'dawn', 'golden-hour'];
 
@@ -212,9 +225,10 @@ describe('HosekWilkieSky', () => {
 
       expect(packet.source).toBe('HosekWilkieSky.cpu-lut');
       expect(packet.cpuVisible).toBe(true);
-      expect(packet.fogColor).toEqual(
-        packet.horizonColor.map((value) => Number((value * 0.5).toFixed(4)))
-      );
+      // Cycle 112 Phase 6: the packet's fogColor feeds the WebGPU terrain's own
+      // distance-fog term. It was `horizonColor * darken` - the same near-white
+      // LUT value that produced the seam - and now carries what the sky paints.
+      expect(packet.fogColor).toEqual(fogArray(sky, 'dusk', 0.5));
     } finally {
       sky.dispose();
     }
@@ -285,9 +299,9 @@ describe('HosekWilkieSky', () => {
       expect(packet.zenithColor).toHaveLength(3);
       expect(packet.sunColor).toHaveLength(3);
       expect(packet.sunDirection).toHaveLength(3);
-      expect(packet.fogColor).toEqual(
-        packet.horizonColor.map((value) => Number((value * packet.fogDarkenMultiplier).toFixed(4)))
-      );
+      expect(packet.fogColor).not.toEqual(packet.horizonColor);
+      expect(packet.fogColor).toHaveLength(3);
+      for (const v of packet.fogColor) expect(Number.isFinite(v)).toBe(true);
     }
   });
 });
@@ -459,37 +473,54 @@ describe('Atmosphere orchestrator', () => {
     atmo.dispose();
   });
 
-  it('update drives fog color from the sky horizon with weather darkening applied', () => {
+  // Cycle 112 Phase 6: fog no longer carries the raw horizon LUT value. It
+  // carries the colour that DISPLAYS as what the sky paints at the horizon,
+  // after the renderer's tone curve. Asserting equality with the raw horizon is
+  // what pinned the white seam in place for as long as it shipped; see
+  // js/atmosphere/paintedHorizon.js and tests/painted-horizon.spec.js.
+  it('update drives fog color from the painted sky horizon with weather darkening applied', () => {
     const scene = new THREE.Scene();
     const atmo = new Atmosphere(scene, { initialPreset: 'dawn' });
     const horizon = atmo.sky.getHorizon(new THREE.Color());
+    const zenith = atmo.sky.getZenith(new THREE.Color());
+    const expected = fogColorMatchingSky(new THREE.Color(), {
+      horizon, zenith, presetName: 'dawn', toneMapping: 'aces',
+    });
 
     atmo.update(0);
-    expect(atmo.fog.color.r).toBeCloseTo(horizon.r, 5);
-    expect(atmo.fog.color.g).toBeCloseTo(horizon.g, 5);
-    expect(atmo.fog.color.b).toBeCloseTo(horizon.b, 5);
+    expect(atmo.fog.color.r).toBeCloseTo(expected.r, 5);
+    expect(atmo.fog.color.g).toBeCloseTo(expected.g, 5);
+    expect(atmo.fog.color.b).toBeCloseTo(expected.b, 5);
 
+    // Darkening still works, and still darkens.
+    const bright = atmo.fog.color.clone();
     atmo.setWeather({ fogDarkenMultiplier: 0.5 });
     atmo.update(0);
-    expect(atmo.fog.color.r).toBeCloseTo(horizon.r * 0.5, 5);
-    expect(atmo.fog.color.g).toBeCloseTo(horizon.g * 0.5, 5);
-    expect(atmo.fog.color.b).toBeCloseTo(horizon.b * 0.5, 5);
+    expect(atmo.fog.color.r).toBeLessThan(bright.r);
+    expect(atmo.fog.color.g).toBeLessThan(bright.g);
+    expect(atmo.fog.color.b).toBeLessThan(bright.b);
     atmo.dispose();
   });
 
-  it('scene fog overrides keep distance parameters while horizon owns fog color', () => {
+  it('scene fog overrides keep distance parameters while the painted horizon owns fog color', () => {
     const scene = new THREE.Scene();
     const atmo = new Atmosphere(scene, {
       initialPreset: 'golden-hour',
       sceneFog: { color: '#123456', near: 40, far: 680 },
     });
     const horizon = atmo.sky.getHorizon(new THREE.Color());
+    const zenith = atmo.sky.getZenith(new THREE.Color());
+    const expected = fogColorMatchingSky(new THREE.Color(), {
+      horizon, zenith, presetName: 'golden-hour', toneMapping: 'aces',
+    });
 
     expect(scene.fog.near).toBe(40);
     expect(scene.fog.far).toBe(680);
-    expect(scene.fog.color.r).toBeCloseTo(horizon.r, 5);
-    expect(scene.fog.color.g).toBeCloseTo(horizon.g, 5);
-    expect(scene.fog.color.b).toBeCloseTo(horizon.b, 5);
+    expect(scene.fog.color.r).toBeCloseTo(expected.r, 5);
+    expect(scene.fog.color.g).toBeCloseTo(expected.g, 5);
+    expect(scene.fog.color.b).toBeCloseTo(expected.b, 5);
+    // And is distinctly not the raw horizon, which is the regression guard.
+    expect(scene.fog.color.r).not.toBeCloseTo(horizon.r, 2);
     atmo.dispose();
   });
 

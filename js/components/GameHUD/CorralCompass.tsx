@@ -12,6 +12,11 @@
  * recomputed on every render anyway, by design) is now a plain per-render call
  * to computeCompassView(); App.js re-renders the HUD at ~60fps. No hex (rgba
  * arrow + the .ui-panel label surface).
+ *
+ * Cycle 112 Phase 3: the chip is confined to the band between the HUD's top
+ * stack and the mobile-controls reserve. It used to position against the raw
+ * viewport, which at 390x844 drew the distance pill through the "Follow"
+ * camera chip.
  */
 import * as THREE from 'three';
 import { getSceneManager, getGameState } from '../../GameBridge.js';
@@ -118,17 +123,26 @@ export function CorralCompass({ platform = 'desktop' }: { platform?: string }) {
     const angleDeg = Math.atan2(-ny, nx) * (180 / Math.PI) + 90;
 
     return (
+        // Cycle 112 Phase 3: the percentages are relative to the band left over
+        // once the HUD's top stack and the mobile-controls reserve are taken
+        // out, not to the raw viewport. Positioning against the viewport put the
+        // distance pill straight through the "Follow" camera chip at 390x844 -
+        // the +/-0.85 NDC envelope lands at y=41px there, which is inside the
+        // top-center stack. Both variables are published by HudLayout from
+        // measured slot heights, so this tracks the real HUD footprint instead
+        // of a second set of magic offsets.
         <div
             className="fixed pointer-events-none z-20"
             style={{
-                left,
-                top,
-                transform: 'translate(-50%, -50%)',
-                paddingTop: 'env(safe-area-inset-top, 0px)',
-                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                top: 'var(--sds-hud-top-reserve, 0px)',
+                bottom: 'var(--sds-bottom-reserve, 0px)',
+                left: 0,
+                right: 0,
             }}
         >
-            <div className="flex flex-col items-center gap-1">
+            {/* The safe-area insets that used to be padding here now ride in
+                --sds-hud-top-reserve and --sds-bottom-reserve on the band. */}
+            <div className="absolute flex flex-col items-center gap-1" style={{ left, top, transform: 'translate(-50%, -50%)' }}>
                 <div
                     style={{
                         width: 0,

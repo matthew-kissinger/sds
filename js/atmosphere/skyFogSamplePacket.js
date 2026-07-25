@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 
 import { HosekWilkieSky } from './HosekWilkieSky.js';
+import { fogColorMatchingSky } from './paintedHorizon.js';
 import { SKY_PRESETS, isKnownPreset } from './skyPresets.js';
 
 export const DEFAULT_SKY_FOG_SAMPLE_PRESET = 'dusk';
@@ -57,7 +58,29 @@ export function sampleSkyFogPacketFromSky({
   const horizonColor = colorArray(horizon);
   const zenithColor = colorArray(zenith);
   const sunColor = colorArray(sun);
-  const fogColor = horizonColor.map((value) => Number((value * fogDarkenMultiplier).toFixed(4)));
+  // Cycle 112 Phase 6: this packet's fogColor feeds the WebGPU terrain's own
+  // distance-fog term, which mixes toward it inside the material and
+  // independently of scene.fog. It used to be `horizonColor * 0.82` - the raw
+  // LUT horizon, the same near-white value that produced the seam, just 18%
+  // darker.
+  //
+  // It now carries the identical value Atmosphere assigns to scene.fog.color:
+  // both are PRE-tone-map inputs to tone-mapped materials, so both must be
+  // solved back through the curve to land on the sky's painted horizon. Using
+  // one function for both is what keeps the two fogs from pulling the far band
+  // in different directions, and webgpuDiagnostic's `fogColorMatchesPacket`
+  // check exists to catch them diverging again.
+  //
+  // The tone curve is assumed to be the non-Apple default here because the
+  // packet is baked before a renderer exists; Atmosphere gets the real operator
+  // at construction and is the authority for the live scene fog.
+  const fogColor = colorArray(fogColorMatchingSky(new THREE.Color(), {
+    horizon,
+    zenith,
+    presetName,
+    toneMapping: 'aces',
+    darken: fogDarkenMultiplier,
+  }));
   const physicalDirection = normalizedVectorArray(sunPhysicalDirection ?? sunDirection, sunDirection);
   const visualDirection = normalizedVectorArray(sunVisualDirection ?? physicalDirection, physicalDirection);
   const billboard = {

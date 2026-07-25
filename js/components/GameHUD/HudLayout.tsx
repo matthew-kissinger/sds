@@ -23,7 +23,7 @@
  *
  * Cycle 48 P1: converted to JSX .tsx. No hex; behavior-identical.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Z } from '../../ui/zIndex.js';
 import { useResponsive } from '../hooks/usePlatform.js';
@@ -72,19 +72,66 @@ export function HudLayout({
     //                          the NSL minimap pins to the same corner the
     //                          GameTimer renders in and was drawing under it)
     const topRightCount = asChildren(topRight).length;
+
+    // Cycle 112 Phase 3: --sds-topleft-reserve was itself one of the hardcoded
+    // magic offsets this mechanism exists to remove. At 140px it under-reported
+    // the real stack whenever SheepCounter carried the stamina bar, and the
+    // DayNightChip that pins below it drew over the "N% complete" line. Measure
+    // the slot instead, so the reserve tracks whatever ends up in it.
+    //
+    // All three top slots are measured because --sds-hud-top-reserve below is
+    // the union: the edge slot self-positions across the full viewport width and
+    // cannot know which corner it will land in.
+    const topLeftRef = useRef<HTMLDivElement | null>(null);
+    const topCenterRef = useRef<HTMLDivElement | null>(null);
+    const topRightRef = useRef<HTMLDivElement | null>(null);
+    const [topHeights, setTopHeights] = useState({ left: 0, center: 0, right: 0 });
+
+    useEffect(() => {
+        const slots = [
+            ['left', topLeftRef.current],
+            ['center', topCenterRef.current],
+            ['right', topRightRef.current],
+        ] as const;
+        const read = () => setTopHeights({
+            left: topLeftRef.current?.getBoundingClientRect().height ?? 0,
+            center: topCenterRef.current?.getBoundingClientRect().height ?? 0,
+            right: topRightRef.current?.getBoundingClientRect().height ?? 0,
+        });
+        read();
+        if (typeof ResizeObserver === 'undefined') return;
+        const ro = new ResizeObserver(read);
+        for (const [, el] of slots) if (el) ro.observe(el);
+        return () => ro.disconnect();
+    }, [topLeft, topCenter, topRight]);
+
+    const topLeftHeight = topHeights.left;
+    const tallestTop = Math.max(topHeights.left, topHeights.center, topHeights.right);
+
     useEffect(() => {
         const rootStyle = document.documentElement.style;
         rootStyle.setProperty('--sds-bottom-reserve', bottomReserve);
         rootStyle.setProperty('--sds-toast-top-offset', isMobile ? '112px' : '64px');
-        rootStyle.setProperty('--sds-topleft-reserve', '140px');
+        // The 8px matches stackGap below, so the next overlay clears the slot by
+        // the same rhythm siblings inside it use.
+        rootStyle.setProperty('--sds-topleft-reserve', topLeftHeight > 0 ? `${Math.ceil(topLeftHeight) + 8}px` : '0px');
         rootStyle.setProperty('--sds-topright-reserve', topRightCount > 0 ? '72px' : '0px');
+        // Cycle 112 Phase 3: the y below which the whole top band is clear, on
+        // any horizontal position. The edge slot (CorralCompass) confines itself
+        // to this, because at 390x844 its NDC envelope put the distance pill
+        // straight through the "Follow" camera chip.
+        rootStyle.setProperty(
+            '--sds-hud-top-reserve',
+            tallestTop > 0 ? `calc(${safeTop} + ${Math.ceil(tallestTop) + 8}px)` : '0px',
+        );
         return () => {
             rootStyle.removeProperty('--sds-bottom-reserve');
             rootStyle.removeProperty('--sds-toast-top-offset');
             rootStyle.removeProperty('--sds-topleft-reserve');
             rootStyle.removeProperty('--sds-topright-reserve');
+            rootStyle.removeProperty('--sds-hud-top-reserve');
         };
-    }, [bottomReserve, isMobile, topRightCount]);
+    }, [bottomReserve, isMobile, topRightCount, topLeftHeight, tallestTop, safeTop]);
 
     const cornerGutter = '8px';
     const stackGap = '8px';
@@ -149,9 +196,9 @@ export function HudLayout({
 
     return (
         <>
-            {tl.length > 0 && <div style={topLeftStyle}>{tl}</div>}
-            {tc.length > 0 && <div style={topCenterStyle}>{tc}</div>}
-            {tr.length > 0 && <div style={topRightStyle}>{tr}</div>}
+            {tl.length > 0 && <div ref={topLeftRef} style={topLeftStyle}>{tl}</div>}
+            {tc.length > 0 && <div ref={topCenterRef} style={topCenterStyle}>{tc}</div>}
+            {tr.length > 0 && <div ref={topRightRef} style={topRightStyle}>{tr}</div>}
             {ed.length > 0 && <>{ed}</>}
             {bs.length > 0 && <div style={bottomSafeStyle}>{bs}</div>}
             {mobileControls && <>{mobileControls}</>}

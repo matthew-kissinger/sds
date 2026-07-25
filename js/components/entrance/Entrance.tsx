@@ -99,6 +99,24 @@ function CornerNav({ nav }: { nav: EntranceNav }) {
                 {l.label}
               </a>
             ))}
+            {/* Cycle 112 Phase 3 (D6): the licence line, demoted here from the
+                gameplay HUD, the loading screen and the entrance panel. One
+                quiet home, reachable in one click, off every play surface. */}
+            <div style={{
+              margin: '4px 8px 2px', paddingTop: 8, borderTop: `1px solid ${pastoral.glassWarmBorder}`,
+              fontSize: 11, lineHeight: 1.35, color: pastoral.inkSoft, maxWidth: 200,
+            }}>
+              (c) 2026 Matthew Kissinger and contributors. Source under AGPL-3.0 at{' '}
+              <a
+                href={SOURCE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setInfoOpen(false)}
+                style={{ color: pastoral.ink, textDecoration: 'underline' }}
+              >
+                {SOURCE_LABEL}
+              </a>
+            </div>
           </div>
         </>
       )}
@@ -240,7 +258,7 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
       {/* Top: title + corner nav */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: compact ? 'max(16px, env(safe-area-inset-top)) 16px 16px' : '22px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: compact ? 20 : 26, color: pastoral.cream, textShadow: '0 2px 12px rgba(43,38,32,0.5)' }}>
-          Sheepdog Simulator
+          Sheep Dog Sim
         </div>
         <CornerNav nav={nav} />
       </div>
@@ -403,12 +421,9 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
           {/* Cycle 58 P8: current leaderboard name; tap to set it inline (no
               gate, no leaving the entrance). Was a link to Settings (Cycle 57 P7). */}
           <PlayingAsField compact={compact} />
-          <div style={{ marginTop: 12, textAlign: 'center', fontSize: compact ? 10 : 11, lineHeight: 1.25, color: pastoral.inkSoft }}>
-            (c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0):{' '}
-            <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" style={{ color: pastoral.ink, textDecoration: 'underline' }}>
-              {SOURCE_LABEL}
-            </a>
-          </div>
+          {/* Cycle 112 Phase 3 (D6): the licence line was the last row of the
+              primary panel, competing with Play for a first-time player's
+              attention. It now sits in the info menu (see CornerNav). */}
         </div>
       </div>
 

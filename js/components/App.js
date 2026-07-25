@@ -16,6 +16,7 @@
  */
 import React, { createElement, useState, useEffect, useCallback, Fragment, Component } from 'react';
 import { Z } from '../ui/zIndex.js';
+import { markBoot } from '../boot/loadTimeline.js';
 import { createRoot } from 'react-dom/client';
 
 // Initialize i18n before any components load
@@ -685,6 +686,11 @@ export async function initReactUI() {
             // surface are full-bleed (their own backdrop), not centered menu
             // cards, so they render outside the start-screen-content max-width box.
             if (screen === 'entrance') {
+                // Cycle 112 Phase 5: the entrance is on screen and Play is
+                // pressable, which is what "first interactive" means to a
+                // player. Idempotent, so returning to the menu later does not
+                // overwrite the cold-load number.
+                markBoot('firstInteractive');
                 return createElement(Entrance, { flow: bootFlow, nav: entranceNav });
             }
             if (screen === 'loading') {
@@ -961,9 +967,16 @@ export async function initReactUI() {
                     key: 'practice-hint',
                     active: !isMultiplayer && gameData.singlePlayerMode === 'practice'
                 }),
+                // Cycle 112 Phase 3: exactly one Space prompt on screen. These
+                // two both taught the bark binding and both rendered a Space
+                // key chip, so solo desktop showed the pair for the hint's
+                // first nine seconds. The meter is the richer of the two (it
+                // carries cooldown and now names the verb when ready), so it
+                // wins wherever it renders and the hint covers only the
+                // multiplayer case, where there is no meter.
                 createElement(BarkHint, {
                     key: 'bark-hint',
-                    active: isDesktop
+                    active: isDesktop && isMultiplayer
                 }),
                 createElement(BarkMeter, {
                     key: 'bark-meter',
@@ -993,28 +1006,11 @@ export async function initReactUI() {
                     bottomSafe: bottomSafeSlot,
                     mobileControls: mobileControlsSlot
                 }),
-                isDesktop && createElement('a', {
-                    key: 'source-notice',
-                    href: 'https://github.com/matthew-kissinger/sds',
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    style: {
-                        position: 'fixed',
-                        right: '8px',
-                        bottom: '8px',
-                        zIndex: Z.hudMeta,
-                        pointerEvents: 'auto',
-                        maxWidth: '420px',
-                        padding: '3px 6px',
-                        borderRadius: '6px',
-                        background: 'rgba(0,0,0,0.28)',
-                        color: 'rgba(255,255,255,0.72)',
-                        fontSize: '10px',
-                        lineHeight: 1.2,
-                        textAlign: 'right',
-                        textDecoration: 'none'
-                    }
-                }, '(c) 2026 Matthew Kissinger and contributors - source (AGPL-3.0): github.com/matthew-kissinger/sds'),
+                // Cycle 112 Phase 3 (D6): the copyright and AGPL line used to be
+                // burned into the bottom-right of every gameplay frame. It now
+                // lives in the entrance info menu next to About and Source,
+                // which is where someone looking for it would go. Nothing is
+                // lost: index.html, the static pages and the repo all carry it.
                 // Pause menu (shown on all platforms when paused). Full-screen
                 // overlay; sits outside HudLayout because it is its own modal.
                 createElement(PauseMenu, {
@@ -1065,6 +1061,9 @@ export async function initReactUI() {
                             setRevealHandoff(true);
                         }
                         setGameStarted(true);
+                        // Cycle 112 Phase 5: the round is built and the player
+                        // has control. Second half of the cold-load budget.
+                        markBoot('roundPlayable');
                         // Cycle 51 P6: the build is done; let SceneSwapOverlay
                         // resume covering any later mid-game scene swaps.
                         try { window.__sdsBootLoading = false; } catch {}

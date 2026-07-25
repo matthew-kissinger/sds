@@ -5,6 +5,7 @@ import { HosekWilkieSky } from './HosekWilkieSky.js';
 import { CloudLayer } from './CloudLayer.js';
 import { SunSystem } from './SunSystem.js';
 import { DayNightCycle } from './DayNightCycle.js';
+import { fogColorMatchingSky } from './paintedHorizon.js';
 import { log as probeLog } from '../diagnostics/glProbe.js';
 import {
   SKY_PRESETS,
@@ -130,6 +131,15 @@ export class Atmosphere {
     this.scratchSunColor = new THREE.Color();
     /** @private */
     this.scratchHorizon = new THREE.Color();
+    /** @private */
+    this.scratchZenith = new THREE.Color();
+    // The renderer's tone curve, needed because applyFogColor solves for the
+    // pre-tone-map fog value. Defaults match configureRenderer's non-Apple
+    // choice; main.js passes the real operator from the live renderer.
+    /** @private */
+    this.toneMappingMode = options.toneMapping?.mode ?? 'aces';
+    /** @private */
+    this.toneMappingExposure = options.toneMapping?.exposure ?? 1.0;
     /** @private */
     this.scratchTargetSunColor = new THREE.Color();
     /** @private */
@@ -472,16 +482,29 @@ export class Atmosphere {
       this.baseFogDensity * (this.weather.fogDensityMultiplier ?? 1.0);
   }
 
-  /** @private */
+  /**
+   * Drive scene fog from what the sky actually paints at the horizon.
+   *
+   * Cycle 112 Phase 6. This used to assign the raw horizon LUT value, which no
+   * sky renderer paints: the dome shades its horizon from that value, and the
+   * terrain is tone mapped while the dome is not. The result was a bright band
+   * where terrain met sky in every scene (near-white against blue at noon).
+   * js/atmosphere/paintedHorizon.js owns both halves of the reconciliation.
+   *
+   * @private
+   */
   applyFogColor() {
     if (!this.fog) return;
     this.sky.getHorizon(this.scratchHorizon);
-    const f = this.weather.fogDarkenMultiplier ?? 1.0;
-    this.fog.color.setRGB(
-      this.scratchHorizon.r * f,
-      this.scratchHorizon.g * f,
-      this.scratchHorizon.b * f
-    );
+    this.sky.getZenith(this.scratchZenith);
+    fogColorMatchingSky(this.fog.color, {
+      horizon: this.scratchHorizon,
+      zenith: this.scratchZenith,
+      presetName: this.currentPresetName,
+      toneMapping: this.toneMappingMode,
+      exposure: this.toneMappingExposure,
+      darken: this.weather.fogDarkenMultiplier ?? 1.0,
+    });
   }
 
   /** @private */

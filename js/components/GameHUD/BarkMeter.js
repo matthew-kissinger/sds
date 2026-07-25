@@ -29,8 +29,14 @@ export function BarkMeter({ active = false }) {
     const ratio = Math.max(0, Math.min(1, gameData.barkCooldownRatio || 0));
     const fillDegrees = Math.round((1 - ratio) * 360);
     const keyLabel = getKeyDisplayName(barkKey);
+    // Cycle 112 Phase 3: the ready state names the verb rather than saying
+    // "Ready". BarkHint used to sit alongside this carrying the word "Bark" and
+    // a second Space chip, so two prompts bound to the same key were on screen
+    // at once. The hint is now suppressed wherever this meter renders, and this
+    // label is what keeps the binding self-explanatory: the chip reads
+    // "Bark [Space]" while available and swaps to the countdown while not.
     const status = ready
-        ? 'Ready'
+        ? 'Bark'
         : `${Math.max(0.1, (gameData.barkCooldownRemainingMs || 0) / 1000).toFixed(1)}s`;
 
     const shellStyle = {
@@ -87,7 +93,7 @@ export function BarkMeter({ active = false }) {
         className: 'bark-meter',
         style: shellStyle,
         'data-sds-bark-meter': 'true',
-        'aria-label': `Bark ${status}`,
+        'aria-label': ready ? 'Bark ready' : `Bark ready in ${status}`,
     }, [
         createElement('span', { key: 'ring', style: ringStyle }, createElement('span', { style: innerStyle },
             createElement(Icon, { name: 'sound', size: 16, color: ready ? pastoral.accentGold : alpha(pastoral.cream, 72) })

@@ -26,7 +26,12 @@ describe('webgpu scene fog horizon proof', () => {
       expect(scene.fog.type).toBe('Fog');
       expect(scene.fog.near).toBe(scene.sceneFog.near);
       expect(scene.fog.far).toBe(scene.sceneFog.far);
-      expect(scene.fog.color).toEqual(scene.horizonColor);
+      // Cycle 112 Phase 6: fog carries the colour that DISPLAYS as the sky's
+      // painted horizon, not the raw LUT horizon. This assertion previously
+      // read `toEqual(scene.horizonColor)`, which pinned the mismatch that
+      // produced the white seam in every scene.
+      expect(scene.fog.color).toEqual(scene.expectedFogColor);
+      expect(scene.fog.color).not.toEqual(scene.horizonColor);
       expect(scene.cloudCoverage).toBe(scene.expectedCoverage);
       expect(scene.cloudLayerCoverage).toBe(scene.expectedCoverage);
       expect(scene.checks).toEqual({
@@ -34,7 +39,7 @@ describe('webgpu scene fog horizon proof', () => {
         sceneFogType: true,
         sceneFogNearMatches: true,
         sceneFogFarMatches: true,
-        fogColorTracksHorizon: true,
+        fogColorMatchesPaintedSky: true,
         skyCloudCoverageMatchesPreset: true,
         cloudLayerCoverageMatchesPreset: true,
       });

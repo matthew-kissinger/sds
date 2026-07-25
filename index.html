@@ -232,10 +232,11 @@
          future asset pass. -->
     <link rel="manifest" href="/manifest.webmanifest">
 
-    <!-- Google Fonts - Fredoka for game title -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+    <!-- Cycle 112 Phase 1: a render-blocking Google Fonts stylesheet and its two
+         preconnects were removed here. They loaded a display face that no file
+         in the project referenced. The real display face is Fraunces, now
+         self-hosted and bundled through css/main.css, so there is no
+         third-party font origin left on the boot path. -->
 
     <!-- Unified CSS - Tailwind v4 with all custom styles in @layer -->
     <link rel="stylesheet" href="/css/main.css">

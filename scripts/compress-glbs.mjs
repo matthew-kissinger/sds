@@ -48,6 +48,22 @@ const TEXTURE_CAPS = [{ match: /(Fence|Gate|Corner)_/i, maxDim: 512 }];
 // SDS-supported browser decodes it). Flat-color legacy assets stay PNG.
 const TEXTURE_FORMATS = [{ match: /^tree\d(_lod1)?\.glb$/i, format: 'webp', quality: 85 }];
 
+// Assets owned by a different bake script, skipped here entirely.
+//
+// The dog rigs are baked by scripts/bake-dog-variants.mjs, which decides their
+// clip set (Cycle 112 Phase 2) and already applies the same draco + meshopt
+// chain. This script always re-reads from the pristine `_originals` backup so
+// transforms compose, which for a dog would restore the 19-clip source and
+// silently undo the manifest. The size-based skip below happens to protect
+// Jep today, but it is a coincidence of thresholds, not a contract.
+const OWNED_ELSEWHERE = [/^Jep\.glb$/i, /^Pip\.glb$/i, /^Sally\.glb$/i, /^Shiloh\.glb$/i, /^George_Washington\.glb$/i];
+
+/** True when `relPath` is baked by another script and must not be touched here. */
+function isOwnedElsewhere(relPath) {
+  const base = relPath.split(/[\\/]/).pop();
+  return OWNED_ELSEWHERE.some((re) => re.test(base));
+}
+
 /** Largest allowed texture dimension for `relPath`, or null to preserve native. */
 function textureCapFor(relPath) {
   const base = relPath.split(/[\\/]/).pop();
@@ -105,6 +121,15 @@ async function main() {
   for (const glb of glbs) {
     const rel = relative(ASSETS_DIR, glb);
     const backup = join(ORIGINALS_DIR, rel);
+
+    if (isOwnedElsewhere(rel)) {
+      const size = (await stat(glb)).size;
+      console.log(`OWNED ${rel}  ${fmtKB(size)} (baked by scripts/bake-dog-variants.mjs)`);
+      totalBefore += size;
+      totalAfter += size;
+      skipped++;
+      continue;
+    }
 
     // Back up original once.
     if (!existsSync(backup)) {

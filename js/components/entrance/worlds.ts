@@ -212,3 +212,28 @@ export const formatSheep = (n: number): string => n.toLocaleString('en-US');
  * per-player; the landing world is fixed and never a coming-soon world.
  */
 export const DEFAULT_WORLD_INDEX = Math.max(0, WORLDS.findIndex((w) => w.id === 'field'));
+
+/**
+ * Resolve the world a `?scene=<id>` deep link should arm (Cycle 112 Phase 7).
+ *
+ * Browsing worlds is otherwise session-local and the entrance always lands on
+ * DEFAULT_WORLD_INDEX. An explicit scene in the URL is the one exception: the
+ * engine already builds that scene at boot and retitles the page, so before
+ * this the entrance disagreed with the backdrop and Play committed the default.
+ *
+ * A coming-soon world resolves to the default rather than arming a tile whose
+ * Play button is disabled, so a shared link never lands a player somewhere they
+ * cannot start. Unknown ids do the same instead of half-applying.
+ */
+export function worldIndexFromSearch(search: string): number {
+  let id: string | null = null;
+  try {
+    id = new URLSearchParams(search).get('scene');
+  } catch {
+    return DEFAULT_WORLD_INDEX;
+  }
+  if (!id) return DEFAULT_WORLD_INDEX;
+  const i = WORLDS.findIndex((w) => w.id === id);
+  if (i < 0 || WORLDS[i].comingSoon) return DEFAULT_WORLD_INDEX;
+  return i;
+}

@@ -126,7 +126,7 @@ function EntranceMock() {
         <circle cx="348" cy="125" r="6" fill="var(--color-cream)" opacity="0.9" />
       </svg>
       <div style={{ position: 'relative', textAlign: 'center' }}>
-        <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: '2rem', fontWeight: 600 }}>Sheepdog Simulator</div>
+        <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: '2rem', fontWeight: 600 }}>Sheep Dog Sim</div>
         <div style={{ opacity: 0.7, marginTop: 4, fontSize: '0.9rem' }}>Pick a pasture</div>
         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Card style={{ padding: '0.7rem 1rem', minWidth: 108 }}>Home Field</Card>

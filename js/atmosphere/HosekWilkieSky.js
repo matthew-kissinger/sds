@@ -5,6 +5,7 @@ import {
   hosekWilkieFragmentShader,
   hosekWilkieVertexShader,
 } from './skyShader.glsl.js';
+import { SKY_DOME_FOG_DARKEN } from './paintedHorizon.js';
 import { sunDirectionFromPreset } from './skyPresets.js';
 import { createWebGpuAtmosphereMaterial } from './webgpuAtmosphereMaterialAdapter.js';
 
@@ -649,7 +650,12 @@ export class HosekWilkieSky {
   syncWebGpuMaterial() {
     if (!this.materialControls?.update) return;
     this.ensureLUT();
-    this.scratchFogColor.copy(this.horizonColor).multiplyScalar(0.82);
+    // The dome's own fogColor uniform, used only by its narrow fogBand term
+    // near the horizon line. Kept at the historical 0.82 x horizon: it is an
+    // input to the very shading that paintedSkyHorizon reproduces, so deriving
+    // it from that function would be circular. See js/atmosphere/paintedHorizon.js
+    // (SKY_DOME_FOG_DARKEN), which mirrors this constant.
+    this.scratchFogColor.copy(this.horizonColor).multiplyScalar(SKY_DOME_FOG_DARKEN);
     this.materialControls.update({
       sunDirection: this.sunDirection,
       horizonColor: this.horizonColor,

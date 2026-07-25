@@ -207,9 +207,31 @@
    motes, and the panel rise. They are gated by the reduced-motion prop in the
    components, and the loading->live reveal is a plain opacity fade in App so it
    is safe on every mobile device and OS. */
+/* Pastoral display face, self-hosted (Cycle 112 Phase 1). Latin subset of the
+   Fraunces variable font, optical size instanced at 48pt because every consumer
+   renders between 16px and 30px; the live opsz axis costs 67KB against this
+   36KB and buys nothing at those sizes. Only wght stays variable, and its
+   default is 900, so every consumer must state font-weight explicitly.
+
+   The url is relative on purpose: Vite bundles and hashes it into dist/assets/,
+   which is base-correct under the './' base the itchio and native targets use
+   and which a root-absolute /fonts/ path would break. It also matches the
+   IMMUTABLE_HASHED rule in sw.js, so the font gets cache-first for free.
+
+   Licensed OFL-1.1, see css/fonts/OFL.txt. */
+@font-face {
+  font-family: 'Fraunces';
+  src: url('./fonts/fraunces-latin-var.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
 :root {
-  /* Pastoral display face. Fraunces (self-hosted woff2) is the design-language
-     target; Georgia stands in until it lands, matching the gallery + bake-off. */
+  /* Georgia stays in the stack as the swap fallback and for the codepoints
+     outside the latin subset above. */
   --font-display: 'Fraunces', Georgia, 'Times New Roman', 'Iowan Old Style', serif;
 }
 @keyframes sds-kenburns {

@@ -70,9 +70,12 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(state.horizonColor).toHaveLength(3);
     expect(state.sunColor).toHaveLength(3);
     expect(state.sunDirection).toHaveLength(3);
-    expect(state.fogColor).toEqual(
-      state.horizonColor.map((v) => Number((v * state.fogDarkenMultiplier).toFixed(4)))
-    );
+    // Cycle 112 Phase 6: fogColor is derived from what the sky PAINTS at the
+    // horizon, not the raw LUT horizon. The old identity is what let the white
+    // seam ship; see js/atmosphere/paintedHorizon.js.
+    expect(state.fogColor).toHaveLength(3);
+    expect(state.fogColor).not.toEqual(state.horizonColor);
+    for (const v of state.fogColor) expect(Number.isFinite(v)).toBe(true);
     expect(state.fogNear).toBeLessThan(state.fogFar);
   });
 
@@ -152,7 +155,9 @@ describe('webgpu diagnostic sky fog state', () => {
     expect(state.fogDarkenMultiplier).toBe(1.0);
     expect(state.fogNear).toBe(350);
     expect(state.fogFar).toBe(900);
-    expect(state.fogColor).toEqual(state.horizonColor);
+    // Cycle 112 Phase 6: see above - fog tracks the painted horizon now.
+    expect(state.fogColor).not.toEqual(state.horizonColor);
+    expect(state.fogColor).toHaveLength(3);
   });
 
   it('keeps the SceneManager WebGPU renderer proof behind an explicit diagnostic flag', () => {

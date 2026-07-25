@@ -1,67 +1,107 @@
-# Next Session - v2.6.2 Beta Hotfix
+# Next Session - Cycle 112, front-door-foundations
 
-> **Updated:** 2026-07-07
-> **For:** web-only `v2.6.2` beta hotfix release
-> **Pickup priority:** Post-release beta follow-up: community/playtest loop, seasonal leaderboard implementation decision, and first-session route review.
+> **Updated:** 2026-07-25
+> **For:** Cycle 112
+> **Pickup priority:** Phases 1 through 7 shipped and deployed. Phase 8's agent half is done (manifest + candidates for all four scenes); what remains is Matt's beauty pass, plus one code fix on Newsheepdogland whose survival HUD renders through `?ui=off`.
+
+## Where the cycle stands
+
+All seven autonomous phases shipped in one pass on 2026-07-25. Working tree is dirty and unpushed; nothing is committed yet.
+
+| Phase | Result |
+|---|---|
+| 1 Fraunces | 37 KB variable woff2 at `css/fonts/`, Fredoka request deleted. Titles were rendering in Georgia before this |
+| 2 Jep | 1,331,856 to 669,360 bytes, 647 KB off the critical set. Bake-script change only, no runtime code |
+| 3 HUD | Reserve now measured, not hardcoded; one `Space` prompt; license off gameplay. Plus a fourth defect the sweep found on its own (compass through the camera chip at 390x844) |
+| 4 Wordmark | "Sheep Dog Sim" everywhere live |
+| 5 Cold load | 593ms desktop, 560ms mobile against 2,500 / 5,000ms budgets. New `validation:coldload` gate |
+| 6 Seam | **Pulled in from Cycle 114.** Fog reads the colour the sky paints at the horizon. Was blocking Phase 8 |
+| 7 Deep links | `?scene=<id>` arms, commits and survives; unknown and gated ids fall back |
+| 8 Heroes | **Agent half done, beauty pass outstanding.** Manifest at [`docs/cycle-112-hero-manifest.md`](docs/cycle-112-hero-manifest.md), candidates in `cycle112-validation/heroes/` (gitignored). Its blocker (the seam) is cleared |
+
+Gate at the end of the pass: `npm run lint` clean, 1,664 vitest passing, `npm run build` clean, and `validation:lod` / `latency` / `perf` / `coldload` / `screenshots --diff` all passing.
+
+### Picking up Phase 8
+
+Read [`docs/cycle-112-hero-manifest.md`](docs/cycle-112-hero-manifest.md) first: it carries the solved camera poses, the sun time-of-day table, and per-scene notes. Regenerate candidates with `node tools/hero-capture-cycle112.mjs` against a dev server on :3000. Nothing has overwritten `assets/scenes/`, so the shipped heroes stand until Matt's pass.
+
+Three things worth knowing up front:
+
+- **Home Field is the strongest candidate.** Rolling Hills needs a yaw nudge: the dog silhouettes against dark grass at dusk and a trunk sits on the right edge.
+- **Newsheepdogland needs a code fix before it can be shot.** Its solo entry is survival-locked at 10 sheep whatever mode is passed, and its day/flock/minimap HUD renders straight through `?ui=off` and `cinema.hideUI()`.
+- **One taste call is open**: whether the sun disk belongs in frame. The brief says "low sun off-axis" without settling it.
+
+Two things a cold reader should know before touching anything:
+
+1. **The screenshot goldens were re-baselined**, and they had been stale since Cycle 103 (40 commits, including the Kiln tree pipeline). The re-baseline banks 8 cycles of unrelated foliage drift. Do not read the new goldens as evidence that Cycle 112 moved the trees. The isolated seam delta was measured separately at 0.977 to 0.996 SSIM, top-band weighted. Detail in the plan's Phase 6 section.
+2. **The `main` bundle budget was bumped 639 to 645 KiB** with the accounting recorded in the plan. `UPDATE_FIXTURES` was not used, so the heightfield and tree-scatter goldens in that fixture directory are untouched.
 
 ## Current State
 
-The repo has released the web-only `v2.6.2` beta hotfix. It keeps the `v2.6.0` beta posture and adds WebGPU Counting Sheep, controller menu, camera zoom, and tutorial framing fixes. Matt's current GTM decisions:
+A front-end review of the shipping v2.6.2 build produced a 21-decision alignment pass, answered in full on 2026-07-24. The decisions are locked in [`DECISIONS.md`](DECISIONS.md) under "Front door alignment". They are constraints, not suggestions; cite them by number (D1 to D20, D-W) rather than re-deriving them.
 
-1. Newsheepdogland is a gated lab, not a launch promise.
-2. Public copy should say three public playable scenes.
-3. The beta identity is `v2.6.2 beta`.
-4. The beta channel is web-only on `https://sheepdogsim.com`.
-5. Steam remains the ultimate target if beta succeeds, but it is not a current public-launch task.
-6. Itch, portals, and ad SDKs are deferred.
+The finding in one sentence: the entrance asked a first-time player to make seven decisions before they had seen the game move, on top of a hero image where the dog was four pixels wide.
 
-The public beta posture is recorded across [`docs/launch/seo-content-matrix.md`](docs/launch/seo-content-matrix.md), [`docs/launch/release-checklist.md`](docs/launch/release-checklist.md), [`docs/launch/leaderboard-season-plan.md`](docs/launch/leaderboard-season-plan.md), and [`docs/launch/v2.6.0-beta-release-notes.md`](docs/launch/v2.6.0-beta-release-notes.md): telemetry disclosure with a Settings opt-out for nonessential events, all-time leaderboard preservation plus a seasonal follow-up plan, and `/privacy` and `/support` public pages.
+That produced a seven-cycle program, [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md), running 112 through 118. Cycle 112 is the foundations pass: clear the noise and re-shoot the art so Cycle 113's new entrance can be judged on its own merits.
 
-Completed in this GTM alignment pass:
+The decisions most likely to surprise an agent picking this up cold:
 
-1. Public SEO/crawler/store copy now says three public scenes and keeps Newsheepdogland as a gated lab.
-2. Newsheepdogland is `noindex, follow` and removed from `sitemap.xml`; support/privacy are in the sitemap.
-3. `/privacy` and `/support` exist and are included in the Vite build input.
-4. Mobile active-play source notice is removed from the HUD; source remains reachable from Pause, About, and static pages.
-5. Tutorial offer gets compact/mobile top spacing to avoid the entrance top rail.
-6. Public lobby discovery uses `NetworkManager.requestPublicLobbies()` directly instead of waiting on a channel listener.
-7. Settings now include a product telemetry toggle; tutorial offer shown/accepted/skipped events are emitted.
-8. Leaderboard season planning and beta release notes are documented.
-9. Controller navigation works on the entrance and tutorial offer, active solo play supports keyboard/gamepad zoom, and the tutorial starts from a close Follow camera on Home Field.
+1. **The first session's promise is "a calm place to spend ten minutes"** (D2), not the mechanic and not the ladder. The hero brief was revised because of it: calm, not tense.
+2. **The entrance becomes Direction A, "One Door"** (D3), with one primary action and everything else behind a summary line or a menu.
+3. **The tutorial moves inside the first round** (D4). Home Field is the first-visit default (D5), which closes the question that had been open since Cycle 111.
+4. **The art target is stylised painterly** (D9), and the fence and farmhouse are authored in-repo (D10) rather than commissioned.
+5. **The water gets rewritten, not retuned** (D-W). Cycle 118.
+6. **Sheep Dog Island's zap becomes a fenced pasture with one gate** (D15), and its solo board resets (D12) after a re-verification step.
+7. **Everything rolls continuously** (D20). No version gate on this program.
 
-Immediate remaining work after release:
+## Cycle 112 Phases
 
-1. Owner decision: keep Rolling Hills as the first visual default with a Home Field tutorial offer, or make Home Field the first-time primary path until tutorial completion.
-2. Engineering follow-up: implement seasonal leaderboard storage/UI only as a scoped Worker/D1 cycle; do not reset production scores as a shortcut.
-3. Community follow-up: start the first small playtest loop before adding new launch channels.
+Full plan with EARS acceptance: [`docs/cycle-112-plan.md`](docs/cycle-112-plan.md).
+
+| Phase | Goal | Mode | Status |
+|---|---|---|---|
+| 1 | Ship Fraunces, delete the dead Fredoka request | Autonomous | Shipped |
+| 2 | Take Jep off the critical path | Autonomous | Shipped |
+| 3 | HUD defect sweep, and demote the license off gameplay | Autonomous | Shipped |
+| 4 | One wordmark: "Sheep Dog Sim" everywhere | Autonomous | Shipped |
+| 5 | Instrument first-interactive against the 2.5s / 5s budget | Autonomous | Shipped |
+| 6 | Horizon seam (pulled in from Cycle 114) | Autonomous | Shipped |
+| 7 | Make `?scene=<id>` deep links actually commit that scene | Autonomous | Shipped |
+| 8 | Hero capture session, all four scenes to the D8 brief | **Paired** | Not started |
+
+Q1, Q2 and Q3 are resolved inline in the plan. Three corrections the scaffold needed once the code was measured, all recorded there: Phase 2's 400 KB target was arithmetically impossible against a 206 KB mesh floor (Matt chose 654 KB, keeping three idles); the font belongs in `css/fonts/` rather than `public/fonts/` because `base: './'` on the itch and native targets breaks a root-absolute url; and the capture phase was pre-blocked by its own hard stop, which is why the seam fix moved into this cycle.
 
 ## Review Entry Points
 
-1. [`docs/cycle-111-plan.md`](docs/cycle-111-plan.md) - implementation plan, EARS acceptance, and validation notes.
-2. [`docs/launch/seo-content-matrix.md`](docs/launch/seo-content-matrix.md) - canonical public copy constraints.
-3. [`docs/launch/leaderboard-season-plan.md`](docs/launch/leaderboard-season-plan.md) - seasonal leaderboard plan and no-reset guardrails.
-4. [`docs/launch/v2.6.0-beta-release-notes.md`](docs/launch/v2.6.0-beta-release-notes.md) - beta release notes.
-5. [`docs/launch/release-checklist.md`](docs/launch/release-checklist.md) - approved web beta release/rollback commands.
+1. [`docs/cycle-112-plan.md`](docs/cycle-112-plan.md) - phases, EARS acceptance, hard stops.
+2. [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md) - where this cycle sits in the seven-cycle program.
+3. [`DECISIONS.md`](DECISIONS.md) - the decision register and the measured findings behind it.
+4. [`docs/launch/leaderboard-season-plan.md`](docs/launch/leaderboard-season-plan.md) - the no-reset guardrail D12 is measured against. Relevant in Cycle 117, not here.
 
 ## Autonomy Rules
 
-- Web beta planning and docs alignment are approved.
-- Do not publish paid, irreversible, or public marketplace submissions without explicit approval.
-- Do not perform itch upload, Steam Direct, Steam depot, CrazyGames, Poki, Newgrounds, Kongregate, or Y8 submission actions without explicit approval.
+- Phases 1 through 7 were approved to run autonomously and are done.
+- **Phase 8 is paired.** Write the full shot manifest before pairing. Matt drives the browser.
+- Do not start the entrance rewrite. That is Cycle 113 and it needs Phase 8's heroes first.
+- Do not reset any leaderboard in this cycle. Cycle 117 owns it, with its own re-verification.
+- Keep `shared/`, sim-baseline goldens, and frozen process files untouched. This cycle needs none of them.
 - Do not store API keys in repo files, docs, memory notes, screenshots, or launch packets.
-- Keep `shared/`, sim-baseline goldens, and frozen process files untouched unless the active cycle plan explicitly authorizes the change.
+- Do not publish paid, irreversible, or public marketplace submissions without explicit approval.
 
 ## Reference Table
 
 | Topic | Source |
 |---|---|
 | Portable agent rules | [`AGENTS.md`](AGENTS.md) |
-| Active cycle sequence | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
+| The seven-cycle program | [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md) |
+| Locked decisions | [`DECISIONS.md`](DECISIONS.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
 | Pickup contract | [`docs/NEXT_SESSION_CONTRACT.md`](docs/NEXT_SESSION_CONTRACT.md) |
-| Launch copy drafts | [`docs/launch/`](docs/launch/) |
+| Closed cycles + deferred | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 
 ## Stop Conditions
 
-Stop and surface before continuing if validation discovers a gameplay regression, a deploy target is red, a platform requires payment or public submission, a store/account credential is missing, or any frozen-file edit is needed outside the active plan's authorization.
+Stop and surface before continuing if the Jep clip split changes visible dog animation in any camera mode, if a Phase 8 capture still shows the horizon skirt seam (which reopens Phase 6 rather than deferring to 114), if validation discovers a gameplay regression, if a deploy target is red, or if any frozen-file edit is needed outside this plan's authorization.
+
+The Fraunces stop is cleared: 37 KB shipped and desktop first-interactive measured at 593ms against a 2,500ms budget.

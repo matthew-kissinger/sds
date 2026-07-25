@@ -1465,3 +1465,56 @@ Matt picked KTX2 as the Cycle 98 goal from the Cycle 97 carryover, then directed
 - **Dead octahedral impostor set dropped from dist (~9 MB, free).** `assets/models/trees/octahedral/` is reachable only via the `?webgpuNativeTreeImpostors=1` debug route (`TreePlacement.resolveWebGpuNativeTreeImpostorRoute`), never on the default prod path - it shipped dead. `vite.config.js`'s dist-pruning plugin now `rmSync`s it from dist (source stays for the lab tool + regen). dist 63 MB -> 54 MB.
 - **Deferred (GPU-gated):** the Phase 5 A/B (golden suite + 20 Mbps cold-load delta + NSL jitter rail + dusk-canopy A/B) and the subsequent PNG-from-dist drop wait until a concurrent perf run in another repo clears the shared GPU. Until then both `.png` and `.ktx2` ship (dist carries both), so the wire/VRAM win only lands when the PNGs are dropped after the A/B validates. Orientation (the `isYFlip` choice) and depth/normal transcode quality are the top A/B checks.
 - **Asset-weighting analysis (durable finding).** Measured dist (then 63 MB): trees/impostors 33%, terrain heightfields 25% (4x 4 MB uncompressed float32), music 24% (lazy). Asset SIZE drives LOADING, not rendering/perf: rendering cost is foliage instance counts + shaders + overdraw; perf/jitter is streaming-wave mesh builds + shadow churn; neither is file bytes. "Too many assets" is not the issue - a handful of big assets are. Biggest levers ranked: (1) octahedral freebie [done], (2) KTX2 the live atlases [this cycle], (3) compress the terrain `.bin` (16 MB uncompressed float32, downloaded per scene-load), (4) a human-in-the-loop impostor bake re-pass (atlas resolution, whether normal AND depth are both needed; the bake tool is unbenchmarked). (3) and (4) are the next-cycle theme.
+
+---
+
+## Front door alignment - 21 decisions locked (2026-07-24)
+
+Matt opened a front-end review after a play session: gameplay good, front door not. A grounded pass over the shipping v2.6.2 build (7 captures, 4 measurements, real boot rather than code reading) produced a decision register; Matt answered all of it in one sitting. A review artifact plus three live entrance comps were the alignment surface. These are constraints for Cycle 112 and after. Do not re-litigate.
+
+**Identity.**
+
+1. **D1: the game is "Sheep Dog Sim", everywhere.** The entrance said "Sheepdog Simulator", the page title said "Sheep Dog Sim", the schema carried four alternates. Sheep Dog Sim matches the domain and the existing search results. Every surface changes to agree.
+2. **D2: the first session's promise is "a calm place to spend ten minutes".** Not the mechanic, not the ladder. This overruled the author lean (mechanic-first) and it propagates: the hero brief was revised away from "flock under visible pressure", because pressure photographs as tension, not calm.
+
+**The front door.**
+
+3. **D3: Direction A ("One Door") with Direction C's typographic restraint.** The entrance asks exactly one question. World, mode and dog collapse to a summary line that opens a picker in place. B's ladder is deferred into A's expanded mode picker, not shipped as the front door.
+4. **D4: the tutorial moves inside the first round** as a soft overlay. It removes the second primary button, which was the worst thing about the current first paint (tutorial offer and Play, both meadow green).
+5. **D5: first-time visitors land on Home Field**, after its hero is re-shot. Closes the question left open in NEXT_SESSION since Cycle 111. With the tutorial now in-round, teaching beats photography.
+6. **D6: the name field, the license line, sandbox, 2-player, leaderboard and achievements all leave the primary surface.** Multiplayer keeps a text-weight line, since nobody finds it otherwise. The name field moves to first score submission, where it has a reason to exist.
+7. **D7: three difficulty rungs visible, the rest behind "More".** Leaderboard identity stays (scene, count), so no score moves. Presentation only.
+
+**Art direction.**
+
+8. **D8: one hero brief across all four scenes.** Dog large in the near third, flock settled and readable mid-frame, destination visible on the horizon, low sun off-axis, generous sky, horizon seam lifted. One rule across four scenes is what makes the world switcher read as one game rather than four screenshots.
+9. **D9: the art target is stylised painterly.** The world had been sitting between stylised and semi-real without committing, which is why untextured props read as unfinished rather than deliberate. Painterly is forgiving of the shipped impostor and LOD work, and it makes a vertex-coloured fence a finished asset rather than a placeholder.
+10. **D10: the fence and the farmhouse are authored in-repo, with a checkpoint on the house.** A new `tools/bake-fence.mjs` follows the `bake-rocks.mjs` pattern (headless Chromium, three.js, GLTFExporter, then gltf-transform + Draco + meshopt). The farmhouse ships as a modular kit-bash for Matt's review; if it reads correct but not charming it goes external at that checkpoint. The fence does not go external.
+11. **D11: the grounding pass comes before any new geometry.** Grass falloff at exclusion edges, post jitter, split materials, the horizon skirt seam, dog ground contact. All shader and placement work, and it changes what the new kit needs to be.
+12. **D-W: the water gets rewritten, not retuned.** Matt's call against the author lean (grade and seam first, then judge). `js/water/AnimeWater.js` is a deliberate cel shader with shoreline foam, two-band depth colour and atmosphere-matched fog, but anime water is the wrong style for the D9 target. The WebGPU node-material twin rebuilds with it.
+
+**World and gameplay.**
+
+13. **D12: Sheep Dog Island's solo leaderboard resets when the objective changes.** Verified against production before approving: the affected boards hold 2 rows (solo:200 and solo:5000), both "Dev" test entries, zero player-authored scores. The `docs/launch/leaderboard-season-plan.md` no-reset guardrail is not violated in substance because there is nothing to preserve. **Re-verify immediately before the delete lands.** If a real score has appeared by then, archive as all-time instead and start a new board for the gate objective.
+14. **D13: the gate cue is a light column at distance and a lantern up close.** Four states: far or off-screen (world-space column plus edge chevron), near and on-screen (column fades, posts rim-light, threshold arc draws), flock approaching (arc brightens with funnel occupancy), crossed (single warm pulse). The column is the only thing readable at 140m; the lantern keeps it diegetic once you are there. A screen-space marker was rejected: it competes with the flock for attention and gets worse as sheep counts rise, where a world-space column occludes correctly behind hills and gives distance for free through perspective.
+15. **D14: one cue language across every scene, styled per scene.** A player who learns "warm column means go there" on Home Field must not relearn it on the island. Open Country's portal keeps its own effect and adopts the threshold behaviour.
+16. **D15: the Rolling Hills lightning retires from gameplay; module deleted one cycle later.** The corral was a single red flag plus an invisible 8m radius, so the zap had to carry all the meaning of "that counted", which is why it read as arbitrary. It becomes a fenced pasture with one open gate, retiring sheep on threshold crossing the way Home Field already works. `js/effects/CorralZapEffect.js` stays in place one cycle so the pasture can be reverted without a restore.
+
+**Engineering posture and release.**
+
+17. **D16: pastoral tokens in new code, others migrate on touch.** No big-bang retirement of the pre-Cycle-49 `color` palette in the same cycle as a redesign; the diff would be unreviewable.
+18. **D17: first-interactive budget is 2.5s desktop, 5s phone, cold.** A working target, revised once the Jep animation split lands. It gives the loading work an acceptance line it did not have.
+19. **D18: port Flock Lab's harness only; no GPU flocking cycle.** From [sds-gpu-boids](https://github.com/matthew-kissinger/sds-gpu-boids): the CPU oracle pattern (validating a GPU pass entity by entity) and the p50/p95/p99 metrics vocabulary. Its own finding, "cranking the sheep count up did not make the game more fun", is recorded here as a design result: it settles the Chaos-tier arms race and points effort at legibility instead. Moving flocking onto the GPU touches the shared deterministic sim that both the Worker and the client predictor depend on, so it stays a separate cycle with its own risk budget.
+20. **D19: Newsheepdogland stays gated until the front door ships.** Adding a fourth world to a front door that cannot sell three is the wrong order.
+21. **D20: everything rolls continuously.** Matt's call against the author lean (bank the entrance and heroes as a v2.7 moment). No release gate on the front-door work.
+
+**Measured findings behind the register.** Evidence for anyone picking this up cold:
+
+- The entrance asked for 7 decision rows before Play, with 2 meadow-green primary buttons on first paint. On a 390x844 phone the panel took roughly half the viewport and the largest text block on screen was the license notice.
+- None of the 3 entrance heroes contained a readable dog or flock. Open Country's camera sits inside a tree. Sheep Dog Island is underexposed by roughly a stop and a half. A white horizon seam (terrain skirt meeting fog) appears in every capture including all three heroes.
+- `Jep.glb` is 1,301 KB against ~208 KB for every other dog at identical Draco and meshopt settings. The delta is 19 animation clips across 2,105 accessors. Jep is the default dog and the only one in `defineCriticalAssets()`, so the heaviest file in the game gates first-interactive for every new player.
+- `--font-display` points at Fraunces, described in `css/main.css` as self-hosted, with no `.woff2` anywhere in the repo. Meanwhile `index.html` makes a render-blocking Google Fonts request for **Fredoka**, which nothing references. Every title in the game has been rendering in the Georgia fallback.
+- 271 inline `style={{ }}` objects across the components against 48 `className` uses. `Entrance.tsx` alone holds 47, which is why its controls have no hover, focus or active states.
+- HUD defects visible in every session: the sheep counter and its percentage overlap; `Space` renders as both Bark and Ready simultaneously; the license line is burned into gameplay bottom right.
+- Observed directly: `/?scene=rolling-hills` sets the page title to Rolling Hills, then Play commits Home Field and the URL resets to `/`.
+- The Home Field pen excludes grass as a hard rectangle, so the enclosure sits on a bald patch; the same exclusion logic leaves the farmhouse in an empty 80x80m yard. The farmhouse is one flat tan material across walls, roof and porch.

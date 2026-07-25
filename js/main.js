@@ -25,6 +25,7 @@ import { loadScene, listScenes, DEFAULT_SCENE_ID } from '../shared/scenes/index.
 import { COUNTING_GAME_MODE } from '../shared/countingModes.js';
 import { startBarkSteering, DEFAULT_BARK_CONFIG } from '../shared/BarkImpulse.js';
 import { Atmosphere } from './atmosphere/index.js';
+import { toneMappingFromRenderer } from './atmosphere/paintedHorizon.js';
 import { updateSceneMetadata } from './utils/seo.js';
 // Cycle 17 Phase 7: local-multiplayer modules dynamic-imported in
 // startLocalGame() so they only ship when the user actually picks Local Mode.
@@ -119,6 +120,13 @@ class SheepDogSimulation {
         // leaderboard submission path can include it as a partition key.
         this.gameState.sceneId = activeSceneId;
         if (typeof window !== 'undefined') window.__currentSceneId = activeSceneId;
+        // Cycle 112 Phase 7: remember that this session was opened with an
+        // explicit, valid ?scene=. _buildSwapUrl keeps the param for the rest of
+        // the session when it was, so a deep link stays a deep link instead of
+        // collapsing to "/" the moment the player swaps to the default scene.
+        // An invalid id does not pin: it fell back to the default, so carrying
+        // it forward would advertise a scene that never loaded.
+        this._sceneParamPinned = Boolean(requestedSceneId) && validSceneIds.includes(requestedSceneId);
         // Cycle 46 Phase 1: boot-time zen attract field. On a plain open (no
         // explicit scene/room/sandbox/cinematic/test intent) the app paints a
         // cheap drifting-boid field as first frame instead of building the
@@ -201,6 +209,10 @@ class SheepDogSimulation {
             // Field/RH/OC each ship explicit `fog: { color, near, far }`. Falls
             // back to FogExp2 default when sceneDef omits.
             sceneFog: this.currentScene.fog ?? null,
+            // Cycle 112 Phase 6: fog colour is solved back through the tone
+            // curve so the terrain's far band displays as the colour the sky
+            // paints at the horizon. Atmosphere needs the live operator.
+            toneMapping: toneMappingFromRenderer(this.sceneManager.renderer),
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
         // Cycle 65: opt-in day/night sun arc when the scene declares it.
@@ -1093,7 +1105,11 @@ class SheepDogSimulation {
      */
     _buildSwapUrl(toId, opts = {}) {
         const url = new URL(location.href);
-        if (toId === DEFAULT_SCENE_ID) {
+        // Cycle 112 Phase 7: a session opened with an explicit ?scene= keeps the
+        // param even when it swaps to the default scene, so the URL stays a
+        // shareable deep link. Sessions opened plainly still drop it, which
+        // keeps "/" as the canonical entrance URL.
+        if (toId === DEFAULT_SCENE_ID && !this._sceneParamPinned) {
             url.searchParams.delete('scene');
         } else {
             url.searchParams.set('scene', toId);
@@ -1163,6 +1179,7 @@ class SheepDogSimulation {
             enableClouds: true,
             enableDayNight: !!sceneDef.dayNight?.enabled,
             sceneFog: sceneDef.fog ?? null,
+            toneMapping: toneMappingFromRenderer(this.sceneManager.renderer),
         });
         this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
         // Cycle 65: opt-in day/night sun arc when the scene declares it.
