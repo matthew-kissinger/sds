@@ -24,7 +24,11 @@ The cycle runs **fully autonomously** at Matt's direction ("complete cycle fully
 
 **Q3: the entrance panel covers the lower-centre, which is where D8 puts the dog. Re-shoot the heroes, or move the panel?** Measured from `cycle112-validation/heroes/measurements.json`, all four heroes put the dog in a tight vertical band: 73.5%, 76.0%, 75.0% and 74.0% down the frame, at 3.9% to 5.5% of frame height. Horizontally they are spread (36.0%, 63.0%, 60.0%, 37.5%), so no single side is clear on all four.
 
-**Resolved: move the panel, do not re-shoot.** The vertical band is the opening. A collapsed one-door panel is roughly 150px tall against today's 362px, so keeping its top edge below 72% of viewport height clears every dog on every scene, and that is a number a test can hold. Re-shooting to dodge a panel would trade a brief the D8 register locked for a layout this cycle is still moving. Phase 6 measures rather than assumes, and carries an escape hatch if the measurement disagrees.
+**Resolved: move the panel, do not re-shoot.** The vertical band is the opening. A collapsed one-door panel is roughly 150px tall against today's 362px, so keeping its top edge low enough clears every dog on every scene, and that is a number a test can hold. Re-shooting to dodge a panel would trade a brief the D8 register locked for a layout this cycle is still moving. Phase 6 measures rather than assumes, and carries an escape hatch if the measurement disagrees.
+
+> **Corrected in flight (Phase 3).** The threshold above was first written as 72%, which was wrong: it compared the panel against the dog's **centre** band (73.5% to 76%) and forgot the dog's own height. Counting it, the dogs span 70.8% to 78.0% of frame height, so the real floor is 78.0%. Measured live, a panel still carrying the world name and tagline settled at 70.1% and went through all four dogs. The fix was to move the world name, the tagline and the carousel dots onto the photograph, which cost the panel 59px and put its top edge at 79.3%. The resolution held; only the number was wrong. Phase 6's gate uses the measured figure.
+>
+> **A second thing the measurement found (Phase 6).** The vertical band was never the whole problem. A 1920x1080 hero in a 390x844 portrait viewport under `object-fit: cover` shows only the middle 26% of the image width, and centred that put Home Field's dog at -3.9% of the viewport and Rolling Hills' at 100%. Two heroes with no dog in them, on a phone, which is the case the cycle was told to design first. Fixed with a per-world `objectPosition` (step 3 below), not by re-shooting.
 
 **Q4: does the tutorial keep an accept step when it moves in-round (D4)?** Today it is an offer card on the entrance with a meadow-green "Show me" that is the second primary button on first paint, which D4 names as the worst thing about that paint.
 
@@ -119,7 +123,7 @@ Four Playwright specs drive the live entrance. They are not frozen, but each is 
 
 - When Phase 4 ships, then `js/components/Tutorial/TutorialOffer.tsx` shall not exist.
 - When a first-time player starts any round, then the tutorial overlay shall mount without the player having accepted an offer.
-- While the tutorial overlay is mounted, it shall present no button.
+- ~~While the tutorial overlay is mounted, it shall present no button.~~ **Revised at implementation:** while the tutorial overlay is mounted, it shall present no primary action and no accept step. The overlay carries a small Skip pill, which is the only way out of prompts that now appear unbidden. Deleting it would have satisfied the letter of the original line against its intent, which was to remove the second primary button from first paint.
 - When a returning player who has completed or dismissed the tutorial starts a round, then the tutorial overlay shall not mount.
 - When `npm test` runs, `tests/ui/tutorialMachine.spec.ts` shall pass unchanged.
 
@@ -150,10 +154,11 @@ Four Playwright specs drive the live entrance. They are not frozen, but each is 
 
 **Acceptance (EARS):**
 
-- While the picker is collapsed at 1440x900, the entrance panel's top edge shall sit below 72% of viewport height.
+- While the picker is collapsed at 1440x900, the entrance panel's top edge shall sit below the lowest dog's bottom edge across all four heroes (**measured at 78.0%**, not the 72% first written here; see the Q3 correction).
 - When the clearance probe runs, then it shall report zero overlap between the collapsed panel and the dog for all four worlds at 1440x900 and 1920x1080.
 - If a dog is cropped out of frame at 390x844, then the world shall carry an `objectPosition` that brings it back, or the report shall record why it cannot.
 - When Phase 6 ships, then `cycle113-validation/hero-panel-clearance.json` shall exist.
+- When `npm test` runs, `tests/ui/heroCrop.spec.ts` shall recompute the crop invariant offline and pass.
 
 ## Phase 7 - Gate, docs, close (~2hr)
 
@@ -207,14 +212,18 @@ Durable stops in [`EMERGENCY_STOPS.md`](EMERGENCY_STOPS.md) apply. Cycle-specifi
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, production build shall be clean.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover. **All seven shipped.**
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass. **1,731 passed, 11 skipped, 178 files.**
+- [x] When `npm run build` runs at cycle close, production build shall be clean. **Built in 8.66s, no errors; only the pre-existing >500KB chunk advisory.**
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When the entrance first paints, then it shall present exactly one primary action and no more than one question.
-- [ ] When `grep -c "style={{" js/components/entrance/Entrance.tsx js/components/entrance/LoadingScreen.tsx` runs, it shall return 0 for both files.
-- [ ] When Phase 4 ships, then no tutorial offer shall appear on the entrance and the tutorial shall arm inside the first round.
-- [ ] While the picker is collapsed, the entrance panel shall not occlude the dog in any of the four heroes at desktop viewports.
+- [x] When the entrance first paints, then it shall present exactly one primary action and no more than one question. **Live probe: one button named Play, one summary line, two corner controls, picker collapsed.**
+- [x] When `grep -c "style={{" js/components/entrance/Entrance.tsx js/components/entrance/LoadingScreen.tsx` runs, it shall return 0 for both files. **Both 0; pinned by `Entrance.spec.tsx` and `LoadingScreen.spec.tsx`.**
+- [x] When Phase 4 ships, then no tutorial offer shall appear on the entrance and the tutorial shall arm inside the first round. **Live probe: fresh profile gets `[data-testid="tutorial-overlay"]` mid-round with no offer card; a profile with `sds:tutorialDone` gets neither.**
+- [x] While the picker is collapsed, the entrance panel shall not occlude the dog in any of the four heroes at desktop viewports. **12 of 12 gated cases clear across 1440x900, 1920x1080 and 390x844; `cycle113-validation/hero-panel-clearance.json`.**
+
+Live probe (dev server, 18 of 18): picker opens and closes, rung selection updates the summary, Escape closes, Play builds the armed world, deep links still arm (`rolling-hills` arms Rolling Hills; `nonsense` and the gated `newsheepdogland` fall back to Home Field), no overlapping entrance text and nothing outside the viewport at either 1440x900 or 390x844, Play reachable with the picker open.
+
+Production build probe (`vite preview`): first-interactive 214ms, panel top at 79.3%, Fraunces resolving on the world name, `object-position: 31% 50%` applied, no console errors.
 
 ## References
 

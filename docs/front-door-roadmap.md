@@ -34,19 +34,24 @@ The free wins plus the capture session. Nothing here needs a design decision, ev
 
 ## Cycle 113 - entrance-one-door
 
-Direction A with C's typographic restraint (D3). This is the actual fix and it sets the UI pattern the rest of the interface migrates onto.
+**Shipped 2026-07-25, seven phases.** Plan: [`archive/cycles/cycle-113-plan.md`](archive/cycles/cycle-113-plan.md).
 
-Shape:
+Direction A with C's typographic restraint (D3). This was the actual fix, and it sets the UI pattern the rest of the interface migrates onto.
 
-- New entrance component in TypeScript, on a real stylesheet rather than inline style objects, on the pastoral tokens only (D16).
-- One primary action. World, mode and dog collapse to a summary line that opens a picker in place.
-- Three rungs plus "More" (D7). World switching moves to arrows on the image edges.
-- Everything in D6 leaves the primary surface. Multiplayer keeps a text-weight line.
-- The tutorial becomes an in-round soft overlay (D4), which is where the second primary button goes away.
-- Phone case designed first, not adapted.
-- Home Field is the first-visit default (D5).
+What shipped:
 
-The old `Entrance.tsx` is 434 lines holding backdrop, corner nav, world switcher, mode family, rungs, dog picker, rename field, perf warning, tutorial offer and legal. Most of this cycle is deletion.
+- [`../css/entrance.css`](../css/entrance.css), the front door's own sheet. Pastoral tokens only (D16), no hex and no bare rgba; phone case as the base rule set with one 721px upgrade to desktop; motion inside `prefers-reduced-motion: no-preference`. `Entrance.tsx` went from 449 lines and 47 inline style objects to 253 and none.
+- One primary action. World, rung and dog collapse into one summary line that opens `EntrancePicker` in place.
+- Three rungs plus More (D7), where "three" is the first three of whatever ladder the armed world carries and the armed rung is always visible. World switching moved to arrows on the image edges.
+- D6 emptied the primary surface: the name field left entirely, and sandbox, 2-player, leaderboard and achievements moved into one corner menu alongside the licence line. Four corner icons became two. Multiplayer keeps its text-weight line.
+- The tutorial moved inside the first round (D4) with no accept step at all, which is what removed the second primary button. `TutorialOffer` deleted, along with `RailPortal` and the offer copy in five locales.
+- The loading surface became the entrance holding still: same sheet, same glass, same dock position, world name unmoved across the cut.
+- The world name moved onto the photograph. That was a measurement, not a preference: the D8 heroes put the dog between 70.8% and 78.0% of frame height, so a panel carrying the world name settled at 70.1% and covered every dog. Collapsed it now sits at 79.3% and clears all four.
+- Per-world `objectPosition` on the backdrop. A 16:9 hero in a portrait phone viewport shows only the middle 26% of its width, which put two of the four dogs off frame entirely.
+
+Two new gates hold it: [`../tools/validation/entrance-hero-clearance.mjs`](../tools/validation/entrance-hero-clearance.mjs) measures panel-vs-dog against the live entrance at three viewports, and `tests/ui/heroCrop.spec.ts` recomputes the same invariant offline so a re-shoot that leaves the crop values stale fails in CI.
+
+Not done here: the name field's new home at first score submission (D6 says it leaves the entrance; where it lands is its own scope), and matching the loading backdrop's framing to the live scene camera.
 
 ## Cycle 114 - grounding-pass
 

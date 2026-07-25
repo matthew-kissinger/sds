@@ -1518,3 +1518,51 @@ Matt opened a front-end review after a play session: gameplay good, front door n
 - HUD defects visible in every session: the sheep counter and its percentage overlap; `Space` renders as both Bark and Ready simultaneously; the license line is burned into gameplay bottom right.
 - Observed directly: `/?scene=rolling-hills` sets the page title to Rolling Hills, then Play commits Home Field and the URL resets to `/`.
 - The Home Field pen excludes grass as a hard rectangle, so the enclosure sits on a bald patch; the same exclusion logic leaves the farmhouse in an empty 80x80m yard. The farmhouse is one flat tan material across walls, roof and porch.
+
+---
+
+## The entrance stylesheet is the D16 reference pattern (2026-07-25, Cycle 113)
+
+D16 said pastoral tokens in new code, others migrate on touch, and deliberately
+did not say what "new code" should look like. Cycle 113 answers that, because
+the entrance rewrite was the first surface built under the rule and the rest of
+the interface migrates onto whatever it established.
+
+[`css/entrance.css`](css/entrance.css) is that reference. What a migrating
+surface should copy:
+
+- **Its own sheet in `@layer components`**, imported from `css/main.css` after
+  `@import "tailwindcss"`, with a class prefix scoped to the surface.
+- **Tokens only.** No hex literal, no bare `rgba()`. Every tint composes with
+  `color-mix(in srgb, var(--color-x) N%, transparent)`, which is the shape
+  `js/components/ui/tokens.ts`'s `alpha()` already emits, so a palette change
+  moves the surface with it.
+- **Phone case as the base rule set**, with one `min-width: 721px` block
+  upgrading to desktop. 721 is `useViewport`'s own `compact` boundary, so JS and
+  CSS never disagree about where the breakpoint is.
+- **`:hover`, `:focus-visible` and `:active` on everything clickable.** The
+  front-end review's finding was 271 inline `style={{ }}` objects against 48
+  `className` uses, with 47 in `Entrance.tsx` alone. That count is *why* the
+  entrance had no interaction states: an inline style has no pseudo-classes to
+  hang them on. A surface that migrates to classes and does not add the states
+  has spent the migration and kept the defect.
+- **Motion inside `@media (prefers-reduced-motion: no-preference)`**, so
+  stillness is the default rather than a `reducedMotion` prop threaded down
+  through the tree.
+- **A `@media (hover: none)` block that restores each class's own resting
+  look.** Flattening them all to one fill repaints the wrong things on phones.
+- **Dynamic values stay in the component, presentation does not.** A progress
+  bar's width is a datum and belongs inline; a colour is not.
+
+[`tests/ui/entranceStylesheet.spec.ts`](tests/ui/entranceStylesheet.spec.ts)
+enforces the first four against the sheet itself, and is the template for the
+next surface's equivalent.
+
+**Also settled here:** the entrance panel's height is a hard constraint, not a
+design preference. The D8 heroes put the dog between 70.8% and 78.0% of frame
+height once its own height is counted, so anything docked at the bottom of the
+frame competes with the subject of the photograph behind it. The world's name,
+tagline and carousel dots live on the image for that reason. Any future addition
+to that panel has to buy its pixels from the hero, and
+[`tools/validation/entrance-hero-clearance.mjs`](tools/validation/entrance-hero-clearance.mjs)
+is what says whether it can afford them.
