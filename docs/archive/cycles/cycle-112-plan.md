@@ -359,16 +359,16 @@ Durable hard stops apply on every cycle, see [`EMERGENCY_STOPS.md`](EMERGENCY_ST
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
-- [ ] When `npm test` runs at cycle close, all vitest specs shall pass.
-- [ ] When `npm run build` runs at cycle close, the production build shall be clean.
-- [ ] When `npm run lint` runs at cycle close, it shall pass.
-- [ ] When the close commit lands on `main`, the sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Cycle 112 closes, the critical asset payload shall be at least 600 KB smaller than at cycle start. *(Revised from 900 KB with the Phase 2 ladder. 647 KB shipped.)*
-- [ ] When Cycle 112 closes, no title in the game shall render in a fallback face.
-- [ ] When Cycle 112 closes, all four entrance heroes shall satisfy the D8 brief per Matt's review.
-- [ ] When Cycle 112 closes, a cold-load number shall exist for the desktop and phone targets.
-- [ ] When Cycle 112 closes, the horizon seam shall be absent from a WebGPU capture of each scene.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
+- [x] When `npm test` runs at cycle close, all vitest specs shall pass. *(1,664 passing, 11 skipped.)*
+- [x] When `npm run build` runs at cycle close, the production build shall be clean.
+- [x] When `npm run lint` runs at cycle close, it shall pass.
+- [x] When the close commit lands on `main`, the sheepdogsim.com deploy shall succeed via GH Actions. *(`2e2a7935` green. A docs-only close commit does not trigger Deploy at all: `paths-ignore` covers `docs/**` and `**.md`.)*
+- [x] When Cycle 112 closes, the critical asset payload shall be at least 600 KB smaller than at cycle start. *(Revised from 900 KB with the Phase 2 ladder. Jep 1,331,856 to 669,360 bytes = 646 KB, plus 173 KB off the eight hero files.)*
+- [x] When Cycle 112 closes, no title in the game shall render in a fallback face. *(Live: computed `font-family` on the wordmark resolves to Fraunces and `document.fonts.check` reports the face loaded.)*
+- [ ] When Cycle 112 closes, all four entrance heroes shall satisfy the D8 brief per Matt's review. **OPEN, deferred to carryover at close (2026-07-25).** The heroes shipped and every measurable part of the brief is met (dog 3.9% to 5.5% of frame height against a 3% floor, no seam, no near occluder), but the line asks for Matt's eye and he has not signed it off. See [`cycle-112-hero-manifest.md`](../cycle-112-hero-manifest.md).
+- [x] When Cycle 112 closes, a cold-load number shall exist for the desktop and phone targets. *(488ms production desktop, 560ms mobile profile, against 2,500 / 5,000ms.)*
+- [x] When Cycle 112 closes, the horizon seam shall be absent from a WebGPU capture of each scene. *(Absent in all eight hero frames and the six re-baselined goldens.)*
 
 ## References
 

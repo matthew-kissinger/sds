@@ -10,6 +10,38 @@ The web-only `v2.6.2` beta hotfix release line is current: the `v2.6.0` beta pos
 
 ## Recently Completed
 
+### Cycle 112 - `front-door-foundations` (closed 2026-07-25)
+
+Plan archived at [`docs/archive/cycles/cycle-112-plan.md`](archive/cycles/cycle-112-plan.md). First cycle of the seven-cycle front-door program ([`front-door-roadmap.md`](front-door-roadmap.md)). Cleared the visible noise in front of the game and re-shot the art, so Cycle 113's entrance can be judged on its own merits rather than on a broken baseline.
+
+- **Shipped: 8/8 phases.** Fraunces self-hosted, Jep off the critical path, HUD defect sweep, one wordmark, a cold-load gate, the horizon seam, working scene deep links, and four re-shot heroes.
+- **Commits:** [`af9dc8a2`](https://github.com/matthew-kissinger/sds/commit/af9dc8a2) phases 1-7, [`03dfd9dc`](https://github.com/matthew-kissinger/sds/commit/03dfd9dc) Phase 8 heroes + capture HUD leak, [`2e2a7935`](https://github.com/matthew-kissinger/sds/commit/2e2a7935) preload fix, [`72bab849`](https://github.com/matthew-kissinger/sds/commit/72bab849) production cold-load number. All deployed green.
+
+**What landed**
+
+- **The display face was never shipped.** `css/main.css` named Fraunces and no `.woff2` existed anywhere in the repo, so every title had been rendering in the Georgia fallback while the boot path made a render-blocking Google Fonts request for Fredoka, which nothing referenced. Ships a 37,052-byte latin variable woff2 at `css/fonts/` (not `public/fonts/`: `base: './'` on the itch and native targets breaks a root-absolute url).
+- **Jep 1,331,856 to 669,360 bytes**, 646 KB off the critical set. Eight of its 19 clips were unreachable code (`Sheepdog.js` hardcodes `'forward'`; `TURNING` is not a key in `ANIMATION_STATES`), so they were deleted rather than deferred. `resample()` was the missing piece: draco and meshopt do not touch animation data, which is why the file had been only 0.9% smaller than its pristine backup.
+- **Four HUD defects, one of which the acceptance line found by itself.** The reported counter overlap did not reproduce; the real defect under it was a hardcoded `--sds-topleft-reserve: 140px` that under-reported the stack. Sweeping every HUD text node for intersection then turned up `CorralCompass` drawing its distance pill through the "Follow" chip at 390x844.
+- **The horizon seam, pulled forward from Cycle 114.** `scene.fog.color` took the raw horizon LUT value at full strength while every sky paints that horizon at a fraction of it. Fog now reads the colour the sky actually paints, solved back through the renderer's tone-mapping curve. New authority at `js/atmosphere/paintedHorizon.js`.
+- **A cold-load number that did not exist before: 488ms** first-interactive on production against D17's 2,500ms budget, plus a `validation:coldload` gate.
+- **Four heroes re-shot** with composition solved rather than guessed (camera clears the rear-most sheep, pitch derived so the dog lands at NDC -0.45). Net 173 KB lighter; Home Field's entrance hero 430 KB to 171 KB.
+
+**Notes**
+
+- **The screenshot goldens had been stale for 8 cycles** (last written at Cycle 103's close, 40 commits back, including the Kiln tree pipeline). The 6/6 failure was mostly accumulated foliage drift, not this cycle. The seam delta was isolated first by capturing the render path at `HEAD`: 0.977 to 0.996 SSIM, heaviest in the top third of every frame. The re-baseline banks that unrelated drift; do not read the new goldens as evidence Cycle 112 moved the trees.
+- **The entrance hero preload had been dead since Cycle 82.** Vite rewrote the static `<link>` href to a hashed copy while the entrance requested the static-copied path, so two copies shipped and the `fetchpriority=high` fetch warmed the one nothing asked for. Now injected from an inline script. Importing the images in `worlds.ts` produces correct hashed URLs in a build but breaks the dev server outright, since `assets/` is served by `vite-plugin-static-copy` and answers `?import` with raw image bytes.
+- **The capture HUD leak was a real bug**, not just a capture inconvenience: `?ui=off` and `cinema.hideUI()` hid `#react-overlay` alone and missed five chips mounting to `document.body`.
+- **`main` chunk budget bumped 639 to 645 KiB** for three new modules, accounting recorded in the plan. `UPDATE_FIXTURES` was not used, so the heightfield and tree-scatter goldens are untouched.
+- **The seam gate was deliberately not automated.** `tools/validation/horizon-seam.mjs` ships as an A/B reporting tool that always exits 0, because its band detector scored Rolling Hills *worse* after the fix by locking onto unrelated terrain. Tuning the threshold to green would have been fitting the test to the answer.
+
+**Carryover to Cycle 113**
+
+- **Hero review is open.** "All four entrance heroes shall satisfy the D8 brief per Matt's review" was deferred at close. Every measurable part of the brief is met (dog 3.9% to 5.5% of frame height against a 3% floor, no seam, no near occluder), but the line asks for Matt's eye and he has not signed it off. Re-shoot with `tools/hero-capture-cycle112.mjs` then `tools/install-hero-candidates.mjs --write`; poses and per-scene reasoning are in [`cycle-112-hero-manifest.md`](cycle-112-hero-manifest.md) (kept out of the archive because this carryover depends on it).
+- **Today's entrance panel covers the lower-centre**, which is where D8 puts the dog, so the dog currently sits behind it. The heroes were framed to the brief rather than to a layout 113 deletes. Re-check once 113's layout is real; the fix is `dogLateral` in the harness, not a new brief.
+- **A real seam gate** needs a detector that knows where the horizon line is. Worth doing, not worth doing under time pressure.
+- **The golden gate ran unattended for 8 cycles while failing.** It lives in `validation:all`, which is not in CI. Either run `validation:all` at every cycle close or move the golden diff into CI.
+
+
 ### Cycle 111 - `core-bark-onboarding` (closed 2026-06-28)
 
 Plan remains at [`docs/cycle-111-plan.md`](cycle-111-plan.md). Cycle 111 shipped the bark-as-core-skill pass, first-session tutorial routing, leaderboard motivation, completion-screen polish, calm bark audio replacement, and a Newsheepdogland sandbox guard. Release notes are at [`docs/launch/v2.5.0-release-notes.md`](launch/v2.5.0-release-notes.md).
