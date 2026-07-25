@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { test, expect, type Page } from '@playwright/test';
+import { startSolo } from './helpers/entrance';
 
 /**
  * Cycle 18 Phase 2 — scene-swap + mode-restart state hygiene gate.
@@ -43,33 +44,17 @@ async function bootSolo(page: Page) {
   await expect(play).toBeVisible({ timeout: 30_000 });
 }
 
-// "Next world" clicks from the Rolling Hills landing (Cycle 89 default).
-const WORLD_STEPS_FROM_DEFAULT: Record<string, number> = {
-  'field': 3,
-  'rolling-hills': 0,
-  'open-country': 1,
+// Cycle 113: one door. Arming by name retires the step table this spec
+// carried, which had gone stale against the Home Field default (D5) without
+// anything noticing, because the whole describe block is @local-only.
+const WORLD_NAMES: Record<string, string> = {
+  'field': 'Home Field',
+  'rolling-hills': 'Rolling Hills',
+  'open-country': 'Open Country',
 };
 
 async function startSoloClassic(page: Page, sceneId = 'field') {
-  // Cycle 51 world-first entrance: arm the requested world via the switcher,
-  // pick the Classic difficulty chip, then Play.
-  const nextBtn = page.getByRole('button', { name: /Next world/i });
-  await expect(nextBtn).toBeVisible({ timeout: 30_000 });
-  const steps = WORLD_STEPS_FROM_DEFAULT[sceneId] ?? WORLD_STEPS_FROM_DEFAULT.field;
-  for (let i = 0; i < steps; i++) {
-    await nextBtn.dispatchEvent('click');
-    await page.waitForTimeout(200);
-  }
-
-  // Cycle 59: match the Classic rung by "Classic <count>" so the mode-family
-  // chip (Solo / Counting Sheep) never collides with this difficulty selector.
-  const classic = page.getByRole('button', { name: /Classic\s+\d/i });
-  await expect(classic).toBeVisible({ timeout: 15_000 });
-  await classic.dispatchEvent('click');
-
-  const play = page.getByRole('button', { name: 'Play', exact: true });
-  await expect(play).toBeVisible({ timeout: 15_000 });
-  await play.dispatchEvent('click');
+  await startSolo(page, WORLD_NAMES[sceneId] ?? WORLD_NAMES.field);
 
   // Game canvas should mount. The swap harness (window.__sdsSwapTo) installs on
   // the first scene build. Generous timeout - scene init on swiftshader CI

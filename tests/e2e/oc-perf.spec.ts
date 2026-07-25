@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { test, expect, type Page } from '@playwright/test';
+import { startSolo } from './helpers/entrance';
 
 /**
  * OC frametime harness — Cycle 8 Phase C.
@@ -30,11 +31,6 @@ const BUDGETS = {
   p95FrameTime: 30,   // ms — tail budget
 };
 
-// "Next world" clicks from the Rolling Hills landing (Cycle 89 default).
-const WORLD_STEPS_FROM_DEFAULT: Record<string, number> = {
-  'open-country': 1,
-};
-
 async function seedIdentity(page: Page) {
   await page.context().addInitScript(() => {
     const identity = {
@@ -50,26 +46,12 @@ async function seedIdentity(page: Page) {
   });
 }
 
+// Cycle 113: the entrance is one door. Arming a world and picking a rung both
+// moved, so the driving lives in one helper instead of a step count per spec.
+// The count this file carried was stale anyway - it still counted from the
+// Rolling Hills landing after D5 made Home Field the default.
 async function startSoloClassic(page: Page) {
-  // Cycle 51 world-first entrance: arm Open Country via the prev/next switcher,
-  // pick the Classic difficulty chip, then Play. dispatchEvent('click')
-  // sidesteps the hover-transform stability issue documented in smoke.spec.ts.
-  const nextBtn = page.getByRole('button', { name: /Next world/i });
-  await expect(nextBtn).toBeVisible({ timeout: 30_000 });
-  for (let i = 0; i < WORLD_STEPS_FROM_DEFAULT['open-country']; i++) {
-    await nextBtn.dispatchEvent('click');
-    await page.waitForTimeout(200);
-  }
-
-  // Cycle 59: match the Classic rung by "Classic <count>" so the mode-family
-  // chip (Solo / Counting Sheep) never collides with this difficulty selector.
-  const classic = page.getByRole('button', { name: /Classic\s+\d/i });
-  await expect(classic).toBeVisible({ timeout: 15_000 });
-  await classic.dispatchEvent('click');
-
-  const play = page.getByRole('button', { name: 'Play', exact: true });
-  await expect(play).toBeVisible({ timeout: 15_000 });
-  await play.dispatchEvent('click');
+  await startSolo(page, 'Open Country');
 }
 
 test.describe('OC frametime harness', () => {

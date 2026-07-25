@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { test, expect, devices, type Page, type BrowserContext } from '@playwright/test';
+import { startSolo } from './helpers/entrance';
 
 /**
  * Cycle 17 Phase 1 — mobile asset visibility regression gate.
@@ -38,36 +39,18 @@ async function seedIdentity(ctx: BrowserContext) {
     });
 }
 
-const WORLD_STEPS_FROM_DEFAULT: Record<string, number> = {
-    'field': 0,
-    'rolling-hills': 1,
-    'open-country': 2,
+// Cycle 113: arming a world and picking a rung both moved when the entrance
+// became one door, so the driving lives in tests/e2e/helpers/entrance.ts.
+// Naming the world also retires the click-count table this file carried, which
+// encoded the carousel's order as a magic number in three separate specs.
+const WORLD_NAMES: Record<string, string> = {
+    'field': 'Home Field',
+    'rolling-hills': 'Rolling Hills',
+    'open-country': 'Open Country',
 };
 
-// Cycle 51 world-first entrance: the world is armed via the prev/next switcher,
-// not a ?scene= deep-link. Home Field is the default; the SEO fallback main
-// also contains scene names, so use the known carousel offset instead of
-// querying visible text.
-async function armWorld(page: Page, sceneId: string) {
-    const steps = WORLD_STEPS_FROM_DEFAULT[sceneId];
-    const nextBtn = page.getByRole('button', { name: /Next world/i });
-    await expect(nextBtn).toBeVisible({ timeout: 30_000 });
-    for (let i = 0; i < steps; i++) {
-        await nextBtn.dispatchEvent('click');
-        await page.waitForTimeout(200);
-    }
-}
-
 async function startSoloClassic(page: Page, sceneId: string) {
-    await armWorld(page, sceneId);
-    // Cycle 59: match the Classic rung by "Classic <count>" so the mode-family
-    // chip (Solo / Counting Sheep) never collides with this difficulty selector.
-    const classic = page.getByRole('button', { name: /Classic\s+\d/i });
-    await expect(classic).toBeVisible({ timeout: 30_000 });
-    await classic.dispatchEvent('click');
-    const play = page.getByRole('button', { name: 'Play', exact: true });
-    await expect(play).toBeVisible({ timeout: 15_000 });
-    await play.dispatchEvent('click');
+    await startSolo(page, WORLD_NAMES[sceneId]);
 }
 
 // Emulate iPhone 14 at the file level — mobile UA + hasTouch + isMobile so

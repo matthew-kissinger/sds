@@ -35,8 +35,6 @@ export interface World {
   accent: string;
   /** CSS gradient approximation, shown under the image while it decodes. */
   gradient: string;
-  /** Work-in-progress world: the entrance shows an Experimental badge. */
-  experimental?: boolean;
   /** Not yet playable: the entrance shows a "Coming soon" badge and disables Play. */
   comingSoon?: boolean;
 }
