@@ -68,12 +68,24 @@ export const GATE_LEAF_SWING_RATE = 3;
 /**
  * How open a freshly built gate is, 0 closed and 1 the asset's authored pose.
  *
- * Zero, because the whole point of the phase is that the pose is now ours: a
- * gate that builds at 1 is indistinguishable from the frozen baked-open bug it
- * replaces. One named constant rather than a literal at each call site, so the
- * cycle that decides gates should idle open has exactly one line to change.
+ * ONE, and the reasoning changed after this shipped at zero for an afternoon.
+ *
+ * Zero is the tidier answer on its face: the point of the phase is that the pose
+ * is ours now, and a gate that builds at 1 looks indistinguishable from the
+ * frozen baked-open bug it replaces. But sheep retire by walking to a
+ * `retirementTarget` INSIDE the pen (js/OptimizedSheep.js, shared/GameStateValidation.js),
+ * so they physically cross the gate line. Closed leaves span the whole 8m
+ * opening, about 3.7m of reach from each pivot at x = +/-3.8. Building closed
+ * therefore puts sheep through a shut gate on Home Field, on Open Country and on
+ * every competitive layout: a visible gameplay regression, shipped by a phase
+ * whose brief was explicitly "only makes it possible", not "closes them".
+ *
+ * So the default preserves the behaviour that shipped before the controller
+ * existed, and the capability to close is what is new. Whatever drives a gate
+ * shut has to deal with the sheep first, which is Cycle 116 and 117's question,
+ * and it has exactly one line to change here when it has an answer.
  */
-export const GATE_LEAF_INITIAL_OPEN_FRACTION = 0;
+export const GATE_LEAF_INITIAL_OPEN_FRACTION = 1;
 
 /**
  * Fraction-space settle threshold. On the authored leaf the full swing is 1.257

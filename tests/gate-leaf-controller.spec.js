@@ -140,11 +140,25 @@ describe('GateLeafController', () => {
         expect(leaves[1].node.rotation.y).toBeCloseTo(Math.PI / 2 + 2, 9);
     });
 
-    it('builds closed by default, which is what un-freezes the shipped asset', () => {
-        expect(GATE_LEAF_INITIAL_OPEN_FRACTION).toBe(0);
+    it('builds OPEN by default, because closing one puts sheep through it', () => {
+        // This asserted 0 for an afternoon and that was a gameplay regression:
+        // sheep retire by walking to a target inside the pen, so they cross the
+        // gate line, and closed leaves span the whole 8m opening. Phase 3's
+        // brief was "only makes it possible", so the default preserves the
+        // behaviour that shipped before the controller existed. What is new is
+        // that the pose is drivable at all, which the next test covers.
+        expect(GATE_LEAF_INITIAL_OPEN_FRACTION).toBe(1);
+        const leaves = makeLeaves();
+        leaves[0].node.rotation.y = 0; // asset arrives however it arrives
+        const controller = new GateLeafController(leaves);
+        expect(controller.openFraction).toBe(1);
+        expect(leaves[0].node.rotation.y).toBeCloseTo(-1, 9);
+    });
+
+    it('can still be built closed explicitly, which is the capability the phase added', () => {
         const leaves = makeLeaves();
         leaves[0].node.rotation.y = -1; // asset arrives baked open
-        const controller = new GateLeafController(leaves);
+        const controller = new GateLeafController(leaves, 0);
         expect(controller.openFraction).toBe(0);
         expect(leaves[0].node.rotation.y).toBe(0);
     });

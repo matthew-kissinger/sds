@@ -186,10 +186,14 @@ describe('every gate carries a leaf controller (Cycle 115 P3)', () => {
     for (const leaf of controller.leaves) {
       expect(leaf.closed).toBe(0);
       expect(leaf.open).toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
-      // The asset ships swung open; the built gate must not be sitting there.
-      expect(leaf.node.rotation.y).toBeCloseTo(0, 6);
+      // The gate builds OPEN, and that is deliberate rather than the old bug
+      // surviving. The difference is that the pose is the CONTROLLER'S: it reads
+      // leaf.open, not whatever quaternion the GLB happened to bake. Building
+      // closed would put sheep through the gate, because they retire by walking
+      // to a target inside the pen and so cross the gate line.
+      expect(leaf.node.rotation.y).toBeCloseTo(leaf.open, 6);
     }
-    expect(controller.openFraction).toBe(0);
+    expect(controller.openFraction).toBe(1);
   });
 
   it('drives both leaves off one settable open fraction', () => {
@@ -222,22 +226,24 @@ describe('every gate carries a leaf controller (Cycle 115 P3)', () => {
     sb.buildSinglePlayerStructures(BOUNDS, GATE, PASTURE, { perimeterFence: true });
     const [controller] = sb.getGateLeafControllers();
 
-    controller.setTargetOpenFraction(1);
-    expect(controller.targetOpenFraction).toBe(1);
+    // Gates build open, so aim CLOSED to have a gap to close.
+    controller.setTargetOpenFraction(0);
+    expect(controller.targetOpenFraction).toBe(0);
     // Aiming alone must not pose anything: nothing here runs on a clock.
-    expect(controller.openFraction).toBe(0);
+    expect(controller.openFraction).toBe(1);
     expect(controller.isSettled).toBe(false);
-    expect(controller.leaves[0].node.rotation.y).toBeCloseTo(0, 6);
+    expect(controller.leaves[0].node.rotation.y)
+      .toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
 
     // dt * rate = 0.1 * 3, so the first step covers 30% of the remaining gap.
     expect(controller.step(0.1)).toBe(true);
-    expect(controller.openFraction).toBeCloseTo(0.3, 6);
+    expect(controller.openFraction).toBeCloseTo(0.7, 6);
     expect(controller.leaves[0].node.rotation.y)
-      .toBeCloseTo(THREE.MathUtils.degToRad(-72) * 0.3, 6);
+      .toBeCloseTo(THREE.MathUtils.degToRad(-72) * 0.7, 6);
 
     // A long frame caps at the target rather than overshooting.
     controller.step(10);
-    expect(controller.openFraction).toBe(1);
+    expect(controller.openFraction).toBe(0);
     expect(controller.isSettled).toBe(true);
     expect(controller.step(1)).toBe(false);
   });
@@ -276,8 +282,10 @@ describe('every gate carries a leaf controller (Cycle 115 P3)', () => {
     const controllers = sb.getGateLeafControllers();
     expect(controllers.length).toBe(4);
     // Distinct instances: posing one gate must not pose its neighbours.
-    controllers[0].setOpenFraction(1);
-    expect(controllers[1].openFraction).toBe(0);
+    // Pose one away from the shared default and the other must not follow.
+    controllers[0].setOpenFraction(0);
+    expect(controllers[0].openFraction).toBe(0);
+    expect(controllers[1].openFraction).toBe(1);
   });
 });
 
