@@ -36,7 +36,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { useMenuNavigation } from '../hooks/useMenuNavigation';
-import { WorldImage } from './sceneComponents';
+import { WorldImage, Masthead } from './sceneComponents';
 import { Icon } from '../ui/Icon';
 import { formatSheep } from './worlds';
 import { COUNTING_GAME_MODE } from '../../../shared/countingModes.js';
@@ -190,22 +190,20 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
 
       {/* On the photograph, not in the panel. See the masthead note in
           css/entrance.css for the measurement that put it there. */}
-      <div className="sds-ent-masthead">
-        <div className="sds-ent-world-name">
-          {flow.world.name}
-          {comingSoon && (
-            <span className="sds-ent-badge" title="In the workshop. Play Home Field, Rolling Hills or Open Country for now.">
-              Coming soon
-            </span>
-          )}
-        </div>
-        <div className="sds-ent-world-tagline">{flow.world.tagline}</div>
+      <Masthead
+        world={flow.world}
+        badge={comingSoon && (
+          <span className="sds-ent-badge" title="In the workshop. Play Home Field, Rolling Hills or Open Country for now.">
+            Coming soon
+          </span>
+        )}
+      >
         <div className="sds-ent-dots">
           {flow.worlds.map((w, i) => (
             <span key={w.id} className={i === flow.worldIndex ? 'sds-ent-dot sds-ent-dot-on' : 'sds-ent-dot'} />
           ))}
         </div>
-      </div>
+      </Masthead>
 
       <WorldArrow dir="prev" onClick={flow.prevWorld} />
       <WorldArrow dir="next" onClick={flow.nextWorld} />

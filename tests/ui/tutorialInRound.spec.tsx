@@ -128,4 +128,17 @@ describe('the offer card is gone', () => {
     it('arms from the entrance commit instead', () => {
         expect(src('js/components/App.js')).toMatch(/maybeAttachFirstRunTutorial\(\)/);
     });
+
+    it('resolves the dynamic import it arms through', () => {
+        // The gate is a bare `import()` inside a .js file, so neither tsc nor
+        // the unit suite ever resolves it. The first version of this line
+        // shipped `../Tutorial/index.js` (correct from the old call site in
+        // js/components/entrance/, wrong from js/components/) and 500'd the dev
+        // server on the very next boot. Resolve it here for real.
+        const app = src('js/components/App.js');
+        const spec = /import\('(\.[^']*Tutorial[^']*)'\)/.exec(app)?.[1];
+        expect(spec, 'no dynamic Tutorial import found in App.js').toBeTruthy();
+        const target = resolve(process.cwd(), 'js/components', spec!);
+        expect(existsSync(target), `${spec} resolves to ${target}, which does not exist`).toBe(true);
+    });
 });

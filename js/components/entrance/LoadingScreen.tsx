@@ -24,7 +24,7 @@
  * loading screen is the last place someone reads licensing, and it was the
  * widest block of text on a surface that should be calm.
  */
-import { WorldImage, LoadingBar } from './sceneComponents';
+import { WorldImage, LoadingBar, Masthead } from './sceneComponents';
 import type { BootFlow } from './useBootFlow';
 
 export function LoadingScreen({ flow }: { flow: BootFlow }) {
@@ -35,10 +35,7 @@ export function LoadingScreen({ flow }: { flow: BootFlow }) {
       </div>
       <div className="sds-ent-loading-scrim" />
 
-      <div className="sds-ent-masthead">
-        <div className="sds-ent-world-name">{flow.world.name}</div>
-        <div className="sds-ent-world-tagline">{flow.world.tagline}</div>
-      </div>
+      <Masthead world={flow.world} />
 
       <div className="sds-ent-dock">
         <div className="sds-ent-loading-panel" data-sds-loading-panel="">

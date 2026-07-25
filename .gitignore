@@ -166,6 +166,16 @@ cycle105-validation/*
 !cycle105-validation/farmhouse-ground-batch-spec.md
 !cycle105-validation/homestead-playfield-pack-report.md
 
+# Cycle 112 hero measurements are the source of truth for the per-world
+# objectPosition values shipped in js/components/entrance/worlds.ts, so
+# tests/ui/heroCrop.spec.ts needs them at hand. 4KB of derived numbers; the
+# PNGs beside them stay ignored.
+!cycle112-validation/
+cycle112-validation/*
+!cycle112-validation/heroes/
+cycle112-validation/heroes/*
+!cycle112-validation/heroes/measurements.json
+
 # Local upstream research clone. Keep source notes, not the cloned repo.
 /examples/three-r185/
 /examples/stylized-scene/

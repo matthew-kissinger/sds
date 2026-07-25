@@ -35,6 +35,22 @@ export interface World {
   accent: string;
   /** CSS gradient approximation, shown under the image while it decodes. */
   gradient: string;
+  /**
+   * Horizontal `object-position` for the backdrop, as a percentage string
+   * (Cycle 113 Phase 6).
+   *
+   * The heroes are 16:9 and the entrance is full-bleed, so a portrait phone
+   * shows only the middle ~26% of the image width. Centred, that crop put Home
+   * Field's dog at -3.9% of the viewport and Rolling Hills' at 100%: both off
+   * frame, on a shot composed entirely around the dog. This names the column
+   * the crop should keep, per world, derived from the dog's measured position
+   * in cycle112-validation/heroes/measurements.json.
+   *
+   * It barely moves desktop, where the same crop shows ~90% of the width, and
+   * it is scene data rather than a branch in the renderer, which is the
+   * project's own idiom for a per-scene knob. Defaults to centre.
+   */
+  objectPosition?: string;
   /** Not yet playable: the entrance shows a "Coming soon" badge and disables Play. */
   comingSoon?: boolean;
 }
@@ -96,6 +112,7 @@ export const WORLDS: World[] = [
     render: '/assets/scenes/entrance/field.webp',
     accent: color.sceneField,
     gradient: 'linear-gradient(180deg, #cfe3f2 0%, #bcd3a6 55%, #8aa66a 100%)',
+    objectPosition: '31%',
   },
   {
     id: 'rolling-hills',
@@ -104,6 +121,7 @@ export const WORLDS: World[] = [
     render: '/assets/scenes/entrance/rolling-hills.webp',
     accent: color.sceneRollingHills,
     gradient: 'linear-gradient(180deg, #f6d8a8 0%, #f0b878 45%, #d99a8f 78%, #b9a6c4 100%)',
+    objectPosition: '68%',
   },
   {
     id: 'open-country',
@@ -112,6 +130,7 @@ export const WORLDS: World[] = [
     render: '/assets/scenes/entrance/open-country.webp',
     accent: color.sceneOpenCountry,
     gradient: 'linear-gradient(180deg, #bcd6e8 0%, #9fc1b0 55%, #6c8f74 100%)',
+    objectPosition: '64%',
   },
   {
     id: 'newsheepdogland',
@@ -120,6 +139,7 @@ export const WORLDS: World[] = [
     render: '/assets/scenes/entrance/newsheepdogland.webp',
     accent: color.sceneNewsheepdogland,
     gradient: 'linear-gradient(180deg, #b9a98c 0%, #8f8a86 45%, #6a6f8c 78%, #3f4a63 100%)',
+    objectPosition: '33%',
     // Switched off pending a regression burn-down. The world stays in the carousel
     // as a "Coming soon" tile (badge + disabled Play); the scene + survival code is
     // untouched so a dev can still reach it via ?scene=newsheepdogland.

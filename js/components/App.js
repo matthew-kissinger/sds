@@ -285,7 +285,7 @@ export async function initReactUI() {
                     // entrance. Lazily imported so the tutorial module stays
                     // off the boot path, and best-effort: a failure here must
                     // never cost the player the round they just started.
-                    import('../Tutorial/index.js')
+                    import('./Tutorial/index.js')
                         .then((m) => m.maybeAttachFirstRunTutorial())
                         .catch(() => {});
                 } catch (err) {

@@ -5,7 +5,7 @@
  * entrance, promoted from the bake-off shell. The world render, the dog
  * avatar, the loading bar, and the dusk motes. Pastoral tokens, no inline hex.
  */
-import { useState, useRef, useEffect, type CSSProperties } from 'react';
+import { useState, useRef, useEffect, type CSSProperties, type ReactNode } from 'react';
 import { pastoral } from '../ui/tokens';
 import type { World, Dog } from './worlds';
 
@@ -35,11 +35,62 @@ export function WorldImage({
         onLoad={() => setLoaded(true)}
         style={{
           width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+          // Cycle 113 Phase 6: which column of a 16:9 hero a portrait crop
+          // keeps. Per world, because the dog is in a different place in each.
+          objectPosition: `${world.objectPosition ?? '50%'} center`,
           opacity: reducedMotion || loaded ? 1 : 0,
           transition: reducedMotion ? 'none' : 'opacity 500ms ease',
         }}
       />
       {overlay && <div style={{ position: 'absolute', inset: 0, background: overlay }} />}
+    </div>
+  );
+}
+
+/**
+ * The armed world's name and tagline, set over the photograph (Cycle 113).
+ * Shared by the entrance and the loading surface so the name does not move at
+ * the moment the player presses Play.
+ *
+ * It also publishes `--sds-toast-top-offset`, which is the shared overlay
+ * rail's existing knob for "start below this". The rail is fixed top-centre and
+ * so is the masthead, so without it the WebGL-fallback notice lands on the
+ * world's name - visible in the first Phase 6 capture. HudLayout publishes the
+ * same variable for the in-game HUD; this is the entrance's half of that
+ * contract rather than a second mechanism.
+ */
+export function Masthead({
+  world, badge, children,
+}: { world: World; badge?: ReactNode; children?: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const publish = () => {
+      document.documentElement.style.setProperty(
+        '--sds-toast-top-offset',
+        `${Math.ceil(el.getBoundingClientRect().bottom)}px`,
+      );
+    };
+    publish();
+    // Guarded: jsdom has no ResizeObserver, and neither did Safari before 13.1.
+    // The resize listener alone still covers the case that actually moves this
+    // box (an orientation change), so the fallback is not a stub.
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
+    ro?.observe(el);
+    window.addEventListener('resize', publish);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', publish);
+      document.documentElement.style.removeProperty('--sds-toast-top-offset');
+    };
+  }, []);
+
+  return (
+    <div className="sds-ent-masthead" ref={ref}>
+      <div className="sds-ent-world-name">{world.name}{badge}</div>
+      <div className="sds-ent-world-tagline">{world.tagline}</div>
+      {children}
     </div>
   );
 }
