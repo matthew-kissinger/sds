@@ -7,6 +7,12 @@
 
 @import "tailwindcss";
 
+/* Cycle 113 Phase 1: the entrance has its own sheet. It must be imported after
+   tailwindcss so the `components` layer it targets is already declared, and
+   before the @source lines below only because CSS requires every @import to
+   precede ordinary rules. */
+@import "./entrance.css";
+
 /* Tell Tailwind where to scan for classes */
 @source "../js/**/*.js";
 @source "../index.html";

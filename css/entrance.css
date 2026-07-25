@@ -1,0 +1,784 @@
+/**
+ * Cycle 113 Phase 1 - the entrance stylesheet.
+ *
+ * The front door's own sheet, imported by css/main.css. Before this the
+ * entrance carried 47 inline style objects in one component, which is why none
+ * of its controls had a hover, focus or active state: an inline style has no
+ * pseudo-classes to hang them on. Everything visual for js/components/entrance/
+ * lives here now, and Entrance.tsx / EntrancePicker.tsx / LoadingScreen.tsx
+ * carry className only.
+ *
+ * Rules this file holds itself to:
+ *
+ *   - Pastoral tokens only (D16). No hex literal enters this file; anything
+ *     that needs a tint composes it with color-mix() over a --color-* token,
+ *     the same shape js/components/ui/tokens.ts `alpha()` emits.
+ *   - Phone case first. The base rules ARE the 390x844 layout; one
+ *     `min-width: 721px` block upgrades to desktop. 721 is not arbitrary: it
+ *     is useViewport's `compact` boundary, so JS and CSS agree on one number.
+ *   - Motion is opt-in. Every transition and animation sits inside
+ *     `prefers-reduced-motion: no-preference`, so the calm case is the default
+ *     rather than a prop threaded through from React.
+ *   - The collapsed panel stays short. Its top edge must clear the dog in all
+ *     four D8 heroes, which sit between 73.5% and 76% down the frame. See the
+ *     `.sds-ent-panel` note and Phase 6's clearance probe.
+ *
+ * The `[data-navfocus]` ring from main.css (controller / keyboard roving
+ * focus) is `!important` and deliberately outranks the `:focus-visible` styles
+ * below, so a gamepad player sees the amber ring, not two competing outlines.
+ */
+
+@layer components {
+  /* ---------------------------------------------------------------- tokens */
+  /* Derived surfaces, defined once on both roots so children inherit. The
+     entrance and the loading surface are one visual room (Phase 5); they read
+     the same values rather than each re-deriving them. */
+  .sds-ent,
+  .sds-ent-loading {
+    --ent-glass: color-mix(in srgb, var(--color-cream) 82%, transparent);
+    --ent-glass-solid: color-mix(in srgb, var(--color-cream) 92%, transparent);
+    --ent-hairline: var(--color-glass-warm-border);
+    --ent-lift: 0 10px 34px color-mix(in srgb, var(--color-ink) 22%, transparent);
+    --ent-lift-sm: 0 6px 20px color-mix(in srgb, var(--color-ink) 20%, transparent);
+    --ent-fill: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    --ent-fill-hover: color-mix(in srgb, var(--color-ink) 10%, transparent);
+    --ent-fill-strong: color-mix(in srgb, var(--color-ink) 14%, transparent);
+    --ent-on-photo: color-mix(in srgb, var(--color-cream) 70%, transparent);
+    --ent-radius: 20px;
+    --ent-radius-sm: 12px;
+
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--color-ink);
+  }
+
+  /* ------------------------------------------------------------- the hero */
+  .sds-ent-hero {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Warm legibility gradient: dark enough at the top for the wordmark and at
+     the bottom for the panel's hairline, transparent across the middle band
+     where the flock and the destination live. */
+  .sds-ent-veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-ink) 30%, transparent) 0%,
+      transparent 24%,
+      transparent 54%,
+      color-mix(in srgb, var(--color-ink) 52%, transparent) 100%
+    );
+  }
+
+  /* -------------------------------------------------------------- top bar */
+  .sds-ent-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: max(16px, env(safe-area-inset-top)) 16px 16px;
+  }
+
+  .sds-ent-wordmark {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--color-cream);
+    text-shadow: 0 2px 12px color-mix(in srgb, var(--color-ink) 50%, transparent);
+  }
+
+  .sds-ent-corner {
+    position: relative;
+    display: flex;
+    gap: 8px;
+  }
+
+  /* ----------------------------------------------------- round icon button */
+  /* One shape for the corner nav and the world arrows. Both sit directly on
+     the photograph, so both need the same frosted backing to stay legible
+     against a bright sky or a dark treeline. */
+  .sds-ent-iconbtn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--ent-hairline);
+    border-radius: 50%;
+    background: var(--ent-on-photo);
+    color: var(--color-ink);
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sds-ent-iconbtn:hover {
+    background: color-mix(in srgb, var(--color-cream) 88%, transparent);
+  }
+
+  .sds-ent-iconbtn:active {
+    background: color-mix(in srgb, var(--color-cream) 94%, transparent);
+  }
+
+  /* --------------------------------------------------------- world arrows */
+  /* D3 moves world switching onto the image edges. Vertically they sit at 46%,
+     which is below the top bar and well above the panel, so they never land in
+     the dog band the heroes are framed around. */
+  .sds-ent-arrow {
+    position: absolute;
+    top: 46%;
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+
+  .sds-ent-arrow-prev { left: 10px; }
+  .sds-ent-arrow-next { right: 10px; }
+
+  /* ------------------------------------------------------------ info menu */
+  .sds-ent-menu {
+    position: absolute;
+    top: 48px;
+    right: 0;
+    min-width: 176px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--ent-hairline);
+    border-radius: 14px;
+    background: var(--ent-glass-solid);
+    box-shadow: var(--ent-lift);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .sds-ent-menu-scrim {
+    position: fixed;
+    inset: 0;
+  }
+
+  .sds-ent-menu-item {
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .sds-ent-menu-item:hover {
+    background: color-mix(in srgb, var(--color-accent-meadow) 14%, transparent);
+  }
+
+  .sds-ent-menu-item:active {
+    background: color-mix(in srgb, var(--color-accent-meadow) 22%, transparent);
+  }
+
+  /* The licence line, demoted here in Cycle 112 Phase 3 (D6). One quiet home,
+     one click away, off every play surface. */
+  .sds-ent-legal {
+    margin: 4px 8px 2px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ent-hairline);
+    max-width: 200px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--color-ink-soft);
+  }
+
+  .sds-ent-legal a {
+    color: var(--color-ink);
+    text-decoration: underline;
+  }
+
+  /* ----------------------------------------------------------- the panel */
+  /* The one-door panel. Collapsed it holds a world name, a tagline, one
+     summary line, one Play and one multiplayer line, and nothing else. It is
+     kept deliberately short: the D8 heroes put the dog between 73.5% and 76%
+     down the frame, so a panel whose top edge sits below 72% of viewport
+     height clears the dog on every scene without re-shooting anything. The old
+     panel was 362px tall at 1440x900 and covered all four. */
+  .sds-ent-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .sds-ent-panel {
+    width: 100%;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    border: 1px solid var(--ent-hairline);
+    border-bottom: 0;
+    border-radius: var(--ent-radius) var(--ent-radius) 0 0;
+    background: var(--ent-glass);
+    box-shadow: var(--ent-lift);
+    color: var(--color-ink);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .sds-ent-world {
+    text-align: center;
+  }
+
+  .sds-ent-world-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 21px;
+    line-height: 1.15;
+  }
+
+  .sds-ent-world-tagline {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.25;
+    color: var(--color-ink-soft);
+  }
+
+  .sds-ent-badge {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 8px;
+    padding: 2px 9px;
+    border: 1px solid var(--ent-hairline);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-accent-gold) 18%, transparent);
+    color: var(--color-ink);
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .sds-ent-dots {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 7px;
+  }
+
+  .sds-ent-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-ink) 22%, transparent);
+  }
+
+  .sds-ent-dot-on {
+    width: 16px;
+    background: var(--color-accent-gold);
+  }
+
+  /* ------------------------------------------------------- summary line */
+  /* The entrance's one question, collapsed. Reads the armed selection as a
+     sentence and opens the picker in place; it is the only route to mode,
+     rung and dog. */
+  .sds-ent-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 10px;
+    padding: 8px 14px;
+    border: 1px solid var(--ent-hairline);
+    border-radius: var(--ent-radius-sm);
+    background: var(--ent-fill);
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sds-ent-summary:hover {
+    background: var(--ent-fill-hover);
+  }
+
+  .sds-ent-summary:active {
+    background: var(--ent-fill-strong);
+  }
+
+  .sds-ent-summary-chevron {
+    display: inline-grid;
+    place-items: center;
+    color: var(--color-ink-soft);
+  }
+
+  /* ------------------------------------------------------------ the play */
+  .sds-ent-play {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 50px;
+    margin-top: 10px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 15px;
+    background: var(--color-accent-meadow);
+    color: var(--color-cream);
+    font: inherit;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--color-accent-meadow) 45%, transparent);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sds-ent-play:hover {
+    background: color-mix(in srgb, var(--color-accent-meadow) 88%, var(--color-ink));
+  }
+
+  .sds-ent-play:active {
+    transform: translateY(1px);
+  }
+
+  .sds-ent-play:disabled {
+    background: var(--ent-fill-hover);
+    color: var(--color-ink-soft);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Multiplayer keeps a text-weight line (D6's one explicit exception to
+     "everything leaves the primary surface"), because nobody finds it
+     otherwise. Text weight, not a second button. */
+  .sds-ent-mp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 32px;
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-ink-soft);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sds-ent-mp:hover {
+    color: var(--color-ink);
+    text-decoration: underline;
+  }
+
+  /* ---------------------------------------------------------- the picker */
+  /* Opens in place above Play rather than as a modal, so the player never
+     leaves the door to answer the question it asked. */
+  .sds-ent-picker {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ent-hairline);
+  }
+
+  .sds-ent-picker-group + .sds-ent-picker-group {
+    margin-top: 10px;
+  }
+
+  .sds-ent-picker-label {
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+  }
+
+  .sds-ent-chiprow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sds-ent-chip {
+    flex-shrink: 0;
+    min-height: 36px;
+    padding: 7px 14px;
+    border: 1px solid var(--ent-hairline);
+    border-radius: 999px;
+    background: var(--ent-fill);
+    color: var(--color-ink-soft);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sds-ent-chip:hover {
+    background: var(--ent-fill-hover);
+    color: var(--color-ink);
+  }
+
+  .sds-ent-chip-on,
+  .sds-ent-chip-on:hover {
+    border-color: transparent;
+    background: var(--color-accent-gold);
+    color: var(--color-ink);
+  }
+
+  .sds-ent-rungs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sds-ent-rung {
+    flex: 1 1 auto;
+    min-width: 84px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--ent-hairline);
+    border-radius: var(--ent-radius-sm);
+    background: var(--ent-fill);
+    color: var(--color-ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sds-ent-rung:hover {
+    background: var(--ent-fill-hover);
+  }
+
+  .sds-ent-rung-on {
+    border-color: transparent;
+    background: var(--color-accent-meadow);
+    color: var(--color-cream);
+  }
+
+  .sds-ent-rung-on:hover {
+    background: color-mix(in srgb, var(--color-accent-meadow) 88%, var(--color-ink));
+  }
+
+  .sds-ent-rung-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .sds-ent-rung-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 11px;
+    opacity: 0.85;
+  }
+
+  /* D7: three rungs plus More. `More` is a peer of the rungs in shape but not
+     in weight, so it reads as a way to see the rest rather than as a fourth
+     difficulty. */
+  .sds-ent-more {
+    flex: 0 0 auto;
+    min-width: 64px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px dashed var(--ent-hairline);
+    border-radius: var(--ent-radius-sm);
+    background: none;
+    color: var(--color-ink-soft);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sds-ent-more:hover {
+    background: var(--ent-fill);
+    color: var(--color-ink);
+  }
+
+  .sds-ent-dogs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .sds-ent-dog {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 2px;
+    border: 0;
+    border-radius: var(--ent-radius-sm);
+    background: none;
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sds-ent-dog:hover {
+    background: var(--ent-fill);
+  }
+
+  .sds-ent-dog-wrap {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
+
+  .sds-ent-dog-badge {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 16px;
+    height: 16px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ent-hairline);
+    border-radius: 50%;
+    background: var(--color-accent-gold);
+    color: var(--color-ink);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--color-ink) 30%, transparent);
+  }
+
+  /* --------------------------------------------------- the loading room */
+  /* Phase 5: the loading surface is the entrance holding still, not a second
+     screen. Same glass, same radii, same dock position, so the commit reads as
+     one surface changing state. */
+  .sds-ent-loading-scrim {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-ink) 28%, transparent);
+  }
+
+  .sds-ent-loading-panel {
+    width: 100%;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    border: 1px solid var(--ent-hairline);
+    border-bottom: 0;
+    border-radius: var(--ent-radius) var(--ent-radius) 0 0;
+    background: var(--ent-glass);
+    box-shadow: var(--ent-lift);
+    color: var(--color-ink);
+    text-align: center;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .sds-ent-loading-sub {
+    margin-top: 3px;
+    font-size: 13px;
+    color: var(--color-ink-soft);
+  }
+
+  .sds-ent-bar {
+    width: 100%;
+    max-width: 360px;
+    margin: 16px auto 0;
+  }
+
+  .sds-ent-bar-track {
+    height: 10px;
+    overflow: hidden;
+    border: 1px solid var(--ent-hairline);
+    border-radius: 999px;
+    background: var(--color-glass-warm);
+  }
+
+  .sds-ent-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--color-accent-meadow);
+  }
+
+  .sds-ent-bar-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--color-ink-soft);
+  }
+
+  /* ------------------------------------------------------- focus states */
+  /* The thing 47 inline style objects could not have. Grouped so a new
+     interactive class has one obvious place to register itself, and so
+     tests/ui/entranceStylesheet.spec.ts can hold the coverage. */
+  .sds-ent-iconbtn:focus-visible,
+  .sds-ent-menu-item:focus-visible,
+  .sds-ent-summary:focus-visible,
+  .sds-ent-play:focus-visible,
+  .sds-ent-mp:focus-visible,
+  .sds-ent-chip:focus-visible,
+  .sds-ent-rung:focus-visible,
+  .sds-ent-more:focus-visible,
+  .sds-ent-dog:focus-visible {
+    outline: 2px solid var(--color-accent-gold);
+    outline-offset: 2px;
+  }
+
+  /* ------------------------------------------------------------- motion */
+  /* Opt-in, so a visitor who asked for stillness gets it without any component
+     threading a `reducedMotion` prop down to decide. */
+  @media (prefers-reduced-motion: no-preference) {
+    .sds-ent-hero-drift {
+      animation: sds-kenburns 26s ease-in-out infinite alternate;
+    }
+
+    .sds-ent-panel {
+      animation: sds-rise 360ms var(--ease-pastoral);
+    }
+
+    .sds-ent-iconbtn,
+    .sds-ent-menu-item,
+    .sds-ent-summary,
+    .sds-ent-play,
+    .sds-ent-mp,
+    .sds-ent-chip,
+    .sds-ent-rung,
+    .sds-ent-more,
+    .sds-ent-dog {
+      transition:
+        background-color var(--duration-fast) var(--ease-pastoral),
+        color var(--duration-fast) var(--ease-pastoral),
+        transform var(--duration-instant) var(--ease-pastoral);
+    }
+
+    .sds-ent-dot {
+      transition: width var(--duration-base) var(--ease-pastoral);
+    }
+
+    .sds-ent-bar-fill {
+      transition: width var(--duration-base) var(--ease-pastoral);
+    }
+  }
+
+  /* -------------------------------------------------- desktop (>= 721px) */
+  /* 721 is useViewport's `compact` boundary. The phone case above is the real
+     design; this block widens it, lifts the sheet off the bottom edge, and
+     buys a little more type. */
+  @media (min-width: 721px) {
+    .sds-ent-top {
+      padding: 22px 28px;
+    }
+
+    .sds-ent-wordmark {
+      font-size: 26px;
+    }
+
+    .sds-ent-dock {
+      padding-bottom: 24px;
+    }
+
+    .sds-ent-panel {
+      width: min(520px, 92%);
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--ent-hairline);
+      border-radius: var(--ent-radius);
+    }
+
+    .sds-ent-world-name {
+      font-size: 24px;
+    }
+
+    .sds-ent-world-tagline {
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sds-ent-arrow-prev { left: 20px; }
+    .sds-ent-arrow-next { right: 20px; }
+
+    .sds-ent-iconbtn {
+      width: 42px;
+      height: 42px;
+    }
+
+    .sds-ent-loading-panel {
+      width: min(520px, 92%);
+      padding: 22px 20px;
+      border-bottom: 1px solid var(--ent-hairline);
+      border-radius: var(--ent-radius);
+    }
+  }
+
+  /* A coarse pointer has no hover, and a sticky :hover state after a tap reads
+     as a stuck button. Each rule below restores that class's own resting look,
+     rather than flattening them all to one fill (which would have repainted the
+     icon buttons and the active chip in the wrong colour on every phone). */
+  @media (hover: none) {
+    .sds-ent-iconbtn:hover {
+      background: var(--ent-on-photo);
+    }
+
+    .sds-ent-menu-item:hover {
+      background: none;
+    }
+
+    .sds-ent-summary:hover,
+    .sds-ent-chip:hover,
+    .sds-ent-rung:hover {
+      background: var(--ent-fill);
+      color: inherit;
+    }
+
+    .sds-ent-chip:hover {
+      color: var(--color-ink-soft);
+    }
+
+    .sds-ent-chip-on:hover {
+      background: var(--color-accent-gold);
+      color: var(--color-ink);
+    }
+
+    .sds-ent-rung-on:hover {
+      background: var(--color-accent-meadow);
+      color: var(--color-cream);
+    }
+
+    .sds-ent-more:hover,
+    .sds-ent-dog:hover {
+      background: none;
+      color: inherit;
+    }
+
+    .sds-ent-more:hover {
+      color: var(--color-ink-soft);
+    }
+
+    .sds-ent-play:hover {
+      background: var(--color-accent-meadow);
+    }
+
+    .sds-ent-mp:hover {
+      color: var(--color-ink-soft);
+      text-decoration: none;
+    }
+  }
+}
