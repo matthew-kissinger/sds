@@ -170,6 +170,9 @@ cycle105-validation/*
 # objectPosition values shipped in js/components/entrance/worlds.ts, so
 # tests/ui/heroCrop.spec.ts needs them at hand. 4KB of derived numbers; the
 # PNGs beside them stay ignored.
+!cycle116-validation/
+cycle116-validation/*
+!cycle116-validation/PROBE_FINDINGS.md
 !cycle112-validation/
 cycle112-validation/*
 !cycle112-validation/heroes/
