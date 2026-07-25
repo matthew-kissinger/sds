@@ -62,3 +62,13 @@ This is Cycle 116's whole premise, now confirmed by looking rather than assumed.
 ## What this changes
 
 Defects 5 and 6 are Cycle 116's brief and are confirmed. Defects 1, 3 and 4 are carryover from closed cycles and belong in the backlog, not in this cycle's scope - with the caveat that defect 1 is a shipped acceptance line that is false, so it is recorded as such rather than as a nice-to-have. Defect 2 is the lighting cycle the Cycle 116 plan already named.
+
+## What Rolling Hills showed, for the two cycles after this one
+
+`10-rh-corral`, the one non-Home-Field framing, confirms two later cycles' premises by looking.
+
+**Cycle 118's water.** The surface is exactly the cel-shaded cobalt-and-teal sheet D-W describes: a saturated deep blue with hard bright-cyan streaks where the ripple quantisation bands, sitting against a warm green island. It does not belong to the same world as the grass and the sky. The "before" capture this cycle needs is not going to be a subtle comparison.
+
+**Cycle 117's findability.** The corral flag pillar is a handful of pixels at play distance, and the objective marker over it is a green diamond a few pixels across. The island currently sells "find it from the far shore" on an affordance that is close to invisible in the frame the player actually looks at. That is the thing Cycle 116's column has to replace, and it is a stronger argument for the column than the plan made.
+
+Also worth recording: the island terrain reads much darker than Home Field's, near-black green with lime speckle, while the trees on it are lit normally. Not investigated. Noted here so a later lighting cycle has a starting point rather than a surprise.
