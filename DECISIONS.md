@@ -1468,6 +1468,32 @@ Matt picked KTX2 as the Cycle 98 goal from the Cycle 97 carryover, then directed
 
 ---
 
+## Front door alignment, round two - 11 decisions locked (2026-07-25)
+
+Cycle 116 closed with a browser probe that finally ran, and it surfaced six defects plus three questions the first register could not have anticipated. Matt answered all of them in one sitting across three rounds. These bind Cycles 117 and after. Do not re-litigate.
+
+**D22. The island leaderboard resets by explicit row id.** D12's factual premise was false: a read-only query against remote D1 (not the public API, which hard-excludes anomaly-flagged rows and so could never have seen it) found `id=16` is a genuine 12.6-minute human playthrough, the Cycle 57 incident run, un-flagged by hand in production, reading `Dev#0002` only because its owner used the rename endpoint that shipped in the same cycle. Cycle 58 shaped the 200-sheep rung around keeping it comparable. Matt chose reset with those facts stated. Scope is ids **16 and 21 only**, never `scene_id`. `id=23` (`Pakrohk#0001`, an outside player, on the counting board) is untouched. Procedure: archive the rows to a committed artifact **first** so the data is recoverable, then a new append-only `worker/migrations/0011_*.sql`, applied by the deploy workflow migrate job. No raw DELETE against production.
+
+**D23. Cycle 117 ships the pasture; Rolling Hills competitive stays as it is.** `shared/CompetitiveLayout.js` hardcodes Home Field geometry regardless of scene, so competitive on the island is already using the wrong layout. `allowedModes` is not narrowed and the cycle is not expanded. Constraint that follows: deleting `corral` removes what competitive currently falls back to, so competitive must stay **broken as before, not newly crashing**. It lands on a layout, never on a null.
+
+**D24. N pastures is real work, deferred.** One pasture per player is the right end state for island competitive. It needs `shared/CompetitiveLayout.js` made scene-aware, which is deterministic-sim work that moves `competitive.json`, so it is a cycle rather than a phase.
+
+**D25. The dusk lamp is fixed by fixing the light first.** Cycle 115's ramp is exactly correct (0 above 19 degrees elevation, full at -6) and bound to a farmhouse on the only public scene with no day/night cycle, so the sun sits pinned at 70 degrees and it can never fire. The order is: make the directional light track time of day, then give Home Field an evening, then the lamp fires for free. Fixing the lamp without the light would produce a navy sky over a noon-lit field.
+
+**D26. Zero-grass zones get a ground treatment.** Cycle 114's exclusion smoothstep is correct, but the excluded interior has nothing in it, so the pen and the 80m farmhouse yard read as flat painted planes and the transition still reads as the knife edge the cycle set out to remove. The fix is not a wider band. Short grass, dirt or worn ground goes inside the zone.
+
+**D27. The gate approach is retreated with D26, not separately.** Both are ground material where grass has been removed. One visual language for worn ground, authored in one sitting, rather than two attempts at the same surface.
+
+**D28. The floating diamond retires.** The billboard over the destination is a separate code path from `CorralCompass` and now does the same job as Cycle 116's column, worse: it is screen-facing, has no ground connection, and is visible from behind and below the gate. Two markers for one job is what D13 set out to end.
+
+**D29. The column gets tuned on Rolling Hills.** It renders as specified but reads thin and pale at 190m, more pole than beacon. Rolling Hills is the scene that sells itself on spotting the objective from across the island, so it is judged and tuned there rather than on a flat pasture.
+
+**D30. Cycle 118 is the full rewrite per D-W.** One shared surface model, both render paths authored against it, the palette retired from all four definition sites into one, analytic normals from the colour noise, and the boot-frozen fog fixed. Not a palette-only pass: the two paths already diverged once without a shared authority.
+
+**D31. A bundle cycle comes before the new work.** `main-*.js` survived Cycle 116 by 14 bytes and the `other` family needed a design fix to get under. Rather than fight the ratchet on every phase of every remaining cycle, spend one cycle on payload first. The ratchet has been catching genuine design errors and is not to be spent by raising it.
+
+**D32. All three new bodies of work happen.** Lighting, worn ground and N pastures are all in, sequenced after the bundle cycle. Order is judgement, not decree: lighting first because it is the root cause under D25 and the only measured defect of the three, then worn ground, then N pastures last because it is deterministic-sim work touching live multiplayer rooms.
+
 ## Front door alignment - 21 decisions locked (2026-07-24)
 
 Matt opened a front-end review after a play session: gameplay good, front door not. A grounded pass over the shipping v2.6.2 build (7 captures, 4 measurements, real boot rather than code reading) produced a decision register; Matt answered all of it in one sitting. A review artifact plus three live entrance comps were the alignment surface. These are constraints for Cycle 112 and after. Do not re-litigate.

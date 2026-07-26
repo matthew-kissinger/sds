@@ -104,6 +104,32 @@ What to keep from the current implementation: shoreline foam driven by boundary 
 
 Capture the current water in good light and at dusk before starting, so the rewrite has a before to beat.
 
+## The program extends: Cycles 119 to 122
+
+Locked 2026-07-25 in the round-two register ([`../DECISIONS.md`](../DECISIONS.md), D22 to D32). The original 112-118 program was authored before anyone had looked at the build in a browser. Cycle 116's probe changed that, and the work below is what it found plus what Matt decided about it.
+
+## Cycle 119 - bundle
+
+Payload before more features (D31). `main-*.js` survived Cycle 116 by **14 bytes** and the `other` chunk family needed a design fix to get under its budget. Every remaining cycle adds code, and a ratchet with no headroom stops arbitrating design merit and starts arbitrating whichever phase happens to run last.
+
+Do not raise the ratchets. They have caught real design errors twice in three cycles, most recently a four-module split that should have been one.
+
+## Cycle 120 - lighting
+
+The root cause under two other things (D25). The production `DirectionalLight` reads **3.456 white at every time of day including full night**, measured across 14 points while fog tracks correctly and dramatically. Make it track time of day, then give Home Field an evening, then Cycle 115's dusk lamp fires for free.
+
+Also recorded and unverified beyond a code read: on the production WebGPU path the `AmbientLight` may be constructed and never added to the scene. Confirm or refute before building on it.
+
+## Cycle 121 - worn ground
+
+D26 and D27, deliberately one cycle rather than two. Cycle 114's grass exclusion smoothstep is correct, but a zero-grass zone with nothing in it reads as a flat painted plane, and the transition still reads as the knife edge the cycle set out to remove. The pen interior, the 80m farmhouse yard and the gate approach are all the same surface: ground where grass has been removed. They get one treatment.
+
+## Cycle 122 - N pastures
+
+D24. One pasture per player for island competitive, which needs `shared/CompetitiveLayout.js` made scene-aware. Deterministic-sim work that moves `competitive.json`, touching live multiplayer rooms, so it needs an in-flight-session migration story per [`../.claude/rules/multiplayer.md`](../.claude/rules/multiplayer.md). Last of the four because it is the riskiest.
+
+Until it ships, Rolling Hills competitive uses the wrong layout and is knowingly left that way (D23). The one constraint: it stays broken as it is, never newly crashing.
+
 ## Deliberately not in this program
 
 - **GPU flocking.** D18. Harness only.

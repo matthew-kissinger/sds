@@ -2,7 +2,7 @@
 
 > **Updated:** 2026-07-25
 > **For:** Cycle 117
-> **Pickup priority:** Phase 1 is a pure `shared/` generalisation that cannot regress anything, so start there. But read the leaderboard section first, because one decision in this cycle is Matt's and not an agent's.
+> **Pickup priority:** Phase 1 is a pure `shared/` generalisation that cannot regress anything, so start there. Every open question was decided 2026-07-25; read the D22 to D32 section before touching the leaderboard or the corral delete.
 
 ## Current State
 
@@ -24,16 +24,22 @@ Cycle 118's before-capture also landed early, because it is worthless once rewri
 
 **One design constraint carries the whole multiplayer risk.** Do not add a top-level `gate:` to `shared/scenes/rolling-hills.js`. `createGameState` derives `gameState.gate` from `scene.gate`, and a non-null gate switches on Worker gate-attraction the island has never had. Declare the gate nested inside the pasture descriptor, where `createGameState` does not read it.
 
-## What needs Matt, not an agent
+## Decided 2026-07-25, round two - D22 to D32
 
-**D12's premise for resetting the Sheep Dog Island leaderboard is false.** A read-only query against remote D1 (not the public API, which hard-excludes anomaly-flagged rows and so could never have seen this) found that `id=16` is a genuine 12.6-minute human playthrough, the Cycle 57 incident run, un-flagged by hand in production. It reads `Dev#0002` only because its owner used the rename endpoint that shipped in the same cycle. Cycle 58 put the 200-sheep rung on Rolling Hills specifically to keep that row comparable, and the rationale is still live in the scene def. `id=23` belongs to `Pakrohk#0001`, an outside player.
+Matt answered every open question in one sitting across three rounds. Full text in [`DECISIONS.md`](DECISIONS.md), "Front door alignment, round two"; program shape in [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md).
 
-D12's own escape clause covers this: archive as all-time instead. **Archiving and resetting are different work and the choice is yours.** Phase 7 exports the rows and stops. Nothing has been deleted or modified.
+What binds this cycle:
 
-Two smaller calls, both upstream of code:
+- **D22, the leaderboard resets by explicit row id.** Matt chose reset with the facts stated: `id=16` is a real 12.6-minute human playthrough and Cycle 58 shaped the ladder around it. Scope is **ids 16 and 21 only**, never `scene_id`. `id=23` (`Pakrohk#0001`, an outside player) is untouched. **Procedure is archive first, then migrate:** export the rows to a committed artifact so the data is recoverable, then a new append-only `worker/migrations/0011_*.sql` applied by the deploy workflow. No raw DELETE against production. Phase 7 does the archive; the migration is the step after.
+- **D23, competitive stays as it is.** Do not narrow `allowedModes` and do not expand the cycle. The one thing to protect: deleting `corral` removes what competitive currently falls back to, so it must stay **broken as before, not newly crashing**. It lands on a layout, never on a null. Verify this explicitly.
+- **D28, the floating diamond retires.** Phase 5.
+- **D29, tune the column on Rolling Hills.** Phase 6. It reads thin and pale at 190m and this is the scene that sells itself on distance.
 
-- **Rolling Hills competitive and timed.** The scene advertises both, but `shared/CompetitiveLayout.js` hardcodes Home Field geometry regardless of scene. Keep a corral for competitive, drop the island to cooperative-only, or ship N pastures. Must be settled before the corral delete lands, since the delete removes the fallback. Phase 2 assumes cooperative-only and says so in the diff.
-- **Findability.** The flag pillar and the zap are the island's "find it from the far shore" affordance. Cycle 116's column replaces them in principle. The probe showed the flag is a handful of pixels at play distance, so the column is probably an upgrade, but confirm it in Phase 6 rather than assume it.
+What comes after, so nobody re-opens it:
+
+- **Cycle 118** is the full water rewrite per D-W and D30, not a palette pass.
+- **Cycle 119 is a bundle cycle** (D31). `main-*.js` survived Cycle 116 by 14 bytes. Do not raise the ratchets.
+- **Cycles 120, 121, 122** are lighting, worn ground, and N pastures (D25, D26, D27, D24, D32). Lighting first because it is the root cause under the dusk lamp and the only measured defect of the three.
 
 ## Carryover worth knowing before you start
 
