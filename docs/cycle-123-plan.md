@@ -22,17 +22,33 @@ Measured at the end of Cycle 120, over a ground-heavy strip on Rolling Hills:
 
 Terrain goes to black and grass falls 12%. The result is a self-lit field hanging over nothing.
 
+## What a second read-only pass found (2026-07-26)
+
+Run before any code, per the practice that has paid for itself in every cycle from 117 on. **One claim above is overstated and the correction makes this cycle materially cheaper.**
+
+**1. "It does not read the scene lights at all" is too strong. Grass already takes a live, per-frame sun direction, on both render paths.** [`js/GrassSystem.js`](../js/GrassSystem.js):2732 `setSunDirection` is driven from the per-frame loop at [`js/main.js`](../js/main.js):2989, and it already forks correctly: the WebGPU path goes through `webgpuGrassBladeMaterialControls.setSunDirection` (and the streamed material alongside it), the WebGL path writes `uniforms.uSunDirection`. The blade shader spends it on the Cycle 14 fake-SSS backlight and a `sunTip` highlight.
+
+**What grass does not read is sun _intensity_, sun _colour_, or ambient.** That is the whole defect, stated precisely: **the direction rotates all day and the brightness never changes.** Which is exactly why night is a glowing field - the sun sets, the grass dutifully re-aims a highlight at it, and nothing dims.
+
+**2. This makes hard stop 3 much cheaper than it reads.** "Both render paths, one shape" already has a shape: one setter, already symmetric, already per-frame, already covering the streamed material. Phase 1 extends an existing channel rather than inventing two new ones. **Do not build a parallel path for intensity next to the existing one for direction** - that is how the two twins drift.
+
+**3. Do not reach for `MeshStandardNodeMaterial`.** [`js/world/webgpuGrassBladeNodeMaterial.js`](../js/world/webgpuGrassBladeNodeMaterial.js):261 reads `MeshBasicNodeMaterial ?? MeshStandardNodeMaterial`, which looks like a lit branch waiting to be switched on and is not: it is a defensive fallback for when the basic class is unavailable, and the material tags itself `webgpuGrassLighting: 'shader-owned-unlit'` versus `'standard-fallback'` at :308. The blade shader owns its entire colour graph - gradient, hue nudge, AO, contact shadow, backlight, rim, fog. Handing that to a standard material would take all of it over at once and blow hard stop 1 on the first frame.
+
+**4. Hard stop 1 has a provable form, and it should be proved rather than eyeballed.** Normalise the new term so it is **exactly 1.0 at the reference preset**, and noon cannot move by construction. [`js/world/sceneLightingRig.js`](../js/world/sceneLightingRig.js) already names every constant that needs: `SUN_REFERENCE_INTENSITY` (`1.1 * Math.PI`), `AMBIENT_REFERENCE_INTENSITY` (`0.75 * Math.PI`), `REFERENCE_AMBIENT_HINT` (0.55, the `pastoral-noon` hint both were tuned at) and `ambientIntensityForHint`. This is the same shape as Cycle 120's finding that the measured 3.456 was just `1.1 * Math.PI` - **a unit test pinning the multiplier to 1.0 at the reference is worth more than a golden here**, because it fails at the cause instead of at the pixel.
+
 **This is currently bounded and about to stop being bounded.** Newsheepdogland is the only scene with a live day loop and it is entrance-gated, so no player sees it today. Cycle 120 Phase 3 wants to give Home Field an evening, and Home Field is wall-to-wall grass, the default scene, and the entrance backdrop. That is why D33 puts this cycle first.
 
 ## Phase 1 - Grass takes the light (~4hr)
 
-1. Establish what the grass shader actually receives today, on **both** paths, before changing anything. The WebGPU node material and the GLSL twin have to end up describing the same surface, per [`.claude/rules/scene-and-render.md`](../.claude/rules/scene-and-render.md).
-2. Give it the scene's light. [`js/world/sceneLightingRig.js`](../js/world/sceneLightingRig.js) is the authority Cycle 120 built and is where the sun and ambient now live; grass should read it rather than sampling a light directly or restating a constant. The rig exists precisely so a consumer cannot silently bind the wrong object.
-3. **Noon must not move.** The grass look at full sun is shipped, reviewed and in every golden. This cycle changes what happens as the sun goes down, not what the field looks like at midday. A change that improves noon is out of scope and is a separate decision.
+1. Establish what the grass shader actually receives today, on **both** paths, before changing anything. **Finding 1 above did this** - it receives a live per-frame sun direction and nothing else. Confirm that reading rather than repeating it, then move on; the expensive part of this phase is item 4, not item 1.
+2. **Extend the existing channel.** `GrassSystem.setSunDirection` is already the per-frame, both-paths, streamed-material-aware setter. Widen what it carries (intensity and colour, plus ambient) rather than adding a second setter beside it. A name change may fall out of that honestly - if it now carries the light rather than the direction, say so - but that is a consequence, not the goal.
+3. Give it the scene's light from the authority. [`js/world/sceneLightingRig.js`](../js/world/sceneLightingRig.js) is what Cycle 120 built and is where the sun and ambient now live; grass should read it rather than sampling a light directly or restating a constant. The rig exists precisely so a consumer cannot silently bind the wrong object, which is the defect Cycle 120 was fixing.
+4. **Noon must not move, and prove it by construction rather than by eye.** Per finding 4, normalise the term to exactly 1.0 at the reference preset and pin that with a unit test. The grass look at full sun is shipped, reviewed and in every golden. This cycle changes what happens as the sun goes down, not what the field looks like at midday. A change that improves noon is out of scope and is a separate decision.
+5. **Do not switch material classes** (finding 3). The blade shader owns its colour graph; the new term multiplies into it.
 
 **Watch item:** grass is one InstancedMesh with a custom shader and per-instance attributes, and [`.claude/rules/scene-and-render.md`](../.claude/rules/scene-and-render.md) forbids decomposing it. Whatever this costs per blade, it is paid 5,000 times on Solo Chaos. Measure the frame cost rather than assuming a lighting term is free.
 
-**Acceptance (EARS):** When the sun sets, then the grass shall darken with it, and a spec shall fail if it does not. When the sun is at the reference noon, then the grass shall be unchanged from its shipped look, pinned by a golden. When Phase 1 ships, then both render paths shall take the same light from the same authority and a spec shall fail if only one does.
+**Acceptance (EARS):** When the sun sets, then the grass shall darken with it, and a spec shall fail if it does not. When the light is at the reference preset, then the new lighting term shall evaluate to exactly 1.0, pinned by a unit test. When the sun is at the reference noon, then the grass shall be unchanged from its shipped look, pinned by a golden. When Phase 1 ships, then both render paths shall take the same light from the same authority through the same setter, and a spec shall fail if only one does. When Phase 1 ships, then the grass material class shall be unchanged.
 
 ## Phase 2 - The ratio, measured (~2hr)
 
@@ -92,6 +108,8 @@ Cycle 120's deferred Phase 3, unblocked. **This is the phase that closes D25.**
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
 - [ ] When the sun sets, then the grass shall darken with it, pinned by a spec.
 - [ ] When the sun is at the reference noon, then the grass shall be unchanged from its shipped look.
+- [ ] When the light is at the reference preset, then the lighting term shall evaluate to exactly 1.0, pinned by a unit test.
+- [ ] When the cycle closes, then the grass material class shall be unchanged and no second sun-update path shall exist beside the first.
 - [ ] When Phase 1 ships, then both render paths shall take the same light from the same authority, pinned by a spec.
 - [ ] When Phase 2 ships, then the grass-to-terrain ratio shall be recorded before and after, at three times of day, on all four biomes.
 - [ ] When Home Field runs past sundown, then the dusk lamp shall light, observed in a browser.
