@@ -11,6 +11,12 @@ import {
 } from '../atmosphere/skyFogSamplePacket.js';
 import { DEFAULT_SCENE_ID, getSceneById } from '../../shared/scenes/index.js';
 import { setWebGpuModules } from '../world/webgpuModules.js';
+import {
+    AMBIENT_REFERENCE_INTENSITY,
+    PRODUCTION_SCENE_LIGHT_PROFILE,
+    SUN_REFERENCE_INTENSITY,
+    SceneLightingRig,
+} from '../world/sceneLightingRig.js';
 
 let cachedWebGpuModules = null;
 
@@ -150,6 +156,13 @@ export async function createProductionWebGpuSceneManagerOptions(state = null, op
             }
             return renderer;
         },
+        // Cycle 120: the lights go in during SceneManager.setupLighting, not in a
+        // post-construction hook. Atmosphere is built in the Game constructor and
+        // binds the scene's lights there, so anything that lands later is a light
+        // nothing is wired to drive - which is the defect this cycle fixes.
+        installSceneLights(sceneManager) {
+            return installProductionWebGpuLightingBridge(sceneManager, state);
+        },
     };
 }
 
@@ -168,12 +181,7 @@ export async function createProductionWebGpuGameOptions(urlParams, state = null)
         state.route = 'renderer-webgpu-production';
     }
 
-    return {
-        sceneManagerOptions,
-        beforeInit: async (gameInstance) => {
-            installProductionWebGpuLightingBridge(gameInstance.sceneManager, state);
-        },
-    };
+    return { sceneManagerOptions };
 }
 
 export async function recordProductionWebGpuBoot(gameInstance, state = null) {
@@ -241,8 +249,8 @@ export async function recordProductionWebGpuBoot(gameInstance, state = null) {
     state.error = state.ok ? null : 'production-webgpu-gates-failed';
 }
 
-export function installProductionWebGpuLightingBridge(sceneManager, state = null) {
-    const { AmbientLight, DirectionalLight } = cachedWebGpuModules ?? {};
+export function installProductionWebGpuLightingBridge(sceneManager, state = null, webGpuModules = null) {
+    const { AmbientLight, DirectionalLight } = webGpuModules ?? cachedWebGpuModules ?? {};
     if (typeof AmbientLight !== 'function' || typeof DirectionalLight !== 'function') {
         if (state) {
             state.webGpuLightingBridge = {
@@ -253,19 +261,14 @@ export function installProductionWebGpuLightingBridge(sceneManager, state = null
         return null;
     }
 
-    const ambient = new AmbientLight(0xffffff, 0.75 * Math.PI);
-    const directional = new DirectionalLight(0xffffff, 1.1 * Math.PI);
-    // Cycle 90: same light direction as always (zero shading change), but
-    // positioned far enough out to carry a shadow camera. The WebGL scene
-    // light has cast shadows since the beginning; the WebGPU bridge never
-    // did, which is why every WebGPU desktop scene shipped shadow-less.
-    const SHADOW_DISTANCE = 260;
-    const dirLen = Math.hypot(1.5, 2.2, 3.0);
-    directional.position.set(
-        (1.5 / dirLen) * SHADOW_DISTANCE,
-        (2.2 / dirLen) * SHADOW_DISTANCE,
-        (3.0 / dirLen) * SHADOW_DISTANCE,
-    );
+    const ambient = new AmbientLight(0xffffff, AMBIENT_REFERENCE_INTENSITY);
+    const directional = new DirectionalLight(0xffffff, SUN_REFERENCE_INTENSITY);
+    // Cycle 90 put the light far enough out to carry a shadow camera; the
+    // WebGL scene light has cast shadows since the beginning and the WebGPU
+    // bridge never did, which is why every WebGPU desktop scene shipped
+    // shadow-less. Cycle 120 moved the transform itself to SceneLightingRig,
+    // which composes the sun DIRECTION with the shadow-frustum FOCUS instead of
+    // letting two callers fight over `position`.
     if (!sceneManager.isMobile) {
         // Shadow camera is configured here but DISABLED by default: the
         // depth pass measured field/practice down from 144 to 48 FPS median
@@ -296,27 +299,41 @@ export function installProductionWebGpuLightingBridge(sceneManager, state = null
         directional.shadow.normalBias = 0.04 * biasScale;
         directional.userData.shadowConfigured = true;
     }
-    sceneManager.getScene().add(ambient);
-    sceneManager.getScene().add(directional);
-    sceneManager.getScene().add(directional.target);
+    const scene = sceneManager.getScene();
+    scene.add(ambient);
+    scene.add(directional);
+    scene.add(directional.target);
     // Day-loop scenes recenter the shadow frustum on the dog each frame
     // (initWorld._tickDayLoop); everything else keeps the origin-centered
     // box, mirroring the WebGL light's behavior.
     sceneManager.webgpuSunLight = directional;
+    sceneManager.ambientLight = ambient;
+    // Constructing the rig asserts both lights are in the scene and stamps the
+    // boot sun transform. `Atmosphere.bindSceneLights` drives it from here on.
+    const rig = new SceneLightingRig({
+        scene,
+        ambient,
+        sun: directional,
+        profile: PRODUCTION_SCENE_LIGHT_PROFILE,
+    });
+    sceneManager.sceneLightingRig = rig;
     const proof = {
         source: 'production-webgpu-lighting-bridge',
-        proofOnlyBridge: true,
-        ambientAdded: sceneManager.getScene().children.includes(ambient),
-        directionalAdded: sceneManager.getScene().children.includes(directional),
-        ok: sceneManager.getScene().children.includes(ambient)
-            && sceneManager.getScene().children.includes(directional),
+        ambientAdded: scene.children.includes(ambient),
+        directionalAdded: scene.children.includes(directional),
+        rigInstalled: sceneManager.sceneLightingRig === rig,
+        ok: scene.children.includes(ambient)
+            && scene.children.includes(directional)
+            && sceneManager.sceneLightingRig === rig,
     };
     if (state) state.webGpuLightingBridge = proof;
 
     return {
+        rig,
         dispose() {
-            sceneManager.getScene().remove(ambient);
-            sceneManager.getScene().remove(directional);
+            scene.remove(ambient);
+            scene.remove(directional);
+            if (sceneManager.sceneLightingRig === rig) sceneManager.sceneLightingRig = null;
         },
         proof,
     };

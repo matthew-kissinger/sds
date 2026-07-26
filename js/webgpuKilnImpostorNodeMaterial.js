@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2 as ThreeVector2, Vector3 as ThreeVector3, Color as ThreeColor } from 'three';
 import { FOLIAGE_RIG, buildFoliageImpostorColorNode } from './world/foliageLightingRig.js';
+import { SUN_REFERENCE_INTENSITY } from './world/sceneLightingRig.js';
 
 /**
  * Cycle 101 Phase 3: production consolidated octahedral tree impostor material.
@@ -235,18 +236,29 @@ export function createWebGpuConsolidatedTreeImpostorMaterial(webGpuModules, opts
   // brightness is no longer a magic number (Cycle 104 Phase 2, Q2). It decomposes
   // into the LOD0 leaf's directional sun intensity times a reserved canopy residual.
   //
-  // The impostor's sun term is fed atmosphere.sun.light.intensity (SunSystem
-  // DirectionalLight = 1.0), but the WebGPU LOD0 leaves are lit by the production
-  // bridge directional at 1.1*PI (~3.46), so the impostor sun was ~3.4x too weak and
-  // the old brightness=6 compensated it blind. Scaling by LEAF_SUN_INTENSITY puts the
-  // impostor on the same sun footing as the leaf it replaces (the principled cure);
-  // IMPOSTOR_CANOPY_RESIDUAL (~1.7) is the reserved on-device canopy knob. The residual
-  // is set to preserve the Matt-validated Cycle-103 look (1.1*PI * 1.74 ~= 6.0, the
-  // prior value) on this commit; P5 dials it against the LOD0 SSIM A/B across scenes
-  // (Open Country shares it, unverified).
-  // SOURCE: installProductionWebGpuLightingBridge, productionWebGpuBoot.js:251 -
-  //   new DirectionalLight(0xffffff, 1.1 * Math.PI).
-  const LEAF_SUN_INTENSITY = 1.1 * Math.PI;
+  // The impostor's sun term is fed atmosphere.sun.light.intensity, but the WebGPU
+  // LOD0 leaves are lit by the production bridge directional at 1.1*PI (~3.46), so
+  // the impostor sun was ~3.4x too weak and the old brightness=6 compensated it
+  // blind. Scaling by LEAF_SUN_INTENSITY puts the impostor on the same sun footing
+  // as the leaf it replaces (the principled cure); IMPOSTOR_CANOPY_RESIDUAL (~1.7)
+  // is the reserved on-device canopy knob. The residual is set to preserve the
+  // Matt-validated Cycle-103 look (1.1*PI * 1.74 ~= 6.0, the prior value).
+  //
+  // Cycle 120 DECISION - the impostor tracks the LIVE sun, through a FIXED
+  // reference. The reference intensity stops being a copy of the boot constant and
+  // is imported from the one place that owns it (SceneLightingRig), because that
+  // constant is no longer what the scene light reads: the production directional
+  // is now SUN_REFERENCE_INTENSITY * daylight-gate, and the gate rides in through
+  // setImpostorTint's `sunIntensity` (which is SunSystem's light intensity, now
+  // the same gate). So the impostor's sun term is
+  //   sunColor * gate * SUN_REFERENCE_INTENSITY * IMPOSTOR_CANOPY_RESIDUAL,
+  // exactly the canopy residual above the LOD0 leaf's own
+  //   sunColor * gate * SUN_REFERENCE_INTENSITY, at every hour rather than only at
+  // noon. The alternative - freezing the impostor at the reference - would leave
+  // far trees lit at midday through a night the leaves in front of them had gone
+  // dark for. Value-preserving at the reference: gate = 1 reproduces the shipped
+  // product to the last bit.
+  const LEAF_SUN_INTENSITY = SUN_REFERENCE_INTENSITY;
   const IMPOSTOR_CANOPY_RESIDUAL = 1.74;
   const directWrapNode = uniform(0.4);
   const sunSatNode = uniform(0.3);

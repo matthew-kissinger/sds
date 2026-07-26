@@ -96,6 +96,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { Atmosphere } from '/js/atmosphere/Atmosphere.js';
 import { SKY_PRESETS } from '/js/atmosphere/skyPresets.js';
+import { SceneLightingRig, WEBGL_SCENE_LIGHT_PROFILE } from '/js/world/sceneLightingRig.js';
 import { loadKilnImpostor } from '/js/kiln-impostor-material.js';
 
 const TREE_SCALE = 15.0;
@@ -154,7 +155,7 @@ const paneI = makePane(document.getElementById('canvasI'));
 // fog, and sun direction. They share preset state externally. The
 // SDS Atmosphere class doesn't own its ambient light — the host (SceneManager)
 // creates an AmbientLight or HemisphereLight, adds it to the scene, then
-// binds via `bindAmbientLight(light)`. Mirror that pattern here so the
+// binds via `bindSceneLights(rig)`. Mirror that pattern here so the
 // preset switch can drive ambient color + intensity per ToD.
 const atmoL = new Atmosphere(paneL.scene, { initialPreset: 'pastoral-noon', enableClouds: false, attachSunLight: true });
 const atmoI = new Atmosphere(paneI.scene, { initialPreset: 'pastoral-noon', enableClouds: false, attachSunLight: true });
@@ -162,9 +163,14 @@ const atmoI = new Atmosphere(paneI.scene, { initialPreset: 'pastoral-noon', enab
 // Replace the bootstrap sun + ambient with atmosphere-driven ones.
 paneL.scene.remove(paneL.sun);
 paneI.scene.remove(paneI.sun);
-// Bind paneL.ambient + paneI.ambient to their respective atmospheres.
-atmoL.bindAmbientLight(paneL.ambient);
-atmoI.bindAmbientLight(paneI.ambient);
+// Bind paneL.ambient + paneI.ambient to their respective atmospheres. The rig
+// asserts each light is in the scene it is handed, which is the point of it.
+atmoL.bindSceneLights(new SceneLightingRig({
+  scene: paneL.scene, ambient: paneL.ambient, profile: WEBGL_SCENE_LIGHT_PROFILE,
+}));
+atmoI.bindSceneLights(new SceneLightingRig({
+  scene: paneI.scene, ambient: paneI.ambient, profile: WEBGL_SCENE_LIGHT_PROFILE,
+}));
 
 // --- Tree loading ---
 const dracoLoader = new DRACOLoader();
@@ -218,10 +224,10 @@ function pumpImpostorUniforms(atmo) {
   // the SAME convention — see TerrainBuilder.setImpostorTint passing
   // `atmosphere.sun.dirVec`.
   const sunDir = atmo.sun?.getDirection?.() ?? new THREE.Vector3(0.5, 0.7, 0.3).normalize();
-  // Atmosphere's ambientLight isn't exposed directly; reuse hemi/sky tint.
+  // The preset ambient hint, same source main.js feeds setImpostorTint from.
   // Fallback: 35% grey × π for irradiance space.
-  const ambientColor = atmo.ambientLight?.color ?? new THREE.Color(0.35, 0.35, 0.35);
-  const ambientIntensity = atmo.ambientLight?.intensity ?? Math.PI;
+  const ambientColor = atmo.ambientHintColor ?? new THREE.Color(0.35, 0.35, 0.35);
+  const ambientIntensity = atmo.ambientHintIntensity ?? Math.PI;
 
   const u = imp.material.uniforms;
   u.uSunColor.value.copy(sunColor).multiplyScalar(sunIntensity);

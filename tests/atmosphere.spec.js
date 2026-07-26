@@ -28,6 +28,7 @@ import {
   getRequiredPresetNames,
   isKnownPreset,
 } from '../js/atmosphere/index.js';
+import { SceneLightingRig, WEBGL_SCENE_LIGHT_PROFILE } from '../js/world/sceneLightingRig.js';
 import { NIGHT_T } from '../shared/survival/dayClock.js';
 import { fogColorMatchingSky } from '../js/atmosphere/paintedHorizon.js';
 
@@ -556,7 +557,12 @@ describe('Atmosphere orchestrator', () => {
     const scene = new THREE.Scene();
     const atmo = new Atmosphere(scene, { initialPreset: 'pastoral-noon' });
     const ambient = new THREE.AmbientLight(0xffffff, 1.0);
-    atmo.bindAmbientLight(ambient);
+    scene.add(ambient);
+    atmo.bindSceneLights(new SceneLightingRig({
+      scene,
+      ambient,
+      profile: WEBGL_SCENE_LIGHT_PROFILE,
+    }));
     atmo.startDayNightCycle({ secondsPerDay: 100, initialT: NIGHT_T });
     atmo.update(0);
 
@@ -576,11 +582,16 @@ describe('Atmosphere orchestrator', () => {
     atmo.dispose();
   });
 
-  it('bindAmbientLight applies the current preset ambient hint', () => {
+  it('bindSceneLights applies the current preset ambient hint', () => {
     const scene = new THREE.Scene();
     const atmo = new Atmosphere(scene, { initialPreset: 'overcast' });
     const ambient = new THREE.AmbientLight(0xffffff, 1.0);
-    atmo.bindAmbientLight(ambient);
+    scene.add(ambient);
+    atmo.bindSceneLights(new SceneLightingRig({
+      scene,
+      ambient,
+      profile: WEBGL_SCENE_LIGHT_PROFILE,
+    }));
     expect(ambient.intensity).toBeCloseTo(SKY_PRESETS.overcast.ambientIntensity, 5);
     atmo.dispose();
   });

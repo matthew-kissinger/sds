@@ -1,0 +1,80 @@
+[
+  {
+    "id": "field__sun05__classic__zoom60",
+    "meanLumaGolden": 71.986,
+    "meanLumaNow": 71.985,
+    "meanShift": -0.001,
+    "blockMAD_mean": 0.577,
+    "blockMAD_median": 0.411,
+    "blockMAD_p90": 1.35,
+    "blockMAD_max": 2.97,
+    "hotBlocks_gt5": 0,
+    "totalBlocks": 880,
+    "top3": "(38,5)=3.0 (32,6)=2.5 (32,8)=2.5"
+  },
+  {
+    "id": "field__sun085__classic__zoom60",
+    "meanLumaGolden": 71.859,
+    "meanLumaNow": 71.869,
+    "meanShift": 0.01,
+    "blockMAD_mean": 2.064,
+    "blockMAD_median": 1.745,
+    "blockMAD_p90": 4.3,
+    "blockMAD_max": 6.69,
+    "hotBlocks_gt5": 26,
+    "totalBlocks": 880,
+    "top3": "(36,4)=6.7 (32,8)=6.5 (28,6)=6.2"
+  },
+  {
+    "id": "open-country__sun05__classic__zoom60",
+    "meanLumaGolden": 50.218,
+    "meanLumaNow": 50.217,
+    "meanShift": -0.002,
+    "blockMAD_mean": 2.207,
+    "blockMAD_median": 1.939,
+    "blockMAD_p90": 4.478,
+    "blockMAD_max": 7.53,
+    "hotBlocks_gt5": 56,
+    "totalBlocks": 880,
+    "top3": "(9,7)=7.5 (1,12)=7.3 (8,7)=7.3"
+  },
+  {
+    "id": "open-country__sun085__classic__zoom60",
+    "meanLumaGolden": 47.411,
+    "meanLumaNow": 47.395,
+    "meanShift": -0.016,
+    "blockMAD_mean": 1.268,
+    "blockMAD_median": 1.018,
+    "blockMAD_p90": 2.826,
+    "blockMAD_max": 5.55,
+    "hotBlocks_gt5": 2,
+    "totalBlocks": 880,
+    "top3": "(32,6)=5.5 (0,12)=5.5 (20,6)=4.7"
+  },
+  {
+    "id": "rolling-hills__sun05__classic__zoom60",
+    "meanLumaGolden": 44.911,
+    "meanLumaNow": 44.914,
+    "meanShift": 0.003,
+    "blockMAD_mean": 0.876,
+    "blockMAD_median": 0.698,
+    "blockMAD_p90": 1.842,
+    "blockMAD_max": 3.36,
+    "hotBlocks_gt5": 0,
+    "totalBlocks": 880,
+    "top3": "(15,10)=3.4 (8,15)=3.2 (39,7)=3.1"
+  },
+  {
+    "id": "rolling-hills__sun085__classic__zoom60",
+    "meanLumaGolden": 37.87,
+    "meanLumaNow": 37.867,
+    "meanShift": -0.003,
+    "blockMAD_mean": 0.979,
+    "blockMAD_median": 0.821,
+    "blockMAD_p90": 2.108,
+    "blockMAD_max": 3.82,
+    "hotBlocks_gt5": 0,
+    "totalBlocks": 880,
+    "top3": "(38,8)=3.8 (15,9)=3.8 (39,20)=3.7"
+  }
+]

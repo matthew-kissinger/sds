@@ -219,7 +219,7 @@ class SheepDogSimulation {
             // paints at the horizon. Atmosphere needs the live operator.
             toneMapping: toneMappingFromRenderer(this.sceneManager.renderer),
         });
-        this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
+        this.atmosphere.bindSceneLights(this.sceneManager.sceneLightingRig);
         // Cycle 65: opt-in day/night sun arc when the scene declares it.
         if (this.currentScene.dayNight?.enabled) {
             this.atmosphere.startDayNightCycle({
@@ -1189,7 +1189,7 @@ class SheepDogSimulation {
             sceneFog: sceneDef.fog ?? null,
             toneMapping: toneMappingFromRenderer(this.sceneManager.renderer),
         });
-        this.atmosphere.bindAmbientLight(this.sceneManager.ambientLight);
+        this.atmosphere.bindSceneLights(this.sceneManager.sceneLightingRig);
         // Cycle 65: opt-in day/night sun arc when the scene declares it.
         if (sceneDef.dayNight?.enabled) {
             this.atmosphere.startDayNightCycle({
@@ -1504,18 +1504,13 @@ class SheepDogSimulation {
             this._tickDayLoop = this.dayLoop = this._wolfPack = this._survivalRun =
                 this._unmountDayNightChip = this._unmountMinimap =
                 this._updateMinimap = null;
+            this._sunShadowFollowArmed = false;
             // Cycle 90: recenter the scene light's shadow frustum back on the
             // origin when a day-loop run tears down; small scenes expect the
-            // WebGL-era origin-centered box.
-            const sunLight = this.sceneManager?.webgpuSunLight ?? null;
-            if (sunLight && this._sunShadowFollowOffset) {
-                const off = this._sunShadowFollowOffset;
-                sunLight.castShadow = false;
-                sunLight.position.set(off.x, off.y, off.z);
-                sunLight.target.position.set(0, 0, 0);
-                sunLight.target.updateMatrixWorld();
-                this._sunShadowFollowOffset = null;
-            }
+            // WebGL-era origin-centered box. Cycle 120: the focus is now its own
+            // input, so recentring cannot disturb the sun's angle.
+            this.sceneManager?.sceneLightingRig?.setShadowCasting(false);
+            this.sceneManager?.sceneLightingRig?.clearShadowFocus();
 
             // Reset gameplay flags — but NOT gameMode/competitiveGates,
             // which the menu wants to remember for "Play Again" UX.
@@ -3006,9 +3001,14 @@ class SheepDogSimulation {
             // v2 (2026-05-04): also pass light intensities — kiln impostors
             // pre-multiply them in so brightness tracks LOD0's
             // `color * intensity` PBR magnitude across time-of-day presets.
-            const ambientColor = this.atmosphere?.ambientLight?.color ?? null;
+            // Cycle 120: preset hints, not a light's absolute intensity. The
+            // impostor relight is calibrated in preset units against a fixed
+            // reference sun (webgpuKilnImpostorNodeMaterial's brightness node);
+            // reading the scene light instead would double-count whichever rig
+            // this session is rendering through.
+            const ambientColor = this.atmosphere?.ambientHintColor ?? null;
             const sunIntensity = this.atmosphere?.sun?.light?.intensity ?? 1;
-            const ambientIntensity = this.atmosphere?.ambientLight?.intensity ?? 1;
+            const ambientIntensity = this.atmosphere?.ambientHintIntensity ?? 1;
             this.terrainBuilder?.setImpostorTint?.(
                 sunLightColor, sunDir, ambientColor,
                 sunIntensity, ambientIntensity,

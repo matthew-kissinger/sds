@@ -17,6 +17,12 @@ import {
   sunDirectionFromPreset,
 } from './skyPresets.js';
 import { sampleSkyFogPacketFromSky } from './skyFogSamplePacket.js';
+import {
+  REFERENCE_AMBIENT_HINT,
+  SUN_REFERENCE_INTENSITY,
+  ambientIntensityForHint,
+  sunDaylightGate,
+} from '../world/sceneLightingRig.js';
 
 /**
  * Top-level atmosphere orchestrator. Owns:
@@ -111,10 +117,23 @@ export class Atmosphere {
       probeLog('atmosphere.fog.attached', { density: this.fog.density });
     }
 
-    /** @type {THREE.AmbientLight | THREE.HemisphereLight | null} */
-    this.ambientLight = null;
-    /** @private */
-    this.ambientBaseIntensity = 1.0;
+    /**
+     * The lights that are actually in the rendered scene. Bound once per scene
+     * load via `bindSceneLights`; null until then and in headless tests.
+     * @type {import('../world/sceneLightingRig.js').SceneLightingRig | null}
+     */
+    this.sceneLights = null;
+
+    /**
+     * The active preset's ambient hint, held here rather than read back off a
+     * light. Consumers that need "how bright is the sky right now" in preset
+     * units (the far-tree impostor tint) read these, so they stay decoupled
+     * from whichever rig this scene happens to be rendering through.
+     * @type {number}
+     */
+    this.ambientHintIntensity = REFERENCE_AMBIENT_HINT;
+    /** @type {THREE.Color} */
+    this.ambientHintColor = new THREE.Color(0xffffff);
 
     /**
      * Materials that light up after sundown. Bound by the scene body once the
@@ -241,12 +260,9 @@ export class Atmosphere {
       this.sky.resetCloudFeatureScale();
     }
 
-    if (this.ambientLight) {
-      const target = preset.ambientIntensity ?? this.ambientBaseIntensity;
-      this.ambientLight.intensity = target;
-      if (preset.ambientColor) {
-        this.ambientLight.color.copy(preset.ambientColor);
-      }
+    this.ambientHintIntensity = preset.ambientIntensity ?? REFERENCE_AMBIENT_HINT;
+    if (preset.ambientColor) {
+      this.ambientHintColor.copy(preset.ambientColor);
     }
 
     // Force LUT bake immediately so downstream samplers see real numbers.
@@ -257,6 +273,7 @@ export class Atmosphere {
     // this line a static scene would sit on whatever the last sample left
     // behind, which for a fresh Atmosphere is nothing at all.
     this.applyDuskLamps();
+    this.applySceneLighting();
     return true;
   }
 
@@ -316,6 +333,7 @@ export class Atmosphere {
       : this.sun.getAzimuth();
     this.sun.setAngles(nextElevation, nextAzimuth);
     this.applyDuskLamps();
+    this.applySceneLighting();
   }
 
   /**
@@ -341,6 +359,9 @@ export class Atmosphere {
     this.sky.getSun(this.scratchSunColor);
     this.sun.setColor(this.scratchSunColor);
     this.applyFogColor();
+    // After the colour snap above, not before: the scene's sun takes the
+    // freshly-baked chromaticity rather than the pre-jump one.
+    this.applySceneLighting();
     return true;
   }
 
@@ -395,23 +416,23 @@ export class Atmosphere {
   }
 
   /**
-   * Bind an ambient/hemisphere light so the orchestrator can modulate its
-   * intensity from preset state. Optional — if your scene already drives
-   * an ambient light, just don't call this.
-   * @param {THREE.AmbientLight | THREE.HemisphereLight} light
+   * Bind the lights that are actually in the rendered scene.
+   *
+   * ONE bind, not one per light. The defect this replaced was two
+   * `bindAmbientLight(sceneManager.ambientLight)` call sites pointed at an
+   * `AmbientLight` that, on the production WebGPU path, `setupLighting` never
+   * added to any scene - so the preset drive landed nowhere while the lights the
+   * renderer used sat at their boot constants. `SceneLightingRig`'s constructor
+   * asserts scene membership and throws, so handing this the wrong light is loud
+   * now instead of invisible.
+   *
+   * @param {import('../world/sceneLightingRig.js').SceneLightingRig | null} rig
+   * @returns {boolean} whether anything is bound.
    */
-  bindAmbientLight(light) {
-    this.ambientLight = light;
-    this.ambientBaseIntensity = light.intensity ?? 1.0;
-    if (this.currentPresetName) {
-      const preset = SKY_PRESETS[this.currentPresetName];
-      if (preset.ambientIntensity !== undefined) {
-        light.intensity = preset.ambientIntensity;
-      }
-      if (preset.ambientColor) {
-        light.color.copy(preset.ambientColor);
-      }
-    }
+  bindSceneLights(rig) {
+    this.sceneLights = rig ?? null;
+    this.applySceneLighting();
+    return !!this.sceneLights;
   }
 
   /**
@@ -518,8 +539,10 @@ export class Atmosphere {
     this.fog = null;
     // The materials belong to the scene body, which disposes itself. Drop the
     // references so a disposed Atmosphere cannot keep a torn-down scene's
-    // materials alive.
+    // materials alive. The lighting rig belongs to the SceneManager and outlives
+    // every scene swap, so this drops the reference and leaves the lights alone.
     this.duskLamps = [];
+    this.sceneLights = null;
   }
 
   /** @private */
@@ -619,16 +642,13 @@ export class Atmosphere {
     }
     this.sun.lerpColor(this.scratchTargetSunColor, dt, 0.6);
 
-    if (this.ambientLight) {
-      const ambIntensity = lerp(
-        a.ambientIntensity ?? 1.0,
-        b.ambientIntensity ?? 1.0,
-        m
-      );
-      this.ambientLight.intensity = ambIntensity;
-      if (a.ambientColor && b.ambientColor) {
-        this.ambientLight.color.copy(a.ambientColor).lerp(b.ambientColor, m);
-      }
+    this.ambientHintIntensity = lerp(
+      a.ambientIntensity ?? REFERENCE_AMBIENT_HINT,
+      b.ambientIntensity ?? REFERENCE_AMBIENT_HINT,
+      m
+    );
+    if (a.ambientColor && b.ambientColor) {
+      this.ambientHintColor.copy(a.ambientColor).lerp(b.ambientColor, m);
     }
 
     // Cloud coverage interpolated between preset baselines so a 'dusk'
@@ -649,10 +669,39 @@ export class Atmosphere {
     // Hold currentPresetName at the dominant side for diagnostics.
     this.currentPresetName = dominantName;
 
-    // Last, because it reads the sun angles this method set at the top. This is
+    // Last, because they read the sun angles this method set at the top. This is
     // the day-loop path (Newsheepdogland) and the `setTimeOfDay` path (the
     // cinematic capture rig, the skip-to-dusk cutscene).
     this.applyDuskLamps();
+    this.applySceneLighting();
+  }
+
+  /**
+   * Push the current sky state at the lights that are actually in the scene.
+   *
+   * Runs from every path that can move the sun or change the preset - the same
+   * set `applyDuskLamps` runs from, for the same reason. The rig owns the
+   * transform, so writing a direction here cannot disturb a day-loop scene's
+   * shadow frustum, and recentring that frustum cannot disturb the sun's angle.
+   *
+   * @private
+   */
+  applySceneLighting() {
+    const rig = this.sceneLights;
+    if (!rig) return;
+
+    rig.setAmbientIntensity(ambientIntensityForHint(this.ambientHintIntensity, rig.profile));
+    rig.setAmbientColor(this.ambientHintColor);
+
+    if (rig.profile?.drivesSun !== true) return;
+    const gate = sunDaylightGate(this.sun.getElevation());
+    // The same gate rides `SunSystem.light.intensity`, which is not in any scene
+    // and never was - it is the value `setImpostorTint` reads to keep the
+    // far-tree impostor on the same sun footing as the LOD0 leaf it replaces.
+    this.sun.setIntensity(gate);
+    rig.setSunIntensity(SUN_REFERENCE_INTENSITY * gate);
+    rig.setSunColor(this.sun.light.color);
+    rig.setSunDirection(this.sun.dirVec);
   }
 }
 

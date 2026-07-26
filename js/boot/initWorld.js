@@ -435,41 +435,39 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 // dog. Day-loop islands are far larger than the +-120m shadow
                 // box and the world origin sits in open water, so an
                 // origin-pinned frustum means no shadows anywhere on land.
-                // The light is the WebGPU lighting bridge's directional
-                // (productionWebGpuBoot); x/z snap to the shadow-map texel
-                // grid so the moving frustum doesn't shimmer the whole map.
-                const sunLight = game.sceneManager?.webgpuSunLight ?? null;
+                // x/z snap to the shadow-map texel grid so the moving frustum
+                // doesn't shimmer the whole map.
+                //
+                // Cycle 120: this used to write `sunLight.position` directly,
+                // which is also how the sun's DIRECTION is expressed - so the
+                // frustum follow and the atmosphere fought over one vector and
+                // whichever wrote last won. The rig takes the focus as its own
+                // input and derives the transform from focus + direction, so
+                // neither can clobber the other.
+                const rig = game.sceneManager?.sceneLightingRig ?? null;
+                const sunLight = rig?.sun ?? null;
                 if (sunLight?.userData?.shadowConfigured) {
                     const dog = game.gameState?.getSheepdog?.();
                     if (dog?.position) {
-                        if (!game._sunShadowFollowOffset) {
+                        if (!game._sunShadowFollowArmed) {
                             // First tick of a day-loop run: shadows on. The
                             // bridge ships them off because small grassed
                             // scenes pay the depth pass for shadows they
                             // can't show; teardown flips them back off.
-                            sunLight.castShadow = true;
-                            game._sunShadowFollowOffset = {
-                                x: sunLight.position.x - sunLight.target.position.x,
-                                y: sunLight.position.y - sunLight.target.position.y,
-                                z: sunLight.position.z - sunLight.target.position.z,
-                            };
+                            rig.setShadowCasting(true);
+                            game._sunShadowFollowArmed = true;
                         }
-                        const off = game._sunShadowFollowOffset;
                         const texel = (sunLight.shadow.camera.right - sunLight.shadow.camera.left)
                             / (sunLight.shadow.mapSize.x || 2048);
-                        const tx = Math.round(dog.position.x / texel) * texel;
-                        const tz = Math.round(dog.position.z / texel) * texel;
                         // Cycle 91 P1: the snap quantizes to ~0.14m steps, so a
                         // standing or slow dog produces the same (tx, tz) for many
-                        // frames; skip the light/target writes (and the matrix
-                        // update they force) until the snapped cell changes.
-                        if (tx !== off.lastTx || tz !== off.lastTz) {
-                            off.lastTx = tx;
-                            off.lastTz = tz;
-                            sunLight.position.set(tx + off.x, off.y, tz + off.z);
-                            sunLight.target.position.set(tx, 0, tz);
-                            sunLight.target.updateMatrixWorld();
-                        }
+                        // frames. `setShadowFocus` early-outs on an unchanged focus,
+                        // so the matrix update those writes force is skipped exactly
+                        // as before.
+                        rig.setShadowFocus(
+                            Math.round(dog.position.x / texel) * texel,
+                            Math.round(dog.position.z / texel) * texel,
+                        );
                     }
                 }
                 const t = dn.getT();

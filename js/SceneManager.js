@@ -7,6 +7,7 @@ import { initGlProbe, captureContext, captureFramebufferSample, captureWaterSamp
 import { configureProductionRenderer, createProductionWebGLRenderer } from './rendering/sceneRendererSetup.js';
 import { isMobileClient } from './utils/isMobileClient.js';
 import { initKtx2Loader } from './rendering/ktx2Loader.js';
+import { SceneLightingRig, WEBGL_SCENE_LIGHT_PROFILE } from './world/sceneLightingRig.js';
 
 /**
  * SceneManager - Three.js scene/lighting/renderer lifecycle plus competitive
@@ -131,7 +132,16 @@ export class SceneManager {
             0xFFFF00  // Yellow
         ];
         this.coloredMeshes = new Map(); // playerId -> array of meshes with applied colors
-        
+
+        // Cycle 120: whoever owns the renderer owns the lights that go in the
+        // scene. Read before init() because setupLighting() runs inside it, and
+        // the lights have to be in the scene before the Game constructor builds
+        // Atmosphere and binds them.
+        /** @private */
+        this.installSceneLights = options.installSceneLights ?? null;
+        /** @type {SceneLightingRig | null} */
+        this.sceneLightingRig = null;
+
         this.init();
 
         console.log(`[CAMERA] Initialized for ${this.isMobile ? 'MOBILE' : 'DESKTOP'} device`);
@@ -182,21 +192,27 @@ export class SceneManager {
         // Cycle 72 P3: the WebGPU renderer (three.webgpu) cannot bind lights
         // created from the WebGL `three` instance this module imports - they log
         // "THREE.LightsNode.setupNodeLights: Light node not found" every frame and
-        // contribute nothing to shading. The webgpu production boot installs its
-        // own webgpu-three lighting bridge for standard materials, and the node
-        // materials are self-lit from atmosphere uniforms, so these WebGL-three
-        // lights are pure warning spam on WebGPU. Create the ambient light (so
-        // Atmosphere can still bind to it) but only add the rig on WebGL. Zero
-        // render change on WebGPU (these lights never bound there).
+        // contribute nothing to shading. So on WebGPU the production boot supplies
+        // the lights (three.webgpu instances) through `installSceneLights`, and
+        // this module builds none.
+        //
+        // Cycle 120: it used to build the ambient anyway "so Atmosphere can still
+        // bind to it", and that was the whole defect - Atmosphere spent every
+        // frame driving an AmbientLight that was in no scene while the light the
+        // renderer actually used sat frozen at its boot constant. A light nobody
+        // renders is not a bind target.
         const isWebGpu = typeof this.renderer?.renderAsync === 'function';
+        if (isWebGpu) {
+            this.installSceneLights?.(this);
+            return;
+        }
 
         // Ambient light - adjusted for new lighting model (multiply by PI for similar appearance)
         // Stored on `this` so the Atmosphere module can bind to it and modulate
         // intensity / color from the active sky preset.
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.7 * Math.PI);
-        if (isWebGpu) return; // WebGL-three lights only warn on the WebGPU path
         this.scene.add(this.ambientLight);
-        
+
         // Directional light (sun) - adjusted for new lighting model
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8 * Math.PI);
         directionalLight.position.set(30, 70, 30);
@@ -222,6 +238,15 @@ export class SceneManager {
         const secondaryLight = new THREE.DirectionalLight(0xffd4a3, 0.3 * Math.PI);
         secondaryLight.position.set(-50, 40, -50);
         this.scene.add(secondaryLight);
+
+        // Cycle 120: the WebGL twin's key + fill stay static and out of scope
+        // (`drivesSun: false`), so its rig publishes the ambient only. Its anchor
+        // reproduces the raw preset hint this path has stamped since Cycle 9.
+        this.sceneLightingRig = new SceneLightingRig({
+            scene: this.scene,
+            ambient: this.ambientLight,
+            profile: WEBGL_SCENE_LIGHT_PROFILE,
+        });
     }
     
     updateCamera(sheepdog, deltaTime = 1 / 60) {
