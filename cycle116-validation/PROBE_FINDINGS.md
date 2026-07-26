@@ -72,3 +72,16 @@ Defects 5 and 6 are Cycle 116's brief and are confirmed. Defects 1, 3 and 4 are 
 **Cycle 117's findability.** The corral flag pillar is a handful of pixels at play distance, and the objective marker over it is a green diamond a few pixels across. The island currently sells "find it from the far shore" on an affordance that is close to invisible in the frame the player actually looks at. That is the thing Cycle 116's column has to replace, and it is a stronger argument for the column than the plan made.
 
 Also worth recording: the island terrain reads much darker than Home Field's, near-black green with lime speckle, while the trees on it are lit normally. Not investigated. Noted here so a later lighting cycle has a starting point rather than a surprise.
+
+## Post-implementation: the cue, looked at
+
+Re-ran the same framings after Cycle 116 shipped, into [`cue/`](cue/). Four visual acceptance lines confirmed by eye rather than by unit test, which is the thing the last two cycles did not do.
+
+- **`cue/09-horizon`, camera 190m out.** The column stands over the gate and clears the treeline. Visible, and it reads as a marker at a destination.
+- **`cue/01-gate-approach`, camera 26m out.** No column, which is correct: 26m is inside the 60m near threshold, so state 1 has handed over to state 2. The ground arc draws between the gate posts and the posts carry a warm rim, so the gate now reads as a gate rather than as an 8m break in a fence.
+
+Two honest notes rather than defects.
+
+**The column is thin and pale.** At 190m it reads more like a pole than a warm beacon. The acceptance line is that it renders and it does, but if the intent is "seen from the far shore" on a 380m island, it wants more presence. Tuning, and it is cheap to tune since the numbers are in one module.
+
+**The floating white diamond is still there.** The plan treated `CorralCompass` as the thing to reconcile with, and correctly found it already self-hides when the target is on-screen. But the diamond billboard over the gate is a different object on a different path, and it now competes with the column for the same job. It should go, or become the column's own head. Carryover.
