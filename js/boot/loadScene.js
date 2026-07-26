@@ -111,6 +111,12 @@ export async function disposeScene(game) {
         } catch (err) { console.warn('[SWAP] roundupZoneDecal teardown:', err); }
         game._roundupZoneDecal = null;
     }
+    // Cycle 116 Phase 2: THE gate cue dispose entry. The cue is scene-graph
+    // geometry at the previous scene's destination, so leaving it standing
+    // draws a column in the sea after a swap to an island. Phases 3-B and 4
+    // extend the controller's own dispose rather than adding a sibling here.
+    try { game._gateCue?.dispose(); } catch (err) { console.warn('[SWAP] gateCue:', err); }
+    game._gateCue = null;
     if (driftLog) baseSnap = step('effects', baseSnap);
 
     // 3. Sheep + sheepdog. Sheep before sheepdog so removeDistanceIndicator

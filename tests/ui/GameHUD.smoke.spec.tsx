@@ -23,6 +23,9 @@ vi.mock('react-i18next', () => ({
 const bridge = vi.hoisted(() => ({
     gameState: null as Record<string, unknown> | null,
     sceneManager: null as Record<string, unknown> | null,
+    // Cycle 116 Phase 5: CorralCompass renders the gate cue's published state
+    // and resolves nothing itself, so this is its entire input.
+    cueView: null as Record<string, unknown> | null,
     frameHandler: null as null | (() => void),
 }));
 
@@ -33,6 +36,7 @@ const tutorial = vi.hoisted(() => ({
 vi.mock('../../js/GameBridge.js', () => ({
     getGameState: () => bridge.gameState,
     getSceneManager: () => bridge.sceneManager,
+    getGateCueView: () => bridge.cueView,
     subscribeGameEvent: (name: string, cb: () => void) => {
         if (name === 'frame') bridge.frameHandler = cb;
         return () => {
@@ -61,6 +65,7 @@ afterEach(() => {
     localStorage.removeItem('sds-settings');
     bridge.gameState = null;
     bridge.sceneManager = null;
+    bridge.cueView = null;
     bridge.frameHandler = null;
     tutorial.active = false;
 });
@@ -135,19 +140,14 @@ describe('CameraModeIndicator (smoke)', () => {
 });
 
 describe('CorralCompass (smoke)', () => {
-    it('returns null without game state', () => {
+    it('returns null without a published cue view', () => {
         const { container } = render(<CorralCompass />);
         expect(container.firstChild).toBeNull();
     });
 
-    it('renders a distance arrow when the corral is off-screen', () => {
-        const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-        camera.position.set(0, 5, 0);
-        camera.updateMatrixWorld();
-        bridge.sceneManager = { getCamera: () => camera };
-        bridge.gameState = {
-            sheepdog: { position: { x: 0, z: 0 } },
-            corral: { center: { x: 500, z: 500 } },
+    it('renders a distance arrow when the cue says the destination is off-screen', () => {
+        bridge.cueView = {
+            showCompass: true, distance: 141.4, ndcX: 0.6, ndcY: -0.4, behind: false,
         };
         render(<CorralCompass />);
         // Distance label is `${distance}m` (off-screen target -> arrow shows).

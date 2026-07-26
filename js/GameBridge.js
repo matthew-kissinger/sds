@@ -60,6 +60,12 @@ export const getPerformanceMonitor = () => gameInstance?.performanceMonitor ?? n
 export const getSheepdog           = () => gameInstance?.sheepdog           ?? null;
 export const getMenuController     = () => gameInstance?.menuController     ?? null;
 export const getMultiplayerState   = () => gameInstance?.multiplayerState   ?? null;
+// Cycle 116 Phase 5: the gate cue's resolved state for the current frame -
+// where the destination is, how far it is, whether it projects on-screen, and
+// which of the cue's surfaces should be drawing. The cue owns all of that (it
+// holds the descriptor and the camera); CorralCompass reads it here and renders
+// it. Null before the first scene builds, and on a scene with no destination.
+export const getGateCueView        = () => gameInstance?._gateCue?.view       ?? null;
 
 // Status queries.
 export const isGameActive   = () => gameInstance?.gameState?.isGameActive?.() ?? false;

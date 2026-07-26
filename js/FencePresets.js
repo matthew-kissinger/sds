@@ -10,6 +10,7 @@ import {
     buildAuthoredGateLeaves,
     GATE_LEAF_INITIAL_OPEN_FRACTION,
 } from './world/gateLeafController.js';
+import { applyGatePostRim, GATE_RIM_MATERIALS_KEY } from './world/gateThreshold.js';
 
 /**
  * FencePresets - Modular fence asset system for reusable fence components
@@ -61,6 +62,27 @@ const PROCEDURAL_GATE_LEAF_OPEN_ANGLE = -Math.PI * 0.58;
 
 /** Node name for the procedural single-leaf door. */
 const PROCEDURAL_GATE_LEAF_NAME = 'GateLeaf';
+
+/**
+ * Node name for the fallback ground plane `addThresholdEffect` lays under a gate.
+ *
+ * Exported because `tests/fence-presets.spec.js` used to locate this mesh by
+ * `geometry.type === 'PlaneGeometry'`, in two places, and a geometry type is
+ * not an identity. It matches any plane that ever lands in a gate group, it
+ * matches nothing at all the moment this effect restyles, and one of the two
+ * call sites asserted the mesh was ABSENT - so a change that deleted the
+ * threshold outright would have made that assertion pass while the other threw.
+ * A name the spec imports from here fails at both sites, at import, the moment
+ * this stops existing.
+ *
+ * Cycle 116 note: this effect is unreachable on every shipping scene.
+ * `createGateStructure` returns early with the authored assembly before it, and
+ * `js/StructureBuilder.js` never calls `createGateStructure` at all on a scene
+ * with a corral. The cycle's ground threshold arc belongs to the cue, not to
+ * the gate group, which is what lets it draw on all four scenes; this stays as
+ * the no-asset fallback's own marker.
+ */
+export const GATE_FALLBACK_THRESHOLD_NAME = 'GateFallbackThreshold';
 
 /**
  * Bands along a procedural rail's long axis (Cycle 115 P2).
@@ -719,7 +741,7 @@ export class FencePresets {
                     buildAuthoredGateLeaves(gate),
                     GATE_LEAF_INITIAL_OPEN_FRACTION
                 );
-                return group;
+                return this._finishGateStructure(group);
             }
         }
 
@@ -749,7 +771,7 @@ export class FencePresets {
             this.addThresholdEffect(group, width, orientation, gateColor);
 
             this._addProceduralGateLeaf(group, width, orientation);
-            return group;
+            return this._finishGateStructure(group);
         }
 
         // Fallback to fully procedural geometry
@@ -806,7 +828,7 @@ export class FencePresets {
         this.addThresholdEffect(group, width, orientation, gateColor);
 
         this._addProceduralGateLeaf(group, width, orientation);
-        return group;
+        return this._finishGateStructure(group);
     }
 
     /**
@@ -818,6 +840,53 @@ export class FencePresets {
         const leaf = this.createProceduralGateLeaf(width, orientation);
         group.add(leaf.node);
         return attachGateLeafController(group, [leaf], GATE_LEAF_INITIAL_OPEN_FRACTION);
+    }
+
+    /**
+     * The one exit from `createGateStructure` (Cycle 116 Phase 3-A).
+     *
+     * Every branch above now returns through here, which is the point: the
+     * method has three of them (authored assembly, fence-kit posts, fully
+     * procedural) and a rim applied on one or two of them is a gate that lights
+     * up on some machines and some asset-load outcomes. There is nothing to
+     * remember to repeat.
+     *
+     * WHAT IT RIMS. Every mesh in the gate structure, which on the shipped path
+     * means the whole authored `Gate_Assembly`. That is deliberate rather than
+     * lazy: the assembly is a single GLB with no per-part mesh names to select
+     * posts by, and "the gate warms up" is the read the cue wants anyway. On the
+     * two fallback branches it catches the two posts, the arch and the swing
+     * leaf, which is the same read.
+     *
+     * WHAT IT DOES NOT TOUCH. The flanking border segments, the pen and the
+     * perimeter fence are all built elsewhere and never enter this group, so the
+     * warm stops at the mouth. That contrast IS the cue.
+     *
+     * The rim starts dark. `js/world/gateThreshold.js` derives one material per
+     * SOURCE material and leaves `emissiveIntensity` at 0; the per-frame owner
+     * reads `userData[GATE_RIM_MATERIALS_KEY]` and drives it from the camera's
+     * distance to the gate through `setGatePostRimIntensity`.
+     *
+     * @param {THREE.Group} group
+     * @returns {THREE.Group} the same group, for `return this._finishGateStructure(group)`
+     * @private
+     */
+    _finishGateStructure(group) {
+        const rimMaterials = new Set();
+        group.traverse(child => {
+            // Null for anything that cannot carry a rim: a group with no
+            // material at all, the unlit fallback ground threshold, a
+            // multi-material array. Nothing is assigned and nothing is
+            // published, so the per-frame owner is never handed a material with
+            // nothing to drive or one FencePresets shares with the whole field.
+            const rim = applyGatePostRim(child.material);
+            if (rim) {
+                child.material = rim;
+                rimMaterials.add(rim);
+            }
+        });
+        group.userData[GATE_RIM_MATERIALS_KEY] = [...rimMaterials];
+        return group;
     }
 
     /**
@@ -837,6 +906,7 @@ export class FencePresets {
         });
 
         const threshold = new THREE.Mesh(thresholdGeometry, thresholdMaterial);
+        threshold.name = GATE_FALLBACK_THRESHOLD_NAME;
         threshold.rotation.x = -Math.PI / 2;
         threshold.position.y = 0.01; // Slightly above ground to avoid z-fighting
         group.add(threshold);

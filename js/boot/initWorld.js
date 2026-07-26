@@ -670,6 +670,26 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             }
         }
 
+        // Cycle 116 Phase 2: THE gate cue construct site. One call, no scene
+        // guard, on the one path that runs for both a cold boot and a rebuild.
+        // Unconditional on purpose: bindGateCue disposes whatever the previous
+        // scene left and resolves the new descriptor itself, so a scene that
+        // declares no destination CLEARS the cue instead of inheriting one. The
+        // `if (sceneDef.X)` shape in main.js's rebuild is what strands a
+        // previous scene's fixtures, and this is the same lesson
+        // `bindDuskLamps` above learned.
+        //
+        // Lazily imported like every other effect in this file, which also
+        // keeps the cue and the descriptor out of the measured main-*.js
+        // ratchet. Its own try/catch: a cue that fails to load must not take
+        // the scene build down with it.
+        try {
+            const { bindGateCue } = await import('../effects/GateColumn.js');
+            bindGateCue(game);
+        } catch (err) {
+            console.warn('[CUE] bind:', err);
+        }
+
         // Cycle 5+: anime water for island scenes. Cycle 64: coastline scenes
         // (Newsheepdogland) get water too - the boot sits in the sea.
         // Built after structures and hidden in flat/rect scenes.

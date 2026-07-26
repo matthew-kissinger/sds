@@ -3034,6 +3034,13 @@ class SheepDogSimulation {
             this._portalEffect.update(deltaTime);
         }
         this._barkWaveEffect?.update(deltaTime);
+        // Cycle 116 Phase 2: THE gate cue hook. Every state of the cue (the
+        // column now, the threshold arc and the crossing pulse next) rides
+        // this one call, so there is one place that decides how far the dog is
+        // from the destination and one answer the whole cue agrees on. Do not
+        // add a second cue hook here; extend js/effects/GateColumn.js's
+        // controller instead.
+        this._gateCue?.update(deltaTime);
 
         // Render the scene (always render to show pause indicator)
         const renderResult = options.skipRender ? false : this.sceneManager.render();

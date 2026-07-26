@@ -330,18 +330,35 @@ export class GameState {
                 // gate opens. RH/Field have no objective — always open.
                 const corralOpen = isCorralOpen(this.objective);
 
+                // Cycle 116 Phase 4: the gate path's crossing signal, counted
+                // here and dispatched ONCE below rather than per sheep.
+                //
+                // The corral path's `corral-retired` has to be per sheep because
+                // the lightning zap is drawn at each one's position. The gate
+                // cue's pulse needs no position and no count - it needs "at
+                // least one" - so a per-sheep dispatch there would allocate a
+                // CustomEvent and walk the listener list 5,000 times over a Solo
+                // Chaos round to produce exactly the same single pulse per
+                // frame. Cycle 116 hard stop 4 is about that cost. An integer
+                // increment inside the loop and one event outside it is the same
+                // signal for the price of an add.
+                let gateCrossings = 0;
+
                 // Count retired sheep
                 for (let sheep of this.sheep) {
                     // Check retirement trigger:
                     //   - Cycle 5+: corral entry (Rolling Hills) when scene has `corral`
                     //   - Legacy: gate passage (Field, Open Country)
                     if (!sheep.hasPassedGate && !sheep.isRetiring) {
-                        let triggered = false;
-                        if (this.corral && corralOpen) {
-                            triggered = sheep.checkCorralAndRetire(this.corral);
-                        } else if (!this.corral) {
-                            triggered = sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior());
-                        }
+                        // Same two branches as before, written as one expression
+                        // (Cycle 116 P4). A scene has a corral or it does not, so
+                        // a `let` seeded false and reassigned in two of three
+                        // arms was always one shape too many, and the bytes it
+                        // costs are the bytes the once-per-frame dispatch below
+                        // needs against a ratchet with double digits of headroom.
+                        const triggered = this.corral
+                            ? corralOpen && sheep.checkCorralAndRetire(this.corral)
+                            : sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior());
                         if (triggered) {
                             // Cycle 58 P1: do NOT count the sheep here. The
                             // "count all passed/retiring" pass below is the single
@@ -351,15 +368,15 @@ export class GameState {
                             // early and isSoloComplete fired with a sheep still in
                             // the field (the "199 of 200" completion). Keep only
                             // the one-shot side effects (chime + corral zap).
-                            if (this.audioManager) {
-                                this.audioManager.playRewardingChime();
-                            }
+                            this.audioManager?.playRewardingChime();
                             // Cycle 5+: corral entry triggers a lightning zap
                             // effect. main.js listens and fires CorralZapEffect.
                             if (this.corral) {
                                 window.dispatchEvent(new CustomEvent('corral-retired', {
                                     detail: { x: sheep.position.x, z: sheep.position.z, y: sheep.mesh?.position?.y ?? 0 }
                                 }));
+                            } else {
+                                gateCrossings++;
                             }
                         }
                     }
@@ -368,6 +385,18 @@ export class GameState {
                     if (sheep.hasPassedGate || sheep.isRetiring) {
                         this.sheepRetired++;
                     }
+                }
+
+                // The sibling of the corral dispatch above, hoisted out of the
+                // loop. The name is `GATE_RETIRED_EVENT` in js/world/gateCue.js;
+                // it is written as a literal here because GameState is in the
+                // eagerly loaded chunk and importing the constant from the cue
+                // would pull the whole cue module into it (see that file's
+                // chunking note). tests/gate-retire-event.spec.js reads the
+                // constant and asserts this line carries exactly it, so the two
+                // cannot drift.
+                if (gateCrossings > 0) {
+                    window.dispatchEvent(new Event('gate-retired'));
                 }
             }
         }

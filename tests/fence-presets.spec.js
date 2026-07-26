@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { FencePresets } from '../js/FencePresets.js';
+import { FencePresets, GATE_FALLBACK_THRESHOLD_NAME } from '../js/FencePresets.js';
 
 function makeModule(name, meshName, geometry, meshY = 0) {
   const group = new THREE.Group();
@@ -12,6 +12,23 @@ function makeModule(name, meshName, geometry, meshY = 0) {
   mesh.position.y = meshY;
   group.add(mesh);
   return group;
+}
+
+/**
+ * The fallback gate's ground threshold, located by the name the builder writes
+ * rather than by its geometry type.
+ *
+ * Both call sites below used to search for `geometry.type === 'PlaneGeometry'`,
+ * which is not an identity: it matches any plane that ever lands in a gate
+ * group, and it silently matches NOTHING once the effect restyles. One site
+ * asserts the mesh is absent and one asserts where it sits, so a change that
+ * removed the threshold outright would have made the first pass while the
+ * second threw on `undefined.position`. Importing the name from the module
+ * means a removal takes both out at once, at import, with the module's own
+ * symbol as the failure.
+ */
+function findFallbackThreshold(gate) {
+  return gate.children.find(child => child.name === GATE_FALLBACK_THRESHOLD_NAME);
 }
 
 function bboxFor(node) {
@@ -35,7 +52,17 @@ describe('FencePresets GLB gate assembly', () => {
     gate.updateWorldMatrix(true, true);
 
     const assembly = gate.children.find(child => child.name === 'Gate_Assembly');
-    const threshold = gate.children.find(child => child.type === 'Mesh' && child.geometry?.type === 'PlaneGeometry');
+    const threshold = findFallbackThreshold(gate);
+
+    // Positive control, built from the same presets in the same test. Asserting
+    // an absence on its own is a hole: a change that deleted the fallback
+    // threshold outright would leave `toBeUndefined()` passing for the wrong
+    // reason. The control proves the locator still finds the thing when the
+    // thing is there, so the absence below means "the authored branch skipped
+    // it" rather than "there is nothing left to skip".
+    const control = new FencePresets();
+    control.useGLBModels = false;
+    expect(findFallbackThreshold(control.createGateStructure(8, 'horizontal'))).toBeDefined();
 
     expect(assembly).toBeDefined();
     expect(threshold).toBeUndefined();
@@ -98,7 +125,7 @@ describe('FencePresets GLB gate assembly', () => {
     const posts = gate.children.filter(child => child.name === 'Fence_Post');
     const header = gate.children.find(child => child.name === 'Fence_Rail');
     const arch = gate.children.find(child => child.name === 'Gate_Arch');
-    const threshold = gate.children.find(child => child.type === 'Mesh' && child.geometry?.type === 'PlaneGeometry');
+    const threshold = findFallbackThreshold(gate);
 
     expect(posts.length).toBe(2);
     expect(header).toBeUndefined();
