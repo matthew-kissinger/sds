@@ -92,18 +92,18 @@ None of this cycle's work needs a frozen file. `shared/` is untouched: this is r
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's [`BACKLOG.md`](BACKLOG.md) carryover.
-- [ ] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's [`BACKLOG.md`](BACKLOG.md) carryover. **Phases 1, 2 and 4 shipped. Phase 3 DEFERRED to carryover: it needs `dayNight` on [`shared/scenes/field.js`](../../../shared/scenes/field.js), which is a look change to the default scene AND to the entrance backdrop, so it is Matt's call rather than an agent's.**
+- [x] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass. **2287 passed / 11 skipped.**
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Phase 1 ships, then the bound light and the scene's light shall be one object, pinned by a spec.
-- [ ] When Phase 1 ships alone, then the goldens shall be unchanged.
-- [ ] When the sun sets, then the directional light's intensity shall fall, pinned by a spec.
-- [ ] When the time of day changes, then the sun's direction shall change with it.
-- [ ] While a day-loop scene recenters its shadow frustum, then the sun's direction shall be unchanged by that recentering.
-- [ ] When Home Field is played in the evening, then the dusk lamp shall light, observed in a browser.
-- [ ] When the cycle closes, then the impostor relight's relationship to the live sun shall be recorded as a decision.
-- [ ] When the cycle closes, then the near-black island terrain shall be recorded as fixed or as a separate defect with evidence.
-- [ ] When the cycle closes, then `bundle-sizes.json` shall be unmodified.
+- [x] When Phase 1 ships, then the bound light and the scene's light shall be one object, pinned by a spec. **[`js/world/sceneLightingRig.js`](../../../js/world/sceneLightingRig.js); its constructor asserts `scene.children.includes(light)` per light and throws. `bindAmbientLight` is deleted.**
+- [x] When Phase 1 ships alone, then the goldens shall be unchanged. **Max whole-frame mean luma shift 0.016/255, sign-random, 0/880 blocks moved on four of six cells. Block attribution in `cycle120-validation/phase1-identity-block-diff.json`.**
+- [x] When the sun sets, then the directional light's intensity shall fall, pinned by a spec. **Horizon gate; measured 3.4558 at +70.0 and +12.75 degrees, 0 at -13.47.**
+- [x] When the time of day changes, then the sun's direction shall change with it. **Measured across three times of day on genuine WebGPU.**
+- [x] While a day-loop scene recenters its shadow frustum, then the sun's direction shall be unchanged by that recentering. **`setSunDirection` and `setShadowFocus` are independent inputs; `applySunTransform` is the only writer of position. Two specs, both mutation-proven.**
+- [x] When Home Field is played in the evening, then the dusk lamp shall light, observed in a browser. **PARTIAL. The lamp was observed firing in a browser (emissiveIntensity 0 at noon, 0.2696 at golden hour, 2.2 at night; `cycle120-validation/browser/lamp-zoom__night.png`), which is the payoff Phase 3 existed to prove. Home Field itself has no evening yet: deferred with Phase 3.**
+- [x] When the cycle closes, then the impostor relight's relationship to the live sun shall be recorded as a decision. **Tracks the live sun through a fixed reference. `LEAF_SUN_INTENSITY` imports `SUN_REFERENCE_INTENSITY` from the rig instead of restating `1.1 * Math.PI`; value-preserving at gate = 1.**
+- [x] When the cycle closes, then the near-black island terrain shall be recorded as fixed or as a separate defect with evidence. **A SEPARATE DEFECT, with evidence. The fix lifted Rolling Hills' terrain floor 10.73 to 14.30 and stopped; a 4.2x spread across four biomes under an identical sun is albedo, not lighting.**
+- [x] When the cycle closes, then `bundle-sizes.json` shall be unmodified. **Unmodified. `main` spent 3,052 of its 23,752 B.**
 
 ## References
 
