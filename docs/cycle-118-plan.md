@@ -1,0 +1,138 @@
+# Cycle 118 - water-rewrite
+
+> Authored 2026-07-25 from a read-only reconnaissance pass against the shipped build, after Phase 1's before-capture had already landed. **The reconnaissance corrected four claims in [`../cycle118-validation/WATER_BEFORE.md`](../cycle118-validation/WATER_BEFORE.md) and one in D30.** Those corrections are in "What measurement changed" below and they move real work around. Read that section before the phases.
+
+## Goal
+
+The water stops being cel-shaded anime cobalt and becomes a stylised painterly surface that belongs to the same world as the grass and the sky. One shared surface model, both render paths authored against it, one palette, a normal with enough amplitude to shade, and fog that tracks the sky instead of a colour frozen at boot.
+
+## What measurement changed
+
+**1. The palette lives at five sites, not four, and D30's four are the wrong four.** D30 says "the palette retired from all four definition sites into one". There are five (six literal blocks), and the one it misses is the one that actually produces the cobalt:
+
+| # | Site | What |
+|---|---|---|
+| 1 | [`js/water/AnimeWater.js`](../js/water/AnimeWater.js):22-26 | `WATER_PALETTE_RGB` - shallow `#6fd7d2`, deep `#103662`, foam `#eaf6ff` |
+| 2 | `js/water/AnimeWater.js`:273-275 | the same three hexes again as uniform defaults, **not derived from #1** |
+| 3 | [`js/water/webgpuWaterNodeMaterialFactories.js`](../js/water/webgpuWaterNodeMaterialFactories.js):5-11 | `DEFAULT_WATER_COLORS`, the same colours in linear float |
+| 4 | [`js/diagnostics/webgpuDiagnostic.js`](../js/diagnostics/webgpuDiagnostic.js):49-53 | `DIAGNOSTIC_WATER_PALETTE_RGB`, a byte-identical copy of #1 |
+| **5** | [`js/atmosphere/skyFogPresetTuning.js`](../js/atmosphere/skyFogPresetTuning.js):161 (`dusk`) and :258 (`golden-hour`) | **`colorTint`, a per-channel multiplier of `[0.22, 0.40, 1.42]` / `[0.20, 0.38, 1.46]`** |
+
+Site 5 is applied at `webgpuAnimeWaterNodeMaterial.js:115` as `.mul(vec3(...colorTint))`. A blue multiplier of 1.42 against a red multiplier of 0.20 is what turns the authored deep blue into the shipped cobalt. **Retiring sites 1 to 4 and leaving `colorTint` alive would ship a rewrite that looks unchanged.** No scene in `shared/scenes/` defines a water colour, and there is no config-file site.
+
+**2. The production path already has an analytic normal. WATER_BEFORE.md is wrong about this.** It records "`N` is a hardcoded up-vector that is never perturbed, so both specular terms evaluate against a perfect plane". That is exact for the WebGL twin (`AnimeWater.js:188`) and **false for the node material production actually runs**: `webgpuAnimeWaterNodeMaterial.js:76-92` builds a three-rotation slope field and a real `rippleNormal`. Two things make it photograph as mirror-flat:
+
+- the slope scale is `0.055`, a maximum tilt of about **3.1 degrees**; and
+- the *broad* sun-path term at `:93-94` uses a flat up-vector and is not gated by the normal at all, and in the shipped weighting at `:112` it carries the dominant contribution.
+
+Zero vertex displacement **is** true of both paths (no `positionNode` or `vertexNode` anywhere in `js/water/`). So the acceptance criterion is written against **slope amplitude and term weighting**, not against the existence of a normal.
+
+**3. The animation clock is not the one WATER_BEFORE.md names, and fixing the named one changes nothing.** `js/main.js:2993` does update water outside the `cinema.paused` guard using `performance.now()` - true as recorded. But on the production path that `timeSec` is **silently discarded**: `AnimeWater.js:384-393` routes to the node controls, and `webgpuAnimeWaterNodeMaterial.js:157-169` has no `timeSec` branch. The real clock is TSL `time`, which is `frame.time`, the renderer's own, advanced on every `renderer.render()` regardless of anything `main.js` does. This strengthens rather than weakens the "not byte-deterministic" verdict, and it moves the fix into the material.
+
+**4. One knob in the shipped tuning is dead.** `skyFogPresetTuning.js:164/261` specifies `sunSpecularIntensity: 0.48` for both water presets. `webgpuWaterNodeMaterialFactories.js:37` resolves `context.sunSpecularIntensity ?? waterDefaults...`, and `AnimeWater.js:341` always supplies `0.6`, so the per-preset value can never take effect. The before-capture records 0.6, correctly. Do not carry this knob forward without wiring it or deleting it.
+
+**5. The bundle blocker is gone.** The `other` chunk family had 121 bytes of headroom when this cycle was scoped. Cycle 119's basis-transcoder fix (pulled forward, see below) freed **56 KiB**. `AnimeWater-*.js` is 9,761 bytes and `webgpuNodeMaterialFactorySuite-*.js` is 52,701 bytes, both in `other`. This cycle is no longer byte-starved, but it is still not licensed to bump a ratchet.
+
+## Phase 1 - The before-capture - DONE
+
+Shipped ahead of this plan, deliberately: a before-capture is worthless once rewrite code exists. [`tools/validation/water-look.mjs`](../tools/validation/water-look.mjs), `npm run validation:water`, 24 frames in `cycle118-validation/water-before/`. Findings in [`WATER_BEFORE.md`](../cycle118-validation/WATER_BEFORE.md), as corrected above.
+
+## Phase 2 - One surface model (~4hr)
+
+A single module that owns the water's geometry-independent maths, imported by both paths, so the two cannot diverge again. Precedent: [`js/world/foliageLightingRig.js`](../js/world/foliageLightingRig.js) is the single foliage-lighting authority and this follows it exactly.
+
+1. New `js/water/waterSurfaceModel.js`: the palette (one definition), the shoreline/depth resolve, the slope field and its normal, and the noise basis. No THREE import beyond what both paths already take.
+2. **Collapse the duplicated noise.** `AnimeWater.js:132-158` is a ~27-line Ashima simplex in GLSL; `webgpuAnimeWaterNodeMaterial.js:11-27` is a TSL `valueNoise`. They are the same idea implemented twice and they do not even agree. One basis, expressed once.
+3. Retire palette sites 2, 3 and 4 to re-export from the model. Site 4 (`webgpuDiagnostic.js`) is a copy that exists only to be cross-checked by `tests/webgpu-diagnostic.spec.js:559-583`; that cross-check becomes trivial once there is one definition, which is the point.
+4. **Retire `colorTint` (site 5).** Fold whatever hue shift is still wanted into the single palette. A per-preset tint that silently multiplies the authored colour by 1.4x is exactly the drift this phase exists to end.
+
+**Acceptance (EARS):** When Phase 2 ships, then `grep -rn "6fd7d2\|103662\|eaf6ff" js/` shall return matches in exactly one file. When Phase 2 ships, then `grep -rn "colorTint" js/` shall return nothing. When a water colour is changed in the model, then both render paths shall change with it and a spec shall fail if only one does.
+
+## Phase 3 - The surface reads as water (~4hr)
+
+The look work, authored against Phase 2's model, on both paths.
+
+1. **Give the normal amplitude.** The current 0.055 slope scale is a 3-degree tilt. Raise it until the surface shades, and rebalance `:112` so the ripple term carries the read rather than the flat broad term. Judge this against `cycle118-validation/water-before/` by eye, not by a number.
+2. Retire the cel quantisation and the anime sparkle pass (D-W names both).
+3. Keep the two-band depth gradient as a concept but **fix its range**: `minDepthT` is 0.82 on both islands, so `depthT` is confined to the deep 18% and the two-band read is nearly absent outside Newsheepdogland (0.45). Note that `depthT` is reused three ways - base colour at `:114`, glint horizon suppression at `:105`, fog ramp at `:113` - so moving it moves all three. Split them if they need different curves.
+4. The palette moves into the pastoral range. Cobalt is the single loudest thing the before-capture shows.
+
+**Acceptance (EARS):** When Phase 3 ships, then the water shall carry a perturbed normal whose slope scale is recorded in the plan and is greater than the shipped 0.055. When Phase 3 ships, then no cel quantisation step and no sparkle pass shall remain on either path. While a scene is at noon or at dusk, the water shall read as the same surface in both, differing by light rather than by palette.
+
+## Phase 4 - Fog that tracks the sky (~3hr)
+
+The water has its own horizon seam, and it is the same defect class Cycle 112 Phase 6 fixed for the terrain.
+
+The cause, exactly: `webgpuAnimeWaterNodeMaterial.js:124` bakes `water.fogColor` into the node graph as a **literal `vec3`**, not a `uniform()`. The value comes from `productionWebGpuBoot.js:31-39` `resolveSceneSkyFog`, which reads the scene's **declared** `sky.preset` and calls `createAtmosphereFrame` once per boot, before a renderer exists (`skyFogSamplePacket.js:80-82` concedes it assumes the default tone curve). `AnimeWater.js`'s context carries no `fogColor` key, so every water material for the whole session resolves to that one boot-time array. `Atmosphere.applyFogColor()` runs every frame and this value never sees it.
+
+The terrain's fix was **deletion, not re-plumbing**: `webgpuTerrainNodeMaterial.js:134-172` removed the hand-rolled fog composite and set `material.fog = true`, so Three's own fog node binds `reference()` uniforms to the live `scene.fog` instance that `Atmosphere.applyFogColor()` (`js/atmosphere/Atmosphere.js:543-556`) mutates **in place**. The in-place mutation is load-bearing.
+
+**The water cannot copy that verbatim and the plan must not pretend otherwise.** The terrain is `MeshLambertNodeMaterial`; the water is `MeshBasicNodeMaterial` with `toneMapped = false` (`:128`) and colours authored pre-tone-map. So decide, explicitly, and record which:
+
+- **(a) the rewritten water is tone-mapped** - then `material.fog = true`, delete `fogColor` and `fogStrength` outright, terrain-style; or
+- **(b) it stays raw** - then `fogColor` becomes a live `uniform()` driven from `scene.fog.color` in the per-frame controls update. That is a per-material fog, which [`.claude/rules/scene-and-render.md`](../.claude/rules/scene-and-render.md) forbids by default, so it needs the written rationale that rule demands.
+
+Mirror the terrain's lock-in test, [`tests/terrain-scene-fog.spec.js`](../tests/terrain-scene-fog.spec.js): five specs including a source-text grep guard and an Atmosphere integration spec proving `scene.fog` is the same object at two times of day with different colours.
+
+**Acceptance (EARS):** When the sun moves, then the water's horizon shall move with the sky's and a spec shall fail if it does not. When Phase 4 ships, then no water colour shall be sampled at boot and held for the session. If option (b) is taken, then the cycle plan shall carry the written rationale `scene-and-render.md` requires for a per-material fog.
+
+## Phase 5 - A clock you can photograph (~2hr)
+
+Golden captures are impossible today because TSL `time` free-runs. Five touches, and the third is the whole fix on the material side:
+
+1. `webgpuAnimeWaterNodeMaterial.js:10` - drop `time` from the TSL destructure, add `const waterTime = uniform(0)`, substitute at the 11 call sites (`:55, 57, 62, 63, 82-87, 103`).
+2. `:143-148` - add `waterTime` to `webgpuWaterNodeUniforms`.
+3. `:157-169` - add the missing branch: `if (Number.isFinite(state.timeSec)) nodes.waterTime.value = state.timeSec;`. **This closes the drop-on-the-floor bug** that makes `main.js`'s `timeSec` a no-op today.
+4. `js/main.js:2991-2995` - accumulate `this._waterClock += deltaTime` and pass that. **Do not simply move the block inside the `:2964` paused guard**: `sunDir` and `sunColor` also stop updating there, which breaks `water-look.mjs`'s `setSun` flow. Sun state keeps pushing every frame; only the clock pauses.
+5. `tools/validation/water-look.mjs` - a `__sdsCinema`-reachable setter to pin the clock before each `shootPose`, so the rAF ticks at `:453-460` cannot advance it.
+
+**Acceptance (EARS):** When the sim is paused, then the water surface shall not advance. When the same pose is captured twice at the same pinned clock, then the two frames shall be byte-identical.
+
+## Phase 6 - The after-capture and the verdict (~2hr)
+
+1. **Fix the `shore-out` pitch first.** `water-look.mjs:281-283` puts the camera at `camY(..., 2.0, 2.0)` against a target 150m out at `waterY + 0.6`; on Rolling Hills' steep coast the camera lands at 14.7m and the ~5-degree downward pitch drops the shoreline out of frame, so two of that scene's four frames are duplicates of `open-water`. Clamp the pitch or scale the target distance with camera height. **Rolling Hills is the scene most players see first** and its near-shore water is currently covered by one pose.
+2. Re-run against `cycle118-validation/water-after/`. The report's `purpose` (`:483`) and `phase: 1` (`:482`) are hardcoded to "before".
+3. **Add a comparison step, and make it a palette histogram rather than SSIM.** The histogram is what actually answers D-W ("is it still cobalt"), and unlike SSIM it is insensitive to ripple phase, so it works whether or not Phase 5 fully lands.
+4. `readWaterStateInPage` (`:335-340`) filters `userData` for scalar keys prefixed `webgpuWater`. If the rewrite renames or nests those, the after-report silently records nothing where the before-report has 13 values. Keep the prefix or update the reader in the same commit.
+
+**Acceptance (EARS):** When Phase 6 ships, then all three water scenes shall have been captured after the rewrite and compared against the before set. When the comparison runs, then it shall report a per-frame palette histogram. When `shore-out` is captured on Rolling Hills, then the frame shall contain shoreline.
+
+## Frozen files
+
+- **`js/water/AnimeWater.js` and `js/water/webgpuAnimeWaterNodeMaterial.js`** are the rewrite target, authorised by D-W and D30.
+- **`tests/refactor-baseline/__fixtures__/bundle-sizes.json`** is NOT authorised. No ratchet bump.
+
+## Hard stops
+
+1. **Every capture must prove genuine WebGPU.** `assertWebGpuEngaged` (`water-look.mjs:100-117`) throws before any frame is written. Do not relax it; headless Chrome has no `navigator.gpu` and the Cycle 103 lesson is that "WebGPU" goldens were silently WebGL for months.
+2. **No ratchet bump.** Cycle 119's basis fix bought 56 KiB of headroom in `other`; that headroom is for the whole remaining program, not for this cycle to spend.
+3. **Do not break the heightfield foam branch.** In production `hasHeightfield` is always 1, so the shipped foam is the heightfield-interface branch (`:63-72`), not the boundary branch. Newsheepdogland is a `coastline` with no real radius - `AnimeWater.js:207-231` synthesises a bbox disc whose radius is meaningless - so if the heightfield branch breaks, NSL's foam disappears entirely.
+4. **The `userData.webgpuWater*` keys are a contract**, read by `js/main.js:1662-1672`'s visual probe and asserted by `tests/webgpu-water-material-adapter.spec.js`. Renaming them is a consumer migration, not a rename.
+5. **Do not change the water Y (-0.05) or the plane size** without re-deriving the terrain skirt interaction. `shared/terrain/Heightfield.js:120-138` takes terrain to exactly 0.00 past `worldSize/2`, which is 5cm above the water, and there is a second mobile-only skirt at `js/TerrainBuilder.js:1198-1206` parked at -0.01. Both are above the waterline.
+
+## Explicitly out of scope
+
+- **The terrain skirt itself.** Measured at 130m (Rolling Hills), 190m (Open Country) and 430m (Newsheepdogland) from the shoreline. Real, recorded, and a terrain problem rather than a water problem.
+- **`tools/konveyor-production-water-proof.mjs:53`**, which asserts a material name retired in Cycle 87. A cycle-pinned historical probe; leave it.
+- **The bake-time heightmap double-multiply** (`scripts/bake-heightmap.mjs:202` writes metres, `Heightfield.sample` multiplies by `peakHeight` again). Found during Cycle 117 reconnaissance, load-bearing for the current look, needs its own cycle.
+
+## Success criteria (cycle close)
+
+- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
+- [ ] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
+- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
+- [ ] When Phase 2 ships, then the three palette hexes shall appear in exactly one file and `colorTint` shall be gone.
+- [ ] When Phase 3 ships, then the slope scale shall exceed 0.055 and be recorded here, and no cel quantisation or sparkle pass shall remain on either path.
+- [ ] When the sun moves, then the water's horizon shall move with the sky's.
+- [ ] When the sim is paused, then the water surface shall not advance.
+- [ ] When Phase 6 ships, then all three water scenes shall have been captured after and compared by palette histogram.
+- [ ] When the cycle closes, then `bundle-sizes.json` shall be unmodified.
+
+## References
+
+- [`../cycle118-validation/WATER_BEFORE.md`](../cycle118-validation/WATER_BEFORE.md) - the before-capture, and the four claims corrected above
+- [`../DECISIONS.md`](../DECISIONS.md) - D9 (the stylised target), D-W (rewrite not retune), D30 (the rewrite's shape), D31 (the bundle cycle)
+- [`front-door-roadmap.md`](front-door-roadmap.md) - where this cycle sits
+- [`../.claude/rules/scene-and-render.md`](../.claude/rules/scene-and-render.md) - "Atmosphere drives `scene.fog`", browser probe hygiene
+- [`../js/world/foliageLightingRig.js`](../js/world/foliageLightingRig.js) - the single-authority precedent Phase 2 follows
+- [`../tests/terrain-scene-fog.spec.js`](../tests/terrain-scene-fog.spec.js) - the lock-in test Phase 4 mirrors

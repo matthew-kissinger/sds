@@ -114,6 +114,32 @@ Payload before more features (D31). `main-*.js` survived Cycle 116 by **14 bytes
 
 Do not raise the ratchets. They have caught real design errors twice in three cycles, most recently a four-module split that should have been one.
 
+### Phase 1 shipped early, out of order
+
+`other` was measured at 691.882 KiB against a 692 KiB budget: **121 bytes of headroom across 97 chunks**, while Cycle 117 Phase 1 alone needed 439. The cycle could not ship, so the biggest item was pulled forward as commit `3b977964`.
+
+`three/examples/jsm/loaders/KTX2Loader.js:106-107` evaluates `new URL('../libs/basis/basis_transcoder.{js,wasm}', import.meta.url)` at module scope. Vite emits both as hashed assets unconditionally, and both are unreachable, because KTX2Loader only reads those URLs when `transcoderPath === ''` and `js/rendering/ktx2Loader.js:51` always sets it. Every build since Cycle 98 shipped **two byte-identical copies** (md5 `3acfda59...`): 57,529 bytes of dead JS that the ratchet counts, plus 527,333 bytes of dead wasm that it does not. `other` is now 651,393 bytes, with 56 KiB of headroom for the rest of the program.
+
+### The measured work list for the rest of the cycle
+
+From a six-angle hunt with adversarial verification on every proposal. Byte figures are the verifiers', not the proposers'.
+
+**Confirmed, dev surfaces shipping to production.** Each is reachable only behind a URL param or a dev flag, and gating the *import* (not the render) lets Rollup drop the chunk:
+
+- `?notes=1` PlaytestNote, **4,656 B**. The verifier notes half the proposed change is unimplementable as written; read its objection before starting.
+- `?wolf=1` wolf harness, **4,192 B**.
+- `?grassInteractionProof` harness, **2,962 B**.
+- ScreenshotCapture, imported unconditionally on every production boot for an F12 tool, **1,520 B**.
+- `ExtremeTuningPanel`, a dead import in `App.js` that is never rendered, **4,314 B** (proposed, not separately verified).
+
+**Confirmed but Matt's call, not an agent's.** Retiring `__sdsCinema.freeFly()` would drop its sole consumer, the 19,739-byte OrbitControls chunk, for **20,875 B**. `.claude/rules/scene-and-render.md` says removing the `?cinematic=1` harness is a separate decision, and `tools/validation/*.mjs` probes depend on it. **Do not take this without asking.**
+
+**Larger items worth their own phase:** a 29 KB ZSTD decoder that ships as a 38,976-character base64 literal inside `KTX2Loader-*.js` (**38,900 B**), and GLSL comments and indentation inside `js/**` template literals, which esbuild never minifies (**15,907 B**).
+
+**Refuted, recorded so it is not re-proposed:** vendoring OrbitControls out of the top-level assets scan. That is a fixture bump laundered through directory depth, not a saving, and it would add 40,525 bytes of unminified source to ship 19,739 fewer measured ones.
+
+**Overstated:** moving the two `webgpuDiagnostic`-only placement-plan chunks out of the `other` catchall. That family has only 1,146 bytes of its own headroom.
+
 ## Cycle 120 - lighting
 
 The root cause under two other things (D25). The production `DirectionalLight` reads **3.456 white at every time of day including full night**, measured across 14 points while fog tracks correctly and dramatically. Make it track time of day, then give Home Field an evening, then Cycle 115's dusk lamp fires for free.
