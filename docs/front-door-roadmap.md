@@ -1,6 +1,10 @@
-# Front door roadmap (Cycles 112 to 118)
+# Front door roadmap (Cycles 112 to 123) - COMPLETE
 
-> Drafted 2026-07-24 from the front-end review and the 21-decision alignment pass. Decision register lives in [`../DECISIONS.md`](../DECISIONS.md) under "Front door alignment". Cite decisions by number (D1 to D20, D-W); do not re-derive them.
+> Drafted 2026-07-24 from the front-end review and the 21-decision alignment pass. Decision register lives in [`../DECISIONS.md`](../DECISIONS.md) under "Front door alignment". Cite decisions by number (D1 to D36); do not re-derive them.
+>
+> **Closed 2026-07-26. All twelve cycles shipped and deployed.** The program was scoped as seven and grew to twelve: D33 added Cycle 123 because nobody could see its defect until Cycle 120 fixed the light in front of it, and rounds two and three added the rest. Every plan is archived under [`archive/cycles/`](archive/cycles/) with a close entry atop [`BACKLOG.md`](BACKLOG.md). What comes next is in [`../NEXT_SESSION.md`](../NEXT_SESSION.md), not here.
+>
+> **The habit this program is worth remembering for: run a read-only de-risking pass over a plan before executing it.** Seven for seven, it changed the shape of the work, twice by refuting the plan's central mechanism outright and once by correcting a plan's stated symptom into a different and worse defect.
 
 ## Why this program exists
 
@@ -164,6 +168,8 @@ D24. One pasture per player for island competitive, which needs `shared/Competit
 
 Until it ships, Rolling Hills competitive uses the wrong layout and is knowingly left that way (D23). The one constraint: it stays broken as it is, never newly crashing.
 
+**CLOSED 2026-07-26, 4/4 phases.** The constraint held and nearly did not: the first draft threw on `coastline`, and Newsheepdogland is reachable by `?scene=`, so it would have shipped exactly the new crash D23 forbade. Caught by walking every scene whose `allowedModes` touches competitive or timed. Home Field is bit-identical and `competitive.json` never moved. Phase 4 is **partial** - the real authoritative sim and the deployed client transform, but no real Durable Object over a real socket. Full entry atop [`BACKLOG.md`](BACKLOG.md). Plan: [`archive/cycles/cycle-122-plan.md`](archive/cycles/cycle-122-plan.md).
+
 ## Cycle 123 - grass reads the light
 
 **Added 2026-07-26 by D33.** Not in the original register, because nobody could see the defect until Cycle 120 fixed the light in front of it.
@@ -172,7 +178,7 @@ Grass is `MeshBasicNodeMaterial` taking baked indirect only, so it does not read
 
 **It also blocks Cycle 120's Phase 3.** Home Field is wall-to-wall grass, the default scene and the entrance backdrop, so giving it an evening before this lands would ship a glowing pasture at midnight on the first thing every player sees. Phase 3 of this cycle takes that deferred work and closes D25.
 
-Plan: [`cycle-123-plan.md`](cycle-123-plan.md).
+**CLOSED 2026-07-26, 5/5 phases, and this entry's framing was overstated.** Grass did read one scene light: a live per-frame sun **direction**, on both paths, through one setter. What it lacked was intensity, so the direction rotated all day and the brightness never changed. Two complete formulations passed unit tests and were killed by measuring the live build; what shipped derives the factor from a quantity the rig already computes, so noon is exactly 1.0000 by construction on every scene and preset. **D25 is closed.** Phase 5 was added at close to measure hard stop 4 rather than carry it: the cost is not resolvable above a ~0.5 ms floor. Plan: [`archive/cycles/cycle-123-plan.md`](archive/cycles/cycle-123-plan.md).
 
 ## The round-three answers, so nobody re-opens them
 

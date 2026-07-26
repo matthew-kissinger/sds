@@ -165,6 +165,40 @@ Re-baselined after reading. All six rewritten: the noon cells by flock noise, th
 
 ---
 
+## Phase 5 - The per-blade cost, measured (~2hr)
+
+Hard stop 4, closed rather than carried. The term is one `vec3` multiply on a value the shader already computes, so the analytic answer is "free" - but this cycle was corrected twice by a probe that disagreed with arithmetic that looked right, and a fourth time by the harness itself. Measure it.
+
+**Acceptance (EARS):** When the cycle closes, then the per-blade frame cost of the lighting term shall be measured as a difference against a build with the term removed, on genuine WebGPU, and the run-to-run noise floor shall be reported alongside it.
+
+---
+
+### PHASE 5 RECORD (written 2026-07-26)
+
+**The cost is not resolvable, and the evidence for that is the sign, not the size.**
+
+Method: the multiply is patched OUT of **both** paths (`color *= uGrassLight;` in [`../js/GrassSystem.js`](../js/GrassSystem.js), `.mul(grassLight)` in [`../js/world/webgpuGrassBladeNodeMaterial.js`](../js/world/webgpuGrassBladeNodeMaterial.js)) and the arms are alternated ON/OFF/ON/OFF across three reps, so drift cannot masquerade as cost. **Setting the uniform to white measures nothing** - the instruction still executes. It has to leave the shader.
+
+| config | arm | p50 (3 reps) | mean p50 | arm spread |
+|---|---|---|---:|---:|
+| Solo Chaos, 5,000 sheep, 1280x720 | **on** | 19.30 / 19.00 / 19.30 | **19.200** | 0.300 |
+| | off | 19.20 / 19.80 / 19.90 | 19.633 | 0.700 |
+| 30 sheep, 2560x1440 | **on** | 5.70 / 5.80 / 6.30 | **5.933** | 0.600 |
+| | off | 5.40 / 5.80 / 5.90 | 5.700 | 0.500 |
+
+**In the case this plan names, the build WITH the term measured 0.43 ms faster than the build without it.** That is not possible, so it is the size of the noise. In the fragment-bound case the sign flips the other way at 0.23 ms, also inside the per-arm spread of 0.5 to 0.7 ms. **A delta whose sign disagrees between two configurations is noise, not a cost.** Bound: under ~0.5 ms, which is under 2.3% of a 19 ms Solo Chaos frame. `cycle123-validation/grass-light-frame-cost.json`.
+
+**Two corrections the measurement made to itself, both of which would have produced a confident wrong answer:**
+
+1. **The first sensitive case was vsync-locked and could not have shown a cost of any size.** 30 sheep at 1280x720 reported p50 **6.9 ms in all four runs across both arms** - that is 1000/143, this display's refresh interval, not a render cost. The fix is `--novsync`; the retained case renders at 5.5 to 6.3 ms *below* the refresh interval, which is how you can tell the number is real.
+2. **`--dpr=3` silently became 2.** [`../js/rendering/sceneRendererSetup.js`](../js/rendering/sceneRendererSetup.js):157 clamps at `Math.min(devicePixelRatio, 2)`. The harness now records the actual drawing buffer (2560x1440) rather than the requested ratio, so a future run cannot claim a resolution it did not render.
+
+**The harness now refuses to report a WebGL frame time as production.** [`../tools/validation/frame-time-histogram.mjs`](../tools/validation/frame-time-histogram.mjs) launched headless by default, which has no `navigator.gpu` - so `npm run validation:perf` has been measuring the WebGL twin. `--webgpu` adds the golden harness's headed-Chrome launch and asserts `isWebGPURenderer` before sampling. It asserts the **renderer object**, not `__sdsG.productionWebGpu.ok`, which is published asynchronously and read `false` on a genuinely-WebGPU session mid-run. The default (no flag) path is unchanged.
+
+**The probe's scene is live, and this was verified rather than assumed** after the question was raised mid-run: 5 of 5 sampled sheep moved in 2 s, `paused: false`, 5,000 sheep resident, grass wind clock 0.400 to 2.074. The dog stands still because no input is injected, which is what makes the window look static. **The lighting and golden probes are the ones that genuinely freeze** - they call `pauseSimulation()` on purpose, for deterministic capture.
+
+---
+
 ## Frozen files
 
 - **[`../shared/scenes/field.js`](../shared/scenes/field.js)** - not fence-listed, but named here because Phase 3's edit is a deliberate look change to the default scene and the entrance backdrop, authorised by D33. Any other `shared/` edit is out of scope; if the cycle appears to need one, it has drifted.
@@ -188,7 +222,7 @@ Re-baselined after reading. All six rewritten: the noon cells by flock noise, th
 
 ## Success criteria (cycle close)
 
-- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to [`BACKLOG.md`](BACKLOG.md) carryover. **4/4 shipped.**
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to [`BACKLOG.md`](BACKLOG.md) carryover. **5/5 shipped.** Phase 5 was added at close to measure hard stop 4 rather than carry it.
 - [x] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
 - [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
 - [x] When the sun sets, then the grass shall darken with it, pinned by a spec. **1.0 through the day, 0.303 at -2.4 degrees, 0.12 at night, measured on genuine WebGPU.**
@@ -200,18 +234,18 @@ Re-baselined after reading. All six rewritten: the noon cells by flock noise, th
 - [x] When Home Field runs past sundown, then the dusk lamp shall light, observed in a browser. **0 at noon to 2.2 at night, read off the live material.**
 - [x] When Phase 3 ships, then the entrance backdrop shall have been reviewed at more than one time of day. **Four times of day. The finding is that it does not change: it is a baked hero PNG, not the live scene.**
 - [x] When the cycle closes, then D25 shall be recorded as closed. **Closed.**
-- [ ] When the cycle closes, then the per-blade frame cost of the lighting term shall be measured and recorded. **NOT measured. Deferred to carryover with the reason stated below.**
+- [x] When the cycle closes, then the per-blade frame cost of the lighting term shall be measured and recorded. **Measured as an A/B against a term-removed build on genuine WebGPU, vsync defeated. Not resolvable: the ON arm came out 0.43 ms *faster* at Solo Chaos, and the sign flips in the other config. Bound under ~0.5 ms, under 2.3% of a 19 ms frame.**
 - [x] When the goldens are re-baselined, then the noon-versus-night split shall be reported. **Noon 0.9953 / 0.9970 / 0.9883; night 0.4392 / 0.4912 / 0.3867.**
 - [x] When the cycle closes, then `bundle-sizes.json` shall be unmodified.
 
-**On the one unticked line.** The term is a single `vec3` uniform multiply on a value the shader already computes, with no new texture fetch, no branch and no per-instance data, so the analytic cost is one multiply per fragment - but **analytic is not measured**, and this cycle has twice been corrected by a probe that disagreed with the arithmetic. Rather than tick it on reasoning, it goes to carryover. `npm run validation:perf` is the harness; Solo Chaos on Home Field is the case that matters.
+**On the line that was nearly carried.** The analytic answer - one `vec3` multiply per fragment, no fetch, no branch, no per-instance data - turned out to be right, but it was **not** worth ticking on reasoning: getting to a defensible number took a vsync-locked false negative, a silently-clamped pixel ratio and a headless harness that had been measuring the WebGL twin. Each of those would have produced a confident wrong answer from a plausible-looking run. See the Phase 5 record.
 
 ### Hard stops, checked at close
 
 - [x] **Noon does not move.** Proven arithmetically and measured at exactly 1.0000.
 - [x] **No decomposition of `GrassSystem.js`.**
 - [x] **Both render paths, one shape.**
-- [ ] **Measure the per-blade cost.** Not done; see above.
+- [x] **Measure the per-blade cost.** Measured as a difference against a term-removed build; below the run-to-run noise floor on both a 5,000-sheep and a fragment-bound config.
 - [x] **No ratchet bump.**
 - [x] **Every capture proves genuine WebGPU.** Headed Chrome with the golden harness's launch args; the first probe run was headless, silently demoted to WebGL, and reported the twin's numbers as if they were production. That is the Cycle 103 lesson re-learned inside this cycle.
 

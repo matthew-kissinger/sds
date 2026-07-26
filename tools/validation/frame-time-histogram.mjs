@@ -25,6 +25,16 @@ const ROOT = resolve(__dirname, '..', '..');
 const CHROMIUM_GPU_ARGS = process.platform === 'win32'
   ? ['--use-angle=d3d11', '--enable-gpu']
   : [];
+// Cycle 123 P5: headless Chromium has no navigator.gpu, so the default launch
+// above silently measures the WebGL twin and reports it as if it were the
+// shipped path. --webgpu uses the golden harness's headed-Chrome launch and
+// fails closed when WebGPU did not engage.
+const WEBGPU_LAUNCH_ARGS = ['--use-angle=d3d11', '--enable-gpu', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'];
+// --novsync removes the display's presentation interval so frame time reports
+// the render cost rather than the refresh rate. Without it a scene that renders
+// faster than the panel refreshes reports exactly 1000/Hz in every arm, which
+// cannot distinguish "free" from "not measured".
+const NO_VSYNC_ARGS = ['--disable-gpu-vsync', '--disable-frame-rate-limit'];
 const MODE_FOR_SHEEP_COUNT = {
   30: 'practice',
   200: 'classic',
@@ -34,11 +44,13 @@ const MODE_FOR_SHEEP_COUNT = {
 };
 
 function parseArgs(argv) {
-  const args = { scene: 'field', frames: 600, out: null, sheepCount: 200, mode: null, warmup: 3000 };
+  const args = { scene: 'field', frames: 600, out: null, sheepCount: 200, mode: null, warmup: 3000, webgpu: false };
   for (const a of argv.slice(2)) {
-    const m = a.match(/^--(\w+)=(.*)$/);
+    const m = a.match(/^--(\w+)(?:=(.*))?$/);
     if (!m) continue;
-    const [, k, v] = m;
+    const [, k, rawV] = m;
+    if (rawV === undefined) { args[k] = true; continue; }
+    const v = rawV;
     if (k === 'frames' || k === 'sheepCount' || k === 'warmup') args[k] = parseInt(v, 10);
     else args[k] = v;
   }
@@ -54,11 +66,21 @@ function percentile(sorted, p) {
 async function run() {
   const args = parseArgs(process.argv);
   const mode = args.mode ?? MODE_FOR_SHEEP_COUNT[args.sheepCount] ?? 'classic';
-  const browser = await chromium.launch({ args: CHROMIUM_GPU_ARGS });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const launchArgs = [
+    ...(args.webgpu ? WEBGPU_LAUNCH_ARGS : CHROMIUM_GPU_ARGS),
+    ...(args.novsync ? NO_VSYNC_ARGS : []),
+  ];
+  const browser = args.webgpu
+    ? await chromium.launch({ channel: 'chrome', headless: false, args: launchArgs })
+    : await chromium.launch({ args: launchArgs });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    deviceScaleFactor: Number(args.dpr) > 0 ? Number(args.dpr) : 1,
+  });
   const page = await context.newPage();
 
-  const url = `http://localhost:3000/?perfMode=1&scene=${args.scene}&autostart=1&mode=${mode}`;
+  const url = `http://localhost:3000/?perfMode=1&scene=${args.scene}&autostart=1&mode=${mode}`
+    + (args.webgpu ? '&renderer=webgpu&probeRender=1' : '');
   console.log(`[FRAME-HIST] booting ${url}`);
   await page.goto(url, { waitUntil: 'domcontentloaded' });
 
@@ -75,6 +97,27 @@ async function run() {
     { timeout: 90_000 },
   );
 
+  if (args.webgpu) {
+    // Assert the renderer OBJECT, not the diagnostics proof. __sdsG.productionWebGpu
+    // is populated asynchronously and reads false on a genuinely-WebGPU session that
+    // simply has not published it yet; isWebGPURenderer is the fact itself.
+    const r = await page.evaluate(() => ({
+      effective: window.__sdsRendererMode?.effective ?? null,
+      isWebGpuRenderer: window.__sds?.sceneManager?.renderer?.isWebGPURenderer === true
+        || window.gameInstance?.sceneManager?.renderer?.isWebGPURenderer === true,
+      hasGpu: !!navigator.gpu,
+      reason: window.__sdsRendererMode?.fallbackReason ?? null,
+    }));
+    if (!r.hasGpu || !r.isWebGpuRenderer || r.effective === 'webgl') {
+      throw new Error(
+        `[FRAME-HIST] WebGPU did not engage (navigator.gpu=${r.hasGpu}, `
+        + `isWebGPURenderer=${r.isWebGpuRenderer}, effective=${r.effective}, reason=${r.reason}). `
+        + 'Refusing to report a WebGL frame time as production.',
+      );
+    }
+    console.log(`[FRAME-HIST] WebGPU engaged (${r.effective})`);
+  }
+
   await page.waitForTimeout(args.warmup);
 
   // Drive sampling for the requested duration (frames * ~16.7ms desktop).
@@ -85,6 +128,13 @@ async function run() {
 
   const result = {
     scene: args.scene,
+    renderer: args.webgpu ? 'webgpu' : 'webgl',
+    dpr: Number(args.dpr) > 0 ? Number(args.dpr) : 1,
+    vsync: !args.novsync,
+    drawingBuffer: await page.evaluate(() => {
+      const c = document.querySelector('canvas');
+      return c ? { w: c.width, h: c.height } : null;
+    }),
     sheepCount: args.sheepCount,
     mode,
     warmupMs: args.warmup,
