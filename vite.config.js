@@ -53,6 +53,44 @@ function externalizeThreeDracoDecoderUrlsPlugin() {
   }
 }
 
+// Cycle 119: stop Vite emitting a second, never-fetched copy of the basis
+// transcoder.
+//
+// `three/examples/jsm/loaders/KTX2Loader.js:106-107` computes
+//   WASM_BIN_URL = new URL('../libs/basis/basis_transcoder.wasm', import.meta.url)
+//   WASM_JS_URL  = new URL('../libs/basis/basis_transcoder.js',  import.meta.url)
+// at module scope. Vite resolves `new URL(..., import.meta.url)` at build time and
+// emits each referenced file as a hashed asset, unconditionally, because the
+// reference is evaluated whether or not the branch that uses it is reachable.
+//
+// It is not reachable. KTX2Loader only reads those two URLs when
+// `this.transcoderPath === ''` (:295-299), and `js/rendering/ktx2Loader.js:51`
+// always calls `setTranscoderPath('assets/vendor/basis/')` before any load. The
+// bytes the game actually fetches are the vendored pair copied by
+// vite-plugin-static-copy below, at `assets/vendor/basis/`.
+//
+// So every build shipped two byte-identical copies of both files (verified by
+// md5: the emitted chunk, the vendored copy and the node_modules original all
+// hash to 3acfda59c08cbb3875d1a4a5de3efa5a). That is 57,529 bytes of dead JS -
+// which the `other` chunk-family ratchet counts - plus 527,333 bytes of dead
+// wasm, on every deploy and in every user's service-worker cache.
+//
+// Dropped in `generateBundle` rather than deleted after write, so they are never
+// emitted at all and the build output is honest about what ships. The dead URL
+// strings left in the KTX2Loader chunk are inert: nothing dereferences them
+// without an empty transcoderPath.
+function dropDeadBasisTranscoderPlugin() {
+  const DEAD = /^assets\/basis_transcoder-[A-Za-z0-9_-]+\.(js|wasm)$/
+  return {
+    name: 'drop-dead-basis-transcoder',
+    generateBundle(_options, bundle) {
+      for (const fileName of Object.keys(bundle)) {
+        if (bundle[fileName].type === 'asset' && DEAD.test(fileName)) delete bundle[fileName]
+      }
+    }
+  }
+}
+
 // Cloudflare Pages has a 26MB per-file limit; .blend source files aren't needed at runtime.
 // Cycle 91 Phase 6: the same pass prunes dead runtime assets that ride along
 // with the whole-dir assets copy - the scatter GLBs (scatter system removed
@@ -282,6 +320,7 @@ export default defineConfig({
         }
       ]
     }),
+    dropDeadBasisTranscoderPlugin(),
     excludeBlendFilesPlugin(),
     // Absolute /assets/ hrefs assume the web base ('/'); itchio/native use './'.
     ...((!isItchio && !isNative) ? [entranceModulePreloadPlugin()] : []),
