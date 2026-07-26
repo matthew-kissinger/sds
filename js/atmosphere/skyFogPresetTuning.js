@@ -156,16 +156,19 @@ export const SKY_FOG_PRESET_TUNING = Object.freeze({
       aoStrength: 0.18,
       dirtStrength: 0.34,
     },
+    // Cycle 118 Phase 2 retired `colorTint` (the fifth palette site: a
+    // per-channel multiplier of [0.22, 0.40, 1.42] that silently turned the
+    // authored teal into the shipped cobalt) and Phase 4 retired `fogStrength`
+    // (the water composites no fog of its own now; scene.fog is the whole fog
+    // story, same as the terrain since Cycle 114 Phase 6).
     water: {
       colorScale: 0.58,
-      colorTint: [0.22, 0.40, 1.42],
       foamScale: 0.62,
       sparkleScale: 0.76,
       sunSpecularIntensity: 0.48,
       broadGlintGain: 0.32,
       rippleGlintGain: 0.42,
       rippleLightScale: 0.10,
-      fogStrength: 0.025,
     },
     sheep: {
       sheepWool: {
@@ -253,16 +256,16 @@ export const SKY_FOG_PRESET_TUNING = Object.freeze({
       aoStrength: 0.18,
       dirtStrength: 0.32,
     },
+    // colorTint and fogStrength retired in Cycle 118 Phases 2 and 4; see the
+    // dusk water block above for the reasoning.
     water: {
       colorScale: 0.58,
-      colorTint: [0.20, 0.38, 1.46],
       foamScale: 0.64,
       sparkleScale: 0.82,
       sunSpecularIntensity: 0.48,
       broadGlintGain: 0.32,
       rippleGlintGain: 0.44,
       rippleLightScale: 0.10,
-      fogStrength: 0.025,
     },
     sheep: {
       sheepWool: {

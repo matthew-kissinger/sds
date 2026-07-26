@@ -20,6 +20,12 @@
  * the rendering path.
  */
 
+// The palette LEAF, not the full surface model. This file rides the `main`
+// chunk (js/main.js imports it statically) and waterSurfaceModel.js minifies to
+// ~4.7 KB against roughly 1.6 KB of main-chunk ratchet headroom. See
+// js/water/waterPalette.js's header for the whole reasoning.
+import { WATER_PALETTE_SRGB_BYTES, isNearFoamWhiteRgb } from '../water/waterPalette.js';
+
 const FLAG_PARAM = 'debug';
 const FLAG_VALUE = 'gl';
 
@@ -127,7 +133,11 @@ const GL_ERROR_NAMES = {
     0x0507: 'CONTEXT_LOST_WEBGL',
 };
 
-const FOAM_WHITE_RGB = [0xea, 0xf6, 0xff];
+// Cycle 118 Phase 2: a SIXTH palette definition site, one the cycle plan did
+// not count. It spelled the foam colour as its own byte array and re-derived
+// the near-foam comparison AnimeWater already exported, so a palette change
+// would have moved the water and left this probe judging the old colour.
+const FOAM_WHITE_RGB = [...WATER_PALETTE_SRGB_BYTES.foam];
 
 function averageRgb(samples) {
     if (samples.length === 0) return null;
@@ -137,7 +147,7 @@ function averageRgb(samples) {
 }
 
 function isNearFoamWhite(rgb, tolerance = 14) {
-    return !!rgb && FOAM_WHITE_RGB.every((channel, index) => Math.abs(rgb[index] - channel) <= tolerance);
+    return !!rgb && isNearFoamWhiteRgb(rgb, tolerance);
 }
 
 /**

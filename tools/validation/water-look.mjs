@@ -43,9 +43,13 @@
  *    pauseSimulation() then short-circuits main.js's update() (which is what
  *    calls atmosphere.update and _tickDayLoop), and setSun re-pins after both.
  *
- * Note on determinism: main.js updates the water uniforms OUTSIDE the paused
- * guard, off performance.now(), so uTime keeps running while the sim is frozen.
- * These frames are reference material for a human eye, not an SSIM gate.
+ * Note on determinism: this was true for the Phase 1 before-capture and is not
+ * true any more. main.js used to drive the water off performance.now(), which
+ * could be neither paused nor pinned, so those frames are reference material
+ * for a human eye and not an SSIM gate. Cycle 118 Phase 5 replaced it with an
+ * accumulated clock that stops under cinema.paused, and this tool now pins that
+ * clock to PINNED_WATER_CLOCK before every pose - so the after-capture CAN be
+ * compared byte for byte against a re-run of itself.
  */
 
 import { chromium } from 'playwright';
@@ -432,10 +436,23 @@ async function openSession(browser, scene, tod) {
     return { context, page, engine, clock, consoleErrors };
 }
 
+/**
+ * Cycle 118 Phase 5: the water's surface phase is pinned to this value before
+ * every pose. Any constant works; a non-zero one is chosen so the ripple field
+ * is not sampled at its t=0 origin, where the three rotated wave terms share a
+ * phase and the surface reads flatter than it ever does in play.
+ */
+const PINNED_WATER_CLOCK = 12.0;
+
 async function shootPose(page, pose, tod) {
-    await page.evaluate(({ pose, t }) => {
+    await page.evaluate(({ pose, t, waterClock }) => {
         const cinema = window.__sdsCinema;
         cinema.hideUI();
+        // Pin the water clock, not just pause it. The clock only advances when
+        // the sim is running, but its value at capture time still depends on
+        // how long scene load took, so an unpinned capture is reproducible in
+        // look and not in bytes.
+        cinema.setWaterClock?.(waterClock);
         // freeFlyActive is the documented gate on SceneManager.updateCamera
         // (js/SceneManager.js:232). Set it without mounting OrbitControls: the
         // controls want pointer input we do not have, and all this needs is for
@@ -445,18 +462,21 @@ async function shootPose(page, pose, tod) {
         cinema.setSun(t);
         cinema.pauseSimulation();
         cinema.syncAtmosphereToCamera();
-    }, { pose, t: tod.t });
+    }, { pose, t: tod.t, waterClock: PINNED_WATER_CLOCK });
 
     // Let the GAME's own render loop paint. cinema.renderFrame() / captureFrame()
     // do a bare renderer.render(scene, camera) that skips the sky dome pass, and
     // come back with a black sky that reads as a scene defect and is not one.
+    // Re-pin the clock inside the loop: these rAF ticks run main.js's frame, so
+    // a clock left free would advance four times between the pose and the read.
     for (let i = 0; i < 4; i++) {
-        await page.evaluate(({ pose }) => {
+        await page.evaluate(({ pose, waterClock }) => {
             const cinema = window.__sdsCinema;
             cinema.setCameraPose(pose.pos, pose.target);
+            cinema.setWaterClock?.(waterClock);
             cinema.syncAtmosphereToCamera();
             return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-        }, { pose });
+        }, { pose, waterClock: PINNED_WATER_CLOCK });
     }
 
     const dataUrl = await page.evaluate(() => {

@@ -34,6 +34,12 @@ import { PortalEffect } from '../effects/PortalEffect.js';
 import { SunBillboard } from '../effects/SunBillboard.js';
 import { TerrainBuilder } from '../TerrainBuilder.js';
 import { createAnimeWater } from '../water/AnimeWater.js';
+import {
+    WATER_COLOR_SPACE,
+    WATER_FOAM_THICKNESS,
+    WATER_PALETTE_LINEAR,
+    mixWaterBaseColorLinear,
+} from '../water/waterSurfaceModel.js';
 import { GrassSystem } from '../GrassSystem.js';
 import { OptimizedSheepSystem } from '../OptimizedSheep.js';
 import {
@@ -52,13 +58,12 @@ import {
     selectImpostorTilesForLayout,
 } from '../impostors/impostorOrbitLab.js';
 
-const DIAGNOSTIC_WATER_PALETTE_RGB = Object.freeze({
-    shallow: [0x6f, 0xd7, 0xd2],
-    deep: [0x10, 0x36, 0x62],
-    foam: [0xea, 0xf6, 0xff],
-});
-
-const DIAGNOSTIC_FOAM_THICKNESS = 2.5;
+// Cycle 118 Phase 2: this file used to carry a byte-identical copy of the
+// water palette purely so tests/webgpu-diagnostic.spec.js could cross-check it
+// against AnimeWater's. Both sides then reported /255 sRGB floats, which is why
+// that cross-check could not see that production had been running the LINEAR
+// values all along. One definition, one space, both read from here.
+const DIAGNOSTIC_FOAM_THICKNESS = WATER_FOAM_THICKNESS;
 const DIAGNOSTIC_WATER_HEIGHTFIELD_SOURCE = Object.freeze({
     sceneId: 'rolling-hills',
     binUrl: '/terrain/rolling-hills.bin',
@@ -159,14 +164,6 @@ function computeDiagnosticShorelineMetrics({
         depthT,
         foamMask,
     };
-}
-
-function mixDiagnosticWaterBaseColor(depthT) {
-    const t = clamp01(depthT);
-    return DIAGNOSTIC_WATER_PALETTE_RGB.shallow.map((channel, index) => {
-        const deep = DIAGNOSTIC_WATER_PALETTE_RGB.deep[index];
-        return Math.round(channel + (deep - channel) * t);
-    });
 }
 
 async function loadWebGpuThree() {
@@ -1012,8 +1009,8 @@ export function createMeadowQuadDiagnosticState(skyFog = createSkyFogDiagnosticS
     };
 }
 
-function normalizedRgb(rgb) {
-    return rgb.map((channel) => Number((channel / 255).toFixed(4)));
+function roundedColor(linearRgb) {
+    return linearRgb.map((channel) => Number(channel.toFixed(4)));
 }
 
 export function createAnimeWaterDiagnosticState(skyFog = createSkyFogDiagnosticState()) {
@@ -1033,11 +1030,12 @@ export function createAnimeWaterDiagnosticState(skyFog = createSkyFogDiagnosticS
     });
 
     return {
-        shallowColor: normalizedRgb(DIAGNOSTIC_WATER_PALETTE_RGB.shallow),
-        deepColor: normalizedRgb(DIAGNOSTIC_WATER_PALETTE_RGB.deep),
-        foamColor: normalizedRgb(DIAGNOSTIC_WATER_PALETTE_RGB.foam),
-        nearShoreColor: normalizedRgb(mixDiagnosticWaterBaseColor(nearShoreMetrics.depthT)),
-        farWaterColor: normalizedRgb(mixDiagnosticWaterBaseColor(farWaterMetrics.depthT)),
+        colorSpace: WATER_COLOR_SPACE,
+        shallowColor: roundedColor(WATER_PALETTE_LINEAR.shallow),
+        deepColor: roundedColor(WATER_PALETTE_LINEAR.deep),
+        foamColor: roundedColor(WATER_PALETTE_LINEAR.foam),
+        nearShoreColor: roundedColor(mixWaterBaseColorLinear(nearShoreMetrics.depthT)),
+        farWaterColor: roundedColor(mixWaterBaseColorLinear(farWaterMetrics.depthT)),
         fogColor: skyFog.fogColor,
         sunColor: skyFog.sunColor,
         sunDirection: skyFog.sunDirection,

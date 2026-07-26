@@ -6,6 +6,8 @@
 
 Payload before more features (D31). Three cycles of the front-door program still have to land and every one of them adds code, so the ratchets need headroom that arbitrates design merit rather than running order. This cycle takes the measured dead weight out of the shipped bundle without raising a single budget, and it takes the largest items first so the remaining cycles inherit room rather than a queue.
 
+**The first thing it did was disqualify its own biggest item.** Phase 2's 38,900-byte ZSTD decoder turned out to decode all ten shipped impostor atlases rather than nothing, so it is retained and the phase is dropped. That is the measurement working, not the cycle failing: the same discipline is what made Phase 1 worth 56 KiB.
+
 ## The one rule this cycle exists to protect
 
 **Do not raise the ratchets.** They have caught real design errors twice in three cycles, most recently a four-module split that should have been one. A cycle whose stated goal is "make the bundle smaller" is the single most dangerous place to bump a budget, because the bump would look like bookkeeping. [`tests/refactor-baseline/__fixtures__/bundle-sizes.json`](../tests/refactor-baseline/__fixtures__/bundle-sizes.json) is fence-frozen and is **not authorised by this plan**.
@@ -38,17 +40,27 @@ Shipped as `3b977964`, refactored to the repo's own pattern as `d75a7546`. Recor
 
 **Acceptance (EARS):** shipped. When the build runs, then exactly one copy of `basis_transcoder.js` and one of `basis_transcoder.wasm` shall be emitted. When a `three` upgrade changes the patched source, then the build shall fail with a named error rather than silently shipping a duplicate.
 
-## Phase 2 - The ZSTD decoder (~4hr)
+## Phase 2 - The ZSTD decoder - MEASURED, AND IT IS NOT DEAD
 
-The largest single remaining item and the one with the most design risk, so it goes first while there is room to back out.
+A 29 KB ZSTD decoder ships as a **38,976-character base64 literal** inside `KTX2Loader-*.js`. Measured at **38,900 B**. The plan asked, before any code, whether any shipped `.ktx2` actually uses ZSTD supercompression, on the reasoning that Phase 1's whole value came from proving unreachability rather than assuming it.
 
-A 29 KB ZSTD decoder ships as a **38,976-character base64 literal** inside `KTX2Loader-*.js`. Measured at **38,900 B**.
+**Measured 2026-07-26. Every one of the 10 shipped `.ktx2` files uses ZSTD (`supercompressionScheme = 2`).** Container headers read directly, in `dist/` and `assets/` alike:
 
-Before writing code, establish the thing that decides the whole phase: **do any of our shipped `.ktx2` assets actually use ZSTD supercompression?** The four octahedral impostor atlases decode to BC7 (`format 36492`, confirmed on-device by Cycle 117's probe). Read the KTX2 container headers of every `.ktx2` in `public/` and `assets/` and report the `supercompressionScheme` field per file. If none is 2 (ZSTD), the decoder is dead payload on the same footing as Phase 1's transcoder and the fix is the same shape. If any is, this phase becomes lazy-loading rather than removal, and the acceptance below changes with it.
+| file | size | scheme |
+|---|---|---|
+| `assets/models/trees/tree{1,2}.imposter.ktx2` | 2048x2048 | ZSTD |
+| `assets/models/trees/tree{1,2}.imposter.normal.ktx2` | 2048x2048 | ZSTD |
+| `assets/models/trees/tree{1,2}.imposter.depth.ktx2` | 2048x2048 | ZSTD |
+| `assets/models/trees/octahedral/tree{1,2}.imposter.ktx2` | 1024x1024 | ZSTD |
+| `assets/models/trees/octahedral/tree{1,2}.imposter.normal.ktx2` | 1024x1024 | ZSTD |
 
-**Do not guess this.** Phase 1's whole value came from proving unreachability rather than assuming it.
+All ten carry `vkFormat = 0`, meaning Basis Universal, so they need the basis transcoder **and** the ZSTD layer on top. **The decoder is load-bearing for every far-tree impostor on every scene.** Deleting it would leave the whole impostor band blank. This is the opposite of Phase 1, and the measurement is exactly what separated the two.
 
-**Acceptance (EARS):** When Phase 2 ships, then the ZSTD path shall be either removed or lazily loaded, and the plan shall record which and why with the measured `supercompressionScheme` of every shipped `.ktx2`. When a `.ktx2` asset that needs ZSTD is added later, then it shall fail loudly at load rather than silently rendering nothing.
+Lazy-loading buys nothing either: impostors are part of first-interactive coverage on streamed scenes per [`.claude/rules/scene-and-render.md`](../.claude/rules/scene-and-render.md), so a deferred decoder would be fetched immediately anyway.
+
+**So the phase is dropped as scoped.** What remains is a real but different question, deliberately NOT taken in this cycle: the atlases are already BC7/UASTC and ZSTD is an outer layer, so re-baking without it would drop 38,900 B of JS in exchange for larger asset files. That trades parse cost for transfer cost, and asset bytes are cacheable while JS bytes are not. It is a genuine tradeoff and it is also uncomfortably close to gaming a ratchet that counts JS and not assets. **It needs a measured before-and-after on both sides and an explicit decision, which is its own phase in a future cycle, not a substitution inside this one.**
+
+**Acceptance (EARS):** shipped as a measurement. When Phase 2 closed, then the `supercompressionScheme` of every shipped `.ktx2` shall be recorded here, and the decoder shall be retained because all ten are ZSTD. If a future cycle re-bakes the atlases without ZSTD, then it shall record measured JS and asset deltas on both sides before taking it.
 
 ## Phase 3 - GLSL comments and indentation (~3hr)
 
@@ -119,7 +131,7 @@ Five items, **17,644 B** together. Each is reachable only behind a URL param or 
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
 - [ ] When the cycle closes, then `bundle-sizes.json` shall be byte-identical to its state at cycle start.
 - [ ] When the cycle closes, then every chunk family shall be inside its budget.
-- [ ] When Phase 2 ships, then the `supercompressionScheme` of every shipped `.ktx2` shall be recorded in this plan.
+- [x] When Phase 2 ships, then the `supercompressionScheme` of every shipped `.ktx2` shall be recorded in this plan. **All 10 are ZSTD; the decoder is retained and the phase is dropped as scoped.**
 - [ ] When Phase 3 ships, then GLSL comments shall be absent from the build and present in source.
 - [ ] When Phase 3 ships, then the golden harness shall show no render change attributable to the shader strip.
 - [ ] When Phase 4 ships, then a production boot with no URL params shall download none of the five dev chunks.

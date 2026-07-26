@@ -39,7 +39,11 @@ import {
 import { RUNTIME_GLB_RENDER_PREVIEW_ASSETS } from '../js/diagnostics/webgpuRuntimeGlbPreview.js';
 import { createSkyFogSamplePacket } from '../js/atmosphere/skyFogSamplePacket.js';
 import { DEFAULT_SCENE_ID } from '../shared/scenes/index.js';
-import { WATER_PALETTE_RGB, mixWaterBaseColor } from '../js/water/AnimeWater.js';
+import {
+  WATER_COLOR_SPACE,
+  WATER_PALETTE_LINEAR,
+  mixWaterBaseColorLinear,
+} from '../js/water/waterSurfaceModel.js';
 import { createProductionTreePlacementPlan } from '../js/diagnostics/webgpuProductionPlacementPlan.js';
 import { createDiagnosticRockPlacementPlan } from '../js/diagnostics/webgpuRockPlacementPlan.js';
 import { HosekWilkieSky } from '../js/atmosphere/HosekWilkieSky.js';
@@ -559,13 +563,18 @@ describe('webgpu diagnostic sky fog state', () => {
   it('keeps anime water diagnostic inputs tied to production palette and atmosphere packet', () => {
     const skyFog = createSkyFogDiagnosticState();
     const water = createAnimeWaterDiagnosticState(skyFog);
-    const normalize = (rgb) => rgb.map((channel) => Number((channel / 255).toFixed(4)));
+    // Cycle 118 Phase 2. This assertion used to divide by 255 on BOTH sides,
+    // which made it structurally incapable of noticing that the diagnostic
+    // reported sRGB floats while production ran the linear values. It compares
+    // against the model's stated space now, with no transform in the middle.
+    const round4 = (rgb) => rgb.map((channel) => Number(channel.toFixed(4)));
 
-    expect(water.shallowColor).toEqual(normalize(WATER_PALETTE_RGB.shallow));
-    expect(water.deepColor).toEqual(normalize(WATER_PALETTE_RGB.deep));
-    expect(water.foamColor).toEqual(normalize(WATER_PALETTE_RGB.foam));
-    expect(water.nearShoreColor).toEqual(normalize(mixWaterBaseColor(0)));
-    expect(water.farWaterColor).toEqual(normalize(mixWaterBaseColor(1)));
+    expect(water.colorSpace).toBe(WATER_COLOR_SPACE);
+    expect(water.shallowColor).toEqual(round4(WATER_PALETTE_LINEAR.shallow));
+    expect(water.deepColor).toEqual(round4(WATER_PALETTE_LINEAR.deep));
+    expect(water.foamColor).toEqual(round4(WATER_PALETTE_LINEAR.foam));
+    expect(water.nearShoreColor).toEqual(round4(mixWaterBaseColorLinear(0)));
+    expect(water.farWaterColor).toEqual(round4(mixWaterBaseColorLinear(1)));
     expect(water.fogColor).toBe(skyFog.fogColor);
     expect(water.sunColor).toBe(skyFog.sunColor);
     expect(water.sunDirection).toBe(skyFog.sunDirection);

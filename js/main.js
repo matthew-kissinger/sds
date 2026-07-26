@@ -2975,7 +2975,17 @@ class SheepDogSimulation {
         const sunDir = this.atmosphere?.getSunDirection?.();
         const sunLightColor = this.atmosphere?.sun?.light?.color;
         if (this._animeWater) {
-            this._animeWater.update(performance.now() * 0.001, sunDir, sunLightColor);
+            // Cycle 118 Phase 5: an accumulated clock the water owns, not
+            // performance.now(). The wall clock cannot be paused or pinned, so
+            // a golden capture of the same pose twice never came back
+            // byte-identical. Only the clock stops under cinema.paused - sunDir
+            // and sunLightColor keep pushing every frame, because
+            // water-look.mjs's setSun flow drives the sun while the sim is
+            // frozen and would otherwise stall with it.
+            this._waterClock = this._animeWater.advanceClock(deltaTime, {
+                paused: window.__sdsCinema?.paused === true,
+            });
+            this._animeWater.update(this._waterClock, sunDir, sunLightColor);
         }
         // Cycle 14 Phase 2: feed sun direction to grass for fake-SSS
         // back-light. Same source as water shader so they agree on time

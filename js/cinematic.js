@@ -393,6 +393,31 @@ export function installCinemaApi(game) {
         paused: false,
 
         /**
+         * Cycle 118 Phase 5: pin the water's animation clock.
+         *
+         * pauseSimulation() already stops the clock advancing (main.js gates
+         * the accumulation on cinema.paused), but a capture wants a KNOWN
+         * value, not whatever the clock happened to reach during scene load.
+         * Set it once before a pose and the surface is identical every run, so
+         * two captures of the same pose can be compared byte for byte.
+         *
+         * Pushes straight through to the material as well as the accumulator,
+         * so it takes effect without waiting for the next frame.
+         */
+        setWaterClock(seconds = 0) {
+            const t = game._animeWater?.setClock?.(seconds)
+                ?? (Number.isFinite(seconds) ? Number(seconds) : 0);
+            game._waterClock = t;
+            game._animeWater?.update?.(
+                t,
+                game.atmosphere?.getSunDirection?.(),
+                game.atmosphere?.sun?.light?.color
+            );
+            return t;
+        },
+        get waterClock() { return game._animeWater?.clock ?? game._waterClock ?? 0; },
+
+        /**
          * LOD/cull focus override. Grass density, tree LOD, and the compute
          * cull normally center on the dog (runFrame's playerPosition); a
          * flyover or orbital shot that leaves the dog behind gets wrong

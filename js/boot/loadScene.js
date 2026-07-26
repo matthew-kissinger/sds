@@ -191,6 +191,7 @@ export async function disposeScene(game) {
     //    the Mac/Safari WebGL crash class flagged in cycle-11-plan.md.
     try { game.sceneManager?.disposeWater?.(); } catch (err) { console.warn('[SWAP] water:', err); }
     game._animeWater = null;
+    game._waterClock = 0;
     if (driftLog) baseSnap = step('water', baseSnap);
 
     // 7. Terrain (composes grass + trees + rocks + mountains + buildings + mesh).

@@ -735,6 +735,11 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                     water,
                 });
                 game._animeWater = water;  // for per-frame uTime updates
+                // Cycle 118 Phase 5: mirror of water.clock, which the water
+                // itself owns and starts at zero. Kept on the game so the
+                // visual probe and the cinema harness can read it without
+                // reaching into the water object.
+                game._waterClock = 0;
                 probeLog('water.created', {
                     size: game.sceneManager.isMobile ? 3200 : 4000,
                     segments: game.sceneManager.isMobile ? 32 : 64,

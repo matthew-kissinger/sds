@@ -9,62 +9,36 @@
  * Stack:
  *  - Two-band shoreline gradient from island boundary radius/falloff
  *  - Sharp shoreline foam from distance-to-shore + step()
- *  - Painted ripples: 2 octaves animated simplex noise, step()-quantized
- *  - Cel sparkles: quantized Blinn step() masked by high-freq simplex
+ *  - Painted ripples: 2 octaves animated value noise, step()-quantized
+ *  - Cel sparkles: quantized Blinn step() masked by high-freq value noise
  *  - Fog match: <fog_pars_fragment>/<fog_fragment> chunks, atmosphere-driven
  *
  * Pure ShaderMaterial - skip <colorspace_fragment>, author colors in
  * linear, write gl_FragColor raw to avoid tonemap double-apply.
+ *
+ * Cycle 118 Phase 2: the palette, the noise basis and the slope normal all come
+ * from js/water/waterSurfaceModel.js now, shared with the WebGPU node path.
+ * This file kept its own copies of all three and they had drifted; the
+ * re-exports below are a compatibility shim for existing importers, in the
+ * shape shared/GameStateValidation.js uses.
  */
 import * as THREE from 'three';
 import { createWebGpuWaterMaterial } from './webgpuWaterMaterialAdapter.js';
+import {
+    WATER_FOAM_THICKNESS,
+    WATER_PALETTE_LINEAR,
+    WATER_SLOPE_SCALE,
+    WATER_SURFACE_GLSL,
+    advanceWaterClock,
+} from './waterSurfaceModel.js';
 
-export const WATER_PALETTE_RGB = Object.freeze({
-    shallow: [0x6f, 0xd7, 0xd2],
-    deep: [0x10, 0x36, 0x62],
-    foam: [0xea, 0xf6, 0xff],
-});
-
-export const DEFAULT_FOAM_THICKNESS = 2.5;
-
-function clamp01(value) {
-    return Math.min(1, Math.max(0, value));
-}
-
-export function computeShorelineMetrics({
-    x,
-    z,
-    centerX = 0,
-    centerZ = 0,
-    boundaryRadius,
-    boundaryFalloff,
-    foamThickness = DEFAULT_FOAM_THICKNESS,
-}) {
-    const falloff = Math.max(boundaryFalloff, 0.001);
-    const radialDistance = Math.hypot(x - centerX, z - centerZ);
-    const distanceFromShore = Math.abs(radialDistance - boundaryRadius);
-    const depthT = clamp01(distanceFromShore / falloff);
-    const foamMask = distanceFromShore < foamThickness ? 1 : 0;
-
-    return {
-        radialDistance,
-        distanceFromShore,
-        depthT,
-        foamMask,
-    };
-}
-
-export function mixWaterBaseColor(depthT) {
-    const t = clamp01(depthT);
-    return WATER_PALETTE_RGB.shallow.map((channel, index) => {
-        const deep = WATER_PALETTE_RGB.deep[index];
-        return Math.round(channel + (deep - channel) * t);
-    });
-}
-
-export function isNearFoamWhiteRgb(rgb, tolerance = 14) {
-    return WATER_PALETTE_RGB.foam.every((channel, index) => Math.abs(rgb[index] - channel) <= tolerance);
-}
+export {
+    WATER_PALETTE_SRGB_BYTES as WATER_PALETTE_RGB,
+    WATER_FOAM_THICKNESS as DEFAULT_FOAM_THICKNESS,
+    computeShorelineMetrics,
+    isNearFoamWhiteRgb,
+    waterBaseColorSrgbBytes as mixWaterBaseColor,
+} from './waterSurfaceModel.js';
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -129,33 +103,12 @@ const FRAG = /* glsl */ `
     return texel * uHeightPeak;
   }
 
-  // Ashima Arts 2D simplex noise (public domain).
-  // https://github.com/ashima/webgl-noise
-  vec3 mod289_vec3(vec3 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
-  vec2 mod289_vec2(vec2 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
-  vec3 permute(vec3 x){ return mod289_vec3(((x*34.0)+1.0)*x); }
-  float snoise(vec2 v) {
-    const vec4 C = vec4(0.211324865405187, 0.366025403784439,
-                       -0.577350269189626, 0.024390243902439);
-    vec2 i  = floor(v + dot(v, C.yy));
-    vec2 x0 = v - i + dot(i, C.xx);
-    vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-    vec4 x12 = x0.xyxy + C.xxzz;
-    x12.xy -= i1;
-    i = mod289_vec2(i);
-    vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
-    vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
-    m = m*m; m = m*m;
-    vec3 x = 2.0 * fract(p * C.www) - 1.0;
-    vec3 h = abs(x) - 0.5;
-    vec3 ox = floor(x + 0.5);
-    vec3 a0 = x - ox;
-    m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
-    vec3 g;
-    g.x  = a0.x  * x0.x  + h.x  * x0.y;
-    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-    return 130.0 * dot(m, g);
-  }
+  // Cycle 118 Phase 2: the noise basis and the slope normal come from
+  // js/water/waterSurfaceModel.js, shared with the WebGPU node path. This file
+  // used to carry a 27-line Ashima simplex that the node path did not have and
+  // did not agree with. waterValueNoiseSigned returns the same [-1, 1] range
+  // snoise did, so every threshold below is exactly as it was authored.
+${WATER_SURFACE_GLSL}
 
   void main() {
     float shoreFalloff = max(uShoreFalloff, 0.001);
@@ -166,14 +119,14 @@ const FRAG = /* glsl */ `
     vec3 baseColor = mix(uShallowColor, uDeepColor, depthT);
 
     vec2 rippleUv = vWorldPos.xz * 0.05 + vec2(uTime * 0.05, uTime * 0.03);
-    float r1 = snoise(rippleUv);
-    float r2 = snoise(rippleUv * 2.7 + vec2(uTime * 0.07, -uTime * 0.04));
+    float r1 = waterValueNoiseSigned(rippleUv);
+    float r2 = waterValueNoiseSigned(rippleUv * 2.7 + vec2(uTime * 0.07, -uTime * 0.04));
     float ripple = (r1 * 0.65 + r2 * 0.35);
     float rippleBanded = step(0.15, ripple) * 0.5 + step(0.55, ripple) * 0.5;
     baseColor += vec3(rippleBanded * uRippleStrength * 0.08);
 
     vec2 foamNoiseUv = vWorldPos.xz * 0.18 + vec2(uTime * 0.04, uTime * 0.02);
-    float foamNoise = snoise(foamNoiseUv);
+    float foamNoise = waterValueNoiseSigned(foamNoiseUv);
     float foamThreshold = uFoamThickness * (1.0 + foamNoise * 0.25);
     // Cycle 35 Phase 6: when a heightfield is bound, foam tracks the
     // visible water-terrain interface. Past the heightfield extent the
@@ -185,14 +138,20 @@ const FRAG = /* glsl */ `
     float foamMask = 1.0 - step(foamThreshold, foamDist);
 
     vec3 viewDir = normalize(cameraPosition - vWorldPos);
-    vec3 N = vec3(0.0, 1.0, 0.0);
+    // Cycle 118 Phase 2: this was a hardcoded up-vector, so the twin shaded
+    // against a perfect plane while the node path already had a three-rotation
+    // slope field. Same field on both paths now, same split of terms as the
+    // node path: the sharp Blinn lobe reads the perturbed normal, the broad
+    // sun path stays flat.
+    vec3 N = waterSlopeNormal(vWorldPos.xz, uTime, ${WATER_SLOPE_SCALE.toFixed(4)});
     vec3 H = normalize(uSunDirection + viewDir);
     float NdotH = max(dot(N, H), 0.0);
+    float flatNdotH = max(dot(vec3(0.0, 1.0, 0.0), H), 0.0);
     float spec = pow(NdotH, 64.0);
-    float sparkleMask = snoise(vWorldPos.xz * 0.8 + vec2(uTime * 0.15));
+    float sparkleMask = waterValueNoiseSigned(vWorldPos.xz * 0.8 + vec2(uTime * 0.15));
     float sparkles = step(0.85, spec) * step(0.55, sparkleMask) * uSparkleStrength;
 
-    float sunGlint = pow(NdotH, 8.0) * uSunSpecularIntensity;
+    float sunGlint = pow(flatNdotH, 8.0) * uSunSpecularIntensity;
     vec3 sunGlintColor = uSunColor;
 
     vec3 color = baseColor + vec3(sparkles) + sunGlintColor * sunGlint;
@@ -270,11 +229,15 @@ export function createAnimeWaterMaterial({
             uShoreFalloff: { value: shoreline.falloff },
             uTime: { value: 0 },
 
-            uShallowColor: { value: new THREE.Color(0x6fd7d2) },
-            uDeepColor: { value: new THREE.Color(0x103662) },
-            uFoamColor: { value: new THREE.Color(0xeaf6ff) },
+            // Cycle 118 Phase 2: derived from the one palette rather than
+            // re-spelling the three hexes. Color.fromArray sets the working
+            // (linear) components directly, which is what WATER_PALETTE_LINEAR
+            // holds, so these are bit-identical to the old new THREE.Color(hex).
+            uShallowColor: { value: new THREE.Color().fromArray(WATER_PALETTE_LINEAR.shallow) },
+            uDeepColor: { value: new THREE.Color().fromArray(WATER_PALETTE_LINEAR.deep) },
+            uFoamColor: { value: new THREE.Color().fromArray(WATER_PALETTE_LINEAR.foam) },
 
-            uFoamThickness: { value: DEFAULT_FOAM_THICKNESS },
+            uFoamThickness: { value: WATER_FOAM_THICKNESS },
             uRippleStrength: { value: 1.0 },
             uSparkleStrength: { value: 0.7 },
 
@@ -354,6 +317,13 @@ export function createAnimeWater({ boundary, heightfield = null, size = 4000, y 
     const waterControls = material.userData?.webgpuWaterMaterialControls ?? null;
     const baseSparkleStrength = material.uniforms?.uSparkleStrength?.value ?? 0.7;
     let qualitySparkleScale = 1;
+    // Cycle 118 Phase 5: the water owns its animation clock. It used to be
+    // performance.now() read at the main.js call site, which could be neither
+    // paused nor pinned, so no capture of the same pose came back twice the
+    // same. Living here rather than on the game instance also keeps
+    // js/main.js - and therefore the `main` chunk - free of any import from
+    // the surface model.
+    let clock = 0;
 
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
     geometry.rotateX(-Math.PI / 2);
@@ -369,6 +339,25 @@ export function createAnimeWater({ boundary, heightfield = null, size = 4000, y 
         webgpuWaterMaterialSummary: material.userData?.webgpuWaterMaterialSummary ?? null,
         get qualitySparkleScale() {
             return qualitySparkleScale;
+        },
+        /** Seconds of surface animation elapsed. */
+        get clock() {
+            return clock;
+        },
+        /**
+         * Advance the surface clock by one frame. Holds while the sim is
+         * paused, so a static capture keeps a still surface; the caller still
+         * pushes sun state every frame, which is why this is separate from
+         * update() rather than folded into it.
+         */
+        advanceClock(deltaTime, options) {
+            clock = advanceWaterClock(clock, deltaTime, options);
+            return clock;
+        },
+        /** Pin the surface to a known phase, so two captures can be compared. */
+        setClock(seconds) {
+            clock = Number.isFinite(seconds) ? Number(seconds) : 0;
+            return clock;
         },
         setQualityState(state = {}) {
             qualitySparkleScale = Number.isFinite(state.waterSparkleScale)

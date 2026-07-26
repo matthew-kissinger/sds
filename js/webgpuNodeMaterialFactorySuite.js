@@ -69,8 +69,12 @@ function withSkyFogMaterialOptions(options = {}, skyFog = null) {
         ...(grassOptions.meadowQuad ?? {}),
       },
     },
+    // No fogColor here either, for the same reason the terrain block below
+    // carries none: Cycle 118 Phase 4 gave the water Three's scene fog, so a
+    // boot-time skyFog colour threaded in through here is exactly what used to
+    // freeze its horizon. sunColor and sunDirection stay - those are live,
+    // repushed every frame through the material controls.
     water: {
-      fogColor: skyFog.fogColor,
       sunColor: skyFog.sunColor,
       sunDirection: skyFog.sunDirection,
       ...(tuning.water ?? {}),

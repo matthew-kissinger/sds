@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 import { createWebGpuAnimeWaterNodeMaterial } from './webgpuAnimeWaterNodeMaterial.js';
+import { WATER_PALETTE_LINEAR } from './waterSurfaceModel.js';
 
+// Cycle 118 Phase 2: these three used to be spelled out here as sRGB floats
+// (byte/255) while the live context path fed the LINEAR values a THREE.Color
+// resolves a hex to - the same colours in two different spaces, and the
+// fallback was the wrong one. They come from the one palette now, in the one
+// stated space. sunColor is the sky's, not the water's palette, and stays.
 const DEFAULT_WATER_COLORS = Object.freeze({
-  shallowColor: [0.4353, 0.8431, 0.8235],
-  deepColor: [0.0627, 0.2118, 0.3843],
-  foamColor: [0.9176, 0.9647, 1],
-  fogColor: [0.2933, 0.1629, 0.1348],
+  shallowColor: WATER_PALETTE_LINEAR.shallow,
+  deepColor: WATER_PALETTE_LINEAR.deep,
+  foamColor: WATER_PALETTE_LINEAR.foam,
   sunColor: [1, 0.3055, 0.0242],
 });
 
@@ -29,7 +34,11 @@ export function createWebGpuWaterNodeMaterialFactories(webGpuModules, options = 
         shallowColor: toArray(context.shallowColor ?? waterDefaults.shallowColor, DEFAULT_WATER_COLORS.shallowColor),
         deepColor: toArray(context.deepColor ?? waterDefaults.deepColor, DEFAULT_WATER_COLORS.deepColor),
         foamColor: toArray(context.foamColor ?? waterDefaults.foamColor, DEFAULT_WATER_COLORS.foamColor),
-        fogColor: toArray(context.fogColor ?? waterDefaults.fogColor ?? options.fogColor, DEFAULT_WATER_COLORS.fogColor),
+        // No fogColor and no fogStrength, deliberately. Cycle 118 Phase 4
+        // deleted the water's hand-rolled fog composite: it now opts into
+        // Three's scene fog, whose reference() uniforms track the live
+        // scene.fog instance Atmosphere repaints every frame. Threading a
+        // boot-time skyFog colour through here is what froze the old one.
         sunColor: toArray(context.sunColor ?? waterDefaults.sunColor ?? options.sunColor, DEFAULT_WATER_COLORS.sunColor),
         sunColorSource: context.sunColorSource ?? waterDefaults.sunColorSource ?? options.sunColorSource ?? 'skyFog.sunColor',
         rippleStrength: context.rippleStrength ?? waterDefaults.rippleStrength ?? 1,
@@ -37,9 +46,7 @@ export function createWebGpuWaterNodeMaterialFactories(webGpuModules, options = 
         sunSpecularIntensity: context.sunSpecularIntensity ?? waterDefaults.sunSpecularIntensity ?? options.sunSpecularIntensity ?? 0.6,
         broadGlintGain: context.broadGlintGain ?? waterDefaults.broadGlintGain ?? options.broadGlintGain,
         rippleGlintGain: context.rippleGlintGain ?? waterDefaults.rippleGlintGain ?? options.rippleGlintGain,
-        fogStrength: context.fogStrength ?? waterDefaults.fogStrength ?? options.fogStrength,
         rippleLightScale: context.rippleLightScale ?? waterDefaults.rippleLightScale ?? options.rippleLightScale,
-        colorTint: toArray(context.colorTint ?? waterDefaults.colorTint ?? options.colorTint, [1, 1, 1]),
         sunDirection: toArray(context.sunDirection ?? waterDefaults.sunDirection ?? options.sunDirection, [0.4, 0.6, 0.7]),
         colorScale: context.colorScale ?? waterDefaults.colorScale ?? options.colorScale ?? 1,
         foamScale: context.foamScale ?? waterDefaults.foamScale ?? options.foamScale ?? 1,
