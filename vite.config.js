@@ -21,12 +21,73 @@ function patchThreeAddonImport(content) {
   return content.replace(/from 'three';/g, "from '../../../three.core.min.js';")
 }
 
-function externalizeThreeDracoDecoderUrlsPlugin() {
+// Rewrite a `new URL(..., import.meta.url)` constant in a vendored three loader
+// into a plain string literal, and FAIL THE BUILD if the source line has moved.
+//
+// Vite resolves `new URL(..., import.meta.url)` at build time and emits the
+// referenced file as a hashed asset, unconditionally, whether or not the branch
+// that reads the constant is reachable. Every one of these loaders already has
+// its decoder shipped by another route, so the emission is pure duplication.
+//
+// The assert matters more than it looks. These are string replaces against a
+// pinned dependency, so a three upgrade that reformats one of these lines would
+// silently no-op the replace and the duplicate would come back with nothing to
+// notice it. Throwing turns that into a build failure at the next `npm install`
+// rather than a payload regression nobody sees.
+function replaceOrThrow(code, find, replaceWith, file) {
+  if (!code.includes(find)) {
+    throw new Error(
+      `[externalize-three-decoder-urls] ${file} no longer contains:\n  ${find}\n` +
+      'A three upgrade probably reformatted it. Update the plugin, or the build ' +
+      'will silently start shipping a duplicate decoder again.'
+    )
+  }
+  return code.replace(find, replaceWith)
+}
+
+function externalizeThreeDecoderUrlsPlugin() {
   return {
-    name: 'externalize-three-draco-decoder-urls',
+    name: 'externalize-three-decoder-urls',
     enforce: 'pre',
     transform(code, id) {
       const normalized = id.replace(/\\/g, '/')
+
+      // Cycle 119: the basis transcoder, the same problem as Draco below.
+      //
+      // KTX2Loader.js:106-107 computes WASM_BIN_URL and WASM_JS_URL at module
+      // scope, so Vite emitted `assets/basis_transcoder-<hash>.js` (57,529 B,
+      // which the `other` chunk-family ratchet counts) and
+      // `assets/basis_transcoder-<hash>.wasm` (527,333 B, which it does not) on
+      // every build since Cycle 98. Both were byte-identical duplicates of the
+      // pair vite-plugin-static-copy already puts at `assets/vendor/basis/`
+      // (verified by md5: 3acfda59c08cbb3875d1a4a5de3efa5a).
+      //
+      // Both constants are read only inside `if (this.transcoderPath === '')`
+      // (KTX2Loader.js:295-299), and js/rendering/ktx2Loader.js:51 always calls
+      // setTranscoderPath('assets/vendor/basis/') immediately after construction,
+      // so that branch never runs. Pointing the literals at the vendored path
+      // keeps it FUNCTIONAL rather than leaving it a dangling 404, which is why
+      // this is better than deleting the emitted assets after the fact.
+      //
+      // The path stays relative, matching js/rendering/ktx2Loader.js:32, because
+      // the itchio and native targets build with base './' and a root-absolute
+      // href would resolve wrong there.
+      if (normalized.endsWith('/node_modules/three/examples/jsm/loaders/KTX2Loader.js')) {
+        let out = replaceOrThrow(
+          code,
+          "const WASM_BIN_URL = new URL( '../libs/basis/basis_transcoder.wasm', import.meta.url ).toString();",
+          "const WASM_BIN_URL = 'assets/vendor/basis/basis_transcoder.wasm';",
+          'KTX2Loader.js'
+        )
+        out = replaceOrThrow(
+          out,
+          "const WASM_JS_URL = new URL( '../libs/basis/basis_transcoder.js', import.meta.url ).toString();",
+          "const WASM_JS_URL = 'assets/vendor/basis/basis_transcoder.js';",
+          'KTX2Loader.js'
+        )
+        return out
+      }
+
       if (!normalized.endsWith('/node_modules/three/examples/jsm/loaders/DRACOLoader.js')) return null
       return code
         .replace(
@@ -49,44 +110,6 @@ function externalizeThreeDracoDecoderUrlsPlugin() {
           "wasm: new URL( '../libs/draco/gltf/draco_decoder.wasm', import.meta.url ).toString(),",
           `wasm: '${dracoDecoderCdn}draco_decoder.wasm',`
         )
-    }
-  }
-}
-
-// Cycle 119: stop Vite emitting a second, never-fetched copy of the basis
-// transcoder.
-//
-// `three/examples/jsm/loaders/KTX2Loader.js:106-107` computes
-//   WASM_BIN_URL = new URL('../libs/basis/basis_transcoder.wasm', import.meta.url)
-//   WASM_JS_URL  = new URL('../libs/basis/basis_transcoder.js',  import.meta.url)
-// at module scope. Vite resolves `new URL(..., import.meta.url)` at build time and
-// emits each referenced file as a hashed asset, unconditionally, because the
-// reference is evaluated whether or not the branch that uses it is reachable.
-//
-// It is not reachable. KTX2Loader only reads those two URLs when
-// `this.transcoderPath === ''` (:295-299), and `js/rendering/ktx2Loader.js:51`
-// always calls `setTranscoderPath('assets/vendor/basis/')` before any load. The
-// bytes the game actually fetches are the vendored pair copied by
-// vite-plugin-static-copy below, at `assets/vendor/basis/`.
-//
-// So every build shipped two byte-identical copies of both files (verified by
-// md5: the emitted chunk, the vendored copy and the node_modules original all
-// hash to 3acfda59c08cbb3875d1a4a5de3efa5a). That is 57,529 bytes of dead JS -
-// which the `other` chunk-family ratchet counts - plus 527,333 bytes of dead
-// wasm, on every deploy and in every user's service-worker cache.
-//
-// Dropped in `generateBundle` rather than deleted after write, so they are never
-// emitted at all and the build output is honest about what ships. The dead URL
-// strings left in the KTX2Loader chunk are inert: nothing dereferences them
-// without an empty transcoderPath.
-function dropDeadBasisTranscoderPlugin() {
-  const DEAD = /^assets\/basis_transcoder-[A-Za-z0-9_-]+\.(js|wasm)$/
-  return {
-    name: 'drop-dead-basis-transcoder',
-    generateBundle(_options, bundle) {
-      for (const fileName of Object.keys(bundle)) {
-        if (bundle[fileName].type === 'asset' && DEAD.test(fileName)) delete bundle[fileName]
-      }
     }
   }
 }
@@ -256,7 +279,7 @@ export default defineConfig({
   },
   plugins: [
     tailwindcss(),
-    externalizeThreeDracoDecoderUrlsPlugin(),
+    externalizeThreeDecoderUrlsPlugin(),
     react(),
     htmlRuntimeConfigPlugin(),
     viteStaticCopy({
@@ -320,7 +343,6 @@ export default defineConfig({
         }
       ]
     }),
-    dropDeadBasisTranscoderPlugin(),
     excludeBlendFilesPlugin(),
     // Absolute /assets/ hrefs assume the web base ('/'); itchio/native use './'.
     ...((!isItchio && !isNative) ? [entranceModulePreloadPlugin()] : []),
