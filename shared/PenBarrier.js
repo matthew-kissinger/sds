@@ -33,8 +33,8 @@
  * sheep) and after the dog's move, so it corrects positions before render.
  */
 
-import { Vector2D } from '../Vector2D.js';
-import { mulberry32 } from '../Random.js';
+import { Vector2D } from './Vector2D.js';
+import { mulberry32 } from './Random.js';
 
 export class PenContainment {
     /**
