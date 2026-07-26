@@ -87,7 +87,9 @@ export function isExtremeBoidCount(count) {
 /**
  * Cycle 58: count-based successor to the legacy `singlePlayerMode === 'extreme'
  * || 'insane'` gate that drives the large-flock difficulty tweaks (the extra
- * flee multiplier in OptimizedSheep, the ExtremeTuningPanel affordance). The
+ * flee multiplier in OptimizedSheep). It also gated a live tuning panel, which
+ * Cycle 119 deleted: it had been imported and destructured but never rendered
+ * on any path. The
  * band [1000, 5000) reproduces the legacy set exactly for the existing ladders
  * (extreme 1000 and insane 3000 in; chaos 5000 and everything below 1000 out),
  * so behavior is unchanged for Home Field while staying count-driven for the

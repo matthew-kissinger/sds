@@ -7,6 +7,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { readFileSync, writeFileSync, readdirSync, unlinkSync, statSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { brotliCompressSync, constants as zlibConstants } from 'node:zlib'
+import { minifyGlslTemplatesPlugin } from './scripts/glsl-template-minify.mjs'
 
 const buildTarget = process.env.BUILD_TARGET || 'web'
 const nativeTargets = new Set(['native', 'desktop', 'electron', 'tauri', 'capacitor', 'ios', 'android'])
@@ -280,6 +281,14 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     externalizeThreeDecoderUrlsPlugin(),
+    // Cycle 119 Phase 3: strip GLSL comments and indentation out of the shipped
+    // shader strings. esbuild minifies JavaScript and does not look inside a
+    // template literal, so every shader in js/** shipped its prose verbatim.
+    // The transform, its refusals and its token-stream post-condition live in
+    // scripts/glsl-template-minify.mjs; it runs in dev as well as build, on
+    // purpose, because the golden harness drives the dev server on :3000 and a
+    // build-only strip would make the byte-identical-render proof vacuous.
+    minifyGlslTemplatesPlugin(),
     react(),
     htmlRuntimeConfigPlugin(),
     viteStaticCopy({

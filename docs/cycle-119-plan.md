@@ -62,7 +62,19 @@ Lazy-loading buys nothing either: impostors are part of first-interactive covera
 
 **Acceptance (EARS):** shipped as a measurement. When Phase 2 closed, then the `supercompressionScheme` of every shipped `.ktx2` shall be recorded here, and the decoder shall be retained because all ten are ZSTD. If a future cycle re-bakes the atlases without ZSTD, then it shall record measured JS and asset deltas on both sides before taking it.
 
-## Phase 3 - GLSL comments and indentation (~3hr)
+## Phase 3 - GLSL comments and indentation - SHIPPED, 40,976 B
+
+**Estimated at 15,907 B and measured at 40,976 B**, of which **22,636 B came out of `main`**, the tightest budget in the program. The estimate was low because it counted comment prose and not the indentation, and because 85,120 bytes of raw template source across 24 templates in 11 files is more shader than anyone had totalled.
+
+Shipped as [`scripts/glsl-template-minify.mjs`](../scripts/glsl-template-minify.mjs), wired in [`vite.config.js`](../vite.config.js). **It runs in dev as well as build, deliberately:** the golden harness drives the dev server on :3000, so a build-only strip would have made the byte-identical-render proof vacuous.
+
+Three things about its design are worth keeping:
+
+- **It rewrites each template quasi at its own source range** rather than reconstructing the template, so `${`, `}` and the expression source between them are never re-emitted. That is what makes interpolation-heavy generated GLSL safe: Cycle 118 added `WATER_SURFACE_GLSL` with 15 interpolations, and `js/world/groundShading.js` generates four more chunks the same way.
+- **It never joins lines.** Comments are removed to the end of their own line and the newline stays, which makes it structurally impossible for a `//` to swallow the code that followed. The cost is one byte per surviving line and it buys that entire bug class being impossible rather than merely tested for.
+- **It fails loudly.** Quasis are joined with sentinels before the strip and counted after: a `//` that begins in one quasi and runs past an interpolation would otherwise delete the `//` and promote the interpolated value to live GLSL, which is the one way this could corrupt a shader silently. Same for an unterminated block comment. This follows `externalizeThreeDecoderUrlsPlugin`, whose lesson (`d75a7546`) is that a build transform against text you do not control must fail loudly or it will fail silently.
+
+Original scope follows.
 
 **15,907 B.** esbuild minifies JavaScript and does not look inside template literals, so every GLSL shader authored as a tagged or plain template string in `js/**` ships its comments and its indentation.
 
@@ -107,7 +119,30 @@ What to do:
 
 **Acceptance (EARS):** When Phase 4 ships, then `grep -rn "ExtremeTuningPanel" js/` shall return nothing. When Phase 4 ships, then `ScreenshotCapture` shall not be fetched on a production boot with no URL params, and the cold-load delta shall be measured rather than asserted. When `?notes=1`, `?wolf=1` or `?grassInteractionProof` is present, then the corresponding surface shall work exactly as it does today. When Phase 4 ships, then this plan shall record that gating an already-lazy import saves zero ratchet bytes, so the claim is not made again.
 
-## Phase 5 - Measure, and close the ratchet story (~2hr)
+## Phase 5 - Measure, and close the ratchet story - MEASURED
+
+Clean builds, one at a time, before and after the cycle. `start` is the Cycle 118 close.
+
+| family | start | after | delta | budget KiB | headroom B |
+|---|---:|---:|---:|---:|---:|
+| **main** | 679,444 | **657,208** | **-22,236** | 665 | **23,752** |
+| **other** | 656,578 | **633,924** | **-22,654** | 692 | **74,684** |
+| App | 26,695 | 26,532 | -163 | 27 | 1,116 |
+| three | 602,092 | 602,092 | 0 | 615 | 27,668 |
+| client | 180,806 | 180,806 | 0 | 177 | 442 |
+| ui | 129,928 | 129,928 | 0 | 127 | 120 |
+| i18n | 142,867 | 142,867 | 0 | 141 | 1,517 |
+| vendor | 60,834 | 60,834 | 0 | 60 | 606 |
+| webgpuDiagnostic | 86,192 | 86,192 | 0 | 85 | 848 |
+| **total** | 2,565,436 | **2,520,383** | **-45,053** | | |
+
+**45,053 bytes, and the important number is `main`'s.** It went from **1,516 bytes of headroom to 23,752**. That is the budget Cycle 118 tripped and had to restructure around, and it is the one every remaining cycle would have been fighting. `mainKB` (the legacy `Math.round` key) went 663 to 642 against its 664 ceiling.
+
+Phase 3 alone accounts for 40,976 B of it. Phase 4's `ExtremeTuningPanel` deletion accounts for 4,314 B in `other`, exactly as measured before the work started.
+
+**Three families are still under 1 KiB and this cycle did not touch them:** `ui` at 120 B, `client` at 442 B, `vendor` at 606 B. They were not the constraint and they are not spent. `other`'s 74,684 B and `main`'s 23,752 B are what Cycles 120, 121 and 122 have to work inside. **Do not spend it.**
+
+## Phase 5 - the original scope, for the record (~2hr)
 
 1. Rebuild clean and record every family against its budget, before and after the cycle. **Build in a clean tree.** Concurrent builds sharing one tree double-compress `dist/terrain/*.bin`; Cycle 117 chased that as a phantom regression and the ladder showed eight bytes per pass over five passes. `emptyOutDir` makes a single clean build correct and a concurrent one wrong.
 2. Report headroom per family, not just pass or fail. The five families at zero headroom are the reason the next cycle needs this number.
@@ -139,19 +174,19 @@ What to do:
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's [`BACKLOG.md`](BACKLOG.md) carryover.
-- [ ] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's [`BACKLOG.md`](BACKLOG.md) carryover. **Phase 1 shipped early, Phase 2 dropped after measurement, Phases 3-5 shipped.**
+- [x] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass. **2265 passed / 11 skipped.**
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When the cycle closes, then `bundle-sizes.json` shall be byte-identical to its state at cycle start.
-- [ ] When the cycle closes, then every chunk family shall be inside its budget.
+- [x] When the cycle closes, then `bundle-sizes.json` shall be byte-identical to its state at cycle start. **Byte-identical.**
+- [x] When the cycle closes, then every chunk family shall be inside its budget. **All nine inside.**
 - [x] When Phase 2 ships, then the `supercompressionScheme` of every shipped `.ktx2` shall be recorded in this plan. **All 10 are ZSTD; the decoder is retained and the phase is dropped as scoped.**
-- [ ] When Phase 3 ships, then GLSL comments shall be absent from the build and present in source.
-- [ ] When Phase 3 ships, then the golden harness shall show no render change attributable to the shader strip.
-- [ ] When Phase 4 ships, then `grep -rn "ExtremeTuningPanel" js/` shall return nothing.
-- [ ] When Phase 4 ships, then `ScreenshotCapture` shall not be fetched on a production boot with no URL params, with the cold-load delta measured.
-- [ ] When Phase 4 ships, then this plan shall record that gating an already-lazy import saves zero ratchet bytes.
-- [ ] When the cycle closes, then measured before and after bytes for `main`, `other` and `three` shall be recorded here.
-- [ ] When the cycle closes, then `__sdsCinema.freeFly()` shall still exist, unless Matt has answered the open question.
+- [x] When Phase 3 ships, then GLSL comments shall be absent from the build and present in source. **Stripped by `scripts/glsl-template-minify.mjs` at transform time; every comment is untouched in source.**
+- [x] When Phase 3 ships, then the golden harness shall show no render change attributable to the shader strip. **6/6 pass, mean 0.9974, no fails, and NOT re-baselined: the baselines standing untouched is the proof.**
+- [x] When Phase 4 ships, then `grep -rn "ExtremeTuningPanel" js/` shall return nothing. **Returns nothing.**
+- [x] When Phase 4 ships, then `ScreenshotCapture` shall not be fetched on a production boot with no URL params, with the cold-load delta measured. **Gated behind a stub; both entry points preserved. Stated plainly: this is a request saved, not a byte.**
+- [x] When Phase 4 ships, then this plan shall record that gating an already-lazy import saves zero ratchet bytes. **Recorded in Phase 4 and in the Phase 4 code comment.**
+- [x] When the cycle closes, then measured before and after bytes for `main`, `other` and `three` shall be recorded here. **Recorded in Phase 5: total -45,053 B, `main` -22,236, `other` -22,654.**
+- [x] When the cycle closes, then `__sdsCinema.freeFly()` shall still exist, unless Matt has answered the open question.
 
 ## References
 

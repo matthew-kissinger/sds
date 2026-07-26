@@ -3376,8 +3376,37 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    import('./utils/ScreenshotCapture.js')
-        .catch((err) => console.warn('[SCREENSHOT] helper load failed:', err?.message || err));
+    // Cycle 119 Phase 4: the screenshot helper is an F12 developer tool, and it
+    // was imported unconditionally on every production boot, so every player
+    // fetched it in order to never use it. Both of its entry points survive
+    // exactly - the F12 key and the two window globals it publishes - behind a
+    // stub that fetches the module on first use.
+    //
+    // This saves a request, not a byte. The ratchet sums every emitted chunk
+    // whether or not it is ever fetched (tests/refactor-baseline/baseline.spec.ts
+    // walks dist/assets and has no notion of reachability), so the win here is
+    // cold load and it belongs to D17's budget rather than to a chunk family.
+    {
+        /** @type {Promise<any> | null} */
+        let helper = null;
+        const loadHelper = () => (helper ??= import('./utils/ScreenshotCapture.js')
+            .catch((err) => {
+                helper = null;
+                console.warn('[SCREENSHOT] helper load failed:', err?.message || err);
+                return null;
+            }));
+        // The module registers its OWN F12 listener when it loads, so this stub
+        // steps aside on first press rather than doubling every later capture.
+        const onScreenshotKey = (e) => {
+            if (e.key !== 'F12' || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            document.removeEventListener('keydown', onScreenshotKey);
+            loadHelper().then((m) => m?.screenshotCapture?.capture());
+        };
+        document.addEventListener('keydown', onScreenshotKey);
+        window.captureScreenshot = () => loadHelper().then((m) => m?.screenshotCapture?.capture() ?? null);
+        window.captureFullPage = () => loadHelper().then((m) => m?.screenshotCapture?.captureFullPage() ?? null);
+    }
 
     const urlParams = new URLSearchParams(location.search);
     let rendererOptions = {};
