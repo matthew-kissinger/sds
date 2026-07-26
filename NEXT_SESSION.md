@@ -1,61 +1,65 @@
-# Next Session - Cycle 117, island-pasture
+# Next Session - Cycle 118, water-rewrite
 
-> **Updated:** 2026-07-25
-> **For:** Cycle 117
-> **Pickup priority:** Phase 1 is a pure `shared/` generalisation that cannot regress anything, so start there. Every open question was decided 2026-07-25; read the D22 to D32 section before touching the leaderboard or the corral delete.
+> **Updated:** 2026-07-26
+> **For:** Cycle 118
+> **Pickup priority:** Read the plan's "What the de-risking pass corrected" section before anything else. It supersedes six things in the phase text below it, including the entire (a)/(b) fork in Phase 4 and two of Phase 2's three acceptance criteria.
 
 ## Current State
 
-Cycle 116 (`gate-legibility`) closed 2026-07-25. Plan archived in [`docs/archive/cycles/`](docs/archive/cycles/); the close entry with full detail sits at the top of [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Cycle 117 (`island-pasture`) closed 2026-07-26. Plan archived in [`docs/archive/cycles/`](docs/archive/cycles/); the close entry with full detail sits at the top of [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
-The game now tells you where the sheep go. A warm column stands over the destination from across the island, a ground arc draws at the mouth inside 85 metres, the arc brightens as the flock funnels in, and each crossing gives one pulse. One module, one descriptor, four states, all four scenes.
+Sheep Dog Island now has a destination you can see and drive into. A fenced pasture with one open gate at (50, -58), sheep retiring by entering the box because the fence blocks every other crossing, no lightning, no flag pillar, no floating diamond. The browser probe confirmed it on the production WebGPU path and found three more defects on the way, all fixed: gate leaves hanging up to 1.85 m over falling ground, the HUD chevron pinned on at any gate above y=4, and the cue column's taper collapsing its base to a needle exactly where terrain hides it.
 
-**The browser probe finally ran**, and it is now a repeatable tool at [`tools/validation/homestead-probe.mjs`](tools/validation/homestead-probe.mjs) rather than a one-off. It confirmed seven claims from Cycles 114 and 115, found six defects, and verified Cycle 116's own visual acceptance by eye. Full record: [`cycle116-validation/PROBE_FINDINGS.md`](cycle116-validation/PROBE_FINDINGS.md).
+`worker/migrations/0011_reset_island_solo_rows.sql` landed with the close, which is when it reaches production D1. Rows 16 and 21 archived into `score_submissions_archive` with every column, then deleted with the DELETE guarded on the archive holding the row. `id=23` untouched.
 
-Cycle 118's before-capture also landed early, because it is worthless once rewrite code exists. 24 frames on proven WebGPU via [`tools/validation/water-look.mjs`](tools/validation/water-look.mjs), findings in [`cycle118-validation/WATER_BEFORE.md`](cycle118-validation/WATER_BEFORE.md).
+**All four remaining cycle plans are now authored** (118 corrected, 119, 120, 121, 122), so the program has no unplanned cycles left.
 
 ## The active cycle
 
-[`docs/cycle-117-plan.md`](docs/cycle-117-plan.md). Eight phases. It was rewritten after a four-agent read-only spike and is materially smaller than the first draft, because the spike answered the gating question with measurements rather than argument.
+[`docs/cycle-118-plan.md`](docs/cycle-118-plan.md). Six phases, Phase 1 already done.
 
-**The gating question is answered.** A bare pasture rect on Rolling Hills holds nothing: driving the real `shared/` sim, 60 sheep started inside and 60 leaked; 60 pushed at a wall and 57 got in. The same run with `shared/survival/pen.js`'s `PenContainment` placed verbatim at Rolling Hills coordinates held 60/60, admitted 0/60 at the wall, and took 34/40 driven through the gate. Cost to generalise it to a rect is roughly 8 lines in one constructor.
+**Start by reading "What the de-risking pass corrected".** A read-only pass ran against Phases 2 to 6 before any of them started, and it found six things that would have cost real time mid-phase:
 
-**Two findings shrink the cycle.** The gate-predicate fix the draft planned is not needed at all, because the recommended design detects entry by box-inside test rather than by passage-zone crossing. And only one of eleven sim-baseline fixtures moves: `island-boundary-rh-60hz.json` was proven byte-identical with the corral removed by replaying the spec's exact construction both ways.
+- **Phase 4's central fork does not exist.** `material.toneMapped` is never read by `WebGPURenderer` (zero occurrences in the unminified `three.webgpu.js`), because tone mapping there is one full-screen pass over the finished frame. The water is already tone-mapped, `:128` is a dead line, and Phase 4 is a deletion that changes zero pixels.
+- **Two of Phase 2's three acceptance criteria are broken.** The palette grep already returns exactly one file today and would keep passing if the phase shipped nothing. The `colorTint` grep cannot return nothing, because 22 of its 26 matches are live terrain and grass knobs. Both are rewritten in the plan.
+- **`depthT` is pinned at its floor** until the seabed is 13.18 m down on Rolling Hills and 23.03 m on Open Country, so the near-shore band is a single flat colour with no gradient in it at all. One of its three uses is dead code, and Phase 4 deletes another, so it is a two-way split after Phase 4, not a three-way.
+- **Every `js/main.js` line number in Phase 5 is wrong**, and the block the plan names is a different subsystem where `deltaTime` is also in scope, so a wrong-block edit compiles silently.
 
-**One design constraint carries the whole multiplayer risk.** Do not add a top-level `gate:` to `shared/scenes/rolling-hills.js`. `createGameState` derives `gameState.gate` from `scene.gate`, and a non-null gate switches on Worker gate-attraction the island has never had. Declare the gate nested inside the pasture descriptor, where `createGameState` does not read it.
+**The palette numbers Phase 3 starts from are measured and in the plan.** At the `depthT` the islands actually sit at, the tint takes a desaturated teal `#064e62` to a saturated navy `#002477`. That is the cobalt.
 
-## Decided 2026-07-25, round two - D22 to D32
+## What binds this cycle
 
-Matt answered every open question in one sitting across three rounds. Full text in [`DECISIONS.md`](DECISIONS.md), "Front door alignment, round two"; program shape in [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md).
-
-What binds this cycle:
-
-- **D22, the leaderboard resets by explicit row id.** Matt chose reset with the facts stated: `id=16` is a real 12.6-minute human playthrough and Cycle 58 shaped the ladder around it. Scope is **ids 16 and 21 only**, never `scene_id`. `id=23` (`Pakrohk#0001`, an outside player) is untouched. **Procedure is archive first, then migrate:** export the rows to a committed artifact so the data is recoverable, then a new append-only `worker/migrations/0011_*.sql` applied by the deploy workflow. No raw DELETE against production. Phase 7 does the archive; the migration is the step after.
-- **D23, competitive stays as it is.** Do not narrow `allowedModes` and do not expand the cycle. The one thing to protect: deleting `corral` removes what competitive currently falls back to, so it must stay **broken as before, not newly crashing**. It lands on a layout, never on a null. Verify this explicitly.
-- **D28, the floating diamond retires.** Phase 5.
-- **D29, tune the column on Rolling Hills.** Phase 6. It reads thin and pale at 190m and this is the scene that sells itself on distance.
-
-What comes after, so nobody re-opens it:
-
-- **Cycle 118** is the full water rewrite per D-W and D30, not a palette pass.
-- **Cycle 119 is a bundle cycle** (D31). `main-*.js` survived Cycle 116 by 14 bytes. Do not raise the ratchets.
-- **Cycles 120, 121, 122** are lighting, worn ground, and N pastures (D25, D26, D27, D24, D32). Lighting first because it is the root cause under the dusk lamp and the only measured defect of the three.
+- **No ratchet bump.** Cycle 119's basis fix freed 56 KiB in `other` for the whole remaining program, not for this cycle to spend. `other` has 57,529 B of headroom and is not close, but **`webgpuDiagnostic` has 747 bytes**, and Phase 2 item 3 touches that file. Moving the palette out shrinks it, which is the direction to push.
+- **Every capture proves genuine WebGPU.** `assertWebGpuEngaged` throws before any frame is written. Headless Chrome has no `navigator.gpu` and the Cycle 103 lesson is that "WebGPU" goldens were silently WebGL for months.
+- **Do not break the heightfield foam branch.** In production `hasHeightfield` is always 1, so the shipped foam is the heightfield-interface branch, not the boundary branch.
+- **The `userData.webgpuWater*` keys are a contract.** So is the material's white birth sun, which `tests/webgpu-water-material-adapter.spec.js:142` pins. Fixing either is a consumer migration, not a rename.
 
 ## Carryover worth knowing before you start
 
-Eight items are recorded in the Cycle 116 close entry. The two that touch this cycle:
+From the Cycle 117 close entry. The one that touches every remaining cycle:
 
-- **The floating white diamond over the gate** is still shipping and now competes with the column. Rolling Hills gets the same treatment in Phase 5, so decide the diamond's fate there rather than twice.
-- **The column reads thin and pale at 190m.** Rolling Hills is where that matters most, since it is the scene that sells itself on distance. Phase 6 is the place to tune it.
+- **The golden harness's flock is not attributable.** It replaces `Math.random` globally with one seeded stream and `js/OptimizedSheep.js` draws from it 32 times for the flock's layout, on a later frame than the re-seed, after other async render systems have drawn from the same stream. Home Field's changed blocks were all in the flock on a scene Cycle 117 never touched. **Attribute golden deltas by block, not by score**, until this is fixed.
+
+The rest are recorded in the close entry: the cue dead zone on Rolling Hills' northern approach, the gate assembly's 0.4 m cross-slope, the near-black island terrain (routed to Cycle 120), and the `competitive.json` fence-glob gap (reconciled in Cycle 122 Phase 1).
+
+## What comes after, so nobody re-opens it
+
+- **Cycle 119, bundle** ([plan](docs/cycle-119-plan.md)). Phase 1 already shipped out of order. Remaining: the ZSTD decoder, the GLSL comment strip, and five dev surfaces. `__sdsCinema.freeFly()` and its OrbitControls chunk need Matt's explicit answer and must not be taken without it.
+- **Cycle 120, lighting** ([plan](docs/cycle-120-plan.md)). The roadmap's unverified claim is refuted: both lights are added to the scene. `Atmosphere` binds different objects entirely, and `1.1 * Math.PI` is 3.45575, which is D25's measured 3.456 to three decimals. Direction is frozen too, not just intensity.
+- **Cycle 121, worn ground** ([plan](docs/cycle-121-plan.md)). Smaller than the roadmap implies, because Cycle 115 already built the shared mechanism. It found a live gap: the grass exclusion keys on `sceneDef.pasture`, so Rolling Hills' new pasture and Newsheepdogland's homestead both have grass growing inside them.
+- **Cycle 122, N pastures** ([plan](docs/cycle-122-plan.md)). The riskiest, deliberately last. The only cycle in the program that can desync a live room.
 
 ## Reference
 
 | What | Where |
 |---|---|
-| Active cycle plan | [`docs/cycle-117-plan.md`](docs/cycle-117-plan.md) |
+| Active cycle plan | [`docs/cycle-118-plan.md`](docs/cycle-118-plan.md) |
+| Remaining plans | [119](docs/cycle-119-plan.md), [120](docs/cycle-120-plan.md), [121](docs/cycle-121-plan.md), [122](docs/cycle-122-plan.md) |
 | Closed-cycle log | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
-| Browser probe harness | [`tools/validation/homestead-probe.mjs`](tools/validation/homestead-probe.mjs) |
 | Water before-capture | [`tools/validation/water-look.mjs`](tools/validation/water-look.mjs), `npm run validation:water` |
+| Browser probe harness | [`tools/validation/homestead-probe.mjs`](tools/validation/homestead-probe.mjs) |
+| Golden harness | `npm run validation:screenshots -- --diff`, then `--baseline` |
 | Deterministic-sim contract | [`.claude/rules/shared-sim.md`](.claude/rules/shared-sim.md) |
 | Frozen files | [`docs/INTERFACE_FENCE.md`](docs/INTERFACE_FENCE.md) |
 | Durable hard stops | [`docs/EMERGENCY_STOPS.md`](docs/EMERGENCY_STOPS.md) |
+| Program shape | [`docs/front-door-roadmap.md`](docs/front-door-roadmap.md) |

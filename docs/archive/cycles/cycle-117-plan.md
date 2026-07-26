@@ -140,24 +140,24 @@ Not optional padding. Boot Rolling Hills, look at the pasture with [`tools/valid
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
-- [ ] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's `BACKLOG.md` carryover.
+- [x] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Phase 1 ships, then all 10 sim-baseline fixtures shall be byte-identical.
-- [ ] When a rect pasture is constructed, then every barrier method shall behave as it does for a square.
-- [ ] When Rolling Hills loads, then it shall declare a pasture with a nested gate and no corral.
-- [ ] When Rolling Hills loads, then `gameState.gate` shall be null and a spec shall fail if it is not.
-- [ ] When a sheep is driven through the island gate, then it shall retire and settle inside the pasture.
-- [ ] When Phase 3 ships, then `island-boundary-rh-60hz.json` shall be byte-identical and the eight other surviving fixtures shall be untouched.
-- [ ] When `corral-retirement-rh-60hz` is replaced, then the replacement shall be a rewritten spec with the decision recorded, not a regenerated JSON.
-- [ ] When a sheep retires on Rolling Hills, then no zap shall fire.
-- [ ] When the cycle closes, then `js/effects/CorralZapEffect.js` shall still exist.
-- [ ] When the cycle closes, then neither `main-*.js` nor `three-*.js` nor the `other` chunk family shall have grown past its ratchet, and `bundle-sizes.json` shall be unmodified.
-- [ ] When Rolling Hills loads, then the gate cue shall point at the pasture gate.
-- [ ] When the cycle closes, then no player-facing copy shall describe a hidden corral.
-- [ ] When Phase 6 ships, then Rolling Hills shall have been viewed in a browser.
-- [ ] When the goldens are re-baselined, then the delta shall have been read with `--diff` first.
-- [ ] When Phase 7 ships, then rows 16 and 21 shall be archived with every column before deletion, the DELETE shall be guarded on the archive, `id=23` shall be untouched, and no statement shall reference `scene_id`.
+- [x] When Phase 1 ships, then all 10 sim-baseline fixtures shall be byte-identical.
+- [x] When a rect pasture is constructed, then every barrier method shall behave as it does for a square.
+- [x] When Rolling Hills loads, then it shall declare a pasture with a nested gate and no corral.
+- [x] When Rolling Hills loads, then `gameState.gate` shall be null and a spec shall fail if it is not.
+- [x] When a sheep is driven through the island gate, then it shall retire and settle inside the pasture.
+- [x] When Phase 3 ships, then `island-boundary-rh-60hz.json` shall be byte-identical and the eight other surviving fixtures shall be untouched.
+- [x] When `corral-retirement-rh-60hz` is replaced, then the replacement shall be a rewritten spec with the decision recorded, not a regenerated JSON.
+- [x] When a sheep retires on Rolling Hills, then no zap shall fire.
+- [x] When the cycle closes, then `js/effects/CorralZapEffect.js` shall still exist.
+- [x] When the cycle closes, then neither `main-*.js` nor `three-*.js` nor the `other` chunk family shall have grown past its ratchet, and `bundle-sizes.json` shall be unmodified.
+- [x] When Rolling Hills loads, then the gate cue shall point at the pasture gate.
+- [x] When the cycle closes, then no player-facing copy shall describe a hidden corral.
+- [x] When Phase 6 ships, then Rolling Hills shall have been viewed in a browser.
+- [x] When the goldens are re-baselined, then the delta shall have been read with `--diff` first.
+- [x] When Phase 7 ships, then rows 16 and 21 shall be archived with every column before deletion, the DELETE shall be guarded on the archive, `id=23` shall be untouched, and no statement shall reference `scene_id`.
 
 ## References
 

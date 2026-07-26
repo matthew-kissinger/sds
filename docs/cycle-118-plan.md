@@ -33,6 +33,47 @@ Zero vertex displacement **is** true of both paths (no `positionNode` or `vertex
 
 **5. The bundle blocker is gone.** The `other` chunk family had 121 bytes of headroom when this cycle was scoped. Cycle 119's basis-transcoder fix (pulled forward, see below) freed **56 KiB**. `AnimeWater-*.js` is 9,761 bytes and `webgpuNodeMaterialFactorySuite-*.js` is 52,701 bytes, both in `other`. This cycle is no longer byte-starved, but it is still not licensed to bump a ratchet.
 
+## What the de-risking pass corrected, 2026-07-26
+
+A second read-only pass ran against Phases 2 to 6 before any of them started. It confirmed most of the plan and found six things that would have cost real time mid-phase. **These corrections supersede the phase text below wherever they disagree.**
+
+**A. Phase 4's (a)/(b) fork does not exist. Take (a), and it is free.** `material.toneMapped` is **never read by `WebGPURenderer`**: `grep -c toneMapped node_modules/three/build/three.webgpu.js` returns **0**, in the un-minified source build, and production loads a copy of exactly that build. Tone mapping on this renderer is one full-screen pass over the finished frame (`Renderer._getFrameBufferTarget` / `_renderOutput`, with three's own comment that this is done "in a separate render pass and not inline" unlike `WebGLRenderer`). So the water **is already tone-mapped**, `webgpuAnimeWaterNodeMaterial.js:128` is a dead line, and `material.fog = true` is independent of all of it (`NodeMaterial.setupOutput` gates on `this.fog` alone). Phase 4 is a deletion, it changes zero pixels, and it owes `scene-and-render.md` no rationale because no per-material fog uniform gets created.
+
+The reason to reject (b) is different from the one the plan gave, and it is the load-bearing one: `Atmosphere.applyFogColor` fills `scene.fog.color` via `fogColorMatchingSky`, which by construction returns the **pre**-tone-map value that lands on the sky's painted colour after the curve. A genuinely raw consumer lands on the inverse-tone-mapped colour, brighter, which is exactly the bright-band defect class Cycle 112 P6 removed. Because `toneMapped` is inert, water and terrain write into the same space, so whatever is correct for the terrain is correct for the water.
+
+Two riders. The **WebGL twin genuinely is raw** (`AnimeWater.js:201` writes `gl_FragColor` with no tonemapping or colorspace chunk, deliberately, while `fog: true` blends toward the same pre-tone-map colour), so its horizon has the mismatch in the opposite direction: decide explicitly whether Phase 4 fixes both paths or only production, and say which. And `paintedHorizon.js:22-28` justifies its inverse-tone-map solve with "the sky dome sets `toneMapped = false`; the terrain is tone mapped", a distinction that does not exist on this renderer. Cycle 112 P6 shipped and was pixel-verified, so something is empirically compensating. **Flagged, not resolved.** Probe pixels before re-deriving the fog colour from first principles.
+
+**B. Two of Phase 2's three acceptance criteria are broken.**
+
+- `grep -rn "6fd7d2\|103662\|eaf6ff" js/` **already returns exactly one file today**. It is blind to sites 1 and 4, which spell the palette as byte arrays (`[0x6f, 0xd7, 0xd2]`), and to site 3, which spells it as decimal floats (`[0.4353, 0.8431, 0.8235]`). The criterion would keep passing if Phase 2 shipped nothing. This is the fifth spec in this program that certifies rather than catches. Rewrite it to assert every consumer imports the one exported palette.
+- `grep -rn "colorTint" js/` **cannot return nothing**. There are 26 matches across 8 files and only 4 are water; the rest are live terrain, grass-blade and meadow-quad knobs. Scope it to `grep -rn "colorTint" js/water/` returning nothing, plus no `colorTint` key in `skyFogPresetTuning.js`'s two water blocks.
+
+**C. The `depthT` split is a two-way split after Phase 4, and one of the three uses is dead code.** All four of the plan's claims are confirmed, and the conclusion drawn from them was too gentle. Measured, with `hasHeightfield` at 1 as production runs it:
+
+| scene | `minDepthT` | `depthT` stays pinned at the floor until the seabed is |
+|---|---:|---:|
+| Rolling Hills | 0.82 | **13.18 m** below the water plane |
+| Open Country | 0.82 | **23.03 m** below the water plane |
+| Newsheepdogland | 0.45 | **6.41 m** below the water plane |
+
+On Rolling Hills everything from the foam line out to 13 m of seabed depth is a **single flat colour**. There is no near-shore gradient to look at at all. And the three uses sit in three regimes: `:105`'s `smoothstep(0.08, 0.55, depthT)` is **identically 1.0 on both islands, dead code** whose constants prove it was authored for an unfloored `depthT`; `:113` is the only pair authored around the 0.82 floor and **Phase 4 deletes it outright**; `:114` is the only one that genuinely wants a shore-to-deep ramp. **Do Phase 4 before Phase 3's item 3.** Un-flooring `depthT` silently reactivates a glint term nobody has seen in the life of the floor, so `:105` gets a deliberate decision or a hard-coded 1.
+
+**D. The palette numbers Phase 3 actually starts from.** Tints confirmed verbatim: `[0.22, 0.40, 1.42]` at `:161` (dusk, Rolling Hills and Newsheepdogland) and `[0.20, 0.38, 1.46]` at `:258` (golden-hour, Open Country). At the `depthT` the scenes actually sit at, the full chain through ACES at exposure 1.0:
+
+| depthT | shipped, dusk | tint retired | shipped, golden-hour | tint retired |
+|---|---|---|---|---|
+| 0.45 (NSL floor) | `#0050a8` | `#3b8f92` | - | - |
+| 0.82 (RH / OC floor) | `#002477` | `#064e62` | `#002379` | `#064e62` |
+| 1.00 | `#000650` | `#00163e` | `#000551` | `#00163e` |
+
+The tint takes a desaturated teal `#064e62` to a saturated navy `#002477`. **That is the cobalt**, and finding 1 above is exactly right. Two corrections to the surrounding detail: **foam is neither tinted nor colour-scaled** (`:120` sits outside that chain and only ever sees `foamScale`), and **site 3 is sRGB float, not linear** as the table above says. The same space bug is live in site 4 (`webgpuDiagnostic.js` divides by 255) and the cross-check spec compares `/255` on both sides, so it is structurally incapable of seeing it. Phase 2's "one definition" has to settle the **space**, not just the count.
+
+**E. Phase 5's material-side facts are right and every `js/main.js` line number is wrong.** The `cinema.paused` guard is **`:2959`**, not `:2964`. The water block is **`:2974-2979`** with the `performance.now() * 0.001` call at **`:2978`**, not `:2991-2995`, which is the **rock rim-colour** block. Hard stop 4's probe reference is **`:1679-1690`**, not `:1662-1672`. `deltaTime` is in scope at both blocks, so a wrong-block edit compiles silently. Also: the call already passes seconds, so `_waterClock += deltaTime` is unit-compatible only if `deltaTime` is seconds (it is, the same one feeding `updateGrassAnimation`). And the substitution count is **11 lines but 15 substitutions** - four lines carry two `time` references each. Say both numbers so nobody replaces 11 and stops.
+
+**F. Bundle prediction, and a landmine the plan does not flag.** `other` sits at 651,079 B against 692 KiB with **57,529 B** of headroom, so Phase 2 is not close to the budget. But the stated precedent does not transfer: `foliageLightingRig.js` was neither duplicated nor given its own chunk, it merged into `webgpuKilnImpostorNodeMaterial-*.js` and the suite imports it from there, which was only possible because the suite already statically imports that chunk. `AnimeWater-*.js` has no such import edge (the two paths are decoupled through a window global), so expect a **third chunk `waterSurfaceModel-*.js`, counted in `other`, not duplicated**. The landmine: **`webgpuDiagnostic` has 747 bytes of headroom**, and Phase 2 item 3 touches that file. Moving the palette out shrinks it, which is fine and is the direction to push; adding anything there trips a ratchet this plan declares unauthorised. Not build-verified: one `npm run build` plus `ls dist/assets | grep waterSurface` confirms it after Phase 2's first commit.
+
+**G. Smaller corrections.** Phase 3's "maximum tilt of about 3.1 degrees" is `atan(0.055)`, but `slopeX`/`slopeZ` are sums of three wave terms and are not unit-bounded: true **max tilt is 8.26 degrees**, RMS 2.88. Record the tilt, not just the scale, or the acceptance invites reasoning from `atan(new_scale)`. Site 4's palette is at `webgpuDiagnostic.js:55-59`, not `:49-53`. Phase 2 item 2 cannot literally have one implementation: a GLSL string in a template literal and a TSL node graph are different artefacts, so "expressed once" means either a shared module exporting both a GLSL source string and a mirrored TSL builder with a test pinning them to the same outputs, or the WebGL twin transcribing the TSL value-noise. **Name which, or the phase discovers it mid-flight.** And the same shadowing that kills `sunSpecularIntensity` also makes the material **born with a white sun** (`AnimeWater.js:338-339` supplies white from the WebGL uniform bag); the per-frame controls update rescues it, so it is a first-frame artefact, but `tests/webgpu-water-material-adapter.spec.js:142` **pins the white value**, so a Phase 2 cleanup that fixes it is a consumer migration rather than a rename.
+
 ## Phase 1 - The before-capture - DONE
 
 Shipped ahead of this plan, deliberately: a before-capture is worthless once rewrite code exists. [`tools/validation/water-look.mjs`](../tools/validation/water-look.mjs), `npm run validation:water`, 24 frames in `cycle118-validation/water-before/`. Findings in [`WATER_BEFORE.md`](../cycle118-validation/WATER_BEFORE.md), as corrected above.
@@ -46,7 +87,13 @@ A single module that owns the water's geometry-independent maths, imported by bo
 3. Retire palette sites 2, 3 and 4 to re-export from the model. Site 4 (`webgpuDiagnostic.js`) is a copy that exists only to be cross-checked by `tests/webgpu-diagnostic.spec.js:559-583`; that cross-check becomes trivial once there is one definition, which is the point.
 4. **Retire `colorTint` (site 5).** Fold whatever hue shift is still wanted into the single palette. A per-preset tint that silently multiplies the authored colour by 1.4x is exactly the drift this phase exists to end.
 
-**Acceptance (EARS):** When Phase 2 ships, then `grep -rn "6fd7d2\|103662\|eaf6ff" js/` shall return matches in exactly one file. When Phase 2 ships, then `grep -rn "colorTint" js/` shall return nothing. When a water colour is changed in the model, then both render paths shall change with it and a spec shall fail if only one does.
+**Acceptance (EARS), rewritten per correction B.** The two original greps could not detect this phase's work and are replaced:
+
+- When Phase 2 ships, then every water-palette consumer shall import the model's single exported palette, and a spec shall fail if any file re-declares the colours in any spelling (hex, byte array, or decimal float).
+- When Phase 2 ships, then `grep -rn "colorTint" js/water/` shall return nothing and neither water block in `skyFogPresetTuning.js` shall carry a `colorTint` key. The 22 non-water `colorTint` matches are live terrain, grass and meadow knobs and stay.
+- When Phase 2 ships, then the palette's colour **space** shall be stated once in the model and every consumer shall agree with it, including `webgpuDiagnostic.js`, whose `/255` sRGB floats currently disagree with production's linear values while the cross-check spec compares `/255` on both sides and cannot see it.
+- When a water colour is changed in the model, then both render paths shall change with it and a spec shall fail if only one does.
+- When Phase 2 item 2 ships, then the plan shall record which of the two noise strategies was taken, since a GLSL template string and a TSL node graph cannot be one implementation.
 
 ## Phase 3 - The surface reads as water (~4hr)
 
@@ -80,10 +127,10 @@ Mirror the terrain's lock-in test, [`tests/terrain-scene-fog.spec.js`](../tests/
 
 Golden captures are impossible today because TSL `time` free-runs. Five touches, and the third is the whole fix on the material side:
 
-1. `webgpuAnimeWaterNodeMaterial.js:10` - drop `time` from the TSL destructure, add `const waterTime = uniform(0)`, substitute at the 11 call sites (`:55, 57, 62, 63, 82-87, 103`).
+1. `webgpuAnimeWaterNodeMaterial.js:10` - drop `time` from the TSL destructure, add `const waterTime = uniform(0)`, substitute across the 11 call-site lines (`:55, 57, 62, 63, 82-87, 103`), which carry **15 substitutions**: `:55`, `:57`, `:62` and `:103` each hold two `time` references. Replacing 11 and stopping leaves four live.
 2. `:143-148` - add `waterTime` to `webgpuWaterNodeUniforms`.
 3. `:157-169` - add the missing branch: `if (Number.isFinite(state.timeSec)) nodes.waterTime.value = state.timeSec;`. **This closes the drop-on-the-floor bug** that makes `main.js`'s `timeSec` a no-op today.
-4. `js/main.js:2991-2995` - accumulate `this._waterClock += deltaTime` and pass that. **Do not simply move the block inside the `:2964` paused guard**: `sunDir` and `sunColor` also stop updating there, which breaks `water-look.mjs`'s `setSun` flow. Sun state keeps pushing every frame; only the clock pauses.
+4. **`js/main.js:2974-2979`** (corrected, see E) - accumulate `this._waterClock += deltaTime` and pass that in place of the `performance.now() * 0.001` at **`:2978`**. `deltaTime` is already seconds, matching that call's units. **`:2991-2995` is the rock rim-colour block and `deltaTime` is in scope there too, so editing it compiles and does nothing.** Do not simply move the block inside the **`:2959`** paused guard: `sunDir` and `sunColor` also stop updating there, which breaks `water-look.mjs`'s `setSun` flow. Sun state keeps pushing every frame; only the clock pauses.
 5. `tools/validation/water-look.mjs` - a `__sdsCinema`-reachable setter to pin the clock before each `shootPose`, so the rAF ticks at `:453-460` cannot advance it.
 
 **Acceptance (EARS):** When the sim is paused, then the water surface shall not advance. When the same pose is captured twice at the same pinned clock, then the two frames shall be byte-identical.
@@ -107,7 +154,7 @@ Golden captures are impossible today because TSL `time` free-runs. Five touches,
 1. **Every capture must prove genuine WebGPU.** `assertWebGpuEngaged` (`water-look.mjs:100-117`) throws before any frame is written. Do not relax it; headless Chrome has no `navigator.gpu` and the Cycle 103 lesson is that "WebGPU" goldens were silently WebGL for months.
 2. **No ratchet bump.** Cycle 119's basis fix bought 56 KiB of headroom in `other`; that headroom is for the whole remaining program, not for this cycle to spend.
 3. **Do not break the heightfield foam branch.** In production `hasHeightfield` is always 1, so the shipped foam is the heightfield-interface branch (`:63-72`), not the boundary branch. Newsheepdogland is a `coastline` with no real radius - `AnimeWater.js:207-231` synthesises a bbox disc whose radius is meaningless - so if the heightfield branch breaks, NSL's foam disappears entirely.
-4. **The `userData.webgpuWater*` keys are a contract**, read by `js/main.js:1662-1672`'s visual probe and asserted by `tests/webgpu-water-material-adapter.spec.js`. Renaming them is a consumer migration, not a rename.
+4. **The `userData.webgpuWater*` keys are a contract**, read by **`js/main.js:1679-1690`**'s visual probe (corrected, see E) and asserted by `tests/webgpu-water-material-adapter.spec.js`. Renaming them is a consumer migration, not a rename. The same spec pins the material's **white birth sun** at `:142`, so fixing that shadowing is also a consumer migration.
 5. **Do not change the water Y (-0.05) or the plane size** without re-deriving the terrain skirt interaction. `shared/terrain/Heightfield.js:120-138` takes terrain to exactly 0.00 past `worldSize/2`, which is 5cm above the water, and there is a second mobile-only skirt at `js/TerrainBuilder.js:1198-1206` parked at -0.01. Both are above the waterline.
 
 ## Explicitly out of scope
@@ -121,8 +168,12 @@ Golden captures are impossible today because TSL `time` free-runs. Five touches,
 - [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
 - [ ] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Phase 2 ships, then the three palette hexes shall appear in exactly one file and `colorTint` shall be gone.
-- [ ] When Phase 3 ships, then the slope scale shall exceed 0.055 and be recorded here, and no cel quantisation or sparkle pass shall remain on either path.
+- [ ] When Phase 2 ships, then every consumer shall import the model's single palette, in one stated colour space, pinned by a spec that fails on any re-declaration in any spelling.
+- [ ] When Phase 2 ships, then `grep -rn "colorTint" js/water/` shall return nothing and neither water block in `skyFogPresetTuning.js` shall carry the key.
+- [ ] When Phase 2 ships, then the noise strategy taken shall be recorded here.
+- [ ] When Phase 3 ships, then the slope scale shall exceed 0.055 and the resulting **max and RMS tilt in degrees** shall be recorded here, and no cel quantisation or sparkle pass shall remain on either path.
+- [ ] When Phase 4 ships, then the plan shall record whether the WebGL twin's raw-fog mismatch was fixed alongside production or deliberately left.
+- [ ] When Phase 4 ships, then `:113`'s `fogStrength` term shall be gone and `:105`'s dead glint suppression shall be given a deliberate decision rather than reactivated as a side effect.
 - [ ] When the sun moves, then the water's horizon shall move with the sky's.
 - [ ] When the sim is paused, then the water surface shall not advance.
 - [ ] When Phase 6 ships, then all three water scenes shall have been captured after and compared by palette histogram.
