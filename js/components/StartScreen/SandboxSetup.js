@@ -41,7 +41,7 @@ const SCENE_OPTIONS = [
     {
         id: 'rolling-hills',
         label: 'Rolling Hills',
-        description: 'Island with corral - 180m radius'
+        description: 'Island with fenced pasture - 180m radius'
     },
     {
         id: 'open-country',

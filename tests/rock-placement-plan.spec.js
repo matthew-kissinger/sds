@@ -15,8 +15,12 @@ function isInRect(point, rect, buffer = 0) {
         && point.z <= rect.maxZ + buffer;
 }
 
-function createPlan(sceneId) {
-    const sceneDef = loadScene(sceneId);
+function createPlan(sceneId, penOverride) {
+    const base = loadScene(sceneId);
+    // The real scene module, with only `pen` swapped when a caller is probing
+    // the keep-out mechanism. Everything else - zones, seed, boundary - is the
+    // shipped data.
+    const sceneDef = penOverride === undefined ? base : { ...base, pen: penOverride };
     const farmHouseArea = sceneDef?.farmHouse?.exclusionArea ?? null;
     return generateRockPlacementPlan({
         zones: sceneDef.terrain.zones,
@@ -50,7 +54,11 @@ describe('rock placement plan', () => {
         const plan = createPlan('rolling-hills');
         const islandBoundary = sceneDef.boundary;
         const safeRadius = islandBoundary.radius - islandBoundary.falloff - 4;
-        const corral = sceneDef.corral;
+        // Cycle 117 P2: the island's destination is a fenced pasture now, not a
+        // corral disc, and the 8m rock keep-out moved with it. A rock inside the
+        // pasture would end up behind the rails once Phase 4 raises the fence.
+        const pen = sceneDef.pen;
+        expect(pen?.scatterKeepOut, 'rolling-hills opts into the pen keep-out').toBe(true);
 
         expect(plan.totalRocks).toBe(9);
         expect([...new Set(plan.placements.map((placement) => placement.type))].sort()).toEqual([
@@ -58,18 +66,45 @@ describe('rock placement plan', () => {
             'rock2',
         ]);
 
+        const m = 8;
         for (const placement of plan.placements) {
             const dx = placement.position.x - islandBoundary.center.x;
             const dz = placement.position.z - islandBoundary.center.z;
             const distanceSq = dx * dx + dz * dz;
             expect(distanceSq).toBeLessThanOrEqual(safeRadius * safeRadius);
 
-            const corralDx = placement.position.x - corral.center.x;
-            const corralDz = placement.position.z - corral.center.z;
-            const corralKeepout = corral.radius + 8;
-            expect(corralDx * corralDx + corralDz * corralDz).toBeGreaterThanOrEqual(
-                corralKeepout * corralKeepout
-            );
+            const inPasture = placement.position.x > pen.minX - m && placement.position.x < pen.maxX + m
+                && placement.position.z > pen.minZ - m && placement.position.z < pen.maxZ + m;
+            expect(inPasture, `rock at ${placement.position.x},${placement.position.z}`).toBe(false);
         }
+    });
+
+    // The assertion above passes at the shipped seed WITHOUT the keep-out too -
+    // measured: nine rocks, none of them anywhere near (50, -76). So on its own
+    // it certifies nothing, which is the exact shape of spec this project has
+    // shipped three times. This one moves the pen onto a rock the scatter really
+    // does place and checks the rock disappears, so the keep-out has to be doing
+    // the work rather than the seed.
+    it('actually drops a rock that falls inside a pen with the opt-in', () => {
+        const sceneDef = loadScene('rolling-hills');
+        const unguarded = createPlan('rolling-hills', { ...sceneDef.pen, scatterKeepOut: false });
+        expect(unguarded.placements.length).toBeGreaterThan(0);
+
+        // Park a 4x4 pen on the first rock the unguarded scatter lays down.
+        const victim = unguarded.placements[0].position;
+        const overPen = {
+            minX: victim.x - 2, maxX: victim.x + 2,
+            minZ: victim.z - 2, maxZ: victim.z + 2,
+            gate: sceneDef.pen.gate,
+            scatterKeepOut: true,
+        };
+        const guarded = createPlan('rolling-hills', overPen);
+
+        const at = (plan) => plan.placements.filter(
+            (p) => p.position.x === victim.x && p.position.z === victim.z,
+        ).length;
+        expect(at(unguarded), 'the rock is there without the keep-out').toBe(1);
+        expect(at(guarded), 'and gone with it').toBe(0);
+        expect(guarded.totalRocks).toBeLessThan(unguarded.totalRocks);
     });
 });

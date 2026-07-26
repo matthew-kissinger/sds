@@ -54,7 +54,6 @@ describe('disposeScene scene AbortController (P3-LISTENER-AUDIT)', () => {
         const destroy = vi.fn();
         const removeMesh2 = vi.fn();
         const sheepdog2 = {
-            removeDistanceIndicator: vi.fn(),
             removePlayerIcon: vi.fn(),
         };
         const sheepdogMesh2 = { parent: { remove: removeMesh2 } };
@@ -75,7 +74,6 @@ describe('disposeScene scene AbortController (P3-LISTENER-AUDIT)', () => {
         expect(game.localMultiplayerManager).toBeNull();
         expect(game.twoPlayerCamera).toBeNull();
         expect(game.isLocalMultiplayer).toBe(false);
-        expect(sheepdog2.removeDistanceIndicator).toHaveBeenCalledTimes(1);
         expect(sheepdog2.removePlayerIcon).toHaveBeenCalledTimes(1);
         expect(removeMesh2).toHaveBeenCalledWith(sheepdogMesh2);
         expect(game.sheepdog2).toBeNull();

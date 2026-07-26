@@ -201,6 +201,12 @@ export function generateTrees(scene, rng, opts = {}) {
     const coastlineBoundary = scene?.boundary?.kind === 'coastline' ? scene.boundary : null;
     const coastField = coastlineBoundary ? getCoastlineField(coastlineBoundary) : null;
     const corral = scene?.corral || null;
+    // Cycle 117 P2: an enclosure the flock is driven into needs the same
+    // clearance a corral has always had. Opt-in via `pen.scatterKeepOut`, so
+    // Newsheepdogland's homestead pen (which has no flag and whose scatter is
+    // baked into shipped goldens) keeps the layout it has always had. Not a
+    // desync risk either way - the Worker never imports this module.
+    const keepOutPen = scene?.pen?.scatterKeepOut ? scene.pen : null;
     const islandSafeRadius = islandBoundary
         ? islandBoundary.radius - islandBoundary.falloff - 4
         : 0;
@@ -227,6 +233,26 @@ export function generateTrees(scene, rng, opts = {}) {
         if (!farmHouseExclusion) return false;
         return x >= farmHouseExclusion.minX && x <= farmHouseExclusion.maxX &&
                z >= farmHouseExclusion.minZ && z <= farmHouseExclusion.maxZ;
+    };
+
+    // The herding destination's clearance, whichever shape it is. Corral: the
+    // disc grown by 5m, exactly the pre-117 test, character for character. Pen:
+    // the box grown by the same 5m. One helper because the two water-aware
+    // branches below both need it and the corral test was already duplicated
+    // across them.
+    const isInDestinationKeepOut = (x, z) => {
+        if (corral) {
+            const cdx = x - corral.center.x;
+            const cdz = z - corral.center.z;
+            const cr = corral.radius + 5;
+            if (cdx * cdx + cdz * cdz < cr * cr) return true;
+        }
+        if (keepOutPen) {
+            const m = 5;
+            if (x > keepOutPen.minX - m && x < keepOutPen.maxX + m &&
+                z > keepOutPen.minZ - m && z < keepOutPen.maxZ + m) return true;
+        }
+        return false;
     };
 
     const isPointOnRock = (x, z) => {
@@ -272,21 +298,11 @@ export function generateTrees(scene, rng, opts = {}) {
                 const dx = x - islandBoundary.center.x;
                 const dz = z - islandBoundary.center.z;
                 if (dx * dx + dz * dz > islandSafeRadius * islandSafeRadius) return false;
-                if (corral) {
-                    const cdx = x - corral.center.x;
-                    const cdz = z - corral.center.z;
-                    const cr = corral.radius + 5;
-                    if (cdx * cdx + cdz * cdz < cr * cr) return false;
-                }
+                if (isInDestinationKeepOut(x, z)) return false;
             } else if (coastlineBoundary) {
                 // Keep trees a few metres inside the shore (no trees in the surf).
                 if (sampleSignedDistance(coastField, x, z) < 6) return false;
-                if (corral) {
-                    const cdx = x - corral.center.x;
-                    const cdz = z - corral.center.z;
-                    const cr = corral.radius + 5;
-                    if (cdx * cdx + cdz * cdz < cr * cr) return false;
-                }
+                if (isInDestinationKeepOut(x, z)) return false;
             } else {
                 if (isInDefaultPasture(x, z)) return false;
                 if (isInCompetitivePasture(x, z)) return false;

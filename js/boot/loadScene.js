@@ -37,7 +37,7 @@ export async function disposeScene(game) {
     try { game._wolfPack?.dispose?.(); } catch (err) { console.warn('[SWAP] wolfPack dispose:', err); }
     game._wolfPack = null;
     game._survivalRun = null;
-    game._penContainment = null;
+    game._penBarrier = null;
     // Cycle 67 P6: tear down the co-op survival renderer (DO-driven wolves).
     try { game._coopWolfRenderer?.dispose?.(); } catch (err) { console.warn('[SWAP] coop wolf renderer dispose:', err); }
     game._coopWolfRenderer = null;
@@ -119,8 +119,9 @@ export async function disposeScene(game) {
     game._gateCue = null;
     if (driftLog) baseSnap = step('effects', baseSnap);
 
-    // 3. Sheep + sheepdog. Sheep before sheepdog so removeDistanceIndicator
-    //    has a valid scene during sheepdog teardown.
+    // 3. Sheep + sheepdog, in that order: the sheep system holds the flock's
+    //    InstancedMesh and the dog teardown below only detaches meshes, so
+    //    releasing the heavier GPU state first keeps peak memory down on a swap.
     try {
         if (game.gameState?.optimizedSheepSystem) {
             game.gameState.optimizedSheepSystem.dispose();
@@ -131,7 +132,6 @@ export async function disposeScene(game) {
     if (driftLog) baseSnap = step('sheep', baseSnap);
 
     try {
-        if (game.sheepdog?.removeDistanceIndicator) game.sheepdog.removeDistanceIndicator();
         if (game.sheepdog?.removePlayerIcon) game.sheepdog.removePlayerIcon();
         if (game.sheepdogMesh) {
             // Sheepdog mesh is a SkeletonUtils.clone of the cached GLB —
@@ -161,7 +161,6 @@ export async function disposeScene(game) {
     game.twoPlayerCamera = null;
     game.isLocalMultiplayer = false;
     try {
-        game.sheepdog2?.removeDistanceIndicator?.();
         game.sheepdog2?.removePlayerIcon?.();
         if (game.sheepdogMesh2?.parent) {
             // Same rule as the player-1 dog above: the mesh is a
@@ -177,7 +176,6 @@ export async function disposeScene(game) {
     if (game.otherPlayers?.size) {
         for (const [, dog] of game.otherPlayers) {
             try {
-                dog.removeDistanceIndicator?.();
                 dog.removePlayerIcon?.();
             } catch {}
         }
@@ -218,6 +216,7 @@ export async function disposeScene(game) {
         if (game.gameState) {
             game.gameState.boundary = null;
             game.gameState.corral = null;
+            game.gameState.pen = null;
             game.gameState.objective = null;
             game.gameState.sceneSpawnDef = null;
             game.gameState._objectiveDef = null;

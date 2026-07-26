@@ -208,14 +208,14 @@ describe('webgpu diagnostic sky fog state', () => {
     }
   });
 
-  it('routes production effect constructors through WebGPU node factories in the diagnostic proof', () => {
+  it('routes production effect constructors through WebGPU node factories in the diagnostic proof', async () => {
     const sceneBinding = resolveDiagnosticScene('?renderer=webgpu&diagnostic=1&webgpuScene=open-country');
     const skyFog = createSceneBoundSkyFogDiagnosticState(sceneBinding);
     const suite = createWebGpuNodeMaterialFactorySuite(WEBGPU, { skyFog });
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(0, 0.2, 3);
-    const { proof, dispose } = createProductionEffectAdapterDiagnosticProof({
+    const { proof, dispose } = await createProductionEffectAdapterDiagnosticProof({
       scene,
       camera,
       sceneBinding,

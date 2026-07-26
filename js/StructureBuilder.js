@@ -8,6 +8,64 @@ import { collectGateLeafControllers, getGateLeafController } from './world/gateL
 import { applyRailSag } from './world/fenceWear.js';
 
 /**
+ * A pen descriptor's four edges, whichever way it was declared.
+ *
+ * `PenDef` comes in two forms: a square as `{center, radius}` (radius is the
+ * half-side - Newsheepdogland's homestead) or an arbitrary rect as
+ * `{minX, maxX, minZ, maxZ}` (Rolling Hills' island pasture). Every consumer
+ * downstream wants the edges, so resolve once here.
+ *
+ * The twin of `shared/PenBarrier.js`'s constructor, deliberately duplicated
+ * rather than imported: the barrier is dynamically imported so it stays out of
+ * the eager chunk, and this builder is not. `tests/island-pasture.spec.js` pins
+ * the two against each other on the real scenes so they cannot drift.
+ *
+ * @param {{center?: {x:number, z:number}, radius?: number, minX?: number, maxX?: number, minZ?: number, maxZ?: number} | null | undefined} pen
+ * @returns {{minX: number, maxX: number, minZ: number, maxZ: number} | null}
+ */
+export function resolvePenBox(pen) {
+    if (Number.isFinite(pen?.minX) && Number.isFinite(pen?.maxX)
+        && Number.isFinite(pen?.minZ) && Number.isFinite(pen?.maxZ)) {
+        return {
+            minX: Math.min(pen.minX, pen.maxX), maxX: Math.max(pen.minX, pen.maxX),
+            minZ: Math.min(pen.minZ, pen.maxZ), maxZ: Math.max(pen.minZ, pen.maxZ),
+        };
+    }
+    if (pen?.center && pen.radius > 1) {
+        const { x, z } = pen.center;
+        return { minX: x - pen.radius, maxX: x + pen.radius, minZ: z - pen.radius, maxZ: z + pen.radius };
+    }
+    return null;
+}
+
+/**
+ * The enclosure a scene builds for itself: its pen box plus the one gate in it,
+ * or null for a scene that declares no pen.
+ *
+ * `pen.gate` first, then the top-level `gate`. Rolling Hills nests its gate
+ * inside the pen because a top-level `gate` is load-bearing in the sim (see
+ * `PenDef` in `shared/scenes/types.js`); Newsheepdogland's homestead gate IS
+ * top-level and has no nested one, so a nested-only resolver would silently
+ * drop its enclosure. Same order, for the same reason, as the gate cue's
+ * `resolveGateDescriptor`.
+ *
+ * The gate comes back FLAT because both consumers want it flat: this builder
+ * positions a group at (x, z), and `PenBarrier` takes `{x, z, width}`. The
+ * scene declares it as a `GateDef` so there is one gate shape in the data.
+ *
+ * @param {{pen?: object, gate?: {position?: {x: number, z: number}, width?: number, facingDeg?: number}} | null | undefined} sceneDef
+ * @returns {{pen: object, gate: {x: number, z: number, width: number|undefined, facingDeg: number|undefined}} | null}
+ */
+export function resolveSceneEnclosure(sceneDef) {
+    const pen = sceneDef?.pen;
+    if (!resolvePenBox(pen)) return null;
+    const g = pen.gate ?? sceneDef.gate;
+    const p = g?.position;
+    if (!Number.isFinite(p?.x) || !Number.isFinite(p?.z)) return null;
+    return { pen, gate: { x: p.x, z: p.z, width: g.width, facingDeg: g.facingDeg } };
+}
+
+/**
  * StructureBuilder - Structure builder with modular fence system
  *
  * Features:
@@ -38,24 +96,51 @@ export class StructureBuilder {
         this.heightfield = null;
         this._tmpWorldPos = new THREE.Vector3();
 
-        // The day loop's gate. Set by buildHomesteadGate, cleared by
+        // The pen enclosure's gate. Set by buildPenEnclosure, cleared by
         // clearAllStructures. Every OTHER scene's gate controller is reached
         // through getGateLeafControllers() rather than a named field, because
         // nothing in this builder decides when those gates move.
         /** @type {import('./world/gateLeafController.js').GateLeafController | null} */
-        this._homesteadGateController = null;
-        this._homesteadGateOpen = false;
+        this._penGateController = null;
+        this._penGateOpen = false;
     }
 
     /**
      * Provide (or clear) the scene's heightfield. Called from main.js after
      * the heightmap loads. Pieces marked with `userData.surfaceToTerrain`
-     * are offset by `heightfield.sample(worldX, worldZ)` so fence posts,
-     * gates, and corner flags rise/fall with the terrain.
+     * are offset by `_groundY(worldX, worldZ)` so fence posts, gates, and
+     * corner flags rise/fall with the terrain.
      * @param {import('../shared/terrain/Heightfield.js').Heightfield | null} heightfield
      */
     setHeightfield(heightfield) {
         this.heightfield = heightfield ?? null;
+    }
+
+    /**
+     * Visible ground Y at (x, z) - the surface `TerrainBuilder._groundY`
+     * reports, not the raw bake. Both come off the same Heightfield, but
+     * `sample()` reads the heightmap texels (Rolling Hills: 500m / 1024) while
+     * the terrain the player actually sees is that heightmap resampled onto the
+     * terrain mesh (4000m / 384 segments). On the island pasture the two differ
+     * by up to 0.48m - a post sunk past its bottom rail - where on flat Home
+     * Field and Newsheepdogland's lowland homestead they differ by under 7cm,
+     * which is why nothing caught it before there was a fence on a hillside.
+     * Measured: `cycle117-validation/pasture-grounding-probe.mjs`.
+     *
+     * This is `scene-and-render.md`'s heightfield contract: visible geometry
+     * grounds on the visible surface. Falls back to the raw sample when no mesh
+     * grid is bound, because `meshSampleY` throws rather than guessing and the
+     * diagnostics harnesses and the specs hand this builder a bare sampler.
+     *
+     * @param {number} x
+     * @param {number} z
+     * @returns {number} metres
+     * @private
+     */
+    _groundY(x, z) {
+        const hf = this.heightfield;
+        if (!hf) return 0;
+        return hf.displacedHeights ? hf.meshSampleY(x, z) : hf.sample(x, z);
     }
 
     /**
@@ -90,7 +175,7 @@ export class StructureBuilder {
                 slopeSamples.push(node);
             } else {
                 node.getWorldPosition(this._tmpWorldPos);
-                const dy = this.heightfield.sample(this._tmpWorldPos.x, this._tmpWorldPos.z);
+                const dy = this._groundY(this._tmpWorldPos.x, this._tmpWorldPos.z);
                 liftSamples.push({ node, dy });
             }
         });
@@ -218,7 +303,7 @@ export class StructureBuilder {
                 return target;
             }
             world.copy(sourceLocal).applyMatrix4(parentMatrix);
-            world.y = this.heightfield.sample(world.x, world.z) + baseY;
+            world.y = this._groundY(world.x, world.z) + baseY;
             return target.copy(world).applyMatrix4(parentInv);
         };
 
@@ -252,8 +337,8 @@ export class StructureBuilder {
                 if (this.heightfield) {
                     aWorld.copy(aLocal).applyMatrix4(parentMatrix);
                     bWorld.copy(bLocal).applyMatrix4(parentMatrix);
-                    aWorld.y = this.heightfield.sample(aWorld.x, aWorld.z) + height;
-                    bWorld.y = this.heightfield.sample(bWorld.x, bWorld.z) + height;
+                    aWorld.y = this._groundY(aWorld.x, aWorld.z) + height;
+                    bWorld.y = this._groundY(bWorld.x, bWorld.z) + height;
                     aLifted.copy(aWorld).applyMatrix4(parentInv);
                     bLifted.copy(bWorld).applyMatrix4(parentInv);
                 } else {
@@ -266,7 +351,15 @@ export class StructureBuilder {
                 mid.copy(aLifted).add(bLifted).multiplyScalar(0.5);
                 dir.copy(bLifted).sub(aLifted).normalize();
                 railRotation.setFromUnitVectors(baseRailAxis, dir);
-                railScale.set(spec.actualSpacing / spec.railModelLength, 1, 1);
+                // Cycle 117 P4: scale to the SLOPED distance between the two
+                // posts, not to the flat `actualSpacing`. Once the rail is
+                // rotated onto the slope, a rail cut to the horizontal spacing
+                // is short by the hypotenuse and leaves a gap at each post. On
+                // flat ground the two are equal to the bit (Home Field's bake is
+                // peakHeight 0) and Newsheepdogland's worst post pair differs by
+                // 0.5mm; the island pasture drops 1.57m across one 5m span,
+                // which is a 24cm hole.
+                railScale.set(aLifted.distanceTo(bLifted) / spec.railModelLength, 1, 1);
                 matrix.compose(mid, railRotation, railScale);
                 instanceMatrix.multiplyMatrices(matrix, spec.railSource.localMatrix);
                 railInstances.setMatrixAt(railIndex++, instanceMatrix);
@@ -323,8 +416,8 @@ export class StructureBuilder {
         const bWorld = bLocal.clone().applyMatrix4(parentMatrix);
 
         // Sample terrain at each post's world (x, z).
-        const hA = this.heightfield.sample(aWorld.x, aWorld.z);
-        const hB = this.heightfield.sample(bWorld.x, bWorld.z);
+        const hA = this._groundY(aWorld.x, aWorld.z);
+        const hB = this._groundY(bWorld.x, bWorld.z);
         aWorld.y = hA + baseY;
         bWorld.y = hB + baseY;
 
@@ -379,11 +472,11 @@ export class StructureBuilder {
             structureArray.length = 0;
         });
 
-        // The homestead gate's controller holds direct refs into the subtree we
+        // The pen gate's controller holds direct refs into the subtree we
         // just detached. Dropping it here stops the day loop from easing a gate
         // that is no longer in the scene after a swap (loadScene clears before
         // initWorld rebuilds).
-        this._homesteadGateController = null;
+        this._penGateController = null;
     }
     
     /**
@@ -395,34 +488,36 @@ export class StructureBuilder {
      * @param {boolean} [opts.perimeterFence=true] When false, only the gate
      *  + pen are built (no four border segments). For "no fences" scenes
      *  like Open Country.
+     * @param {ReturnType<typeof resolveSceneEnclosure>} [opts.enclosure=null]
+     *  The scene's own fenced pen + gate, from {@link resolveSceneEnclosure}.
      */
     buildSinglePlayerStructures(bounds, gate, pasture, opts = {}) {
-        const { perimeterFence = true, corral = null, homesteadGate = false } = opts;
-        console.log(`[BUILD] Building single player structures (perimeterFence=${perimeterFence}, corral=${!!corral}, homesteadGate=${homesteadGate})`);
+        const { perimeterFence = true, corral = null, enclosure = null } = opts;
+        console.log(`[BUILD] Building single player structures (perimeterFence=${perimeterFence}, corral=${!!corral}, enclosure=${!!enclosure})`);
 
         this.clearAllStructures();
 
-        // Cycle 8X: homestead-gate scenes (Newsheepdogland's day loop) build their
-        // own gate + pen via buildHomesteadGate. The FieldConfig default gate+pen
-        // from buildGateAndPenOnly would strand a stray gate out in the water at
-        // the default origin location, so skip the default fence build entirely.
-        if (homesteadGate) {
-            console.log('[OK] Homestead-gate scene: default gate+pen skipped');
+        // Cycle 117 P4: a scene that declares its own fenced enclosure builds
+        // THAT and nothing else. Laying FieldConfig's default gate + pen ring on
+        // top of it strands a second gate at the origin - out in the water on
+        // Newsheepdogland, and 100m INSIDE the disc on the Rolling Hills island.
+        // (This was Cycle 8X's `homesteadGate` suppression flag, which suppressed
+        // without building because the homestead was built separately under the
+        // day-loop branch. One call site now does both, so local 2-player - which
+        // rebuilds structures from scratch - stops being a way to lose the fence.)
+        if (enclosure) {
+            this.buildPenEnclosure(enclosure);
             return;
         }
 
-        // Cycle 5+ corral scene (Rolling Hills): the corral marker replaces
-        // the perimeter pen+gate. Even if FieldConfig still surfaces a legacy
-        // gate object, corral wins — no fence ring, no pen at the perimeter.
+        // Cycle 5+ corral scene: the corral disc replaces the perimeter pen+gate.
+        // Even if FieldConfig still surfaces a legacy gate object, corral wins -
+        // no fence ring, no pen at the perimeter. Open Country is the only one
+        // left and it owns its own visual (PortalEffect, built in
+        // js/boot/initWorld.js); Cycle 117 P4 retired the flag-pillar marker
+        // along with the island corral it was built for (D15).
         if (corral) {
-            // Cycle 6 Phase 4: 'portal'-style corrals own their own visual
-            // (PortalEffect, instantiated in main.js). The flag-pillar marker
-            // is just for 'zap'-style corrals (Rolling Hills) where the
-            // retirement visual is event-driven, not persistent.
-            if (corral.effect !== 'portal') {
-                this.buildCorralStructure(corral);
-            }
-            console.log('[OK] Corral structures built');
+            console.log('[OK] Corral scene: default gate+pen skipped');
             return;
         }
 
@@ -443,71 +538,18 @@ export class StructureBuilder {
     }
 
     /**
-     * Cycle 5+ corral marker. Builds a tall flag pillar at corral.center so
-     * the destination is findable from the far shore. The corral disc itself
-     * is the retirement-trigger zone (no fence walls); sheep within
-     * `corral.radius` of the centre enter retirement.
+     * A scene's fenced enclosure: a full fence ring around the pen box with one
+     * swing gate (posts + arch from the fence kit + a hinged door) as the only
+     * opening. Newsheepdogland's homestead (Cycle 65) and, since Cycle 117 P4,
+     * Rolling Hills' island pasture. A day loop, where there is one, swings the
+     * door shut at night via `setPenGateOpen` + `updateGate`; a scene without a
+     * clock leaves it standing open, which is the state it builds in.
      *
-     * @param {{center: {x: number, z: number}, radius: number}} corral
-     */
-    buildCorralStructure(corral) {
-        const group = new THREE.Group();
-        group.name = 'CorralMarker';
-
-        // Pillar: 8m tall wooden post
-        const pillarHeight = 8;
-        const pillar = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.18, 0.22, pillarHeight, 8),
-            new THREE.MeshLambertMaterial({ color: 0x6b4a30 })
-        );
-        pillar.position.set(corral.center.x, pillarHeight / 2, corral.center.z);
-        pillar.castShadow = true;
-        pillar.userData.surfaceToTerrain = true;
-        group.add(pillar);
-
-        // Flag: a small banner near the top
-        const flagWidth = 1.6;
-        const flagHeight = 1.0;
-        const flag = new THREE.Mesh(
-            new THREE.PlaneGeometry(flagWidth, flagHeight),
-            new THREE.MeshLambertMaterial({
-                color: 0xc83a3a,
-                side: THREE.DoubleSide,
-                emissive: 0x4a0c0c,
-                emissiveIntensity: 0.15
-            })
-        );
-        flag.position.set(corral.center.x + flagWidth / 2, pillarHeight - flagHeight / 2 - 0.5, corral.center.z);
-        // Surface flag follows pillar's terrain offset
-        flag.userData.surfaceToTerrain = true;
-        group.add(flag);
-
-        // Faint ground ring at the corral radius — anime-style flat disc, subtle
-        const ringGeo = new THREE.RingGeometry(corral.radius - 0.4, corral.radius, 48);
-        const ringMat = new THREE.MeshBasicMaterial({
-            color: 0xeaf6ff,
-            transparent: true,
-            opacity: 0.35,
-            side: THREE.DoubleSide,
-            depthWrite: false,
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.set(corral.center.x, 0.05, corral.center.z);
-        ring.userData.surfaceToTerrain = true;
-        group.add(ring);
-
-        this.scene.add(group);
-        this.structures.fences.push(group);
-        this._surfaceToTerrain(group);
-    }
-
-    /**
-     * Cycle 65 (rebuilt): the homestead enclosure - a full square pen fence
-     * ringing `pen.center` at `pen.radius`, with one swing gate (posts + arch
-     * from the fence kit + a hinged door) as the only opening, on the
-     * field-facing edge. The day loop swings the door open at dawn and shut at
-     * night via `setHomesteadGateOpen` + `updateGate`.
+     * Rect-capable since Cycle 117 P4: `resolvePenBox` accepts either the square
+     * `{center, radius}` the homestead declares or the `{minX, maxX, minZ, maxZ}`
+     * rect the island pasture declares, and the ring is laid out from the four
+     * edges either way. On a square the two forms produce the same segments to
+     * the bit, so the homestead's geometry is unchanged.
      *
      * Grounding: the outer group is deliberately NOT tagged surfaceToTerrain.
      * Every fence post + rail self-grounds per-piece (createBorderSegment tags
@@ -516,17 +558,17 @@ export class StructureBuilder {
      * the children to ~2x terrain height - that was the old "floating wings"
      * bug (locked as known behavior in structure-builder.spec.js).
      *
-     * @param {{ gate: {x:number, z:number, width?:number, facingDeg?:number}, pen?: {center:{x:number, z:number}, radius:number} }} homestead
+     * @param {{ gate: {x:number, z:number, width?:number, facingDeg?:number}, pen?: object }} enclosure
      * @returns {THREE.Group}
      */
-    buildHomesteadGate(homestead) {
-        const g = homestead?.gate;
+    buildPenEnclosure(enclosure) {
+        const g = enclosure?.gate;
         if (!g) return null;
         const width = g.width ?? 10;
-        const pen = homestead?.pen;
+        const box = resolvePenBox(enclosure?.pen);
 
         const group = new THREE.Group();
-        group.name = 'HomesteadGate';
+        group.name = 'PenEnclosure';
 
         // Snap rather than tween when the user prefers reduced motion.
         this._reducedMotion = typeof window !== 'undefined'
@@ -536,66 +578,74 @@ export class StructureBuilder {
         // Which pen edge holds the gate? east/west edges run along z (vertical);
         // north/south edges run along x. Drives both the gate rotation and which
         // edge gets split into flanks.
+        //
+        // This is `PenBarrier`'s nearest-face rule verbatim, not the Cycle 66
+        // raw-offset rule it replaced, because the VISIBLE gap and the PASSABLE
+        // gap have to be the same gap. On a square the two rules agree (see the
+        // proof in PenBarrier's constructor), so the homestead does not move;
+        // on a long thin rect the old rule gaps the wrong edge and the fence
+        // would have a hole where the barrier does not.
         let onVertical = true;
-        if (pen?.center) {
-            const dx = g.x - pen.center.x, dz = g.z - pen.center.z;
-            onVertical = Math.abs(dx) >= Math.abs(dz);
+        if (box) {
+            const cx = (box.minX + box.maxX) / 2, cz = (box.minZ + box.maxZ) / 2;
+            onVertical = ((box.maxX - cx) - Math.abs(g.x - cx))
+                <= ((box.maxZ - cz) - Math.abs(g.z - cz));
         }
         const facingDeg = g.facingDeg ?? (onVertical ? 90 : 0);
 
         // --- The swing-gate assembly, grounded as ONE unit so the posts, arch,
         //     and hinged door stay coplanar on a slope. ---
         const gate = new THREE.Group();
-        gate.name = 'HomesteadGateAssembly';
+        gate.name = 'PenGateAssembly';
         // Cycle 115 P3: the leaf rig used to be built HERE, which is why only
         // this scene's gate could move. It now comes back on the gate group
         // itself from createGateStructure, on both the authored-asset and the
         // no-asset branch, so there is nothing left to branch on.
         const gateStructure = this.fencePresets.createGateStructure(width, 'horizontal');
         gate.add(gateStructure);
-        this._homesteadGateController = getGateLeafController(gateStructure);
-        this._homesteadGateOpen = true;
-        // The day loop starts at dawn with the gate standing open. Every other
-        // scene keeps the builder's closed default; this is the one place that
-        // states an opinion, and it states it out loud.
-        this._homesteadGateController?.setOpenFraction(1);
+        this._penGateController = getGateLeafController(gateStructure);
+        this._penGateOpen = true;
+        // A pen gate builds OPEN: the day loop starts at dawn, and a scene with
+        // no day loop never closes it. Every other gate keeps the builder's
+        // default; this is the one place that states an opinion, out loud.
+        this._penGateController?.setOpenFraction(1);
         gate.position.set(g.x, 0, g.z);
         gate.rotation.y = (facingDeg * Math.PI) / 180;
         gate.userData.surfaceToTerrain = true; // single lift for the whole gate
         group.add(gate);
 
-        // --- The pen enclosure: a full square ring around pen.center; the gate
-        //     edge is split into two flanks that meet the opening. Each segment
-        //     self-grounds per-piece (no group-level tag, so no double-lift). ---
-        if (pen?.center && pen.radius > 1) {
-            const cx = pen.center.x, cz = pen.center.z, R = pen.radius;
+        // --- The ring: all four edges of the pen box, with the gate's edge split
+        //     into two flanks that meet the opening. Each segment self-grounds
+        //     per-piece (no group-level tag, so no double-lift). ---
+        if (box) {
+            const { minX, maxX, minZ, maxZ } = box;
+            const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
             const half = width / 2;
             const seg = (a, b) => { const f = this.buildFenceSegment(a, b); if (f) group.add(f); };
 
             if (onVertical) {
-                const gx = (g.x < cx) ? cx - R : cx + R;   // x of the gate edge
-                const fx = (g.x < cx) ? cx + R : cx - R;   // x of the far edge
-                seg({ x: cx - R, z: cz + R }, { x: cx + R, z: cz + R });  // north
-                seg({ x: cx - R, z: cz - R }, { x: cx + R, z: cz - R });  // south
-                seg({ x: fx, z: cz + R }, { x: fx, z: cz - R });          // far edge
-                seg({ x: gx, z: cz + R }, { x: gx, z: g.z + half });      // gate flank
-                seg({ x: gx, z: g.z - half }, { x: gx, z: cz - R });      // gate flank
+                const gx = (g.x < cx) ? minX : maxX;      // x of the gate edge
+                const fx = (g.x < cx) ? maxX : minX;      // x of the far edge
+                seg({ x: minX, z: maxZ }, { x: maxX, z: maxZ });          // north
+                seg({ x: minX, z: minZ }, { x: maxX, z: minZ });          // south
+                seg({ x: fx, z: maxZ }, { x: fx, z: minZ });              // far edge
+                seg({ x: gx, z: maxZ }, { x: gx, z: g.z + half });        // gate flank
+                seg({ x: gx, z: g.z - half }, { x: gx, z: minZ });        // gate flank
             } else {
-                const gz = (g.z < cz) ? cz - R : cz + R;   // z of the gate edge
-                const fz = (g.z < cz) ? cz + R : cz - R;   // z of the far edge
-                seg({ x: cx - R, z: cz + R }, { x: cx - R, z: cz - R });  // west
-                seg({ x: cx + R, z: cz + R }, { x: cx + R, z: cz - R });  // east
-                seg({ x: cx - R, z: fz }, { x: cx + R, z: fz });          // far edge
-                seg({ x: cx - R, z: gz }, { x: g.x - half, z: gz });      // gate flank
-                seg({ x: g.x + half, z: gz }, { x: cx + R, z: gz });      // gate flank
+                const gz = (g.z < cz) ? minZ : maxZ;      // z of the gate edge
+                const fz = (g.z < cz) ? maxZ : minZ;      // z of the far edge
+                seg({ x: minX, z: maxZ }, { x: minX, z: minZ });          // west
+                seg({ x: maxX, z: maxZ }, { x: maxX, z: minZ });          // east
+                seg({ x: minX, z: fz }, { x: maxX, z: fz });              // far edge
+                seg({ x: minX, z: gz }, { x: g.x - half, z: gz });        // gate flank
+                seg({ x: g.x + half, z: gz }, { x: maxX, z: gz });        // gate flank
             }
         }
 
         this.scene.add(group);
         this.structures.gates.push(group);
         this._surfaceToTerrain(group);
-        this._homesteadGate = group;
-        console.log(`[BUILD] Homestead enclosure at pen (${(pen?.center?.x ?? g.x).toFixed(0)}, ${(pen?.center?.z ?? g.z).toFixed(0)}) r${pen?.radius ?? 0}, gate w${width}`);
+        console.log(`[BUILD] Pen enclosure ${box ? `[${box.minX}..${box.maxX}] x [${box.minZ}..${box.maxZ}]` : '(gate only)'}, gate w${width} at (${g.x}, ${g.z})`);
         return group;
     }
 
@@ -614,16 +664,16 @@ export class StructureBuilder {
     }
 
     /**
-     * Cycle 65: command the homestead gate open or closed. The actual swing is
-     * tweened in `updateGate`; if the scene has no homestead gate this is a
+     * Cycle 65: command the pen gate open or closed. The actual swing is
+     * tweened in `updateGate`; if the scene has no pen gate this is a
      * no-op. Idempotent.
      * @param {boolean} open
      */
-    setHomesteadGateOpen(open) {
-        const controller = this._homesteadGateController;
+    setPenGateOpen(open) {
+        const controller = this._penGateController;
         if (!controller) return;
-        this._homesteadGateOpen = !!open;
-        const target = this._homesteadGateOpen ? 1 : 0;
+        this._penGateOpen = !!open;
+        const target = this._penGateOpen ? 1 : 0;
         // Reduced motion snaps; everything else aims and lets updateGate ease.
         if (this._reducedMotion) {
             controller.setOpenFraction(target);
@@ -633,15 +683,15 @@ export class StructureBuilder {
     }
 
     /**
-     * Cycle 65: tween the homestead gate door toward its target each frame.
+     * Cycle 65: tween the pen gate door toward its target each frame.
      * Driven by the day loop's per-frame runner because StructureBuilder.update
      * is not on the main loop. No-op without a gate or under reduced motion
-     * (where setHomesteadGateOpen has already snapped it).
+     * (where setPenGateOpen has already snapped it).
      * @param {number} deltaTime
      */
     updateGate(deltaTime) {
         if (this._reducedMotion) return;
-        this._homesteadGateController?.step(deltaTime);
+        this._penGateController?.step(deltaTime);
     }
 
     /**

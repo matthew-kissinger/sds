@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { Vector2D } from './Vector2D.js';
-import { getTerrainBuilder, getSceneManager, getGameState } from './GameBridge.js';
+import { getTerrainBuilder, getGameState } from './GameBridge.js';
 import { getFenceCollisionSystem } from './FenceCollisionSystem.js';
 import { obstacleAvoidance } from '../shared/SceneObstacles.js';
 import { DEFAULT_BARK_CONFIG } from '../shared/BarkImpulse.js';
@@ -130,10 +130,6 @@ export class Sheepdog {
         this.playerId = null;
         this.playerIcon = null;
 
-        // Distance indicator (always visible marker for local player)
-        this.distanceIndicator = null;
-        this.isLocalPlayer = false;
-        
         // Configure dog stats based on type
         this.configureDogStats(dogType);
         
@@ -1200,179 +1196,5 @@ export class Sheepdog {
 
         // Animation system is handled in updateAnimationSystem()
         // This method is kept for compatibility with existing code
-    }
-
-    /**
-     * Create distance indicator for local player
-     * Floating marker above dog - always visible, added to scene directly
-     */
-    createDistanceIndicator() {
-        if (this.distanceIndicator) {
-            this.removeDistanceIndicator();
-        }
-
-        // Create a group to hold indicator elements
-        this.distanceIndicator = new THREE.Group();
-        this.distanceIndicator.renderOrder = 999;
-
-        // Floating arrow/chevron pointing down
-        const arrowShape = new THREE.Shape();
-        arrowShape.moveTo(0, 0);
-        arrowShape.lineTo(-0.8, 1.2);
-        arrowShape.lineTo(-0.4, 1.2);
-        arrowShape.lineTo(0, 0.5);
-        arrowShape.lineTo(0.4, 1.2);
-        arrowShape.lineTo(0.8, 1.2);
-        arrowShape.lineTo(0, 0);
-
-        const arrowGeometry = new THREE.ShapeGeometry(arrowShape);
-        const arrowMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00ff88,
-            transparent: true,
-            opacity: 0.9,
-            side: THREE.DoubleSide,
-            depthTest: false,
-            depthWrite: false
-        });
-        const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
-        arrow.position.y = 6;
-        arrow.renderOrder = 1000;
-        this.distanceIndicator.add(arrow);
-
-        // Top diamond
-        const diamondGeometry = new THREE.OctahedronGeometry(0.5, 0);
-        const diamondMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.9,
-            depthTest: false,
-            depthWrite: false
-        });
-        const diamond = new THREE.Mesh(diamondGeometry, diamondMaterial);
-        diamond.position.y = 8;
-        diamond.scale.set(1, 1.5, 1);
-        diamond.renderOrder = 1000;
-        this.distanceIndicator.add(diamond);
-
-        // Store references for animation
-        this.distanceIndicator.userData = {
-            arrow,
-            diamond,
-            animationTime: 0
-        };
-
-        // Add to scene directly (not as child of mesh) to avoid occlusion
-        const scene = getSceneManager()?.getScene();
-        if (scene) {
-            scene.add(this.distanceIndicator);
-            console.log(`[INDICATOR] Created and added to scene for ${this.dogType}`);
-        } else {
-            console.warn(`[INDICATOR] Scene not available, indicator will be added later`);
-        }
-
-        this.isLocalPlayer = true;
-    }
-
-    /**
-     * Ensure indicator is in the scene
-     */
-    ensureIndicatorAttached() {
-        if (this.isLocalPlayer && this.distanceIndicator && !this.distanceIndicator.parent) {
-            const scene = getSceneManager()?.getScene();
-            if (scene) {
-                scene.add(this.distanceIndicator);
-                console.log('Distance indicator attached to scene (deferred)');
-            }
-        }
-    }
-
-    /**
-     * Remove distance indicator
-     */
-    removeDistanceIndicator() {
-        console.log(`[INDICATOR] removeDistanceIndicator called, indicator exists: ${!!this.distanceIndicator}`);
-        if (this.distanceIndicator) {
-            console.log(`[INDICATOR] Indicator parent: ${this.distanceIndicator.parent?.type || 'none'}`);
-            if (this.distanceIndicator.parent) {
-                this.distanceIndicator.parent.remove(this.distanceIndicator);
-                console.log('[INDICATOR] Removed from parent');
-            }
-            this.distanceIndicator.traverse((child) => {
-                if (child.geometry) child.geometry.dispose();
-                if (child.material) child.material.dispose();
-            });
-            this.distanceIndicator = null;
-            console.log('[INDICATOR] Disposed and nulled');
-        }
-    }
-
-    /**
-     * Update distance indicator - follows the dog position
-     * @param {number} cameraDistance - Distance from camera to dog
-     * @param {number} deltaTime - Time since last frame
-     * @param {boolean} isLocalMultiplayer - Whether this is local 2-player mode
-     */
-    updateDistanceIndicator(cameraDistance, deltaTime, isLocalMultiplayer = false) {
-        // Ensure indicator is attached
-        this.ensureIndicatorAttached();
-
-        if (!this.distanceIndicator || !this.distanceIndicator.userData) return;
-
-        // Update position to follow dog using mesh position (updated by Three.js).
-        // Track the dog's mesh.y (terrain-clamped) — not world y=0 — so the
-        // chevron + diamond stay anchored to the dog on hills. Was: y hard-set
-        // to 0, which made the indicator visibly drift uphill as the dog
-        // climbed (parallax through the angled camera).
-        if (this.mesh) {
-            this.distanceIndicator.position.set(
-                this.mesh.position.x,
-                this.mesh.position.y,
-                this.mesh.position.z
-            );
-        }
-
-        const data = this.distanceIndicator.userData;
-        data.animationTime += deltaTime;
-
-        // Calculate scale based on camera distance for local multiplayer
-        // When camera zooms out, scale up the indicators so they remain visible
-        let scale = 1.0;
-        if (isLocalMultiplayer && cameraDistance) {
-            // Base scale at distance 80 (default camera distance)
-            // Scale up proportionally as camera zooms out
-            const baseDistance = 80;
-            const maxScale = 3.0; // Maximum scale factor
-            const minScale = 1.0; // Minimum scale factor
-            scale = Math.max(minScale, Math.min(maxScale, cameraDistance / baseDistance));
-        }
-
-        // Apply scale to the indicator group
-        this.distanceIndicator.scale.set(scale, scale, scale);
-
-        // Adjust height based on scale for local multiplayer
-        const baseArrowHeight = 6;
-        const baseDiamondHeight = 8;
-        const heightMultiplier = isLocalMultiplayer ? 1.2 : 1.0; // Raise higher in local multiplayer
-
-        // Update arrow - bob up and down
-        if (data.arrow) {
-            const bob = Math.sin(data.animationTime * 3) * 0.3;
-            data.arrow.position.y = (baseArrowHeight * heightMultiplier) + bob;
-        }
-
-        // Update diamond - rotate and bob
-        if (data.diamond) {
-            const bob2 = Math.sin(data.animationTime * 2.5 + Math.PI) * 0.3;
-            data.diamond.position.y = (baseDiamondHeight * heightMultiplier) + bob2;
-            data.diamond.rotation.y = data.animationTime * 2;
-        }
-    }
-
-    /**
-     * Mark this as the local player and create indicator
-     */
-    setAsLocalPlayer() {
-        this.isLocalPlayer = true;
-        this.createDistanceIndicator();
     }
 }

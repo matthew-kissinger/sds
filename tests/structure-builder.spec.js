@@ -116,7 +116,11 @@ function instancePostBase(instancedMesh, index) {
   return position.sub(meshOffset);
 }
 
-describe('buildHomesteadGate — authored gate asset vs fallback door', () => {
+describe('buildPenEnclosure — authored gate asset vs fallback door', () => {
+  // Cycle 117 P4 renamed buildHomesteadGate. The enclosure is no longer
+  // Newsheepdogland's alone (Rolling Hills' island pasture is the second), and
+  // it accepts a rect pen as well as this square one. The square fixture is
+  // unchanged so the homestead's own geometry stays pinned.
   const HOMESTEAD = {
     gate: { x: 0, z: 0, width: 8, facingDeg: 90 },
     pen: { center: { x: 20, z: 0 }, radius: 24 },
@@ -127,19 +131,20 @@ describe('buildHomesteadGate — authored gate asset vs fallback door', () => {
     sb.fencePresets.useGLBModels = true;
     sb.fencePresets.models.gateAssembly = makeGateAssemblyWithLeafPivots();
 
-    const group = sb.buildHomesteadGate(HOMESTEAD);
+    const group = sb.buildPenEnclosure(HOMESTEAD);
     const assembly = group.getObjectByName('Gate_Assembly');
     const leftLeaf = group.getObjectByName('GateLeafLeft');
     const rightLeaf = group.getObjectByName('GateLeafRight');
 
     expect(assembly).toBeTruthy();
     expect(group.getObjectByName('GateLeaf')).toBeUndefined();
-    // The day loop opens the homestead gate at dawn, so it builds at 1.
-    expect(sb._homesteadGateController.openFraction).toBe(1);
+    // A pen gate builds open: the day loop starts at dawn, and a scene without
+    // one never closes it.
+    expect(sb._penGateController.openFraction).toBe(1);
     expect(assembly.parent.rotation.y).toBeCloseTo(0, 6);
     expect(leftLeaf.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
     expect(rightLeaf.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-72), 6);
-    sb.setHomesteadGateOpen(false);
+    sb.setPenGateOpen(false);
     sb.updateGate(1);
     expect(assembly.parent.rotation.y).toBeCloseTo(0, 6);
     expect(leftLeaf.rotation.y).toBeCloseTo(0, 6);
@@ -150,15 +155,34 @@ describe('buildHomesteadGate — authored gate asset vs fallback door', () => {
     const { sb } = makeBuilder(false);
     sb.fencePresets.useGLBModels = false;
 
-    const group = sb.buildHomesteadGate(HOMESTEAD);
+    const group = sb.buildPenEnclosure(HOMESTEAD);
     const door = group.getObjectByName('GateLeaf');
 
     expect(door).toBeTruthy();
-    expect(sb._homesteadGateController.leaves[0].node).toBe(door);
+    expect(sb._penGateController.leaves[0].node).toBe(door);
     expect(door.rotation.y).toBeCloseTo(-Math.PI * 0.58, 6);
-    sb.setHomesteadGateOpen(false);
+    sb.setPenGateOpen(false);
     sb.updateGate(1);
     expect(door.rotation.y).toBeCloseTo(0, 6);
+  });
+
+  it('lays the same ring for a square pen and the rect that spells it out', () => {
+    // The regression this guards: the rect branch is new, the square branch is
+    // Newsheepdogland's shipped geometry, and a square IS a rect. Compare the
+    // fence segments the two forms produce piece for piece.
+    const ring = (pen) => {
+      const { sb } = makeBuilder(false);
+      sb.fencePresets.useGLBModels = false;
+      const group = sb.buildPenEnclosure({ gate: HOMESTEAD.gate, pen });
+      return group.children
+        .filter((c) => c.name !== 'PenGateAssembly')
+        .map((c) => `${c.position.x.toFixed(6)},${c.position.z.toFixed(6)},${c.rotation.y.toFixed(6)}`)
+        .sort();
+    };
+    const square = ring(HOMESTEAD.pen);
+    const rect = ring({ minX: -4, maxX: 44, minZ: -24, maxZ: 24 });
+    expect(square.length).toBeGreaterThan(0);
+    expect(rect).toEqual(square);
   });
 });
 

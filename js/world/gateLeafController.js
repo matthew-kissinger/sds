@@ -18,7 +18,8 @@
  * off the shipped binary, not assumed.
  *
  * WHY A CONTROLLER AND NOT A ROTATION. Until this phase the rig lived inside
- * `StructureBuilder.buildHomesteadGate`, which only Newsheepdogland calls.
+ * `StructureBuilder.buildPenEnclosure` (then `buildHomesteadGate`), which only
+ * Newsheepdogland called.
  * Every other scene cloned the asset, scaled it, rotated it and rendered it
  * exactly as baked - so Home Field's pen gate stood open forever, and nothing
  * downstream had a handle to move it. Promoting the rig into the gate builder

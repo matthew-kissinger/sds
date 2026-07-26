@@ -50,7 +50,7 @@ import { mulberry32 } from '../../shared/Random.js';
 // broadcast). All four are pure shared/ modules (no Three/DOM).
 import { SurvivalRun } from '../../shared/survival/run.js';
 import { WolfSim } from '../../shared/survival/wolves.js';
-import { PenContainment } from '../../shared/survival/pen.js';
+import { PenBarrier } from '../../shared/PenBarrier.js';
 import { secondsToT, phaseForT, gateOpenForPhase } from '../../shared/survival/dayClock.js';
 import { PROTOCOL_VERSION, KEYFRAME_INTERVAL_TICKS } from '../../shared/protocol.js';
 // P0-OBS: structured one-line JSON logging (worker/src/log.ts). Extensionless
@@ -194,6 +194,45 @@ function isActiveSheep(s) {
     return s.state === 0;
 }
 
+/**
+ * Cycle 117 P2: build the scene's pen barrier, or null when it has no pen.
+ *
+ * The gate is `pen.gate ?? scene.gate`, IN THAT ORDER. Rolling Hills nests its
+ * gate inside the pen descriptor, because a top-level `gate` would make
+ * `createGameState` produce a non-null `gameState.gate` and switch on the
+ * gate-attraction steer and the x=0 passage-zone suppression rect that the
+ * island has never had. Newsheepdogland declares its homestead gate top-level
+ * and has no nested one, so a nested-only resolver would silently drop its
+ * barrier. Both forms of the box (square `{center, radius}`, rect
+ * `{minX..maxZ}`) resolve to the same four edges inside PenBarrier.
+ *
+ * Seeded from the per-game seed so the settle spot inside the pen is
+ * reproducible for replay, like every other retirement placement here.
+ *
+ * EXPORTED for tests only. `tests/sim-baseline/harness.js` keeps a hand copy
+ * (`makeScenePenBarrier`) because that harness is also imported by bare-node
+ * probes under `cycle117-validation/` and `tools/`, which cannot resolve this
+ * module's extensionless `./log` import. The copy is what captures the
+ * pasture-retirement fixture, so a drift between the two silently invalidates a
+ * sim-baseline trace; `tests/scene-pen-barrier-parity.spec.js` pins them to each
+ * other rather than leaving the mirror on trust.
+ *
+ * @param {object} scene
+ * @param {number} seed
+ * @returns {PenBarrier|null}
+ */
+export function createScenePenBarrier(scene, seed) {
+    const pen = scene?.pen;
+    const gate = pen?.gate ?? scene?.gate ?? null;
+    const box = (pen?.center || Number.isFinite(pen?.minX)) ? pen : null;
+    if (!box || !gate?.position) return null;
+    return new PenBarrier(
+        box,
+        { x: gate.position.x, z: gate.position.z, width: gate.width },
+        { settleSeed: seed },
+    );
+}
+
 // P2-DELTA: flat key/value compare of two quantized sheep wire records
 // (design doc 3.4). A sheep is "changed" iff its record differs from the
 // previous broadcast frame's record in any key's PRESENCE or VALUE - the
@@ -330,6 +369,23 @@ export class GameSimulation {
         // RH/Field have no objective — `this.objective` stays null and the
         // corral retirement path runs unchanged via `isCorralOpen(null) === true`.
         this.objective = createObjective(this.scene.objective, roomSheepCount);
+
+        // Cycle 117 P2: the pen barrier is NOT survival-scoped. Any scene that
+        // declares a pen runs it authoritatively here (Rolling Hills' island
+        // pasture, Newsheepdogland's homestead), and `_initSurvival` reuses this
+        // instance rather than building a second one, so the wolves, the day
+        // loop and the retirement count all read one `pennedCount`.
+        //
+        // Competitive and timed are excluded: `shared/CompetitiveLayout.js` lays
+        // its gates and pastures out on Home Field geometry regardless of scene
+        // (a known, deliberately unfixed limitation - see DECISIONS D23), so a
+        // mid-island fence would sit across the competitive pastures. Those
+        // modes keep the retirement path they have always had.
+        this._penBarrier = (this.isCompetitive || this.isTimedMode)
+            ? null
+            : createScenePenBarrier(this.scene, this.seed);
+        /** @type {Map<string, {inside: boolean}>} per-dog fence-side memory. */
+        this._penDogMem = new Map();
 
         // Game state broadcasting
         this.lastGameState = null;
@@ -570,6 +626,13 @@ export class GameSimulation {
             // corrects final sheep positions and the wolves see the settled flock.
             if (this.isSurvival && this._survival) {
                 this._tickSurvival(this.deltaTime);
+            } else if (this._penBarrier) {
+                // Cycle 117 P2: a non-survival scene that declares a pen (the
+                // Rolling Hills island pasture) runs the same barrier, with no
+                // day clock to close the gate. Same position in the tick as the
+                // survival pen: AFTER updateSheep, so it corrects final sheep
+                // positions and owns retirement for the scene.
+                this._tickPen(this.deltaTime);
             }
 
             // Update timed mode specific logic
@@ -1083,7 +1146,24 @@ export class GameSimulation {
                 );
                 this.gameState.sheepRetired = retirementResult.totalRetired;
             }
-        } else {
+        } else if (this._penBarrier) {
+            // Cycle 117: a fenced-pen scene retires INSIDE the barrier. `_tickPen`
+            // runs later in the same tick and sets `sheepRetired` from
+            // `pennedCount`, so this arm is deliberately empty - it is here to
+            // claim ownership ahead of the gate arm below, mirroring the empty
+            // survival arm at the top of the same chain.
+            //
+            // Ownership is the whole point, and the first cut of this guard got
+            // it wrong: it asked `this.gameState.gate` and so only stood the gate
+            // arm down on a scene whose gate is NESTED (Rolling Hills). The other
+            // pen scene, Newsheepdogland, declares a TOP-LEVEL gate and no
+            // pasture, so `gameState.gate` is truthy and `gameState.pasture` is
+            // null - a co-op (non-survival) island room ran `updateSheepRetirements`,
+            // which dereferences `pasture.minX` the moment a sheep crosses the
+            // phantom passage zone that `createGameState` pins to x=0. Asking for
+            // the BARRIER instead of for the absence of a gate is the same test
+            // the tick loop already makes when it decides who advances the pen.
+        } else if (this.gameState.gate) {
             // Use cooperative retirement logic
             const retirementResult = updateSheepRetirements(
                 this.gameState.sheep,
@@ -1094,6 +1174,43 @@ export class GameSimulation {
 
             this.gameState.sheepRetired = retirementResult.totalRetired;
         }
+        // Cycle 117 P2: NO trailing else. A scene can declare a corral, or a
+        // gate plus pasture, or a fenced pen, and the third case must not fall
+        // into the gate branch: `updateSheepRetirements` dereferences
+        // `gate.passageZone` and `pasture.minX` (shared/GameStateValidation.js),
+        // and a pen scene has no pasture. The client was always null-safe here
+        // (js/OptimizedSheep.js early-returns on a falsy gate); the Worker was
+        // not. A pen scene's retirement is `_tickPen`'s, which runs after this
+        // and sets `sheepRetired` from the barrier's own count.
+    }
+
+    /**
+     * Cycle 117 P2: advance the pen barrier for a non-survival scene that
+     * declares a pen. Called from tick() AFTER updateSheep, exactly where
+     * `_tickSurvival` calls the survival pen, so it sees final sheep positions.
+     *
+     * The gate is always open: an island pasture has no day clock to seal it.
+     * Each player dog gets its own `{inside}` memory because the barrier's
+     * single-dog path in `update()` tracks one flag and the DO has several.
+     *
+     * @param {number} dt
+     */
+    _tickPen(dt) {
+        const pen = this._penBarrier;
+        const step = Number.isFinite(dt) ? dt : this.deltaTime;
+        pen.update(this.gameState.sheep, null, true, step);
+        for (const [playerId, dog] of this.sheepdogs) {
+            let mem = this._penDogMem.get(playerId);
+            if (!mem) {
+                mem = { inside: false };
+                this._penDogMem.set(playerId, mem);
+            }
+            pen.containDog(dog.position, true, mem);
+        }
+        // "Inside" is only reachable through the gate, so the pen's membership
+        // IS the retired count. It agrees with the `hasPassedGate || isRetiring`
+        // tally `checkGameCompletion` uses, because entry sets both.
+        this.gameState.sheepRetired = pen.pennedCount;
     }
 
     applySheepBoundaryConstraint(sheep) {
@@ -1193,65 +1310,6 @@ export class GameSimulation {
         sheep.velocity.set(0, 0);
         sheep.acceleration.set(0, 0);
         // That's it - no position updates, no movement, nothing
-    }
-
-    applyPastureContainment(sheep) {
-        // Keep sheep within pasture bounds
-        const pastureMargin = 2;
-        const steer = new Vector2D(0, 0);
-        
-        let targetPasture;
-        
-        if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates && sheep.assignedGate !== null) {
-            // Find the pasture for the assigned gate in competitive/timed mode
-            const assignedGate = this.gameState.competitiveGates.find(gate => gate.id === sheep.assignedGate);
-            targetPasture = assignedGate ? assignedGate.pasture : this.gameState.competitiveGates[0].pasture;
-        } else if ((this.isCompetitive || this.isTimedMode) && this.gameState.competitiveGates) {
-            // If no assigned gate yet, use the closest pasture
-            let closestPasture = this.gameState.competitiveGates[0].pasture;
-            let closestDistance = Infinity;
-            
-            for (const gate of this.gameState.competitiveGates) {
-                const centerX = (gate.pasture.minX + gate.pasture.maxX) / 2;
-                const centerZ = (gate.pasture.minZ + gate.pasture.maxZ) / 2;
-                const distance = Math.sqrt(
-                    (sheep.position.x - centerX) ** 2 + 
-                    (sheep.position.z - centerZ) ** 2
-                );
-                
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestPasture = gate.pasture;
-                }
-            }
-            
-            targetPasture = closestPasture;
-        } else {
-            // Use cooperative mode pasture
-            targetPasture = this.gameState.pasture;
-        }
-        
-        // Use distance-based forces for smoother boundaries
-        const distToMinX = sheep.position.x - targetPasture.minX;
-        const distToMaxX = targetPasture.maxX - sheep.position.x;
-        const distToMinZ = sheep.position.z - targetPasture.minZ;
-        const distToMaxZ = targetPasture.maxZ - sheep.position.z;
-        
-        if (distToMinX < pastureMargin) {
-            steer.x = 0.02 * (1 - distToMinX / pastureMargin);
-        } else if (distToMaxX < pastureMargin) {
-            steer.x = -0.02 * (1 - distToMaxX / pastureMargin);
-        }
-        
-        if (distToMinZ < pastureMargin) {
-            steer.z = 0.02 * (1 - distToMinZ / pastureMargin);
-        } else if (distToMaxZ < pastureMargin) {
-            steer.z = -0.02 * (1 - distToMaxZ / pastureMargin);
-        }
-        
-        if (steer.magnitude() > 0) {
-            sheep.acceleration.add(steer);
-        }
     }
 
     shouldSeekGate(sheep) {
@@ -2032,16 +2090,11 @@ export class GameSimulation {
             }
         }
 
-        // Pen barrier (same geometry the client builds: scene.pen + scene.gate).
-        const pen = this.scene.pen;
-        const gate = this.scene.gate;
-        const penContainment = (pen?.center && gate?.position)
-            ? new PenContainment(
-                pen,
-                { x: gate.position.x, z: gate.position.z, width: gate.width },
-                { settleSeed: this.seed },
-            )
-            : null;
+        // Pen barrier: the one the constructor already built from the scene
+        // (Cycle 117 P2 moved the construction there, since a pen is not
+        // survival-only). Reused rather than rebuilt so the wolves, the day loop
+        // and the retirement count all read the same `pennedCount`.
+        const penContainment = this._penBarrier;
 
         const run = new SurvivalRun(cfg);
         // Cycle 68 P4: resume a multi-day run that survived a worker redeploy /

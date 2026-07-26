@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Rolling Hills — Cycle 5: an island bounded by water, with an off-centre
- * corral the player must drive sheep into. No perimeter fence, no gate;
- * the destination is a circular corral reached by navigation across
- * the heightfield.
+ * Rolling Hills. Cycle 5: an island bounded by water, reached across the
+ * heightfield rather than along a fence line. Cycle 117 replaced the off-centre
+ * corral disc and its 8m trigger with a fenced pasture and one open gate, so the
+ * destination is somewhere the flock is driven INTO rather than a radius it
+ * crosses. Still no perimeter fence around the island itself.
  *
  * @type {import('./types.js').SceneDef}
  */
@@ -15,7 +16,7 @@ export const rollingHills = {
     // identity that's been the scene's character since Cycle 5.
     id: 'rolling-hills',
     name: 'Sheep Dog Island',
-    description: 'An island home with rolling hills and a hidden corral. Find it. Drive the flock home before they wander into the water.',
+    description: 'An island home with rolling hills and a fenced pasture at the far end. Drive the flock in through the gate before they wander into the water.',
 
     // Sim — Cycle 5 island. Centre at origin, 90m radius, 15m falloff into sea.
     boundary: {
@@ -28,19 +29,39 @@ export const rollingHills = {
         falloff: 40
     },
 
-    // Off-centre corral (Q1 decision) — visible from the island centre but
-    // requires navigation to reach. Tall flag/pillar makes it findable from
-    // the far shore; CorralCompass HUD kicks in when off-screen.
-    corral: {
-        center: { x: 110, z: 60 },
-        radius: 8
+    // Cycle 117 P2: the destination is a fenced pasture with one open gate, not
+    // a corral disc with an 8m trigger. Sheep are not zapped out of the world at
+    // an invisible radius; they are driven through the opening, and the fence
+    // (shared/PenBarrier.js) is what makes "inside" mean "came in through the
+    // gate". The corral is gone, so `gameState.corral` is null on this island.
+    //
+    // THE SITE was measured through the shipped bake (public/terrain/
+    // rolling-hills.bin) rather than chosen by eye, by scanning 36x36 boxes at
+    // 2m centres and scoring interior relief plus three times the relief across
+    // the opening. This one runs 24.12m to 29.06m inside (4.94m of relief, worst
+    // slope 23 deg) and 0.41m across the 12m gate opening. All four corners sit
+    // inside the 140m full-height radius (66/89/99/116m out), the centre is 91m
+    // from the origin, and the gate is 85m from the sheep spawn at (-30, -30)
+    // and 57m from the dog spawn at (0, -30), so it stays a real traverse. The
+    // gate faces back toward the island centre, which is the approach direction,
+    // and it is the flattest 12m of ground on any candidate edge. 1296 m2 against
+    // Home Field's 1680 m2, which already absorbs a 5,000-sheep Chaos flock.
+    //
+    // The gate is NESTED, not top-level. See PenDef in types.js: a top-level
+    // `gate` would make `gameState.gate` non-null and switch on Worker
+    // gate-attraction plus an x=0 passage-zone suppression rect that this island
+    // has never had.
+    pen: {
+        minX: 32, maxX: 68, minZ: -94, maxZ: -58,
+        gate: { position: { x: 50, z: -58 }, width: 12, facingDeg: 180 },
+        scatterKeepOut: true
     },
 
     sheepSpawn: {
         pattern: 'scattered',
         count: 250,
         spreadRadius: 45,
-        // Spawn south-west of origin so players have to traverse to reach the corral
+        // Spawn south-west of origin so players have to traverse to reach the pasture
         centerX: -30,
         centerZ: -30
     },

@@ -49,6 +49,7 @@ import {
     createSheepCollisionScratch,
     resolveSheepSheepCollisions
 } from '../../shared/index.js';
+import { PenBarrier } from '../../shared/PenBarrier.js';
 
 const islandCollisionScratch = createSheepCollisionScratch();
 const coopCollisionScratch = createSheepCollisionScratch();
@@ -178,6 +179,38 @@ export function makeIslandGameState(sceneId, totalSheep = 50) {
         sceneId,
         totalSheep
     });
+}
+
+/**
+ * Cycle 117 P2/P3: the scene's pen barrier, derived from the REAL scene module.
+ *
+ * Mirrors `createScenePenBarrier` in `worker/src/GameSim.js` exactly, including
+ * the gate resolution order: `pen.gate ?? scene.gate`. Rolling Hills nests its
+ * gate inside the pen (a top-level one would make `gameState.gate` non-null and
+ * switch on Worker gate-attraction the island has never had); Newsheepdogland
+ * declares its homestead gate top-level. A nested-only resolver would silently
+ * drop Newsheepdogland's barrier, so the order is part of the contract, not a
+ * convenience.
+ *
+ * Deliberately NOT a stub. This project has three times shipped a spec that
+ * certified a bug because it compared against a hand-rolled object rather than
+ * the shipped scene data.
+ *
+ * @param {string} sceneId
+ * @param {number} [seed]
+ * @returns {PenBarrier|null}
+ */
+export function makeScenePenBarrier(sceneId, seed = 0x5e77) {
+    const scene = loadScene(sceneId);
+    const pen = scene.pen;
+    const gate = pen?.gate ?? scene.gate ?? null;
+    const box = (pen?.center || Number.isFinite(pen?.minX)) ? pen : null;
+    if (!box || !gate?.position) return null;
+    return new PenBarrier(
+        box,
+        { x: gate.position.x, z: gate.position.z, width: gate.width },
+        { settleSeed: seed },
+    );
 }
 
 /**

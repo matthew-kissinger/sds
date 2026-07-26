@@ -54,8 +54,16 @@
  * posts (js/world/gateThreshold.js derives the material, this drives it). No
  * second hook, no second construct site, no second dispose entry. The arc is
  * built HERE rather than inside the gate group because js/StructureBuilder.js
- * builds no gate at all on Rolling Hills or Open Country, so a gate-owned arc
- * would ship the cue's near state on two scenes out of four.
+ * builds no gate at all on Open Country, so a gate-owned arc would ship the
+ * cue's near state on some scenes and not others.
+ *
+ * WHAT CYCLE 117 CHANGED, WHICH IS NOTHING IN THIS FILE. Rolling Hills traded
+ * its corral disc for a fenced pasture with one opening, so the descriptor it
+ * resolves is now a `gate` rather than a `corral` and the island grew posts for
+ * `collectGateRimMaterials` to find. Every surface here read the descriptor and
+ * not the scene, so the column narrows, the arc becomes a sill instead of a
+ * ring, and the rim warms, from a data edit in shared/scenes/rolling-hills.js.
+ * That was the whole bet of Cycle 116 Phase 1 and this is it paying out.
  */
 
 import * as THREE from 'three';
@@ -200,9 +208,10 @@ export function createGateColumn({ scene, descriptor, groundY }) {
  * @param {() => number} [opts.getCrossings]
  *   Sheep that crossed since the previous frame, for a destination whose
  *   retirement is READ rather than announced. Newsheepdogland is the only one:
- *   its sheep retire inside `shared/survival/pen.js`, which dispatches nothing
- *   and is fence-frozen. Any positive return is one pulse, exactly like an
- *   event, so the two mechanisms cannot produce two different pulse behaviours.
+ *   its sheep retire inside `shared/PenBarrier.js`, which dispatches nothing
+ *   and lives on the deterministic boundary. Any positive return is one pulse,
+ *   exactly like an event, so the two mechanisms cannot produce two different
+ *   pulse behaviours.
  * @param {() => (THREE.Camera | null)} [opts.getCamera]
  *   The live camera, for the one projection the cue publishes. Absent leaves
  *   the destination reading as off-screen, which is the state that shows the
@@ -426,7 +435,7 @@ export function bindGateCue(game) {
     const approach = gateApproachRect(descriptor);
     // Only Newsheepdogland has one. Everywhere else the crossing is an event,
     // and a null getter costs the update an `?? 0`.
-    const pen = game._penContainment;
+    const pen = game._penBarrier;
     const observeCrossings = pen ? createPenCrossingObserver(pen) : null;
 
     game._gateCue = createGateCue({

@@ -4,7 +4,6 @@ import * as THREE from 'three';
 
 import { Atmosphere } from '../atmosphere/Atmosphere.js';
 import { createWebGpuAtmosphereMaterial } from '../atmosphere/webgpuAtmosphereMaterialAdapter.js';
-import { CorralZapEffectPool } from '../effects/CorralZapEffect.js';
 import { PortalEffect } from '../effects/PortalEffect.js';
 import { SunBillboard } from '../effects/SunBillboard.js';
 import { SceneManager } from '../SceneManager.js';
@@ -121,7 +120,7 @@ export async function createSceneManagerWebGpuRendererProof(webGpuModules, {
         skyFog,
         effectFactories: factorySupply.effectFactories,
     });
-    const effectIsland = createProductionEffectSceneManagerIsland({
+    const effectIsland = await createProductionEffectSceneManagerIsland({
         sceneManager,
         effectFactories: factorySupply.effectFactories,
     });
@@ -882,12 +881,15 @@ function createProductionSunBillboardSceneManagerIsland({
     };
 }
 
-function createProductionEffectSceneManagerIsland({
+async function createProductionEffectSceneManagerIsland({
     sceneManager,
     effectFactories,
 }) {
     if (!effectFactories) return null;
 
+    // On demand, not at module scope - see the note on the same import in
+    // js/diagnostics/webgpuDiagnostic.js (Cycle 117 P4).
+    const { CorralZapEffectPool } = await import('../effects/CorralZapEffect.js');
     const search = '?renderer=webgpu&webgpuEffects=1';
     const portal = new PortalEffect(sceneManager.scene, { x: -1.32, z: 0.18 }, -0.95, {
         search,

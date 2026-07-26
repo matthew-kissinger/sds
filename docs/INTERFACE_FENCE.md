@@ -44,6 +44,7 @@ This file lists **which files are frozen**. The rule files explain **why**.
 - **[`shared/ObjectiveLogic.js`](../shared/ObjectiveLogic.js)** — `getRequiredSheep` formula (per-mode count scaling).
 - **[`shared/objective.js`](../shared/objective.js)** *(Cycle 34 Phase 2)* — multi-stage objective state machine (`createObjective` / `refreshObjective` / `tickObjective` / `isCorralOpen`). Worker + client run byte-identical transitions; the `js/gamestate/objective.js` file is now a thin re-export shim and stays in sync only by depending on this module.
 - **[`shared/terrain/Heightfield.js`](../shared/terrain/Heightfield.js)** — heightfield single source of truth (`sample`, `meshSampleY`).
+- **[`shared/PenBarrier.js`](../shared/PenBarrier.js)** *(Cycle 117)* — fenced-enclosure barrier and enclosure-entry retirement. Was `shared/survival/pen.js`, deliberately unfenced while it ran only in survival; Cycle 117 made it the authoritative retirement predicate for Sheep Dog Island, a scene with ranked solo rungs, running byte-identically on the Worker and the client. `shared/survival/pen.js` is its re-export shim and carries the same fence.
 
 Changes to any of these require sim-baseline regeneration with **explicit acceptance recorded in the cycle plan**. See [`.claude/rules/shared-sim.md`](../.claude/rules/shared-sim.md) for the full discipline.
 

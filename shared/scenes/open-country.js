@@ -24,8 +24,10 @@ export const openCountry = {
     // Cycle 6 Phase 4: portal trigger replaces the coastal gate+pasture.
     // Placed at the north shore (z=295) so it reads as "edge of the world"
     // — well inside the safe land radius (380 - 70 - 4 = 306).
-    // `effect: 'portal'` selects the swirling-vortex visual + ring shader
-    // (vs. Rolling Hills' lightning-zap default).
+    // `effect: 'portal'` selects the swirling-vortex visual + ring shader. It
+    // used to be read against Rolling Hills' lightning-zap default; Cycle 117
+    // retired that, so this is now the only corral visual in the game and the
+    // default builds nothing (see CorralDef in types.js).
     corral: {
         center: { x: 0, z: 295 },
         radius: 9,

@@ -24,7 +24,7 @@ The game has **one fenced pasture and three islands** (four biomes, since v2.2.3
 Per-biome:
 
 - **Home Field**: flat fenced pasture, single perimeter pen with a gate. The starter biome.
-- **Rolling Hills**: 180-metre island with rolling heightfield, golden-hour mood, lightning-zap corral.
+- **Rolling Hills**: 180-metre island with rolling heightfield, golden-hour mood, a fenced pasture with one gate.
 - **Open Country**: 380-metre island with multi-stage gather-and-portal objective.
 - **Newsheepdogland**: boot-shaped survival island (~3.2 km^2) with a northern mountain, a homestead pen, a day/night cycle, and wolves after dark. The WebGPU flagship; the Experimental (WIP) pill came off in Cycle 92 after the frame-floor fix passed a bracketed gate. Rolling Hills is still the default entrance world.
 

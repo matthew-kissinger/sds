@@ -10,12 +10,19 @@
  * inside the gate assembly, and resurrecting it there was the obvious move and
  * the wrong one. `js/StructureBuilder.js` returns early from its gate path
  * whenever the scene declares a `corral`, so `createGateStructure` is never
- * called on Rolling Hills or on Open Country: those two scenes build no gate at
- * all. An arc living in the gate group would therefore ship on two scenes out of
- * four, and D14 (the player learns one visual language on Home Field and it
- * transfers to the island) is the whole reason this cycle exists. So the arc is
- * a mesh the CUE owns, placed at `descriptor.position`, and every scene with a
- * destination gets one whether or not anything built a fence there.
+ * called on Open Country: that scene builds no gate at all, and its destination
+ * is a portal disc in open ground. An arc living in the gate group would
+ * therefore ship on some scenes and not others, and D14 (the player learns one
+ * visual language on Home Field and it transfers to the island) is the whole
+ * reason this cycle exists. So the arc is a mesh the CUE owns, placed at
+ * `descriptor.position`, and every scene with a destination gets one whether or
+ * not anything built a fence there.
+ *
+ * Cycle 117 narrowed that list without changing the reasoning: Rolling Hills
+ * dropped its corral for a fenced pasture, so it now builds a real gate with
+ * real posts and its arc happens to land in a mouth. Open Country still does
+ * not, so an arc owned by the gate group would still ship on three scenes out
+ * of four. The arc did not move, and that is the point of owning it here.
  *
  * WHY IT IS A CONFORMED STRIP AND NOT A FLAT RING. Rolling Hills and Open
  * Country are heightfield islands. A `RingGeometry` laid flat at one sampled Y

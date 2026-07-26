@@ -32,13 +32,13 @@ import {
     makeCoopGameState,
     makeIslandGameState,
     makeIslandSheepConfig,
+    makeScenePenBarrier,
     tickSheepCoop,
     tickSheepIslandCoop,
     tickSheepdog,
     tickSheepdogClientInterp,
     applyInput,
     SHEEP_CONFIG,
-    withSeededRandom,
     round4
 } from './harness.js';
 // @ts-expect-error - shared module, no types
@@ -321,78 +321,125 @@ describe('60Hz simulation baseline', () => {
         expect(trace).toEqual(expected);
     });
 
-    it('corral retirement RH: 30 sheep adjacent to corral retire over 120 ticks', () => {
-        // Rolling Hills corral: (110, 60) radius 8. Cluster at (114, 60)
-        // straddles the corral disc — some sheep start inside and retire
-        // immediately, others drift in via flocking + flee from the dog.
-        // Dog at (122, 60), east of cluster, pushes flock west into corral.
-        // updateSheepCorralRetirements uses Math.random() for the retirement
-        // target inside the corral disc — wrap in withSeededRandom for a
-        // reproducible trace.
-        const seed = 0xC34F1E12;
-        const result = withSeededRandom(seed, () => {
-            const sheep = makeDeterministicFlock(30, 114, 60, 1.0);
-            const dog = makeSheepdog('p1', 122, 60);
-            const state = makeIslandGameState('rolling-hills', 30);
-            const config = makeIslandSheepConfig('rolling-hills');
+    // Cycle 117 P3 REPLACED the `corral retirement RH` trace with this one, and
+    // the old `corral-retirement-rh-60hz.json` was DELETED rather than
+    // regenerated. Recording the decision here, in the spec, per
+    // `.claude/rules/shared-sim.md`:
+    //
+    //   Rolling Hills no longer has a corral. Its destination is a fenced
+    //   pasture with one gate, so a trace of "sheep enter a disc at (110, 60)
+    //   and get walked to a seeded point inside it" is not a changed trace of
+    //   the same behaviour - it is a trace of a mechanism the island does not
+    //   have. `state.corral` is null there now, and the old spec dereferenced
+    //   `state.corral.center.x`, so it could not be regenerated either. This is
+    //   a SPEC REWRITE. The JSON self-captured on first run (loadOrWriteFixture
+    //   writes when the file is absent), and no other fixture moved: the nine
+    //   others, `island-boundary-rh-60hz.json` included, are byte-identical,
+    //   which is the proof that dropping the corral touched only the corral.
+    //
+    // Two things also got simpler and are worth naming. There is no
+    // `withSeededRandom` wrapper because there is no `Math.random` left on this
+    // path: `updateSheepCorralRetirements` (the one caller that drew from it) is
+    // skipped when `gameState.corral` is null, and PenBarrier's settle spot is a
+    // seeded mulberry32 keyed by (settleSeed, sheepId). And the pen is built
+    // from the real scene module, gate resolution and all - never from a stub.
+    it('pasture retirement RH: 30 sheep driven through the island gate settle inside', () => {
+        // The pasture is a 36x36 box at (32..68, -94..-58) with a 12m opening
+        // centred on (50, -58), the middle of the north edge. The cluster starts
+        // 6m north of the opening and the dog sits 8m north of the cluster, so
+        // its flee field pushes the flock south, through the gate. The barrier
+        // runs AFTER the sheep sim each tick, which is exactly where
+        // `worker/src/GameSim.js` `_tickPen` runs it relative to `updateSheep`.
+        const sheep = makeDeterministicFlock(30, 50, -52, 1.0);
+        const dog = makeSheepdog('p1', 50, -44);
+        const state = makeIslandGameState('rolling-hills', 30);
+        const config = makeIslandSheepConfig('rolling-hills');
+        const pen = makeScenePenBarrier('rolling-hills', 0xC117);
 
-            const trace: Array<{
-                tick: number;
-                retired: number;
-                inCorral: number;
-                sample: Array<{ id: number; x: number; z: number; state: number; retired: boolean }>;
-            }> = [];
+        // The island really has stopped being a corral scene, and the gate
+        // really is nested (hard stop 2: a top-level one would switch on Worker
+        // gate-attraction). If either changes, this trace is measuring
+        // something else and should be read again rather than regenerated.
+        expect(state.corral).toBeNull();
+        expect(state.gate).toBeNull();
+        expect(pen).not.toBeNull();
 
-            const sampleIds = [0, 5, 10, 15, 20, 25, 29];
-            const cx = state.corral.center.x;
-            const cz = state.corral.center.z;
-            const rSq = state.corral.radius * state.corral.radius;
+        const box = loadScene('rolling-hills').pen;
+        const trace: Array<{
+            tick: number;
+            penned: number;
+            retired: number;
+            inside: number;
+            sample: Array<{ id: number; x: number; z: number; state: number; retired: boolean }>;
+        }> = [];
 
-            const snap = (tick: number) => {
-                let retired = 0;
-                let inCorral = 0;
-                for (const s of sheep) {
-                    if (s.hasPassedGate || s.isRetiring) retired++;
-                    const dx = s.position.x - cx;
-                    const dz = s.position.z - cz;
-                    if (dx * dx + dz * dz <= rSq) inCorral++;
-                }
-                trace.push({
-                    tick,
-                    retired,
-                    inCorral,
-                    sample: sampleIds.map(id => {
-                        const s = sheep[id];
-                        return {
-                            id,
-                            x: round4(s.position.x),
-                            z: round4(s.position.z),
-                            state: s.state,
-                            retired: !!(s.hasPassedGate || s.isRetiring)
-                        };
-                    })
-                });
-            };
+        const sampleIds = [0, 5, 10, 15, 20, 25, 29];
 
-            snap(0);
-            for (let t = 1; t <= 120; t++) {
-                tickSheepIslandCoop(sheep, [dog], state, DT, config);
-                snap(t);
+        const snap = (tick: number) => {
+            let retired = 0;
+            let inside = 0;
+            for (const s of sheep) {
+                if (s.hasPassedGate || s.isRetiring) retired++;
+                if (s.position.x > box.minX && s.position.x < box.maxX
+                    && s.position.z > box.minZ && s.position.z < box.maxZ) inside++;
             }
-            return trace;
-        });
+            trace.push({
+                tick,
+                penned: pen.pennedCount,
+                retired,
+                inside,
+                sample: sampleIds.map(id => {
+                    const s = sheep[id];
+                    return {
+                        id,
+                        x: round4(s.position.x),
+                        z: round4(s.position.z),
+                        state: s.state,
+                        retired: !!(s.hasPassedGate || s.isRetiring)
+                    };
+                })
+            });
+        };
 
-        const expected = loadOrWriteFixture('corral-retirement-rh-60hz.json', result) as typeof result;
-
-        expect(result).toHaveLength(121);
-        // Sanity: retired count must be monotonically non-decreasing.
-        for (let i = 1; i < result.length; i++) {
-            expect(result[i].retired).toBeGreaterThanOrEqual(result[i - 1].retired);
+        snap(0);
+        for (let t = 1; t <= 120; t++) {
+            tickSheepIslandCoop(sheep, [dog], state, DT, config);
+            pen.update(sheep, dog, true, DT);
+            snap(t);
         }
-        // Sanity: at least one sheep must retire by end of trace.
-        expect(result[result.length - 1].retired).toBeGreaterThan(0);
 
-        expect(result).toEqual(expected);
+        const expected = loadOrWriteFixture('pasture-retirement-rh-60hz.json', trace) as typeof trace;
+
+        expect(trace).toHaveLength(121);
+        // Sanity: penning is monotonically non-decreasing (nothing un-retires
+        // without a `releaseAll`, and there is no day loop here to call one).
+        for (let i = 1; i < trace.length; i++) {
+            expect(trace[i].penned).toBeGreaterThanOrEqual(trace[i - 1].penned);
+        }
+        // Sanity: sheep actually got driven in. This is the line that goes red
+        // if the barrier stops running.
+        expect(trace[0].penned).toBe(0);
+        expect(trace[trace.length - 1].penned).toBeGreaterThan(0);
+        // Sanity: the barrier's own count IS the retired count. Entry sets
+        // `penned` and `hasPassedGate` together, which is what lets
+        // `_tickPen` publish `sheepRetired` from `pennedCount`.
+        for (const row of trace) expect(row.retired).toBe(row.penned);
+        // Sanity: and "inside" means "penned", both ways. Nothing gets in
+        // without being retired (the whole invariant the barrier buys: the only
+        // crossing is the gate), and nothing retired leaks back out.
+        for (const row of trace) expect(row.inside).toBe(row.penned);
+        // Sanity: a penned sheep is settled - state 2, so the sim stops moving
+        // it - and it is inside the box, not parked on the fence line.
+        for (const s of sheep) {
+            if (!s.penned) continue;
+            expect(s.state).toBe(2);
+            expect(s.position.x).toBeGreaterThan(box.minX);
+            expect(s.position.x).toBeLessThan(box.maxX);
+            expect(s.position.z).toBeGreaterThan(box.minZ);
+            expect(s.position.z).toBeLessThan(box.maxZ);
+        }
+
+        expect(trace).toEqual(expected);
     });
 
     it('OC objective stage: roundup → drive after holdRequired with sheep in zone', () => {

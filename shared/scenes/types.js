@@ -41,20 +41,58 @@
  * @property {{x: number, z: number}} center
  * @property {number} radius
  * @property {'zap'|'portal'} [effect]   Cycle 6 Phase 4 — retirement visual.
- *                                       'zap' (default): lightning bolt + flag pillar (Rolling Hills).
  *                                       'portal': swirling vortex + ring shader (Open Country).
+ *                                       'zap' (default): WAS a lightning bolt plus a flag
+ *                                       pillar, on Rolling Hills. Cycle 117 replaced that
+ *                                       island's corral with a fenced pasture and retired both
+ *                                       (D15), so no scene declares 'zap' and the default now
+ *                                       builds nothing: js/boot/initWorld.js constructs a visual
+ *                                       only for 'portal'. The value is kept rather than removed
+ *                                       so a scene that reintroduces a disc destination has a
+ *                                       name for "no special effect".
  */
 
 /**
- * Cycle 64: a sheep pen — a safe enclosure the flock is driven into. This cycle
- * ships it as INERT data + visual only (it coexists with the scene's `corral`,
- * which is the wired herding destination). The survival safe-zone semantics
- * (overnight protection, bankruptcy accounting) arrive in Cycle 65; nothing
- * reads `pen` for gameplay yet, so it is the cheap additive fence case.
+ * Cycle 64: a sheep pen — a fenced enclosure with one gate that the flock is
+ * driven into. `shared/PenBarrier.js` makes it a real barrier: the dog and the
+ * sheep collide with the four edges, the only crossing is the gate gap, and a
+ * sheep that ends up inside must therefore have been herded through the gate,
+ * which is what makes "inside" the retirement predicate.
+ *
+ * A scene declares the box in ONE of two forms and the barrier resolves either
+ * to the same four edges:
+ *   - square: `center` + `radius`, where `radius` is the HALF-SIDE.
+ *     Newsheepdogland's homestead.
+ *   - rect:   `minX`/`maxX`/`minZ`/`maxZ`. Rolling Hills' island pasture.
+ * The rect form wins when all four edges are finite.
+ *
+ * Cycle 117 P2 added the rect form, the NESTED `gate`, and `scatterKeepOut`.
+ * All three are optional additions, so Newsheepdogland's pre-117 `{center,
+ * radius}` parses unchanged and keeps its top-level `gate` (the barrier's gate
+ * resolver is `pen.gate ?? scene.gate`, in that order).
+ *
+ * The gate is nested here rather than declared top-level BECAUSE a top-level
+ * `gate` is load-bearing elsewhere: `shared/index.js` createGameState derives
+ * `gameState.gate` from `scene.gate?.position`, and a non-null `gameState.gate`
+ * switches on Worker gate-attraction and a passage-zone suppression rect pinned
+ * to x=0. An island pasture wants the fence and the opening, not any of that,
+ * so it declares the gate where createGameState does not look.
  *
  * @typedef {Object} PenDef
- * @property {{x: number, z: number}} center
- * @property {number} radius
+ * @property {{x: number, z: number}} [center] Square form: box centre.
+ * @property {number} [radius]                 Square form: HALF-SIDE, not a disc radius.
+ * @property {number} [minX]                   Rect form: west edge.
+ * @property {number} [maxX]                   Rect form: east edge.
+ * @property {number} [minZ]                   Rect form: south edge.
+ * @property {number} [maxZ]                   Rect form: north edge.
+ * @property {GateDef} [gate]                  The opening, in the same shape as a
+ *   top-level `GateDef`. Its position MUST sit on one of the four edge lines -
+ *   the barrier's gap model measures the opening from the nearest edge. Absent
+ *   => the barrier falls back to the scene's top-level `gate`.
+ * @property {boolean} [scatterKeepOut]        Opt the enclosure into the tree +
+ *   rock scatter keep-out that a `corral` gets for free (trees keep 5m clear,
+ *   rocks 8m). Absent => the scatter ignores the pen, which is what every
+ *   pre-117 scene did, so Newsheepdogland's baked layout is untouched.
  */
 
 /**
@@ -338,10 +376,16 @@
  * Simulation (authoritative; read by Worker + shared createGameState):
  * @property {Bounds} [bounds]                  Legacy rect-only field; synthesised into `boundary` if present without `boundary`
  * @property {Boundary} [boundary]              Cycle 5+ discriminated boundary; takes precedence over `bounds` if both present
- * @property {GateDef} [gate]                   Optional for `island` scenes that use a `corral` instead
- * @property {PastureDef} [pasture]             Optional for `island` scenes that use a `corral` instead
- * @property {CorralDef} [corral]               Cycle 5+ — circular destination zone (Rolling Hills); replaces gate+pasture when present
- * @property {PenDef} [pen]                      Cycle 64 — inert safe-enclosure data/visual (survival reads it in Cycle 65); coexists with `corral`
+ * A scene declares exactly ONE destination shape, and which one it is decides
+ * how a sheep retires. The three are `gate` + `pasture` (Home Field: cross the
+ * passage zone northward, walk to a spot in the pasture rect), `corral` (Open
+ * Country: enter the disc), and `pen` (Rolling Hills, Newsheepdogland: get
+ * herded through the fence's one opening). They are alternatives, not
+ * overrides - nothing "replaces" anything, and no scene ships two.
+ * @property {GateDef} [gate]                   Absent on scenes whose destination is a `corral` or a `pen` with its own nested gate
+ * @property {PastureDef} [pasture]             Absent on scenes whose destination is a `corral` or a `pen`
+ * @property {CorralDef} [corral]               Cycle 5+ — circular destination zone (Open Country)
+ * @property {PenDef} [pen]                      Cycle 64 — fenced enclosure with one gate; the herding destination on the scenes that declare it (Cycle 117 P2 on Rolling Hills, Cycle 66 on Newsheepdogland)
  * @property {{x: number, z: number}} [dogSpawn] Cycle 64 — initial dog position; defaults to (0, -30) when absent (every pre-64 scene). Must be on land.
  * @property {ObjectiveDef} [objective]         Cycle 7+ — multi-stage objective (round-up → drive). When absent, scene retires sheep on corral entry directly.
  * @property {SheepSpawnDef} sheepSpawn

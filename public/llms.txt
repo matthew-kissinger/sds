@@ -14,7 +14,7 @@ The site is the game. Open the URL, herd some sheep, close the tab. Single-playe
 ## Public scenes and lab
 
 - [Home Field](https://sheepdogsim.com/scenes/home-field): flat fenced pasture with a single gate. The starter biome.
-- [Rolling Hills](https://sheepdogsim.com/scenes/rolling-hills): 180-metre sunset island with rolling heightfield and a lightning corral.
+- [Rolling Hills](https://sheepdogsim.com/scenes/rolling-hills): 180-metre sunset island with rolling heightfield and a fenced pasture with one gate.
 - [Open Country](https://sheepdogsim.com/scenes/open-country): 380-metre wild island with a multi-stage gather-and-portal objective.
 - [Newsheepdogland](https://sheepdogsim.com/scenes/newsheepdogland): gated lab for directed beta testing of larger scene scale, homestead routing, day/night pressure, and experimental flock systems.
 

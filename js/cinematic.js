@@ -135,28 +135,22 @@ export function installCinemaApi(game) {
         // [data-sds-ui="hidden"] rule in css/main.css for why this is CSS.
         hideUI() {
             document.documentElement.dataset.sdsUi = 'hidden';
-            cinema.hideWorldMarkers();
         },
         showUI() {
             delete document.documentElement.dataset.sdsUi;
-            cinema.showWorldMarkers();
         },
-        hideWorldMarkers() {
-            for (const dog of cinema.getDogs()) {
-                if (dog?.distanceIndicator) dog.distanceIndicator.visible = false;
-            }
-        },
-        showWorldMarkers() {
-            for (const dog of cinema.getDogs()) {
-                if (dog?.distanceIndicator) dog.distanceIndicator.visible = true;
-            }
-        },
+        // Cycle 117 Phase 5 (D28): `hideWorldMarkers` / `showWorldMarkers` are
+        // gone. Their entire body toggled `Sheepdog.distanceIndicator.visible`,
+        // and that indicator - the white diamond over a green chevron, drawn
+        // with `depthTest: false` eight metres above the dog - is retired. The
+        // capture tools in tools/ call the pair through `?.()`, so they now
+        // no-op, which is the honest answer: there is no world-space marker
+        // left for a shot to hide.
         mountMenuDog() {
             const dog = game.gameState?.getSheepdog?.() ?? game.sheepdog;
             const mesh = dog?.mesh ?? game.sheepdogMesh;
             if (!dog || !mesh) return false;
             if (!mesh.parent) game.sceneManager?.add?.(mesh);
-            cinema.hideWorldMarkers();
             return true;
         },
         tickMenuHerding(deltaTime = 1 / 60) {

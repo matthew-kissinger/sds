@@ -5,14 +5,17 @@
  *
  * Four failure modes this file exists for.
  *
- * ONE: the arc ships on two scenes out of four. This is the specific mistake the
- * corrected cycle plan caught by reading `js/StructureBuilder.js`: it returns
- * early from its gate path whenever the scene declares a `corral`, so Rolling
- * Hills and Open Country build no gate at all and an arc parented to the gate
- * group would simply be absent on both islands. D14 says the language the player
- * learns on Home Field transfers, so the four-scene sweep below is the phase's
- * whole point, and the structural guard fails if the arc is ever imported into
- * the fence or structure builders.
+ * ONE: the arc ships on some scenes and not others. This is the specific mistake
+ * the corrected cycle plan caught by reading `js/StructureBuilder.js`: it returns
+ * early from its gate path whenever the scene declares a `corral`, so Open
+ * Country builds no gate group at all and an arc parented to that group would
+ * simply be absent there. (Rolling Hills was the second such scene until Cycle
+ * 117 P4 gave the island a fenced pasture; it now builds a gate group of its own,
+ * which is the opposite premise and the same rule. The test below reads which is
+ * which off the real builder instead of taking this paragraph's word for it.)
+ * D14 says the language the player learns on Home Field transfers, so the
+ * four-scene sweep below is the phase's whole point, and the structural guard
+ * fails if the arc is ever imported into the fence or structure builders.
  *
  * TWO: a flat disc on a hill. Rolling Hills and Open Country are heightfield
  * islands, and a ring at one sampled Y buries its uphill half and floats its
@@ -80,7 +83,7 @@ const ARC_NAME = 'gate-cue-threshold-arc';
  */
 const DESTINATIONS = [
     ['Home Field gate', field, null],
-    ['Rolling Hills corral', rollingHills, null],
+    ['Rolling Hills pasture gate', rollingHills, null],
     ['Open Country round-up zone', openCountry, { objective: { stage: 'roundup' } }],
     ['Open Country portal', openCountry, { objective: { stage: 'drive' } }],
     ['Newsheepdogland pen gate', newsheepdogland, null],
@@ -158,17 +161,48 @@ describe('the arc draws at the destination of all four scenes', () => {
         expect(mid).toBeCloseTo(gateThresholdRadius(descriptor), 2);
     });
 
-    it('draws on the two scenes that build no gate at all', () => {
-        // js/StructureBuilder.js returns early from its gate path when the scene
-        // declares a corral, so these two never call createGateStructure. An arc
-        // living in the gate group is absent here, which is D14 broken in
-        // substance rather than in wording.
+    it('draws whether or not the structure builder builds a gate group', async () => {
+        // D14 in substance, not in wording. The failure this guards is an arc
+        // parented to the gate group: it would simply be absent on a scene that
+        // has no gate group.
+        //
+        // The premise is READ OFF the real builder rather than restated in a
+        // comment, because restating it went stale inside one cycle. The text
+        // here used to say Rolling Hills and Open Country both "return early
+        // from the gate path, so neither calls createGateStructure" - and Cycle
+        // 117 P4 gave the island a real fenced pasture, so
+        // `buildSinglePlayerStructures` now takes the enclosure arm and
+        // `buildPenEnclosure` builds a gate assembly through that very
+        // function. The two scenes are opposite premises now, and the arc rule
+        // has to hold across both.
+        const { StructureBuilder, resolveSceneEnclosure } = await import('../js/StructureBuilder.js');
+        const { FieldConfig } = await import('../js/FieldConfig.js');
+
+        const gateGroupsBuiltFor = (sceneDef) => {
+            const sb = new StructureBuilder(new THREE.Scene());
+            sb.fencePresets.useGLBModels = false;
+            // The same three options `js/boot/initWorld.js` passes.
+            sb.buildSinglePlayerStructures(
+                FieldConfig.getBounds(),
+                FieldConfig.getGate(),
+                FieldConfig.getPasture(),
+                {
+                    perimeterFence: sceneDef.perimeterFence !== false,
+                    corral: sceneDef.corral || null,
+                    enclosure: resolveSceneEnclosure(sceneDef),
+                },
+            );
+            return sb.structures.gates.length;
+        };
+
+        expect(gateGroupsBuiltFor(openCountry), 'the corral arm builds no gate group').toBe(0);
+        expect(gateGroupsBuiltFor(rollingHills), 'the enclosure arm does build one').toBe(1);
+
         for (const sceneDef of [rollingHills, openCountry]) {
-            expect(sceneDef.corral, `${sceneDef.id} should still declare a corral`).toBeTruthy();
             const game = fakeGame(sceneDef, { groundY: slopedGround });
             expect(arcsIn(game.scene).length).toBe(0);
             bindGateCue(game);
-            expect(arcsIn(game.scene).length, `${sceneDef.id} drew no arc`).toBe(1);
+            expect(arcsIn(game.scene).length, `${sceneDef.id} drew exactly one arc`).toBe(1);
         }
     });
 
@@ -319,7 +353,13 @@ describe('a mouth is swept, a boundary is closed', () => {
     });
 
     it('closes a disc destination into a full boundary', () => {
-        for (const [sceneDef, gameState] of [[rollingHills, null], [openCountry, null]]) {
+        // Cycle 117 P2: Rolling Hills was the second disc here and is now a
+        // gate, so the pair is Open Country's two stages - the gather zone and,
+        // once the stage flips, the portal. Two kinds, one disc rule.
+        for (const [sceneDef, gameState] of [
+            [openCountry, null],
+            [openCountry, { objective: { stage: 'drive' } }],
+        ]) {
             const descriptor = resolveGateDescriptor(sceneDef, gameState);
             expect(descriptor.kind).not.toBe('gate');
             const { geometry, radius } = buildGateArcGeometry(descriptor, () => 0);
@@ -335,12 +375,15 @@ describe('a mouth is swept, a boundary is closed', () => {
     });
 
     it('splits on kind and never on scene identity', () => {
-        // Hard stop 3. Home Field and Newsheepdogland share the gate sweep
-        // without either being named; the two discs share the other.
+        // Hard stop 3. Home Field, Newsheepdogland and (since Cycle 117 P2) the
+        // Rolling Hills pasture share the gate sweep without any of them being
+        // named; Open Country's two disc stages share the other.
         const kindOf = (sceneDef, state) => resolveGateDescriptor(sceneDef, state).kind;
         expect(gateArcSweep({ kind: kindOf(field, null) }))
             .toBe(gateArcSweep({ kind: kindOf(newsheepdogland, null) }));
-        expect(gateArcSweep({ kind: kindOf(rollingHills, null) }))
+        expect(gateArcSweep({ kind: kindOf(field, null) }))
+            .toBe(gateArcSweep({ kind: kindOf(rollingHills, null) }));
+        expect(gateArcSweep({ kind: kindOf(openCountry, null) }))
             .toBe(gateArcSweep({ kind: kindOf(openCountry, { objective: { stage: 'drive' } }) }));
         expect(gateArcSweep({ kind: 'gate' })).toBeLessThan(gateArcSweep({ kind: 'corral' }));
         expect(source('js/effects/GateThresholdArc.js')).not.toMatch(

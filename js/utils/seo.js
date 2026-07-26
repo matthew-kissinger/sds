@@ -9,7 +9,7 @@ const SCENE_META = {
     },
     'rolling-hills': {
         title: 'Rolling Hills - Sheep Dog Sim Island Herding',
-        description: 'Golden-hour island with rolling terrain, shoreline water, trees, rocks, and a lightning corral.',
+        description: 'Golden-hour island with rolling terrain, shoreline water, trees, rocks, and a fenced pasture to drive the flock into.',
         ogImage: '/assets/scenes/social/rolling-hills.webp',
         ogImageAlt: 'Sheep Dog Sim Rolling Hills capture by the shoreline'
     },

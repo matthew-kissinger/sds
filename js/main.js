@@ -10,7 +10,7 @@ import { SceneManager } from './SceneManager.js';
 import { GameState } from './GameState.js';
 import { GameTimer } from './GameTimer.js';
 import { TerrainBuilder } from './TerrainBuilder.js';
-import { StructureBuilder } from './StructureBuilder.js';
+import { StructureBuilder, resolveSceneEnclosure } from './StructureBuilder.js';
 import { InputHandler } from './InputHandler.js';
 import { MobileControls } from './MobileControls.js';
 import { Sheepdog } from './Sheepdog.js';
@@ -41,6 +41,7 @@ import { installMpEventHandlers, handleMultiplayerGameState as runMpStateHandoff
 import { MultiplayerCoordinator } from './multiplayer/MultiplayerCoordinator.js';
 import { buildSceneBody } from './boot/initWorld.js';
 import { disposeScene as runDisposeScene } from './boot/loadScene.js';
+import { tickPenBarrier } from './gamestate/penBarrierTick.js';
 import { shouldBootAttract } from './boot/bootAttract.js';
 import {
     showCompletionOverlay as renderCompletionOverlay,
@@ -174,6 +175,10 @@ class SheepDogSimulation {
             this.gameState.setFlockingOverride(this.currentScene.flocking);
         }
         // Cycle 5+: corral replaces gate+pasture for island scenes that have one.
+        // (Cycle 117 P2: `gameState.pen`, the third destination shape, is set in
+        // js/boot/initWorld.js instead of here - one seam that runs for both a
+        // cold boot and a scene rebuild, rather than the two `if (sceneDef.X)`
+        // lines this pattern needs.)
         if (this.currentScene.corral) {
             this.gameState.setCorral(this.currentScene.corral);
         }
@@ -1478,13 +1483,26 @@ class SheepDogSimulation {
 
             // Cycle 85: the rebuild above re-mounts survival gameplay surfaces
             // for the backdrop scene, but we are returning to the StartScreen.
-            // Tear them back down so the menu is inert; entrance Play forces a
-            // rebuild and re-mounts the run surfaces cleanly.
+            // Tear them back down so the menu is inert.
+            //
+            // The pen barrier is NOT one of them, and Cycle 85's note that
+            // "entrance Play forces a rebuild" has not been true on this path
+            // since attract mode landed. `_disposeAndRebuildCurrentScene()`
+            // above already rebuilt the scene, which cleared `_attractMode`, so
+            // the Play click goes straight to startGame and
+            // `_ensureSceneBuiltForStart` is a no-op - nothing rebuilds the
+            // barrier. Nulling it here left a pen scene entered from the menu
+            // with a fence made of scenery and no way to retire a sheep. Its
+            // lifetime is the SCENE's: `js/boot/loadScene.js#disposeScene`
+            // clears it and `js/boot/initWorld.js` builds it, and the fence it
+            // makes solid is standing in the scene we just rebuilt. It ticks
+            // only while `gameState.gameActive`, so it is already inert on the
+            // menu backdrop.
             this._wolfPack?.dispose?.();
             this._unmountDayNightChip?.();
             this._unmountMinimap?.();
             this._tickDayLoop = this.dayLoop = this._wolfPack = this._survivalRun =
-                this._penContainment = this._unmountDayNightChip = this._unmountMinimap =
+                this._unmountDayNightChip = this._unmountMinimap =
                 this._updateMinimap = null;
             // Cycle 90: recenter the scene light's shadow frustum back on the
             // origin when a day-loop run tears down; small scenes expect the
@@ -1895,10 +1913,7 @@ class SheepDogSimulation {
             void this.terrainBuilder.preloadAllDogs();
         }
 
-        // Remove the old sheepdog and its indicator from scene if it exists
-        if (this.sheepdog) {
-            this.sheepdog.removeDistanceIndicator();
-        }
+        // Remove the old sheepdog from the scene if it exists
         if (this.sheepdogMesh) {
             this.sceneManager.remove(this.sheepdogMesh);
         }
@@ -1914,12 +1929,9 @@ class SheepDogSimulation {
         // Connect audio manager to new sheepdog
         sheepdog.setAudioManager(this.audioManager);
 
-        // Set as local player and create distance indicator
-        sheepdog.setAsLocalPlayer();
-
         // Add new sheepdog to scene when game starts
         this.sceneManager.add(this.sheepdogMesh);
-        
+
         // Enable mobile controls if on touch device
         if (this.mobileControls.getIsTouchDevice()) {
             this.mobileControls.enable();
@@ -2078,10 +2090,7 @@ class SheepDogSimulation {
         // Store sandbox config
         this.sandboxConfig = sandboxConfig;
 
-        // Remove the old sheepdog and its indicator from scene if it exists
-        if (this.sheepdog) {
-            this.sheepdog.removeDistanceIndicator();
-        }
+        // Remove the old sheepdog from the scene if it exists
         if (this.sheepdogMesh) {
             this.sceneManager.remove(this.sheepdogMesh);
         }
@@ -2101,9 +2110,6 @@ class SheepDogSimulation {
 
         // Connect audio manager to new sheepdog
         sheepdog.setAudioManager(this.audioManager);
-
-        // Set as local player and create distance indicator
-        sheepdog.setAsLocalPlayer();
 
         // Add new sheepdog to scene when game starts
         this.sceneManager.add(this.sheepdogMesh);
@@ -2255,15 +2261,9 @@ class SheepDogSimulation {
             this.gameState.setPaused(isPaused);
         });
 
-        // Remove old sheepdog if exists
-        if (this.sheepdog) {
-            this.sheepdog.removeDistanceIndicator();
-        }
+        // Remove old sheepdogs if they exist
         if (this.sheepdogMesh) {
             this.sceneManager.remove(this.sheepdogMesh);
-        }
-        if (this.sheepdog2) {
-            this.sheepdog2.removeDistanceIndicator();
         }
         if (this.sheepdogMesh2) {
             this.sceneManager.remove(this.sheepdogMesh2);
@@ -2333,7 +2333,12 @@ class SheepDogSimulation {
                 this.gameState.getPasture(),
                 {
                     perimeterFence: this.currentScene.perimeterFence !== false,
-                    corral: this.currentScene.corral || null
+                    corral: this.currentScene.corral || null,
+                    // Cycle 117 P4: this rebuild clears every structure first, so
+                    // without the enclosure a 2-player game on a pen scene tears
+                    // the pasture fence down and lays Home Field's ring inside the
+                    // island in its place.
+                    enclosure: resolveSceneEnclosure(this.currentScene),
                 }
             );
         }
@@ -2655,20 +2660,10 @@ class SheepDogSimulation {
             this.gameState.advanceCountingRound();
             // Cycle 66 P2: client-side pen containment + pen-entry retirement.
             // Runs after the shared sheep sim has moved the flock (and after the
-            // dog moved earlier this frame), before render. Day-loop scenes only;
-            // a no-op everywhere else.
-            // Cycle 67 P6: solo only. In co-op the DO runs the pen authoritatively
-            // and the client renders the corrected sheep from the broadcast.
-            if (updateSurvival && this._penContainment) {
-                // Always pass the dog: it collides with the fence whether or not
-                // the round is "active" (the fence is a physical barrier).
-                this._penContainment.update(
-                    this.gameState.sheep,
-                    this.sheepdog ?? null,
-                    this.dayLoop?.gateOpen ?? true,
-                    deltaTime
-                );
-            }
+            // dog moved earlier this frame), before render. Body in
+            // js/gamestate/penBarrierTick.js, because the LOCAL 2-PLAYER frame
+            // needs the identical call and does not come through here.
+            this._tickPenBarrier(deltaTime);
             // Cycle 66 P4: tick the night wolves AFTER the sheep sim + pen
             // containment so they read final sheep positions and pen membership
             // (a wolf never kills a sheep the same frame it crossed the gate to
@@ -2965,16 +2960,6 @@ class SheepDogSimulation {
             this.update(deltaTime);
         }
 
-        // Update distance indicator for local player AFTER update so position is current
-        if (this.sheepdog && this.sheepdog.isLocalPlayer) {
-            const camera = this.sceneManager.getCamera();
-            const playerPosition = this.sheepdog.mesh?.position;
-            if (camera && playerPosition) {
-                const cameraDistance = camera.position.distanceTo(playerPosition);
-                this.sheepdog.updateDistanceIndicator(cameraDistance, deltaTime);
-            }
-        }
-
         // Update performance monitoring (always update for monitoring purposes)
         const renderer = this.sceneManager.getRenderer();
         this.updatePerformanceVisibleCounts();
@@ -3157,6 +3142,16 @@ class SheepDogSimulation {
     }
     
     /**
+     * Advance the scene's pen barrier for one frame. Body extracted to
+     * js/gamestate/penBarrierTick.js#tickPenBarrier so the solo frame in
+     * update() and the local 2-player frame in updateLocalMultiplayer() run
+     * the same code - on a pen scene the barrier is the fence AND the
+     * retirement predicate, so a frame that skips it cannot score.
+     * Self-guards on `_penBarrier`, `gameActive` and `isMultiplayer`.
+     */
+    _tickPenBarrier(deltaTime) { tickPenBarrier(this, deltaTime); }
+
+    /**
      * Update loop for local 2-player mode
      */
     updateLocalMultiplayer(deltaTime) {
@@ -3175,22 +3170,17 @@ class SheepDogSimulation {
 
         const bounds = this.gameState.getBoundary();
 
-        // Get camera distance for distance indicators
+        // Camera distance drives the per-player icon scale-up when the split
+        // camera pulls back (js/Sheepdog.js animatePlayerIcon).
         const cameraDistance = this.twoPlayerCamera ? this.twoPlayerCamera.getDistance() : 80;
 
         // Update Player 1 sheepdog
         sheepdog1.move(p1Direction, bounds, deltaTime, p1Sprint);
         sheepdog1.animate(deltaTime, cameraDistance); // Animate player icon with camera distance for scaling
-        if (sheepdog1.isLocalPlayer) {
-            sheepdog1.updateDistanceIndicator(cameraDistance, deltaTime, true);
-        }
 
         // Update Player 2 sheepdog
         sheepdog2.move(p2Direction, bounds, deltaTime, p2Sprint);
         sheepdog2.animate(deltaTime, cameraDistance); // Animate player icon with camera distance for scaling
-        if (sheepdog2.isLocalPlayer) {
-            sheepdog2.updateDistanceIndicator(cameraDistance, deltaTime, true);
-        }
 
         // Update two-player camera
         if (this.twoPlayerCamera) {
@@ -3199,6 +3189,13 @@ class SheepDogSimulation {
 
         // Update sheep behaviors - pass both dogs for combined scaring
         this.gameState.updateSheepBehaviors(deltaTime);
+
+        // Same call, same position in the frame, as the solo path in update():
+        // right after the sheep sim has moved the flock. On a pen scene this is
+        // the ONLY thing that makes the fence solid and the ONLY thing that
+        // retires a sheep, so without it a local 2-player round on Rolling Hills
+        // walks through the fence and can never complete.
+        this._tickPenBarrier(deltaTime);
 
         // Make sheep react to both dogs
         const sheep = this.gameState.getSheep();

@@ -1,33 +1,43 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Pen containment + pen-entry retirement.
+ * Fenced-enclosure barrier + enclosure-entry retirement.
  *
- * Cycle 67 P1: PROMOTED to `shared/survival/` (was the client-only
+ * An axis-aligned box of fence with ONE passable gap at the gate. This module
+ * makes that fence a real barrier:
+ *   - The dog and every sheep collide with the four fence edges. The only way
+ *     across is the gate gap, and only while the gate is open (a day-loop scene
+ *     seals it at night). No climbing the fence anywhere else.
+ *   - Because non-gate crossings are blocked, any sheep that ends up inside the
+ *     box MUST have been herded through the gate. So "inside" => "entered via the
+ *     gate", which makes retirement trivial: on entry a sheep settles and
+ *     retires in the pasture (a calm walk to a spot inside, then it grazes/idles
+ *     until morning). No zap. No teleport.
+ *
+ * The box is declared either as a square (`{center, radius}`, where `radius` is
+ * the half-side), or as an arbitrary rect (`{minX, maxX, minZ, maxZ}`).
+ * `StructureBuilder.buildPenEnclosure` raises the fence around either form and
+ * `resolvePenBox` there is this constructor's twin. Every method below reads only
+ * the resolved `minX/maxX/minZ/maxZ` plus the half-extents, so the two forms are
+ * the same barrier.
+ *
+ * Cycle 117 P1: was `shared/survival/pen.js` (class `PenContainment`). The
+ * barrier is not survival-scoped - an island pasture is the same geometry - and
+ * `scene-and-render.md` says a file names WHAT, not WHEN. `shared/survival/pen.js`
+ * and `js/gamestate/penContainment.js` are re-export shims carrying the old name
+ * so every existing import keeps working.
+ *
+ * Cycle 67 P1: PROMOTED to `shared/` (was the client-only
  * `js/gamestate/penContainment.js` in Cycle 66) so the Worker `GameSim` can run
- * the pen barrier authoritatively for co-op survival. `js/gamestate/penContainment.js`
- * is a one-line re-export shim so every existing client import keeps working.
+ * the barrier authoritatively for co-op survival.
  *
  * Determinism: the one Cycle 66 `Math.random()` (the settle spot) is now a
  * SEEDED draw (`mulberry32` keyed by a run seed + the sheep id), so a given
  * (settleSeed, sheepId) lands the same spot run to run and the module is safe on
  * the deterministic boundary. No DOM, no Three, no `Math.random` here. `atan2`
  * for the settle-walk facing is render-only (guarded on `s.facingDirection`) and
- * the pen is authoritative-only (render-from-snapshot in co-op), so it never
+ * the barrier is authoritative-only (render-from-snapshot in co-op), so it never
  * needs cross-engine agreement.
- *
- * The homestead pen is a square fence ring around `pen.center` at half-side
- * `pen.radius` (StructureBuilder.buildHomesteadGate builds exactly this box),
- * with ONE passable gap at the gate. This module makes that fence a real
- * barrier:
- *   - The dog and every sheep collide with the four fence edges. The only way
- *     across is the gate gap, and only while the gate is open (it seals at
- *     night). No climbing the fence anywhere else.
- *   - Because non-gate crossings are blocked, any sheep that ends up inside the
- *     box MUST have been herded through the gate. So "inside" => "entered via the
- *     gate", which makes retirement trivial: on entry a sheep settles and
- *     retires in the pasture (a calm walk to a spot inside, then it grazes/idles
- *     until morning). No zap. No teleport.
  *
  * Runs every frame AFTER the shared sheep sim tick (which has already moved the
  * sheep) and after the dog's move, so it corrects positions before render.
@@ -36,9 +46,12 @@
 import { Vector2D } from './Vector2D.js';
 import { mulberry32 } from './Random.js';
 
-export class PenContainment {
+export class PenBarrier {
     /**
-     * @param {{center:{x:number,z:number}, radius:number}} pen
+     * @param {{center:{x:number,z:number}, radius:number}
+     *        |{minX:number, maxX:number, minZ:number, maxZ:number}} pen
+     *   The enclosure box. Square form: `center` + `radius` (half-side). Rect
+     *   form: the four edges. The rect form wins when all four are finite.
      * @param {{x:number, z:number, width?:number}} gate  Gate centre + opening width (world space).
      * @param {Object} [opts]
      * @param {number} [opts.sheepBody=0.6] Sheep body radius (fence standoff).
@@ -47,21 +60,44 @@ export class PenContainment {
      * @param {number} [opts.settleSeed=0x5e77] Base seed for the deterministic settle spot.
      */
     constructor(pen, gate, opts = {}) {
-        const R = pen.radius;
-        this.cx = pen.center.x;
-        this.cz = pen.center.z;
-        this.minX = this.cx - R;
-        this.maxX = this.cx + R;
-        this.minZ = this.cz - R;
-        this.maxZ = this.cz + R;
+        if (Number.isFinite(pen?.minX) && Number.isFinite(pen?.maxX)
+            && Number.isFinite(pen?.minZ) && Number.isFinite(pen?.maxZ)) {
+            // Rect form. Normalised so a swapped pair still describes a box.
+            this.minX = Math.min(pen.minX, pen.maxX);
+            this.maxX = Math.max(pen.minX, pen.maxX);
+            this.minZ = Math.min(pen.minZ, pen.maxZ);
+            this.maxZ = Math.max(pen.minZ, pen.maxZ);
+            this.halfX = (this.maxX - this.minX) / 2;
+            this.halfZ = (this.maxZ - this.minZ) / 2;
+            this.cx = this.minX + this.halfX;
+            this.cz = this.minZ + this.halfZ;
+        } else {
+            // Square form (Cycle 66), unchanged to the last bit.
+            const R = pen.radius;
+            this.cx = pen.center.x;
+            this.cz = pen.center.z;
+            this.minX = this.cx - R;
+            this.maxX = this.cx + R;
+            this.minZ = this.cz - R;
+            this.maxZ = this.cz + R;
+            this.halfX = R;
+            this.halfZ = R;
+        }
 
         this.gateX = gate.x;
         this.gateZ = gate.z;
         this.gateHalf = (gate.width ?? 10) / 2;
         // Which edge holds the gate: a vertical edge (runs along z, gate gaps in
         // z) or a horizontal edge (runs along x, gate gaps in x). Matches the
-        // onVertical split in StructureBuilder.buildHomesteadGate.
-        this.onVertical = Math.abs(gate.x - this.cx) >= Math.abs(gate.z - this.cz);
+        // onVertical split in StructureBuilder.buildPenEnclosure. Pick the face
+        // the gate is NEAREST, measured as the gap left to each face pair. The
+        // Cycle 66 rule compared the raw offsets, which on a long, thin rect picks
+        // the long axis almost every time and gaps the fence on the wrong side.
+        // On a square (halfX === halfZ === R) the two rules agree: `R - a <= R - b`
+        // iff `a >= b`, bar a tie that only appears when the two offsets are within
+        // an ulp of each other, which puts the gate at the box centre.
+        this.onVertical = (this.halfX - Math.abs(gate.x - this.cx))
+            <= (this.halfZ - Math.abs(gate.z - this.cz));
 
         this.sheepBody = opts.sheepBody ?? 0.6;
         this.dogBody = opts.dogBody ?? 1.0;

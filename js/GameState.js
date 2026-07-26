@@ -52,11 +52,23 @@ export class GameState {
         /** @type {import('../shared/scenes/types.js').Boundary | null} */
         this.boundary = null;
 
-        // Corral (Cycle 5+ Rolling Hills). When set, sheep retire on entering
+        // Corral (Cycle 5+ Open Country). When set, sheep retire on entering
         // the corral disc instead of crossing a gate. Replaces gate+pasture
         // for the win condition.
         /** @type {import('../shared/scenes/types.js').CorralDef | null} */
         this.corral = null;
+
+        // The scene's fenced pen (Cycle 117 P2 Rolling Hills, Cycle 66
+        // Newsheepdogland), when it declares one. Retirement on these scenes
+        // belongs to `shared/PenBarrier.js`, which flips `hasPassedGate` on
+        // entry from inside the per-frame barrier tick, so the trigger check in
+        // updateSheepCount must stand down rather than fall through to the
+        // gate branch. That branch is NOT harmless here: `this.gate` defaults
+        // to Home Field's gate at (0, 100) and never gets nulled per scene, and
+        // (0, 100) is 100m inside Rolling Hills' 180m island - so falling
+        // through would retire island sheep at a gate that is not there.
+        /** @type {import('../shared/scenes/types.js').PenDef | null} */
+        this.pen = null;
 
         // Multi-stage objective state. Null on scenes without an `objective`
         // def (RH, Field). Shape + transitions live in js/gamestate/objective.js.
@@ -356,9 +368,15 @@ export class GameState {
                         // arms was always one shape too many, and the bytes it
                         // costs are the bytes the once-per-frame dispatch below
                         // needs against a ratchet with double digits of headroom.
+                        //
+                        // Cycle 117 P2 adds the third shape. A pen scene's
+                        // retirement happens inside the barrier tick, so the
+                        // gate arm stands down (see `this.pen` in the
+                        // constructor for why standing down matters rather
+                        // than being tidy).
                         const triggered = this.corral
                             ? corralOpen && sheep.checkCorralAndRetire(this.corral)
-                            : sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior());
+                            : !this.pen && sheep.checkGatePassageAndRetire(this.getGateForSheepBehavior(), this.getPastureForSheepBehavior());
                         if (triggered) {
                             // Cycle 58 P1: do NOT count the sheep here. The
                             // "count all passed/retiring" pass below is the single

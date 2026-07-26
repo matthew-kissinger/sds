@@ -127,15 +127,34 @@ describe('Home Field - the sim gate and the cue gate are the same gate', () => {
     });
 });
 
-describe('Rolling Hills - the corral disc', () => {
-    it('resolves the corral, sized from its radius', () => {
+// Cycle 117 P2: the island's destination stopped being a corral disc with an
+// invisible 8m trigger and became a fenced pasture with one opening. The gate
+// is NESTED inside the pen descriptor rather than declared top-level, because a
+// top-level `gate` is load-bearing in the sim, so the resolver reads
+// `pen.gate ?? scene.gate` - which is the whole change the cue needed.
+describe('Rolling Hills - the pasture gate', () => {
+    it('resolves the gate nested inside the pen, sized from its width', () => {
         const descriptor = resolveGateDescriptor(rollingHills, null);
-        expect(descriptor.kind).toBe('corral');
+        expect(rollingHills.gate, 'no top-level gate, by design').toBeUndefined();
+        expect(descriptor.kind).toBe('gate');
         expect(descriptor.position).toEqual({
-            x: rollingHills.corral.center.x,
-            z: rollingHills.corral.center.z,
+            x: rollingHills.pen.gate.position.x,
+            z: rollingHills.pen.gate.position.z,
         });
-        expect(descriptor.width).toBe(rollingHills.corral.radius * 2);
+        expect(descriptor.width).toBe(rollingHills.pen.gate.width);
+    });
+
+    it('faces the way the flock travels: in through the opening', () => {
+        // The gate sits on the pasture's north edge, so the direction of travel
+        // is south, into the box. Derived from the pen's own geometry rather
+        // than from the authored facingDeg, so an edit to either surfaces here.
+        const { position, facing } = resolveGateDescriptor(rollingHills, null);
+        const pen = rollingHills.pen;
+        const interior = {
+            x: (pen.minX + pen.maxX) / 2 - position.x,
+            z: (pen.minZ + pen.maxZ) / 2 - position.z,
+        };
+        expect(dot(facing, interior)).toBeGreaterThan(0);
     });
 
     it('faces away from the island centre', () => {
@@ -186,10 +205,15 @@ describe('Open Country - two destinations, one live stage', () => {
         const objective = createObjective(openCountry.objective, 200);
         objective.stage = 'drive';
         expect(openCountry.corral.effect).toBe('portal');
-        expect(rollingHills.corral.effect).toBeUndefined();
 
+        // Cycle 117 P2: Rolling Hills used to be the plain-disc half of this
+        // pair and is now a gate, so the "not from the scene id" claim is made
+        // against the SAME scene with only `effect` dropped. That is the tighter
+        // comparison anyway - the scene id is held fixed while the one field the
+        // resolver is supposed to read changes underneath it.
+        const plainDisc = { ...openCountry, corral: { ...openCountry.corral, effect: undefined } };
         expect(resolveGateDescriptor(openCountry, { objective }).kind).toBe('portal');
-        expect(resolveGateDescriptor(rollingHills, { objective }).kind).toBe('corral');
+        expect(resolveGateDescriptor(plainDisc, { objective }).kind).toBe('corral');
     });
 
     it('falls back to the round-up zone on a malformed stage rather than jumping ahead', () => {
@@ -247,14 +271,19 @@ describe('scene swap - the previous scene never leaks in through game state', ()
         boundary: null,
     });
 
-    it('resolves the island corral, not the stale Home Field gate', () => {
+    it('resolves the island pasture gate, not the stale Home Field gate', () => {
+        // The sharper version of this since Cycle 117 P2: both destinations are
+        // now `kind: 'gate'`, so kind alone cannot tell them apart and the
+        // position is doing the whole job. Home Field's gate survives the swap
+        // on `gameState`, and the island's is 158m away from it.
         const descriptor = resolveGateDescriptor(rollingHills, staleAfterHomeField());
-        expect(descriptor.kind).toBe('corral');
+        expect(descriptor.kind).toBe('gate');
         expect(descriptor.position).toEqual({
-            x: rollingHills.corral.center.x,
-            z: rollingHills.corral.center.z,
+            x: rollingHills.pen.gate.position.x,
+            z: rollingHills.pen.gate.position.z,
         });
         expect(descriptor.position.z).not.toBe(FieldConfig.getGate().position.z);
+        expect(descriptor.width).not.toBe(FieldConfig.getGate().width);
     });
 
     it('resolves the Open Country zone, not the stale Home Field gate', () => {

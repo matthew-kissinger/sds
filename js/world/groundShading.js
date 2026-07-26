@@ -594,6 +594,12 @@ export function resolveEntityFacing(entity) {
  * carries a `facingDeg` but no pasture rect, so there is no inside to point
  * away from. Its homestead approach is its own problem with its own geometry.
  *
+ * Cycle 117 P4 note: Rolling Hills now HAS a gate, nested in its pen, and would
+ * qualify for an approach off `pen.gate` plus the pen rect in about three lines.
+ * Deliberately not taken here - the ground fan is a legibility affordance, not
+ * part of the fence, and turning it on moves the island's grass scatter. Left
+ * for whoever owns the island's legibility pass.
+ *
  * Known limit: this reads the SCENE's pen. Competitive mode reassigns pastures
  * at runtime (js/world/sandbox.js#updateBounds), and the approach does not
  * follow them - it stays where the scene's single-player pen is.

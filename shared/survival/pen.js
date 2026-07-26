@@ -6,4 +6,4 @@
  * pasture is too - and `scene-and-render.md` says a file names WHAT, not WHEN.
  * This file is a re-export shim so every existing import keeps working.
  */
-export { PenContainment, PenContainment as PenBarrier } from '../PenBarrier.js';
+export { PenBarrier, PenBarrier as PenContainment } from '../PenBarrier.js';

@@ -112,6 +112,11 @@ export function generateRockPlacementPlan({
     const waterAware = !!(islandBoundary || coastlineBoundary);
     const playArea = zones.playArea;
     const corral = sceneDef?.corral || null;
+    // Cycle 117 P2: the pen is a herding destination too, and once Phase 4
+    // raises the fence a rock scattered inside it would sit behind the rails.
+    // Opt-in (`pen.scatterKeepOut`) so Newsheepdogland's homestead keeps its
+    // existing rock layout - see the same flag in shared/TreePlacement.js.
+    const keepOutPen = sceneDef?.pen?.scatterKeepOut ? sceneDef.pen : null;
     // Optional radial confinement (Home Field): drop rocks past this distance so
     // formation spread + rect corners never push a rock onto the bare terrain
     // outside the green. Squared once to keep the per-rock check multiply-only.
@@ -133,12 +138,19 @@ export function generateRockPlacementPlan({
         }
         return false;
     };
-    const isInCorralKeepout = (x, z) => {
-        if (!corral) return false;
-        const dx = x - corral.center.x;
-        const dz = z - corral.center.z;
-        const r = corral.radius + 8;
-        return (dx * dx + dz * dz) < r * r;
+    const isInDestinationKeepOut = (x, z) => {
+        if (corral) {
+            const dx = x - corral.center.x;
+            const dz = z - corral.center.z;
+            const r = corral.radius + 8;
+            if ((dx * dx + dz * dz) < r * r) return true;
+        }
+        if (keepOutPen) {
+            const m = 8;
+            if (x > keepOutPen.minX - m && x < keepOutPen.maxX + m &&
+                z > keepOutPen.minZ - m && z < keepOutPen.maxZ + m) return true;
+        }
+        return false;
     };
 
     for (const { zone, formations, types, scaleRange } of createRockPlacementZones(zones, sceneDef)) {
@@ -148,7 +160,7 @@ export function generateRockPlacementPlan({
 
             if (waterAware) {
                 if (isInWater(centerX, centerZ)) continue;
-                if (isInCorralKeepout(centerX, centerZ)) continue;
+                if (isInDestinationKeepOut(centerX, centerZ)) continue;
             } else if (isInRect({ x: centerX, z: centerZ }, playArea, 50)) {
                 continue;
             }
@@ -161,7 +173,7 @@ export function generateRockPlacementPlan({
             for (const rock of formation) {
                 if (waterAware) {
                     if (isInWater(rock.x, rock.z)) continue;
-                    if (isInCorralKeepout(rock.x, rock.z)) continue;
+                    if (isInDestinationKeepOut(rock.x, rock.z)) continue;
                 } else if (isInRect(rock, playArea, 40)) {
                     continue;
                 }

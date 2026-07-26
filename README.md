@@ -21,7 +21,7 @@ Sheep Dog Sim is built around pressure, flock shape, and terrain. Get behind the
 Scenes:
 
 - **Home Field** - flat fenced starter pasture with one gate.
-- **Rolling Hills** - 180 m golden-hour island with shoreline water and a lightning corral.
+- **Rolling Hills** - 180 m golden-hour island with shoreline water and a fenced pasture with one gate.
 - **Open Country** - 380 m island with a multi-stage gather-and-portal objective.
 - **Newsheepdogland** - gated large-scene lab with a homestead pen and day/night pressure. It remains out of the public beta scene set while the larger loop is reconsidered.
 

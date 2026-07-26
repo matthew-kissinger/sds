@@ -72,14 +72,68 @@ describe('generateTrees — placement constraints', () => {
         }
     });
 
+    // Cycle 117 retired Rolling Hills' corral, so Open Country is the last
+    // scene that has one and this case retargeted to it. The seed is the
+    // scene's own production seed, not a hand-picked one: a 14m keep-out disc
+    // on a 380m island is a small target, and on most seeds the nearest tree
+    // lands 20m+ away for reasons that have nothing to do with the keep-out.
+    // Under mulberry32(13) - the seed this case used to carry - the nearest
+    // unguarded tree sits at 16.6m, so the assertion held with the keep-out
+    // deleted from TreePlacement.js outright. Verified by mutation.
     it('island scenes keep trees out of the corral keep-out', () => {
-        const trees = generateTrees(rollingHills, mulberry32(13));
-        const { center, radius } = rollingHills.corral;
-        const keepOut = radius + 5 - 1; // -1m to mirror the strict-less-than check
+        const seed = openCountry.terrain.seed;
+        const trees = generateTrees(openCountry, mulberry32(seed));
+        const { center, radius } = openCountry.corral;
+        const keepOut = radius + 5;
+        const distance = (t) => Math.hypot(t.x - center.x, t.z - center.z);
         for (const t of trees) {
-            const d = Math.hypot(t.x - center.x, t.z - center.z);
-            expect(d).toBeGreaterThanOrEqual(keepOut);
+            expect(distance(t), `tree at ${t.x},${t.z} is inside the corral keep-out`)
+                .toBeGreaterThanOrEqual(keepOut);
         }
+        // Same shape as the pen sibling below: the claim only says something if
+        // trees would otherwise land there, so run the same scatter with the
+        // corral dropped and confirm some do. Canopy spacing means the disc
+        // holds one tree at a time, so this is a one-stray check by
+        // construction rather than a loose bound.
+        const unguarded = generateTrees({ ...openCountry, corral: undefined }, mulberry32(seed));
+        const strays = unguarded.filter((t) => distance(t) < keepOut);
+        expect(strays.length, 'the keep-out is doing work').toBeGreaterThan(0);
+    });
+
+    // Cycle 117 P2. Rolling Hills' destination stopped being a corral disc and
+    // became a fenced pasture, and the keep-out had to follow it or trees would
+    // scatter inside the pasture and, once the fence goes up, through it.
+    it('island scenes keep trees out of the pen keep-out', () => {
+        const trees = generateTrees(rollingHills, mulberry32(13));
+        const pen = rollingHills.pen;
+        expect(pen?.scatterKeepOut, 'rolling-hills opts into the pen keep-out').toBe(true);
+        const m = 5;
+        for (const t of trees) {
+            const inside = t.x > pen.minX - m && t.x < pen.maxX + m
+                && t.z > pen.minZ - m && t.z < pen.maxZ + m;
+            expect(inside, `tree at ${t.x},${t.z} is inside the pasture keep-out`).toBe(false);
+        }
+        // The claim only says something if trees would otherwise land there, so
+        // check the same scatter WITHOUT the opt-in and confirm some do.
+        const unguarded = generateTrees(
+            { ...rollingHills, pen: { ...pen, scatterKeepOut: false } },
+            mulberry32(13),
+        );
+        const strays = unguarded.filter((t) => t.x > pen.minX - m && t.x < pen.maxX + m
+            && t.z > pen.minZ - m && t.z < pen.maxZ + m);
+        expect(strays.length, 'the keep-out is doing work').toBeGreaterThan(0);
+    });
+
+    // The opt-in is what keeps Newsheepdogland's baked layout still. Its pen
+    // carries no flag, so its scatter must be indifferent to the pen entirely.
+    it('leaves a pen without the opt-in out of it', () => {
+        expect(newsheepdogland.pen?.scatterKeepOut).toBeUndefined();
+        const asIs = generateTrees(newsheepdogland, mulberry32(newsheepdogland.terrain.seed));
+        const penless = generateTrees(
+            { ...newsheepdogland, pen: undefined },
+            mulberry32(newsheepdogland.terrain.seed),
+        );
+        expect(JSON.stringify(asIs)).toBe(JSON.stringify(penless));
     });
 
     it('field (legacy rect) keeps trees out of the play area + buffer', () => {

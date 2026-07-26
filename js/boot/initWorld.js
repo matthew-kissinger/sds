@@ -17,6 +17,7 @@ import * as THREE from 'three';
 
 import { Heightfield } from '../../shared/terrain/Heightfield.js';
 import { Sheepdog } from '../Sheepdog.js';
+import { resolveSceneEnclosure } from '../StructureBuilder.js';
 import { resolveAssetUrl } from '../utils/assetUrl.js';
 import { log as probeLog } from '../diagnostics/glProbe.js';
 
@@ -286,6 +287,17 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // out of the perimeter fence (e.g. Open Country) — flag lives
         // on the scene def.
         logStep('Building structures');
+        // Cycle 117 P4: the scene's own enclosure - its pen box and the one gate
+        // in it - resolved ONCE and used twice. StructureBuilder raises the fence
+        // and the swing gate on the heightfield here; the PenBarrier below makes
+        // that same box solid. One resolver is what keeps the visible gap and the
+        // passable gap from drifting apart.
+        //
+        // Rolling Hills sets `perimeterFence: false` and, since P2, no `corral`,
+        // so without an enclosure it falls through to `buildGateAndPenOnly` and
+        // stands Home Field's gate at (0, 100) - 100m INSIDE the 180m island -
+        // with a pen fence behind it.
+        const enclosure = resolveSceneEnclosure(game.currentScene);
         game.structureBuilder.buildSinglePlayerStructures(
             game.gameState.getBounds(),
             game.gameState.getGate(),
@@ -293,64 +305,72 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             {
                 perimeterFence: game.currentScene.perimeterFence !== false,
                 corral: game.currentScene.corral || null,
-                // Scenes with a day-loop homestead gate (Newsheepdogland) build
-                // their own gate + pen below via buildHomesteadGate; suppress the
-                // FieldConfig default gate+pen so a stray gate doesn't strand in
-                // the water at the default origin location.
-                homesteadGate: Boolean(game.currentScene.dayNight?.dayLoop && game.currentScene.gate)
+                enclosure,
             }
         );
 
-        // Cycle 65: the homestead gate + day loop. Only on scenes that opt into
-        // the day loop (Newsheepdogland). The gate is grounded via the heightfield set
+        // Cycle 66 P2: the pen is a real barrier and it is the objective. A
+        // per-frame containment makes the fence solid (gate-only entry, sealed
+        // at night on a day-loop scene, dog + sheep collide) and retires sheep
+        // that come through the gate: a calm settle walk to a spot inside, no
+        // zap, no teleport. main.js ticks it after the shared sheep sim.
+        //
+        // Cycle 117 P2 HOISTED this out of the day-loop block below, rather than
+        // widening that block's predicate. That block also builds DayLoop, the
+        // day/night chip, skipToDusk, the survival run, the minimap and the
+        // wolves, so admitting Rolling Hills into it would hand the island a day
+        // loop it must not have. Both of its pen consumers - createLazyWolfPack
+        // and the day-loop's `home` count - read `game._penBarrier`, so the
+        // barrier has to exist before it runs.
+        //
+        // Cycle 67 P6: SOLO only. In co-op the DO runs the barrier
+        // authoritatively and the client renders the corrected sheep from the
+        // broadcast (initNetwork.driveCoopSurvival). Competitive and timed are
+        // multiplayer modes, so they never reach here either - which is what
+        // keeps a mid-island fence from standing across the competitive
+        // pastures.
+        //
+        // The import stays dynamic so `shared/PenBarrier.js` never lands in the
+        // eagerly loaded main chunk.
+        const penDef = game.currentScene.pen || null;
+        // The scene's destination shape, for the client retirement dispatch.
+        // Set HERE rather than beside `setCorral` in main.js because this is the
+        // one path that runs for both a cold boot and a scene rebuild - the same
+        // reason the gate cue is constructed here - so it is one assignment
+        // instead of two `if (sceneDef.X)` lines that drift apart. disposeScene
+        // clears it, so a swap away from a pen scene does not inherit one.
+        if (game.gameState) game.gameState.pen = penDef;
+        if (enclosure && !game.isMultiplayer) {
+            const { PenBarrier } = await import('../gamestate/penContainment.js');
+            game._penBarrier = new PenBarrier(enclosure.pen, enclosure.gate);
+        } else {
+            game._penBarrier = null;
+        }
+
+        // Cycle 65: the day loop. Only on scenes that opt into it
+        // (Newsheepdogland). Its enclosure went up with every other scene's
         // above; the DayLoop + the day/night HUD chip are created here, and a
         // per-frame runner is stashed on the game for the main loop to call.
         if (game.currentScene.dayNight?.dayLoop && game.currentScene.gate) {
-            const gd = game.currentScene.gate;
-            const pen = game.currentScene.pen || null;
-            const needsPenContainment = Boolean(pen?.center && !game.isMultiplayer);
+            const pen = penDef;
             const needsSurvivalRun = Boolean(game.currentScene.survival && !game.isMultiplayer);
             const needsMinimap = Boolean(game.currentScene.survival && Array.isArray(game.currentScene.boundary?.points));
             const [
                 { DayLoop },
                 chip,
-                penContainmentModule,
                 survivalRunModule,
                 minimapModule,
                 { createSkipToDusk },
             ] = await Promise.all([
                 import('../gamestate/dayLoop.js'),
                 import('../components/GameHUD/DayNightChip.js'),
-                needsPenContainment ? import('../gamestate/penContainment.js') : Promise.resolve(null),
                 needsSurvivalRun ? import('../gamestate/survivalRun.js') : Promise.resolve(null),
                 needsMinimap ? import('../components/GameHUD/Minimap.js') : Promise.resolve(null),
                 import('../effects/skipToDusk.js'),
             ]);
 
-            game.structureBuilder.buildHomesteadGate({
-                gate: { x: gd.position.x, z: gd.position.z, width: gd.width, facingDeg: gd.facingDeg },
-                pen,
-            });
             const dayLoop = new DayLoop({ initialT: game.currentScene.dayNight.initialT });
             game.dayLoop = dayLoop;
-
-            // Cycle 66 P2: the pen is a real barrier + the objective. A
-            // client-side per-frame containment makes the fence solid (gate-only
-            // entry, sealed at night, dog + sheep collide) and retires sheep that
-            // pass through the gate (calm settle, no zap, no teleport). main.js
-            // ticks it after the shared sheep sim each frame.
-            // Cycle 67 P6: the client-side pen + survival sim run for SOLO only. In
-            // co-op the DO is authoritative (run + wolves + pen) and the client
-            // renders from the broadcast (see initNetwork.driveCoopSurvival), so
-            // skip the local sim entirely in MP.
-            if (needsPenContainment) {
-                const { PenContainment } = penContainmentModule;
-                game._penContainment = new PenContainment(pen, {
-                    x: gd.position.x, z: gd.position.z, width: gd.width,
-                });
-            } else {
-                game._penContainment = null;
-            }
 
             // Cycle 66 P3: the survival run economy (start flock, +growth/day,
             // death on a 33%+ night loss, score = peak flock). Client-side; it
@@ -370,7 +390,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 game._wolfPack = createLazyWolfPack({
                     scene: game.sceneManager.getScene(),
                     groundY: (x, z) => (game.terrainBuilder?._groundY ? game.terrainBuilder._groundY(x, z) : 0),
-                    pen: game._penContainment,
+                    pen: game._penBarrier,
                     onKill: () => game._survivalRun?.recordKill(),
                     seed: (game.currentScene.terrain?.seed ?? 7) >>> 0,
                 });
@@ -457,8 +477,8 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 // been herded through the gate and retired inside; prefer its
                 // count. Fall back to a throttled radius scan only when there is
                 // no containment (e.g. a day-loop scene without a pen).
-                if (game._penContainment) {
-                    home = game._penContainment.pennedCount;
+                if (game._penBarrier) {
+                    home = game._penBarrier.pennedCount;
                 } else {
                     acc += Number.isFinite(dt) ? dt : 0.016;
                     // Throttle the pen membership scan to ~4Hz; it is O(activeSheep).
@@ -481,7 +501,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                 const total = game.gameState?.optimizedSheepSystem?.activeCount
                     ?? (game.gameState?.sheep?.length ?? 0);
                 const state = dayLoop.update(t, home, total);
-                game.structureBuilder?.setHomesteadGateOpen?.(state.gateOpen);
+                game.structureBuilder?.setPenGateOpen?.(state.gateOpen);
                 game.structureBuilder?.updateGate?.(dt);
 
                 // Cycle 66 P3: drive the survival economy off the day phase.
@@ -495,7 +515,7 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                         // Dawn: wolves retreat; release the penned flock to graze,
                         // then grow +N for surviving the night.
                         game._wolfPack?.retreatAll();
-                        game._penContainment?.releaseAll?.(game.gameState?.sheep);
+                        game._penBarrier?.releaseAll?.(game.gameState?.sheep);
                         game.gameState?.growSurvivalFlock?.(run.growth);
                         // [P3-ACHIEVE-DATA] Achievement seam: ev.day is the NEW
                         // day after dawn, so this run has survived ev.day - 1
@@ -559,6 +579,15 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // Cycle 5+: corral retirement effect. Listens for 'corral-retired'
         // events dispatched by GameState's retirement loop. Cycle 6 Phase 4
         // adds the persistent 'portal' variant for Open Country.
+        //
+        // Cycle 117 P4 retired the OTHER variant: the lightning bolt that fired
+        // when a sheep crossed Rolling Hills' invisible 8m corral radius (D15).
+        // The island is a fenced pasture now, so nothing on it retires at a
+        // radius and nothing zaps; Open Country's portal is the only corral
+        // visual left, so this branch no longer has an else. The effect module
+        // js/effects/CorralZapEffect.js stays on disk for one more cycle so the
+        // pasture can be reverted without a restore - it is simply never
+        // constructed, which is also what lets Rollup drop its chunk.
         if (game.currentScene.corral) {
             const corral = game.currentScene.corral;
             if (corral.effect === 'portal') {
@@ -651,22 +680,6 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                         }
                     }, { signal: game._sceneAbort.signal });
                 }
-            } else {
-                const { CorralZapEffectPool } = await import('../effects/CorralZapEffect.js');
-                game._corralZapPool = new CorralZapEffectPool(game.sceneManager.getScene());
-                window.addEventListener('corral-retired', (e) => {
-                    if (e?.detail && game._corralZapPool) {
-                        game._corralZapPool.fire(e.detail);
-                    }
-                }, { signal: game._sceneAbort.signal });
-                // Cycle 7: spark at the top of the bolt when a retiring
-                // sheep finishes its upward ascent. Marks the moment of
-                // removal cleanly — small particle burst, no new bolt.
-                window.addEventListener('corral-ascend-top', (e) => {
-                    if (e?.detail && game._corralZapPool) {
-                        game._corralZapPool.fireSpark(e.detail);
-                    }
-                }, { signal: game._sceneAbort.signal });
             }
         }
 
@@ -753,9 +766,6 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
 
         // Connect audio manager to sheepdog
         sheepdog.setAudioManager(game.audioManager);
-
-        // Set as local player and create distance indicator (after mesh is created)
-        sheepdog.setAsLocalPlayer();
 
         // Create optimized sheep flock (visible during start screen)
         logStep('Creating sheep flock');

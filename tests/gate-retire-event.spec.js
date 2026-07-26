@@ -20,7 +20,7 @@
  * with no crossing gives none.
  *
  * THREE: Newsheepdogland is silent. Its sheep retire inside
- * `shared/survival/pen.js`, which is fence-frozen and dispatches nothing, and
+ * `shared/PenBarrier.js`, which dispatches nothing, and
  * `js/GameState.js`'s gate branch tests them against FieldConfig's passage zone
  * about 1,200 metres away. So the pen tests drive the cue with NO event at all
  * and assert it still pulses, and one of them measures that distance out of the
@@ -142,7 +142,7 @@ function fakeGame(sceneDef, { sheep = [], activeCount, dog = null, pen = null } 
         sceneManager: { getScene: () => scene },
         terrainBuilder: { _groundY: () => 0 },
         structureBuilder: { structures: {} },
-        _penContainment: pen,
+        _penBarrier: pen,
         scene,
     };
 }
@@ -238,11 +238,15 @@ describe('the approach funnel is derived, per kind, never per scene', () => {
         // ratios through different radii, so two scenes on one formula land a
         // ULP apart. A same-shape claim is about the formula, not the bits.
         const same = (a, b, label) => a.forEach((v, i) => expect(b[i], `${label}[${i}]`).toBeCloseTo(v, 9));
+        // Cycle 117 P2: Rolling Hills moved from the disc family to the gate
+        // family when its corral became a fenced pasture, so the disc pair is
+        // now Open Country's two stages (the gather zone and the portal).
         const gate = shape(rectOf(field, null));
-        const disc = shape(rectOf(rollingHills, null));
+        const disc = shape(rectOf(openCountry, { objective: { stage: 'drive' } }));
 
         same(gate, shape(rectOf(newsheepdogland, null)), 'gate');
-        same(disc, shape(rectOf(openCountry, { objective: { stage: 'drive' } })), 'disc');
+        same(gate, shape(rectOf(rollingHills, null)), 'gate');
+        same(disc, shape(rectOf(openCountry, null)), 'disc');
         // And the split is a real one, so "shares a shape" says something.
         expect(gate[0]).not.toBeCloseTo(disc[0], 6);
         expect(source('js/world/gateCue.js'))

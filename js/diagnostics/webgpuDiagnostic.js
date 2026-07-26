@@ -23,7 +23,13 @@ import {
 import {
     createWebGpuEffectMaterial,
 } from '../effects/webgpuEffectMaterialAdapter.js';
-import { CorralZapEffectPool } from '../effects/CorralZapEffect.js';
+// CorralZapEffect is imported on demand rather than at module scope (Cycle 117
+// P4). It used to ride a static import here because the game itself pulled it
+// in dynamically from js/boot/initWorld.js, so it was already its own chunk and
+// this reference cost nothing. Rolling Hills' lightning retired with its corral
+// (D15), leaving these proofs as the module's only importers - which folded 4.7
+// KB of production effect code into the diagnostic chunk. Loading it the way
+// the game used to keeps it a chunk of its own.
 import { PortalEffect } from '../effects/PortalEffect.js';
 import { SunBillboard } from '../effects/SunBillboard.js';
 import { TerrainBuilder } from '../TerrainBuilder.js';
@@ -840,13 +846,14 @@ function summarizeMaterial(material) {
     };
 }
 
-export function createProductionEffectAdapterDiagnosticProof({
+export async function createProductionEffectAdapterDiagnosticProof({
     scene,
     camera,
     sceneBinding,
     skyFog,
     effectFactories,
 }) {
+    const { CorralZapEffectPool } = await import('../effects/CorralZapEffect.js');
     const search = '?renderer=webgpu&webgpuEffects=1';
     const sun = new SunBillboard(scene, {
         distance: 2.2,
@@ -1643,7 +1650,7 @@ export async function bootWebGpuDiagnostic() {
         sun: sunMaterialResult.summary,
         portal: portalMaterialResult.summary,
     };
-    const productionEffectProof = createProductionEffectAdapterDiagnosticProof({
+    const productionEffectProof = await createProductionEffectAdapterDiagnosticProof({
         scene,
         camera,
         sceneBinding,

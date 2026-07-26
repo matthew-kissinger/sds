@@ -41,10 +41,15 @@
 
 /**
  * @typedef {'gate'|'corral'|'zone'|'portal'} GateCueKind
- *   'gate'   a mouth in a fence (Home Field, Newsheepdogland)
- *   'corral' a plain radial destination disc (Rolling Hills)
+ *   'gate'   a mouth in a fence (Home Field, Rolling Hills, Newsheepdogland)
+ *   'corral' a plain radial destination disc (no shipping scene since Cycle 117)
  *   'zone'   a hold-here gather disc, not yet the final destination (Open Country, roundup stage)
  *   'portal' a radial destination that ships its own vortex visual (Open Country, drive stage)
+ *
+ * `corral` is kept rather than deleted because it is the DEFAULT for any scene
+ * that declares a `corral` without `effect: 'portal'`, and dropping it would
+ * leave that authoring shape resolving to nothing. Cycle 117 moved Rolling
+ * Hills off it; Open Country still ships the disc, just as a portal.
  */
 
 /**
@@ -220,8 +225,8 @@ export const GATE_POST_RIM_PEAK_INTENSITY = 0.55;
  * Arc radius, in metres, from a descriptor's `width`.
  *
  * `resolveGateDescriptor` normalises two different things into one `width`:
- * a gate's mouth (Home Field 8, Newsheepdogland 12) and a disc's diameter
- * (Rolling Hills 16, Open Country 60 then 18). Half of either is the honest
+ * a gate's mouth (Home Field 8, Rolling Hills 12, Newsheepdogland 12) and a
+ * disc's diameter (Open Country 60 then 18). Half of either is the honest
  * radius, and for a disc that is the end of it - the arc IS the boundary the
  * flock has to end up inside, so drawing it anywhere else would be a lie about
  * where the sheep count.
@@ -231,8 +236,8 @@ export const GATE_POST_RIM_PEAK_INTENSITY = 0.55;
  * player reads a line that stops at the timber rather than a mouth to walk
  * through. 1.5m clears a 0.4m post section with room for the post jitter in
  * `js/FencePresets.js` to lean it. This is a per-KIND derivation, not a
- * per-scene one: Home Field and Newsheepdogland share it, and hard stop 3 is
- * about the cue branching on scene identity.
+ * per-scene one: Home Field, Rolling Hills and Newsheepdogland share it, and
+ * hard stop 3 is about the cue branching on scene identity.
  *
  * The clamps shape nothing that ships. Every descriptor above lands between
  * them; they exist so a scene authored later with a 2m corral or a 400m zone
@@ -513,7 +518,7 @@ export const GATE_PULSE_GAIN = 0.8;
  * `checkGatePassageAndRetire` against FieldConfig's passage zone at roughly
  * (+-4, 98..102) - about 1,200 metres from Newsheepdogland's actual gate at
  * (610, -1000). It never fires. What actually retires a sheep there is
- * `PenContainment.update`, inside `shared/survival/pen.js`, which dispatches
+ * `PenBarrier.update`, inside `shared/PenBarrier.js`, which dispatches
  * nothing and cannot be given a dispatch without a `shared/` edit.
  *
  * So the crossing is read rather than announced. `pennedCount` is recomputed
@@ -780,7 +785,33 @@ export function resolveGateDescriptor(sceneDef, gameState) {
         if (descriptor) return descriptor;
     }
 
-    const gate = sceneDef.gate;
+    // Cycle 117 P2: `pen.gate` first, then the top-level one. A fenced pasture
+    // nests its gate inside the pen descriptor because a top-level `gate` is
+    // load-bearing in the sim (see PenDef in shared/scenes/types.js), and the
+    // cue has to aim at the opening the flock actually walks through. The `??`
+    // order leaves Newsheepdogland, whose homestead gate IS top-level and which
+    // has no nested one, resolving exactly as before. This is the data change
+    // Cycle 116 built the descriptor for: one line, no new kind, no scene id.
+    //
+    // WHY THE ISLAND PASTURE IS 'gate' AND NOT A FIFTH KIND (Cycle 117 P5).
+    // `kind` exists to answer three questions and nothing else, and a fenced
+    // pasture answers all three the way Home Field's gate does:
+    //   - `gateThresholdRadius`: does the arc need an outset past the posts?
+    //     Yes. Rolling Hills' 12m is the gap BETWEEN two posts, exactly as
+    //     Home Field's 8m is, so half of it is drawn through the timber.
+    //   - `gateApproachRect`: is the ground worth counting entirely outside
+    //     the mark? Yes. A sheep past the posts has arrived; there is no
+    //     "still gathering it" state inside a pen the way there is inside
+    //     Open Country's 60m zone.
+    //   - `createGateThresholdArc`'s sweep: is a full ring wrong here? Yes.
+    //     A ring would be drawn through the fence and half of it would sit
+    //     inside the pasture.
+    // A new kind would have to give a different answer to at least one of
+    // those to earn its existence, and it gives the same answer to all three.
+    // What makes the island a gate is the fence around it (Cycle 117 P4 builds
+    // a real one, posts and all, so `collectGateRimMaterials` finds them and
+    // the rim warms), not which scene file it is declared in.
+    const gate = sceneDef.pen?.gate ?? sceneDef.gate;
     if (isNum(gate?.position?.x) && isNum(gate?.position?.z) && gate.width > 0) {
         const position = { x: gate.position.x, z: gate.position.z };
         let facing = null;
