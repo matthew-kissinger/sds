@@ -5,6 +5,7 @@ import { FencePresets, FenceConfigBuilder } from './FencePresets.js';
 import { sumObjectTreeTriangles } from './utils/TriangleCount.js';
 import { isPointInPolygon } from './gamestate/polygonSpawn.js';
 import { collectGateLeafControllers, getGateLeafController } from './world/gateLeafController.js';
+import { createGateLeafGroundPitch } from './world/gateLeafGroundPitch.js';
 import { applyRailSag } from './world/fenceWear.js';
 
 /**
@@ -103,6 +104,11 @@ export class StructureBuilder {
         /** @type {import('./world/gateLeafController.js').GateLeafController | null} */
         this._penGateController = null;
         this._penGateOpen = false;
+        // The pen gate's terrain rig. Separate from the controller because the
+        // two own different things: the controller owns WHERE the leaf is swung
+        // to, this owns how far the ground under that swing has fallen away.
+        /** @type {ReturnType<typeof createGateLeafGroundPitch>} */
+        this._penGateLeafPitch = null;
     }
 
     /**
@@ -477,6 +483,7 @@ export class StructureBuilder {
         // that is no longer in the scene after a swap (loadScene clears before
         // initWorld rebuilds).
         this._penGateController = null;
+        this._penGateLeafPitch = null;
     }
     
     /**
@@ -557,6 +564,12 @@ export class StructureBuilder {
      * unit. Tagging both a group AND its already-tagged children double-lifts
      * the children to ~2x terrain height - that was the old "floating wings"
      * bug (locked as known behavior in structure-builder.spec.js).
+     *
+     * The leaves are the one part of that assembly the single lift cannot serve,
+     * because an open leaf reaches metres away from the point it was sampled at.
+     * They are hung on the terrain separately by `js/world/gateLeafGroundPitch.js`,
+     * which tilts each leaf about its own hinge and is re-solved on every pose
+     * change. On flat ground it resolves to zero, so Home Field cannot move.
      *
      * @param {{ gate: {x:number, z:number, width?:number, facingDeg?:number}, pen?: object }} enclosure
      * @returns {THREE.Group}
@@ -645,6 +658,11 @@ export class StructureBuilder {
         this.scene.add(group);
         this.structures.gates.push(group);
         this._surfaceToTerrain(group);
+        // AFTER the lift, because the rig measures the leaves where they ended
+        // up. The anchor is the same (x, z) the assembly was grounded at, which
+        // is what makes a flat scene an exact no-op rather than a small tilt.
+        this._penGateLeafPitch = createGateLeafGroundPitch(this._penGateController, { x: g.x, z: g.z });
+        this._pitchPenGateLeaves();
         console.log(`[BUILD] Pen enclosure ${box ? `[${box.minX}..${box.maxX}] x [${box.minZ}..${box.maxZ}]` : '(gate only)'}, gate w${width} at (${g.x}, ${g.z})`);
         return group;
     }
@@ -677,9 +695,23 @@ export class StructureBuilder {
         // Reduced motion snaps; everything else aims and lets updateGate ease.
         if (this._reducedMotion) {
             controller.setOpenFraction(target);
+            // The snap moved the leaves, and the ground under a closed leaf is
+            // not the ground under an open one. `updateGate` returns early under
+            // reduced motion, so this is the only chance to re-hang them.
+            this._pitchPenGateLeaves();
         } else {
             controller.setTargetOpenFraction(target);
         }
+    }
+
+    /**
+     * Re-hang the pen gate's leaves on the terrain at their current pose.
+     * No-op without a rig (no pen gate, or a gate with no leaves) and without a
+     * heightfield, where `_groundY` is flat 0 and the pitch resolves to zero.
+     * @private
+     */
+    _pitchPenGateLeaves() {
+        this._penGateLeafPitch?.solve((x, z) => this._groundY(x, z));
     }
 
     /**
@@ -691,7 +723,10 @@ export class StructureBuilder {
      */
     updateGate(deltaTime) {
         if (this._reducedMotion) return;
-        this._penGateController?.step(deltaTime);
+        // Only when the swing actually moved. `step` reports that for us, and a
+        // settled gate is the common case: Newsheepdogland calls this every
+        // frame of every day and the leaves are in motion for a second of it.
+        if (this._penGateController?.step(deltaTime)) this._pitchPenGateLeaves();
     }
 
     /**

@@ -103,20 +103,46 @@ export const GATE_COLUMN_HEIGHT = 44;
  * Peak material opacity. Additive blending with `transparent: true` gives
  * src-alpha/one, so this scales the light the column contributes and the
  * distance fade multiplies straight into it.
+ *
+ * D29 (Cycle 117 Phase 6, tuned in a browser at 190m / 120m / 70m on Rolling
+ * Hills). 0.3 was measured and it is worth stating what the measurement showed,
+ * because the obvious lever is the wrong one: the blend is ADDITIVE, so against
+ * a bright daytime sky the column can only move the pixel toward white, and
+ * pushing opacity harder makes it whiter rather than warmer. Past about 0.45 it
+ * stops buying contrast and starts reading as a blown-out streak. So the far
+ * read is bought with GIRTH below and the opacity moves only enough to lift the
+ * column clear of the sky's own value. The near end is unaffected either way,
+ * because `columnFade` has already taken it to 0.35 of this by 70m and to 0 by
+ * 60m.
  */
-export const GATE_COLUMN_OPACITY = 0.3;
+export const GATE_COLUMN_OPACITY = 0.42;
 
-/** Radius band. A destination's width sets the column's girth, within reason. */
-const COLUMN_RADIUS_PER_WIDTH = 0.14;
-const COLUMN_MIN_RADIUS = 0.9;
-const COLUMN_MAX_RADIUS = 2.4;
+/**
+ * Radius band. A destination's width sets the column's girth, within reason.
+ *
+ * D29: these were 0.14 / 0.9 / 2.4, which put Rolling Hills' 12m gate mouth on a
+ * 1.68m radius. Measured at the distance the island sells itself on, that is a
+ * 3.4m-wide mark 190m out - about eleven pixels at the base and, after the taper
+ * below, under two at the top, which is the only part that clears the ridge and
+ * the canopy. It read as a distant mast. Girth is the one lever that buys
+ * angular size at range without touching the near state at all (the column is
+ * already fully faded inside 60m), so it is the one that moved.
+ */
+const COLUMN_RADIUS_PER_WIDTH = 0.22;
+const COLUMN_MIN_RADIUS = 1.2;
+const COLUMN_MAX_RADIUS = 3.2;
 
 /**
  * The top radius as a fraction of the base. A cylinder ends in a hard ring
  * against the sky; a taper converges instead, so the column has no visible top
  * edge to read as geometry.
+ *
+ * D29: 0.12 converged so hard that the column was a needle everywhere above its
+ * own base, and the base is exactly the part a ridge or a treeline hides at the
+ * ranges the far state exists for. 0.45 still converges - there is no hard ring
+ * to read - while leaving the top half a column rather than a wire.
  */
-const COLUMN_TAPER = 0.12;
+const COLUMN_TAPER = 0.45;
 
 /** Metres of column buried below the sample point, so a slope shows no gap. */
 const COLUMN_SINK = 1.5;
@@ -131,6 +157,14 @@ const COLUMN_RADIAL_SEGMENTS = 12;
  * took ownership of the projection. 4m keeps the indicator tracking above the
  * ground rather than at it; the 0.95 envelope hides the chevron slightly before
  * the destination reaches the true screen edge, so the two never overlap.
+ *
+ * Cycle 117 P6: it is 4m ABOVE THE DESTINATION'S GROUND, not 4m above sea
+ * level. It moved from `CorralCompass.tsx` as a bare world Y because every
+ * scene that had a destination when it was written put it near y=0. Rolling
+ * Hills' pasture gate stands at y=27.86, so the projected point sat 24m
+ * underground: measured 12m from the gate with the gate filling the frame,
+ * `onScreen` read false and the screen-edge chevron was pinned on with the
+ * destination dead centre. Open Country's gather zone has the same defect.
  */
 const CUE_PROJECT_HEIGHT_M = 4;
 const CUE_ON_SCREEN_NDC = 0.95;
@@ -235,6 +269,11 @@ export function createGateCue({
     // gate group - and `js/StructureBuilder.js` builds no gate at all on Rolling
     // Hills or Open Country, so that ships the language on half the scenes.
     const arc = createGateThresholdArc({ scene, descriptor, groundY });
+    // Where the chevron projects from, resolved once against the destination's
+    // OWN ground. Baked here alongside the column and the arc, and for the same
+    // reason they are: `onStageChanged` rebuilds all three when the destination
+    // moves, so a constant cannot go stale behind a stage flip.
+    const projectY = groundY(descriptor.position.x, descriptor.position.z) + CUE_PROJECT_HEIGHT_M;
     /**
      * THE CUE'S PUBLISHED STATE, and the only copy of it.
      *
@@ -338,7 +377,7 @@ export function createGateCue({
             let behind = false;
             let onScreen = false;
             if (camera) {
-                _projected.set(descriptor.position.x, CUE_PROJECT_HEIGHT_M, descriptor.position.z);
+                _projected.set(descriptor.position.x, projectY, descriptor.position.z);
                 _projected.project(camera);
                 ndcX = _projected.x;
                 ndcY = _projected.y;

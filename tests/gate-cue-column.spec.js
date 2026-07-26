@@ -372,6 +372,90 @@ describe('one visibility decision, two surfaces', () => {
     });
 });
 
+describe('the chevron projects from the destination\'s own ground (Cycle 117 P8)', () => {
+    // `CUE_PROJECT_HEIGHT_M` moved out of CorralCompass.tsx as a bare world Y,
+    // which was right for every scene that had a destination when it was
+    // written: Home Field's gate ground is 0, so "4" meant what it said. Rolling
+    // Hills' pasture gate stands at 27.86m, so the cue was projecting a point
+    // 23.9m inside the hill and answering `onScreen`, `showCompass` and `near`
+    // off it. Measured in the browser (cycle117-validation/PROBE_FINDINGS.md,
+    // defect 3): 12m from the gate with the gate filling the frame, `onScreen`
+    // read false and the screen-edge chevron was pinned on.
+    const ISLAND_GROUND = 27.86;
+    const GATE = resolveGateDescriptor(rollingHills, null);
+
+    /** A cue on ground `ground`, with a real camera and a scripted dog. */
+    function islandCue(camera, { ground = ISLAND_GROUND, dog = null } = {}) {
+        return createGateCue({
+            scene: new THREE.Scene(),
+            descriptor: GATE,
+            groundY: () => ground,
+            getDogPosition: () => dog,
+            getCamera: () => camera,
+        });
+    }
+
+    function facing(from, at) {
+        const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+        camera.position.copy(from);
+        camera.lookAt(at);
+        camera.updateMatrixWorld();
+        return camera;
+    }
+
+    it('projects 4m above the destination\'s ground, not 4m above sea level', () => {
+        const eye = new THREE.Vector3(GATE.position.x, ISLAND_GROUND + 2, GATE.position.z + 30);
+        const camera = facing(eye, new THREE.Vector3(GATE.position.x, ISLAND_GROUND + 2, GATE.position.z));
+        const cue = islandCue(camera);
+
+        const aboveGround = new THREE.Vector3(GATE.position.x, ISLAND_GROUND + 4, GATE.position.z)
+            .project(camera);
+        const atSeaLevel = new THREE.Vector3(GATE.position.x, 4, GATE.position.z).project(camera);
+
+        expect(cue.view.ndcY).toBeCloseTo(aboveGround.y, 9);
+        // And the two answers are nowhere near each other: a whole viewport
+        // apart, which is why the defect showed up as a state flip and not as
+        // a wobble.
+        expect(Math.abs(aboveGround.y - atSeaLevel.y)).toBeGreaterThan(1);
+        cue.dispose();
+    });
+
+    it('reads the gate as on-screen while the player is standing in its mouth', () => {
+        const dog = { x: GATE.position.x, z: GATE.position.z + 12 };
+        const camera = facing(
+            new THREE.Vector3(dog.x, ISLAND_GROUND + 2, dog.z),
+            new THREE.Vector3(GATE.position.x, ISLAND_GROUND + 4, GATE.position.z),
+        );
+        const cue = islandCue(camera, { dog });
+
+        expect(cue.view.behind).toBe(false);
+        expect(cue.view.onScreen).toBe(true);
+        expect(cue.view.showCompass).toBe(false);
+        cue.dispose();
+    });
+
+    it('is unchanged on a scene whose destination sits at y = 0', () => {
+        // Home Field is the reason the constant read the way it did, so the fix
+        // has to leave it exactly where it was.
+        const gate = resolveGateDescriptor(field, null);
+        const camera = facing(
+            new THREE.Vector3(gate.position.x, 2, gate.position.z - 30),
+            new THREE.Vector3(gate.position.x, 4, gate.position.z),
+        );
+        const cue = createGateCue({
+            scene: new THREE.Scene(),
+            descriptor: gate,
+            groundY: () => 0,
+            getDogPosition: () => null,
+            getCamera: () => camera,
+        });
+        const legacy = new THREE.Vector3(gate.position.x, 4, gate.position.z).project(camera);
+        expect(cue.view.ndcX).toBeCloseTo(legacy.x, 12);
+        expect(cue.view.ndcY).toBeCloseTo(legacy.y, 12);
+        cue.dispose();
+    });
+});
+
 describe('a scene swap leaves nothing behind', () => {
     it('is torn down by the real disposeScene', async () => {
         const game = fakeGame(field);

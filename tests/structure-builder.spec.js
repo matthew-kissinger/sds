@@ -3,6 +3,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { StructureBuilder } from '../js/StructureBuilder.js';
+import { GATE_LEAF_MAX_GROUND_PITCH_RAD } from '../js/world/gateLeafGroundPitch.js';
 
 /**
  * Characterization tests for js/StructureBuilder.js (Three.js structure +
@@ -310,6 +311,171 @@ describe('every gate carries a leaf controller (Cycle 115 P3)', () => {
     controllers[0].setOpenFraction(0);
     expect(controllers[0].openFraction).toBe(0);
     expect(controllers[1].openFraction).toBe(1);
+  });
+});
+
+describe('an open gate leaf hangs on the ground it swings over (Cycle 117 P8)', () => {
+  // The defect: `buildPenEnclosure` grounds the gate sub-assembly as ONE rigid
+  // unit at the gate's own (x, z), which is right for the posts and wrong for
+  // the leaves, because an open leaf reaches metres away from that sample. On
+  // Rolling Hills' real bake the ground under the swept leaves falls 1.55m and
+  // the measured daylight under an open leaf was 1.85m. Home Field could never
+  // show it: public/terrain/field.bin has peakHeight 0.
+  //
+  // The fixture reproduces the SHIPPED asset rather than the one the older
+  // tests above use: both wood meshes hang off local +x and the right pivot
+  // carries the baked (180, -72, 180) Euler that turns its shared left-handed
+  // mesh around. That is what makes both leaves swing to the same side, and it
+  // is the arrangement the tilt has to compose with without corrupting.
+  const PEN = {
+    gate: { x: 0, z: 0, width: 8, facingDeg: 90 },
+    pen: { center: { x: 20, z: 0 }, radius: 24 },
+  };
+  /** Ground the gate anchor stands on in every case below. */
+  const ANCHOR_GROUND = 20;
+  /** Falls 0.25m per metre of +x, which is the way both leaves swing. */
+  const SLOPE = (x) => ANCHOR_GROUND - 0.25 * x;
+  const FLAT = () => ANCHOR_GROUND;
+  /**
+   * The wood plank's far bottom edge in its own pivot's frame. The fixture
+   * hangs a 3.5 x 1.4 x 0.12 box at local (1.8, 0.9, 0), so the free end is
+   * 1.75 out and the underside 0.7 down. Spelled out rather than read back off
+   * the rig, so the spec measures the leaf and not the fix.
+   */
+  const TIP_LOCAL = new THREE.Vector3(3.55, 0.2, 0);
+
+  function makeShippedGateAssembly() {
+    const group = makeGateAssemblyWithLeafPivots();
+    const right = group.getObjectByName('RightLeafPivot');
+    right.getObjectByName('Mesh_RightGateWood').position.x = 1.8;
+    right.rotation.set(Math.PI, THREE.MathUtils.degToRad(-72), Math.PI);
+    return group;
+  }
+
+  function build(sample) {
+    const scene = new THREE.Scene();
+    const sb = new StructureBuilder(scene);
+    if (sample) sb.setHeightfield({ sample });
+    sb.fencePresets.useGLBModels = true;
+    sb.fencePresets.models.gateAssembly = makeShippedGateAssembly();
+    const group = sb.buildPenEnclosure(PEN);
+    group.updateMatrixWorld(true);
+    return { sb, group };
+  }
+
+  /** World points along one leaf's underside, hinge to free end. */
+  function underside(group, name, samples = 24) {
+    const pivot = group.getObjectByName(name);
+    group.updateMatrixWorld(true);
+    const points = [];
+    for (let i = 0; i <= samples; i++) {
+      points.push(new THREE.Vector3(TIP_LOCAL.x * (i / samples), TIP_LOCAL.y, TIP_LOCAL.z)
+        .applyMatrix4(pivot.matrixWorld));
+    }
+    return points;
+  }
+
+  /** Widest daylight anywhere under one leaf. Negative means buried. */
+  const worstGap = (group, name, sample) =>
+    Math.max(...underside(group, name).map((p) => p.y - sample(p.x, p.z)));
+
+  const LEAVES = ['GateLeafLeft', 'GateLeafRight'];
+
+  it('leaves no more daylight under a leaf on a slope than the same leaf has on the flat', () => {
+    const flat = build(FLAT);
+    const slope = build(SLOPE);
+    for (const name of LEAVES) {
+      // The gate's authored ground clearance, whatever it is: 0.2m here.
+      const authored = worstGap(flat.group, name, FLAT);
+      expect(authored).toBeCloseTo(0.2, 9);
+      // Without the tilt the leaf keeps that constant world Y all the way out,
+      // so this reads 1.04m: the ground falls 0.844m over the 3.55m reach.
+      expect(worstGap(slope.group, name, SLOPE), `${name} daylight on the slope`)
+        .toBeLessThanOrEqual(authored + 0.02);
+    }
+  });
+
+  it('pivots about the hinge, so the leaf stays on its post', () => {
+    const { group } = build(SLOPE);
+    // Gate at (0, 0) facing 90 degrees, pivots at gate-local x = +/-3.8, so the
+    // hinges land on world (0, +/-3.8) at the anchor's own ground height.
+    for (const [name, z] of [['GateLeafLeft', 3.8], ['GateLeafRight', -3.8]]) {
+      const hinge = group.getObjectByName(name).getWorldPosition(new THREE.Vector3());
+      expect(hinge.x).toBeCloseTo(0, 9);
+      expect(hinge.z).toBeCloseTo(z, 9);
+      expect(hinge.y).toBeCloseTo(ANCHOR_GROUND, 9);
+    }
+  });
+
+  it('writes no tilt at all on flat ground, which is why Home Field cannot move', () => {
+    // field.bin is peakHeight 0, so every sample under every leaf is the same
+    // number and the tilt is identically zero. Proven, not assumed - and the
+    // no-heightfield case takes the same path because `_groundY` returns 0.
+    for (const sample of [FLAT, () => 0, null]) {
+      const { sb, group } = build(sample);
+      for (const leaf of sb._penGateLeafPitch.leaves) {
+        expect(leaf.pitchNode.quaternion.x).toBe(0);
+        expect(leaf.pitchNode.quaternion.y).toBe(0);
+        expect(leaf.pitchNode.quaternion.z).toBe(0);
+        expect(leaf.pitchNode.quaternion.w).toBe(1);
+      }
+      for (const name of LEAVES) {
+        const ys = underside(group, name).map((p) => p.y);
+        expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(0, 12);
+      }
+    }
+  });
+
+  it('re-hangs the leaves when the gate swings, because Newsheepdogland shuts this gate every night', () => {
+    const { sb, group } = build(SLOPE);
+    // Closed, both leaves lie along world x = 0, where the slope is flat at the
+    // anchor's own height - so the correct tilt is zero and the underside sits
+    // at the authored clearance along its whole length. A tilt left over from
+    // the open pose would drive the free end 0.82m into the hill instead.
+    sb.setPenGateOpen(false);
+    sb.updateGate(1);
+    group.updateMatrixWorld(true);
+    for (const name of LEAVES) {
+      const drift = Math.max(...underside(group, name)
+        .map((p) => Math.abs(p.y - SLOPE(p.x, p.z) - 0.2)));
+      expect(drift, `${name} underside drift from its authored clearance, closed`)
+        .toBeLessThan(0.02);
+    }
+  });
+
+  it('never writes through the leaf pivots, so the asset\'s baked flip survives a tilt', () => {
+    // The reason the tilt goes on an inserted parent. `GateLeafController` poses
+    // a leaf by setting `rotation.y` and nothing else; composing onto the pivot's
+    // own quaternion writes back into its Euler, and the next pose write would
+    // then set y on an x/z pair that is no longer the asset's.
+    const { sb, group } = build(SLOPE);
+    const right = group.getObjectByName('GateLeafRight');
+    expect(right.rotation.x).toBe(Math.PI);
+    expect(right.rotation.z).toBe(Math.PI);
+    expect(right.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-72), 12);
+
+    sb.setPenGateOpen(false);
+    sb.updateGate(1);
+    expect(right.rotation.x).toBe(Math.PI);
+    expect(right.rotation.z).toBe(Math.PI);
+    expect(right.rotation.y).toBeCloseTo(0, 12);
+  });
+
+  it('stops at the pitch cap rather than standing a leaf on end', () => {
+    // A metre of drop per metre of reach. Past the cap the site is wrong, not
+    // the gate, and a leaf pointing at the ground reads as a ramp.
+    const { sb } = build((x) => ANCHOR_GROUND - 5 * x);
+    for (const leaf of sb._penGateLeafPitch.leaves) {
+      const angle = 2 * Math.acos(Math.min(1, Math.abs(leaf.pitchNode.quaternion.w)));
+      expect(angle).toBeCloseTo(GATE_LEAF_MAX_GROUND_PITCH_RAD, 9);
+    }
+  });
+
+  it('is dropped with the structures it belongs to', () => {
+    const { sb } = build(SLOPE);
+    expect(sb._penGateLeafPitch).not.toBeNull();
+    sb.clearAllStructures();
+    expect(sb._penGateLeafPitch).toBeNull();
   });
 });
 
