@@ -146,6 +146,8 @@ The root cause under two other things (D25). The production `DirectionalLight` r
 
 Also recorded and unverified beyond a code read: on the production WebGPU path the `AmbientLight` may be constructed and never added to the scene. Confirm or refute before building on it.
 
+**Closed 2026-07-26, and both claims above needed correcting.** The `AmbientLight` guess is **refuted**: both lights are added, with a proof object asserting `scene.children.includes()` for each. The real defect was a missing **bind** - `Atmosphere` drove a different object instance - and `1.1 * Math.PI` is 3.45575, which is the measured 3.456 to three decimals. It was never a light that failed to update. Direction was frozen too, not just intensity. Phases 1, 2 and 4 shipped; Phase 3 deferred to Cycle 123 by D33.
+
 ## Cycle 121 - worn ground
 
 D26 and D27, deliberately one cycle rather than two. Cycle 114's grass exclusion smoothstep is correct, but a zero-grass zone with nothing in it reads as a flat painted plane, and the transition still reads as the knife edge the cycle set out to remove. The pen interior, the 80m farmhouse yard and the gate approach are all the same surface: ground where grass has been removed. They get one treatment.
@@ -155,6 +157,24 @@ D26 and D27, deliberately one cycle rather than two. Cycle 114's grass exclusion
 D24. One pasture per player for island competitive, which needs `shared/CompetitiveLayout.js` made scene-aware. Deterministic-sim work that moves `competitive.json`, touching live multiplayer rooms, so it needs an in-flight-session migration story per [`../.claude/rules/multiplayer.md`](../.claude/rules/multiplayer.md). Last of the four because it is the riskiest.
 
 Until it ships, Rolling Hills competitive uses the wrong layout and is knowingly left that way (D23). The one constraint: it stays broken as it is, never newly crashing.
+
+## Cycle 123 - grass reads the light
+
+**Added 2026-07-26 by D33.** Not in the original register, because nobody could see the defect until Cycle 120 fixed the light in front of it.
+
+Grass is `MeshBasicNodeMaterial` taking baked indirect only, so it does not read the scene lights at all. A frozen sun and a surface that never listened produce the same picture, which is why five cycles of visual work never surfaced it. With the light honest, night is a self-lit grass field over near-black ground: grass-to-terrain goes from 8.1:1 at noon to **204:1** at night on Rolling Hills.
+
+**It also blocks Cycle 120's Phase 3.** Home Field is wall-to-wall grass, the default scene and the entrance backdrop, so giving it an evening before this lands would ship a glowing pasture at midnight on the first thing every player sees. Phase 3 of this cycle takes that deferred work and closes D25.
+
+Plan: [`cycle-123-plan.md`](cycle-123-plan.md).
+
+## The round-three answers, so nobody re-opens them
+
+Locked 2026-07-26 ([`../DECISIONS.md`](../DECISIONS.md), "Front door alignment, round three", D33 to D36). Three of the four are decisions **not** to do things, recorded so the same proposals do not come back:
+
+- **`__sdsCinema.freeFly()` and its 20,875-byte OrbitControls chunk stay** (D34). The harness has found real defects in six consecutive cycles and Cycle 119 removed the bundle pressure that would have justified the trade.
+- **PlaytestNote, the wolf harness and grassInteractionProof stay on production** (D35). Excluding them would save roughly 11.8 KB and break sending a playtester a URL with a param on it, which is why they are reachable at all. Note the finding underneath: **gating an already-lazy import saves nothing**, because the ratchet sums every emitted chunk with no notion of whether it is fetched.
+- **The impostor atlases keep their ZSTD layer** (D36). Re-baking without it moves 38,900 bytes off the JS bundle and onto the assets, which is close enough to gaming a ratchet that counts one and not the other that the honest measurement is worth more than the bytes.
 
 ## Deliberately not in this program
 
