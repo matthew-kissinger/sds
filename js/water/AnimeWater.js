@@ -1,17 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * AnimeWater - cel/anime-shaded water surface.
+ * The water surface, WebGL path. The WebGPU node path production runs is
+ * js/water/webgpuAnimeWaterNodeMaterial.js; both are authored against
+ * js/water/waterSurfaceModel.js and must not diverge.
  *
- * Single ShaderMaterial. Shoreline foam and two-band water color come from
- * scene boundary data instead of a per-frame depth render target.
+ * Single ShaderMaterial. Shoreline foam and the depth colour come from the
+ * terrain heightfield rather than from a per-frame depth render target.
  *
- * Stack:
- *  - Two-band shoreline gradient from island boundary radius/falloff
- *  - Sharp shoreline foam from distance-to-shore + step()
- *  - Painted ripples: 2 octaves animated value noise, step()-quantized
- *  - Cel sparkles: quantized Blinn step() masked by high-freq value noise
- *  - Fog match: <fog_pars_fragment>/<fog_fragment> chunks, atmosphere-driven
+ * Stack, after Cycle 118 Phase 3:
+ *  - Shore-to-deep gradient in metres of seabed under the water plane
+ *  - Shoreline foam at the water-terrain interface, as a band
+ *  - Continuous signed ripple, 2 octaves of the shared value noise
+ *  - A three-rotation slope normal that both shades the surface and carries
+ *    the specular lobe
+ *  - A light response off the sun's elevation, since this shader is unlit
+ *  - Fog match: <fog_pars_fragment>/<fog_fragment>, atmosphere-driven
+ *
+ * The name is historical. What it described - "cel/anime-shaded", painted
+ * ripples quantised with step(), cel sparkles gated with step() - is what D-W
+ * called the rewrite against and what Phase 3 retired. The file name is load
+ * bearing across the boot path, the diagnostics and the validation tools, so it
+ * outlives the style; renaming it is its own mechanical pass.
  *
  * Pure ShaderMaterial - skip <colorspace_fragment>, author colors in
  * linear, write gl_FragColor raw to avoid tonemap double-apply.
@@ -25,10 +35,13 @@
 import * as THREE from 'three';
 import { createWebGpuWaterMaterial } from './webgpuWaterMaterialAdapter.js';
 import {
+    WATER_FOAM_INTERFACE_BAND,
     WATER_FOAM_THICKNESS,
+    WATER_GLINT_GAIN_DEFAULTS,
     WATER_PALETTE_LINEAR,
     WATER_SLOPE_SCALE,
     WATER_SURFACE_GLSL,
+    WATER_SWELL_DEPTH_SWING,
     advanceWaterClock,
 } from './waterSurfaceModel.js';
 
@@ -115,15 +128,33 @@ ${WATER_SURFACE_GLSL}
     float radialDistance = length(vWorldPos.xz - uShoreCenter);
     float distanceFromShore = abs(radialDistance - uShoreRadius);
 
-    float depthT = clamp(distanceFromShore / shoreFalloff, 0.0, 1.0);
-    vec3 baseColor = mix(uShallowColor, uDeepColor, depthT);
+    // Cycle 118 Phase 3: when a heightfield is bound the depth ramp reads
+    // METRES OF SEABED, the same model the node path uses, instead of distance
+    // from the boundary circle. The circle branch survives as the
+    // heightfield-less fallback only.
+    float seabedDepth = max(uWaterY - sampleTerrainY(vWorldPos.xz), 0.0);
+    float depthT = mix(
+      clamp(distanceFromShore / shoreFalloff, 0.0, 1.0),
+      waterDepthFromSeabed(seabedDepth),
+      uHasHeight
+    );
+
+    // The slow swell reads as a nudge of apparent depth rather than as a colour
+    // added on top, so it can darken as well as lighten and spells no colour of
+    // its own. Same change as the node path.
+    float swell = waterValueNoise(vWorldPos.xz * 0.012 + vec2(uTime * 0.025, -uTime * 0.018)) - 0.5;
+    float swellDepthT = clamp(depthT + swell * ${WATER_SWELL_DEPTH_SWING.toFixed(3)}, 0.0, 1.0);
+    vec3 baseColor = mix(uShallowColor, uDeepColor, swellDepthT);
 
     vec2 rippleUv = vWorldPos.xz * 0.05 + vec2(uTime * 0.05, uTime * 0.03);
     float r1 = waterValueNoiseSigned(rippleUv);
     float r2 = waterValueNoiseSigned(rippleUv * 2.7 + vec2(uTime * 0.07, -uTime * 0.04));
-    float ripple = (r1 * 0.65 + r2 * 0.35);
-    float rippleBanded = step(0.15, ripple) * 0.5 + step(0.55, ripple) * 0.5;
-    baseColor += vec3(rippleBanded * uRippleStrength * 0.08);
+    // Cycle 118 Phase 3 retired the cel quantisation. This was
+    // step(0.15, ripple) * 0.5 + step(0.55, ripple) * 0.5 - three flat bands
+    // with hard edges, the "painted ripples, step()-quantized" line of the
+    // anime stack D-W named. Continuous and signed now.
+    float ripple = r1 * 0.65 + r2 * 0.35;
+    baseColor += vec3(ripple * uRippleStrength * 0.04);
 
     vec2 foamNoiseUv = vWorldPos.xz * 0.18 + vec2(uTime * 0.04, uTime * 0.02);
     float foamNoise = waterValueNoiseSigned(foamNoiseUv);
@@ -133,9 +164,10 @@ ${WATER_SURFACE_GLSL}
     // sampled value is the baked seaLevel (~-12m) so terrain_y << waterY
     // and no foam appears — correct for the open ocean. Without a
     // heightfield (Field has no water anyway), fall back to the original
-    // boundary-radius band.
+    // boundary-radius band. Cycle 118 Phase 3 softened the edge from a step()
+    // to a band, matching the node path; the branch itself is untouched.
     float foamDist = mix(distanceFromShore, abs(sampleTerrainY(vWorldPos.xz) - uWaterY), uHasHeight);
-    float foamMask = 1.0 - step(foamThreshold, foamDist);
+    float foamMask = 1.0 - smoothstep(foamThreshold * ${WATER_FOAM_INTERFACE_BAND.start.toFixed(2)}, foamThreshold * ${WATER_FOAM_INTERFACE_BAND.end.toFixed(2)}, foamDist);
 
     vec3 viewDir = normalize(cameraPosition - vWorldPos);
     // Cycle 118 Phase 2: this was a hardcoded up-vector, so the twin shaded
@@ -148,14 +180,24 @@ ${WATER_SURFACE_GLSL}
     float NdotH = max(dot(N, H), 0.0);
     float flatNdotH = max(dot(vec3(0.0, 1.0, 0.0), H), 0.0);
     float spec = pow(NdotH, 64.0);
-    float sparkleMask = waterValueNoiseSigned(vWorldPos.xz * 0.8 + vec2(uTime * 0.15));
-    float sparkles = step(0.85, spec) * step(0.55, sparkleMask) * uSparkleStrength;
+    // Cycle 118 Phase 3 retired the cel sparkle pass. It was
+    // step(0.85, spec) * step(0.55, sparkleMask) * uSparkleStrength - a binary
+    // on/off speck, the "cel sparkles, quantized Blinn step()" line of the
+    // anime stack. The continuous lobe below is the same energy without the
+    // quantisation, and it leads the read the way the node path's does.
+    float glintMask = waterValueNoise(vWorldPos.xz * 0.8 + vec2(uTime * 0.15));
+    float shoreFade = waterGlintShoreFade(depthT);
+    float rippleGlint = spec * (glintMask * 0.72 + 0.28) * shoreFade * uSparkleStrength;
+    float sunGlint = pow(flatNdotH, 8.0) * uSunSpecularIntensity * (glintMask * 0.65 + 0.20) * shoreFade;
+    float waveShade = waterWaveShade(N, uSunDirection);
 
-    float sunGlint = pow(flatNdotH, 8.0) * uSunSpecularIntensity;
-    vec3 sunGlintColor = uSunColor;
-
-    vec3 color = baseColor + vec3(sparkles) + sunGlintColor * sunGlint;
+    vec3 color = baseColor + uSunColor * (waveShade + rippleGlint * ${WATER_GLINT_GAIN_DEFAULTS.ripple.toFixed(2)} + sunGlint * ${WATER_GLINT_GAIN_DEFAULTS.broad.toFixed(2)});
     color = mix(color, uFoamColor, foamMask);
+    // Cycle 118 Phase 3: the light response, after the foam mix for the same
+    // reason the node path applies it there. This shader is unlit, so without it
+    // the sea keeps noon brightness under a dusk that has taken the terrain
+    // nearly to black.
+    color *= waterSunLevel(normalize(uSunDirection).y);
 
     gl_FragColor = vec4(color, 1.0);
 
@@ -299,9 +341,25 @@ export function createAnimeWaterMaterial({
             rippleStrength: uniforms.uRippleStrength.value,
             sparkleStrength: uniforms.uSparkleStrength.value,
             sunDirection: uniforms.uSunDirection.value.clone(),
-            sunColor: uniforms.uSunColor.value.clone(),
+            // sunColor and sunSpecularIntensity are DELIBERATELY not forwarded
+            // (Cycle 118 Phase 3). Both are twin-side defaults, and the twin's
+            // defaults are placeholders that the per-frame update overwrites -
+            // but the node factory resolves `context.X ?? bootPacket.X`, so
+            // forwarding them shadowed the boot packet and cost two things.
+            //
+            // sunSpecularIntensity: skyFogPresetTuning specifies 0.48 for both
+            // water presets and could never take effect, because this always
+            // supplied 0.6 and nothing repushes it per frame. It is live now, so
+            // the preset knob is wired rather than dead - the plan required one
+            // or the other and deleting it would have thrown away per-preset
+            // control over the broad sun path Phase 3 is rebalancing.
+            //
+            // sunColor: THREE.Color(1, 1, 1), a placeholder, so the material was
+            // BORN with a white sun and only stopped being white on the first
+            // controls update. First-frame artefact, but a capture harness that
+            // poses before that update photographs it. It now takes the boot
+            // packet's skyFog.sunColor, which is the sun's real colour at boot.
             sunColorSource: 'skyFog.sunColor',
-            sunSpecularIntensity: uniforms.uSunSpecularIntensity.value,
         },
     });
     const material = materialResult.material;

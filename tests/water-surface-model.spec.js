@@ -102,8 +102,9 @@ describe('the water surface model is the single authority', () => {
     }
 
     // Not the sRGB floats the factories used to fall back to.
-    expect(WATER_PALETTE_LINEAR.shallow[0]).toBeCloseTo(0.15896, 5);
-    expect(WATER_PALETTE_LINEAR.shallow[0]).not.toBeCloseTo(0.4353, 3);
+    expect(WATER_PALETTE_LINEAR.shallow[0]).toBeCloseTo(0.27468, 5);
+    expect(WATER_PALETTE_LINEAR.shallow[0])
+      .not.toBeCloseTo(WATER_PALETTE_SRGB_BYTES.shallow[0] / 255, 3);
   });
 
   it('resolves both render paths and both fallback paths to that one palette', () => {
@@ -260,7 +261,7 @@ describe('the water surface model is the single authority', () => {
 
     // The tilt the scale actually produces. atan(0.055) = 3.1 degrees is the
     // wrong reading: the per-axis sums are three waves each bounded by 1 + w2,
-    // not a unit vector. Phase 3 raises the scale and this number with it.
+    // not a unit vector. Phase 3 raised the scale and this number with it.
     let maxX = 0;
     let maxZ = 0;
     WATER_SLOPE_ROTATIONS.forEach((rot, index) => {
@@ -270,6 +271,6 @@ describe('the water surface model is the single authority', () => {
     });
     const scale = WATER_SLOPE_NORMALISE * WATER_SLOPE_SCALE;
     const maxTiltDeg = Math.atan(Math.hypot(maxX * scale, maxZ * scale)) * 180 / Math.PI;
-    expect(maxTiltDeg).toBeCloseTo(8.26, 1);
+    expect(maxTiltDeg).toBeCloseTo(20.01, 1);
   });
 });

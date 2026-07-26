@@ -163,12 +163,25 @@ export const SKY_FOG_PRESET_TUNING = Object.freeze({
     // story, same as the terrain since Cycle 114 Phase 6).
     water: {
       colorScale: 0.58,
-      foamScale: 0.62,
+      // Cycle 118 Phase 3 pulled the foam down from 0.62. Once the sea stopped
+      // being a saturated navy the surf was the brightest thing in frame after
+      // the sun itself, and a blown-white band is not a painterly one.
+      foamScale: 0.45,
       sparkleScale: 0.76,
+      // Live at last. js/water/AnimeWater.js forwarded the WebGL twin's 0.6
+      // placeholder into the node factory's context, which resolves
+      // `context.X ?? preset.X`, so this knob could never take effect. Phase 3
+      // stopped forwarding it rather than delete it: it is per-preset control
+      // over the broad sun path, which is exactly the term being rebalanced.
       sunSpecularIntensity: 0.48,
-      broadGlintGain: 0.32,
-      rippleGlintGain: 0.42,
-      rippleLightScale: 0.10,
+      // Cycle 118 Phase 3 reversed these two. The broad lobe reads a flat
+      // up-vector and cannot see the waves; the ripple lobe is the only one
+      // that reads the slope normal. See WATER_GLINT_GAIN_DEFAULTS.
+      broadGlintGain: 0.16,
+      rippleGlintGain: 0.60,
+      // The ripple is a signed field now rather than a two-rail cel band, so
+      // this scales a swing either side of the base colour, not a lift.
+      rippleLightScale: 0.30,
     },
     sheep: {
       sheepWool: {
@@ -260,12 +273,12 @@ export const SKY_FOG_PRESET_TUNING = Object.freeze({
     // dusk water block above for the reasoning.
     water: {
       colorScale: 0.58,
-      foamScale: 0.64,
+      foamScale: 0.47,
       sparkleScale: 0.82,
       sunSpecularIntensity: 0.48,
-      broadGlintGain: 0.32,
-      rippleGlintGain: 0.44,
-      rippleLightScale: 0.10,
+      broadGlintGain: 0.16,
+      rippleGlintGain: 0.66,
+      rippleLightScale: 0.30,
     },
     sheep: {
       sheepWool: {

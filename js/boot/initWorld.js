@@ -723,11 +723,12 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
                     size: game.sceneManager.isMobile ? 3200 : 4000,
                     y: -0.05,
                     segments: game.sceneManager.isMobile ? 32 : 64,
-                    // Cycle 90: coastline scenes get a real shallow band along
-                    // the shore; radial-boundary islands keep the tuned 0.82
-                    // depth floor (a lower floor there reads as a turquoise
-                    // disc around the whole island).
-                    minDepthT: game.currentScene.boundary?.kind === 'coastline' ? 0.45 : undefined,
+                    // No minDepthT. Cycle 90's coastline override (0.45) and the
+                    // 0.82 default were both compensating for a depth ramp that
+                    // asked for water three to ten times deeper than any scene
+                    // has; Cycle 118 Phase 3 re-ranged the ramp in metres of
+                    // seabed and scoped the floor to the heightfield-less
+                    // branch, which no shipped water scene takes.
                 });
                 scene.add(water.mesh);
                 game.sceneManager.setWater({

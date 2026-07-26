@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * Cycle 118 Phase 1 - the water "before".
+ * Cycle 118 Phases 1 and 6 - the water capture, and the verdict.
  *
  * Captures the water surface on every scene that has water, at noon and at
  * dusk, on the production WebGPU path, from camera poses derived at runtime by
  * walking outward from the island until the terrain drops under the waterline.
- * The point is to have a truthful record of what the shipped AnimeWater looks
- * like BEFORE any rewrite lands. Run this before the first line of new water
- * code exists or it is worth nothing.
+ * Phase 1 shot the "before" set with it; Phase 6 shoots the "after" set and
+ * scores the two against each other by palette histogram.
  *
  * Usage:
  *   node tools/validation/water-look.mjs
  *   node tools/validation/water-look.mjs --only=rolling-hills
  *   node tools/validation/water-look.mjs --tod=noon
- *   node tools/validation/water-look.mjs --out=cycle118-validation/water-before
+ *   node tools/validation/water-look.mjs --out=cycle118-validation/water-after
+ *   node tools/validation/water-look.mjs --compare=off
+ *   node tools/validation/water-look.mjs --compare-only
+ *
+ * The out directory defaults to `water-after` and the compare directory to
+ * `water-before`, so a bare run can never overwrite Phase 1's frozen reference.
  *
  * Requires a dev server on :3000 and installed Chrome (headed).
  *
@@ -53,7 +57,8 @@
  */
 
 import { chromium } from 'playwright';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -86,13 +91,21 @@ function parseArgs(argv) {
     const out = {
         only: null,
         tod: null,
-        outDir: resolve(ROOT, 'cycle118-validation', 'water-before'),
+        // Cycle 118 Phase 6: the default moved off the before-set. Phase 1's
+        // frames are a frozen reference and re-running the tool must never be
+        // able to overwrite them.
+        outDir: resolve(ROOT, 'cycle118-validation', 'water-after'),
+        compareDir: resolve(ROOT, 'cycle118-validation', 'water-before'),
+        compareOnly: false,
     };
     for (const a of argv.slice(2)) {
         const [k, v] = a.replace(/^--/, '').split('=');
         if (k === 'only' && v) out.only = v.split(',').map(s => s.trim()).filter(Boolean);
         if (k === 'tod' && v) out.tod = v.split(',').map(s => s.trim()).filter(Boolean);
         if (k === 'out' && v) out.outDir = resolve(ROOT, v);
+        if (k === 'compare' && v) out.compareDir = resolve(ROOT, v);
+        if (k === 'compare' && v === 'off') out.compareDir = null;
+        if (k === 'compare-only') out.compareOnly = true;
     }
     return out;
 }
@@ -128,7 +141,7 @@ async function assertWebGpuEngaged(page, label) {
  * Deriving instead of hardcoding is what lets one shot list serve a 180m radial
  * island, a 380m radial island, and a 3.3km concave coastline.
  */
-function deriveShorelineInPage() {
+function deriveShorelineInPage({ shoreOutStandoff }) {
     const game = window.gameInstance;
     const scene = game?.currentScene;
     const hf = game?.heightfield;
@@ -264,7 +277,7 @@ function deriveShorelineInPage() {
 
     // 1. Low, on the beach, looking out to sea. The frame the rewrite has to beat:
     //    near-shore shallow band, foam line, open water, horizon blend.
-    const outCam = { x: P.x - D.x * 12, z: P.z - D.z * 12 };
+    const outCam = { x: P.x - D.x * shoreOutStandoff, z: P.z - D.z * shoreOutStandoff };
     // 2. Standing just off the shore looking ALONG it, so the foam band runs
     //    across the frame instead of hugging the bottom edge.
     const alongOut = seawardOffset(8);
@@ -278,34 +291,13 @@ function deriveShorelineInPage() {
     const openOut = seawardOffset(130);
     const openCam = { x: P.x + D.x * openOut, z: P.z + D.z * openOut };
 
-    const poses = [
-        {
-            id: 'shore-out',
-            subject: 'low on the beach looking out to sea: foam line, shallow band, deep band, horizon',
-            pos: { x: outCam.x, y: camY(outCam.x, outCam.z, 2.0, 2.0), z: outCam.z },
-            target: { x: P.x + D.x * 150, y: waterY + 0.6, z: P.z + D.z * 150 },
-        },
-        {
-            id: 'shore-along',
-            subject: 'just off the shore looking along it: the foam band across frame, shore contact',
-            pos: { x: alongCam.x, y: waterY + 2.6, z: alongCam.z },
-            target: { x: P.x + T.x * 45 + D.x * 2, y: waterY + 0.5, z: P.z + T.z * 45 + D.z * 2 },
-        },
-        {
-            id: 'water-wide',
-            subject: 'elevated pull-back: colour gradient, the whole coast read, water-to-sky seam',
-            pos: { x: wideCam.x, y: camY(wideCam.x, wideCam.z, 50, 50), z: wideCam.z },
-            target: { x: P.x + D.x * 280, y: waterY, z: P.z + D.z * 280 },
-        },
-        {
-            id: 'open-water',
-            subject: 'open sea, no land in frame: ripple read, sun specular, water-plane horizon seam',
-            pos: { x: openCam.x, y: waterY + 3.2, z: openCam.z },
-            target: { x: openCam.x + D.x * 300, y: waterY + 1.4, z: openCam.z + D.z * 300 },
-        },
-    ];
-
     const r3 = (n) => Math.round(n * 10) / 10;
+    // Cycle 118 Phase 6: the poses are BUILT IN NODE now, by buildWaterPoses,
+    // from the geometry this returns. They used to be assembled here, inside
+    // page.evaluate, where nothing off-browser could see the framing maths - and
+    // the framing maths was wrong (see buildWaterPoses for what and why). What
+    // stays in the page is the part that genuinely needs the heightfield: the
+    // shoreline solve and the ground height under each camera.
     return {
         anchor,
         waterY,
@@ -319,7 +311,147 @@ function deriveShorelineInPage() {
         seawardLimit: r3(seawardOffset(1e6)),
         skirtRadius,
         skirtProbe,
-        poses,
+        frame: {
+            P,
+            D,
+            T,
+            alongOut,
+            openOut,
+            cameras: {
+                out: { ...outCam, groundY: groundY(outCam.x, outCam.z) },
+                along: { ...alongCam, groundY: groundY(alongCam.x, alongCam.z) },
+                wide: { ...wideCam, groundY: groundY(wideCam.x, wideCam.z) },
+                open: { ...openCam, groundY: groundY(openCam.x, openCam.z) },
+            },
+        },
+    };
+}
+
+/**
+ * How far inland of the waterline the `shore-out` camera stands, in metres.
+ * The pitch solve needs the same number the camera was placed with, so it is
+ * passed INTO the page rather than duplicated there: page.evaluate serialises
+ * the function source and it cannot close over module scope, and a second
+ * literal in the page is exactly how a framing constant drifts from the framing
+ * maths that reads it.
+ */
+export const SHORE_OUT_STANDOFF = 12;
+
+/**
+ * Cycle 118 Phase 6 - the `shore-out` pitch fix, and the reason the poses moved
+ * out of the page.
+ *
+ * The pose used to aim at a point 150 m out to sea at the water's surface. On a
+ * gentle coast that is a near-level shot; on Rolling Hills, where the ground is
+ * 12.7 m up only 12 m inland of the waterline, the camera lands at y=14.72 and
+ * the aim drops it 5.4 degrees. The shoreline it is supposed to be framing sits
+ * atan(14.77 / 12) = 50.9 degrees below horizontal, so it fell far outside the
+ * frame and two of that scene's four frames came back as duplicates of
+ * `open-water`. Rolling Hills is the scene most players see first and its
+ * near-shore water was covered by a single pose.
+ *
+ * The fix is to derive the pitch instead of fixing the target distance: aim the
+ * view axis at the BISECTOR of the shoreline and the horizon, so both land the
+ * same angular distance from frame centre and the composition degrades
+ * gracefully on any coast. The camera is 75 degrees vertical FOV
+ * (js/SceneManager.js), so the bisector fits anything up to a 75-degree
+ * depression; Rolling Hills needs 50.9 and asks for a 25.4-degree pitch.
+ *
+ * The clamps only bite outside that: MAX_PITCH_DEG keeps the horizon inside the
+ * frame if a future coast is steeper still, and MIN_PITCH_DEG stops a camera
+ * that is nearly at sea level from aiming at infinity.
+ *
+ * Pure, exported, and unit-tested (tests/water-look-poses.spec.js) precisely
+ * because the bug it fixes was a geometry error that no browser run could have
+ * caught - both frames rendered fine, they just did not contain the subject.
+ */
+export const SHORE_OUT_PITCH = Object.freeze({
+    minDeg: 3,
+    maxDeg: 30,
+    eyeAboveGround: 2.0,
+    eyeAboveWater: 2.0,
+});
+
+export function buildWaterPoses(shore) {
+    const { waterY, frame } = shore;
+    const { P, D, T, cameras } = frame;
+    const camY = (camera, above, floor) => Math.max(camera.groundY + above, waterY + floor);
+
+    const outY = camY(cameras.out, SHORE_OUT_PITCH.eyeAboveGround, SHORE_OUT_PITCH.eyeAboveWater);
+    const outHeight = outY - waterY;
+    const depressionToShore = Math.atan2(outHeight, SHORE_OUT_STANDOFF);
+    const pitch = Math.min(
+        Math.max(depressionToShore * 0.5, SHORE_OUT_PITCH.minDeg * Math.PI / 180),
+        SHORE_OUT_PITCH.maxDeg * Math.PI / 180,
+    );
+    // Horizontal distance from the CAMERA to the aim point on the water.
+    const outAim = outHeight / Math.tan(pitch);
+
+    return [
+        {
+            id: 'shore-out',
+            subject: 'low on the beach looking out to sea: foam line, shallow band, deep band, horizon',
+            pos: { x: cameras.out.x, y: outY, z: cameras.out.z },
+            target: {
+                x: cameras.out.x + D.x * outAim,
+                y: waterY,
+                z: cameras.out.z + D.z * outAim,
+            },
+            framing: {
+                camHeightAboveWater: outHeight,
+                shoreStandoff: SHORE_OUT_STANDOFF,
+                depressionToShoreDeg: depressionToShore * 180 / Math.PI,
+                pitchDeg: pitch * 180 / Math.PI,
+                aimDistance: outAim,
+            },
+        },
+        {
+            id: 'shore-along',
+            subject: 'just off the shore looking along it: the foam band across frame, shore contact',
+            pos: { x: cameras.along.x, y: waterY + 2.6, z: cameras.along.z },
+            target: { x: P.x + T.x * 45 + D.x * 2, y: waterY + 0.5, z: P.z + T.z * 45 + D.z * 2 },
+        },
+        {
+            id: 'water-wide',
+            subject: 'elevated pull-back: colour gradient, the whole coast read, water-to-sky seam',
+            pos: { x: cameras.wide.x, y: camY(cameras.wide, 50, 50), z: cameras.wide.z },
+            target: { x: P.x + D.x * 280, y: waterY, z: P.z + D.z * 280 },
+        },
+        {
+            id: 'open-water',
+            subject: 'open sea, no land in frame: ripple read, sun specular, water-plane horizon seam',
+            pos: { x: cameras.open.x, y: waterY + 3.2, z: cameras.open.z },
+            target: {
+                x: cameras.open.x + D.x * 300,
+                y: waterY + 1.4,
+                z: cameras.open.z + D.z * 300,
+            },
+        },
+    ];
+}
+
+/**
+ * Is the waterline inside the vertical frame of a `shore-out` pose? The
+ * question the acceptance criterion asks, answered off-browser.
+ *
+ * The pitch is measured from the pose's OWN camera and target, not read back
+ * off `framing.pitchDeg`. Reading the recorded number would make this a check
+ * that the solver agrees with itself: a mutation that leaves the pitch solve
+ * alone and aims the target somewhere else entirely still passes, which is the
+ * exact bug being fixed and the exact shape of spec this program keeps shipping.
+ */
+export function shorelineIsInFrame(pose, verticalFovDeg = 75) {
+    const { camHeightAboveWater, shoreStandoff } = pose.framing ?? {};
+    if (!Number.isFinite(camHeightAboveWater)) return null;
+    const run = Math.hypot(pose.target.x - pose.pos.x, pose.target.z - pose.pos.z);
+    const pitchDeg = Math.atan2(pose.pos.y - pose.target.y, run) * 180 / Math.PI;
+    const depression = Math.atan2(camHeightAboveWater, shoreStandoff) * 180 / Math.PI;
+    return {
+        shorelineBelowAxisDeg: depression - pitchDeg,
+        horizonAboveAxisDeg: pitchDeg,
+        halfFovDeg: verticalFovDeg / 2,
+        shorelineInFrame: (depression - pitchDeg) < verticalFovDeg / 2,
+        horizonInFrame: pitchDeg < verticalFovDeg / 2,
     };
 }
 
@@ -379,6 +511,128 @@ function readWaterStateInPage() {
             waterY: u.uWaterY?.value ?? null,
         } : null,
     };
+}
+
+// ---------------------------------------------------------------------------
+// The palette histogram
+// ---------------------------------------------------------------------------
+
+/**
+ * Cycle 118 Phase 6 - the comparison, and why it is a histogram and not SSIM.
+ *
+ * The question D-W actually poses is "is it still anime cobalt", which is a
+ * question about WHICH COLOURS are on the screen and in what proportion. SSIM
+ * answers a different question - "are these two frames structurally the same" -
+ * and answers it badly here, because an animated surface differs from itself by
+ * ripple phase and SSIM cannot tell that apart from a rewrite. A hue/saturation
+ * histogram is blind to phase and reads the thing under test directly.
+ *
+ * `cobaltFraction` is the headline: the share of non-sky pixels sitting in the
+ * saturated blue wedge the retired palette occupied. Blue-wedge bounds are
+ * generous on purpose (200 to 265 degrees covers #002477 at 217 and #103662 at
+ * 213) and the saturation gate at 0.5 is what separates a cobalt sea from a
+ * pale blue sky.
+ */
+const HISTOGRAM_SIZE = { width: 400, height: 225 };
+const HUE_BUCKETS = 12;
+
+function rgbToHsv(r, g, b) {
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    let hue = 0;
+    if (delta > 0) {
+        if (max === r) hue = 60 * (((g - b) / delta) % 6);
+        else if (max === g) hue = 60 * ((b - r) / delta + 2);
+        else hue = 60 * ((r - g) / delta + 4);
+    }
+    if (hue < 0) hue += 360;
+    return { hue, saturation: max === 0 ? 0 : delta / max, value: max / 255 };
+}
+
+export function paletteHistogramFromPixels(pixels, channels, options = {}) {
+    const buckets = new Array(HUE_BUCKETS * 2).fill(0);
+    let neutral = 0;
+    let cobalt = 0;
+    let total = 0;
+    let sumR = 0;
+    let sumG = 0;
+    let sumB = 0;
+    for (let i = 0; i < pixels.length; i += channels) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const { hue, saturation, value } = rgbToHsv(r, g, b);
+        total += 1;
+        sumR += r; sumG += g; sumB += b;
+        if (saturation < 0.12 || value < 0.05) { neutral += 1; continue; }
+        const hueIndex = Math.min(HUE_BUCKETS - 1, Math.floor(hue / (360 / HUE_BUCKETS)));
+        buckets[hueIndex * 2 + (saturation >= 0.5 ? 1 : 0)] += 1;
+        if (hue >= 200 && hue < 265 && saturation >= 0.5) cobalt += 1;
+    }
+    const share = (n) => Math.round((n / total) * 10000) / 10000;
+    const labelled = buckets.map((count, index) => ({
+        hue: `${(index >> 1) * (360 / HUE_BUCKETS)}-${((index >> 1) + 1) * (360 / HUE_BUCKETS)}`,
+        sat: (index & 1) ? 'high' : 'low',
+        share: share(count),
+    })).filter((entry) => entry.share > 0.005);
+    labelled.sort((a, b) => b.share - a.share);
+    return {
+        pixels: total,
+        meanRgb: [Math.round(sumR / total), Math.round(sumG / total), Math.round(sumB / total)],
+        neutralShare: share(neutral),
+        cobaltFraction: share(cobalt),
+        topBuckets: labelled.slice(0, 4),
+    };
+}
+
+/**
+ * Whole frame, plus the bottom 45% of it on its own.
+ *
+ * The whole-frame number is diluted by sky: the dusk sky is itself a saturated
+ * blue that lands inside the cobalt wedge, so a dusk frame reads 30% cobalt with
+ * a perfectly teal sea. The lower band is water in `shore-out`, `shore-along`
+ * and `open-water` (it is land in `water-wide`, noted in the report), so it is
+ * the honest read of the thing under test.
+ */
+const WATER_BAND_FRACTION = 0.45;
+
+async function paletteHistogram(pngBuffer) {
+    const sharp = (await import('sharp')).default;
+    const { data, info } = await sharp(pngBuffer)
+        .resize(HISTOGRAM_SIZE.width, HISTOGRAM_SIZE.height, { fit: 'fill' })
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+    const bandStart = Math.floor(info.height * (1 - WATER_BAND_FRACTION)) * info.width * info.channels;
+    return {
+        ...paletteHistogramFromPixels(data, info.channels),
+        lowerBand: paletteHistogramFromPixels(data.subarray(bandStart), info.channels),
+    };
+}
+
+async function compareAgainst(beforeDir, afterDir, frameNames) {
+    const rows = [];
+    for (const name of frameNames) {
+        const beforePath = resolve(beforeDir, name);
+        const afterPath = resolve(afterDir, name);
+        if (!existsSync(beforePath) || !existsSync(afterPath)) {
+            rows.push({ file: name, ok: false, reason: existsSync(beforePath) ? 'after missing' : 'before missing' });
+            continue;
+        }
+        const [before, after] = await Promise.all([
+            paletteHistogram(await readFile(beforePath)),
+            paletteHistogram(await readFile(afterPath)),
+        ]);
+        rows.push({
+            file: name,
+            ok: true,
+            before,
+            after,
+            cobaltDelta: Math.round((after.cobaltFraction - before.cobaltFraction) * 10000) / 10000,
+        });
+    }
+    return rows;
 }
 
 async function openSession(browser, scene, tod) {
@@ -494,13 +748,29 @@ async function main() {
     if (!scenes.length) { console.error('[WATER] no scenes matched --only'); process.exit(2); }
     if (!times.length) { console.error('[WATER] no times matched --tod'); process.exit(2); }
 
+    // --compare-only re-scores two directories of frames that already exist. No
+    // browser, no capture: useful for re-reading a comparison without spending
+    // a WebGPU session on it.
+    if (args.compareOnly) {
+        const names = scenes.flatMap(s => times.flatMap(t => ['shore-out', 'shore-along', 'water-wide', 'open-water']
+            .map(p => `${s}__${t.id}__${p}.png`)));
+        const rows = await compareAgainst(args.compareDir, args.outDir, names);
+        for (const row of rows) {
+            if (!row.ok) { console.log(`[WATER] ${row.file}  SKIPPED (${row.reason})`); continue; }
+            console.log(`[WATER] ${row.file.padEnd(44)} cobalt ${(row.before.cobaltFraction * 100).toFixed(1)}% -> `
+                + `${(row.after.cobaltFraction * 100).toFixed(1)}%   mean rgb [${row.before.meanRgb}] -> [${row.after.meanRgb}]`);
+        }
+        process.exit(0);
+    }
+
     await mkdir(args.outDir, { recursive: true });
     const browser = await chromium.launch({ channel: 'chrome', headless: false, args: WEBGPU_LAUNCH_ARGS });
 
     const report = {
         cycle: 118,
-        phase: 1,
-        purpose: 'water "before" reference, production WebGPU path, captured prior to any water rewrite',
+        phase: 6,
+        purpose: 'water "after" capture, production WebGPU path, compared against the Phase 1 before-set by palette histogram',
+        comparedAgainst: args.compareDir ? args.compareDir.replace(ROOT, '').replace(/\\/g, '/').replace(/^\//, '') : null,
         capturedAt: new Date().toISOString(),
         viewport: VIEWPORT,
         baseUrl: BASE_URL,
@@ -532,8 +802,11 @@ async function main() {
                         throw new Error('water mesh absent after scene build (initWorld water init failed)');
                     }
 
-                    const shore = await page.evaluate(deriveShorelineInPage);
+                    const shore = await page.evaluate(deriveShorelineInPage, {
+                        shoreOutStandoff: SHORE_OUT_STANDOFF,
+                    });
                     if (shore?.error) throw new Error(`shoreline derivation failed: ${shore.error}`);
+                    const poses = buildWaterPoses(shore);
                     session.shoreline = {
                         anchor: shore.anchor,
                         waterY: shore.waterY,
@@ -547,13 +820,18 @@ async function main() {
                         seawardLimit: shore.seawardLimit,
                         skirtRadius: shore.skirtRadius,
                         skirtProbe: shore.skirtProbe,
+                        frame: shore.frame,
                     };
+                    session.shoreOutFraming = shorelineIsInFrame(poses[0]);
+                    console.log(`[WATER]   shore-out framing: cam ${session.shoreOutFraming.horizonAboveAxisDeg.toFixed(1)}deg pitch, `
+                        + `shoreline ${session.shoreOutFraming.shorelineBelowAxisDeg.toFixed(1)}deg below axis `
+                        + `(half-FOV ${session.shoreOutFraming.halfFovDeg}deg, in frame=${session.shoreOutFraming.shorelineInFrame})`);
                     console.log(`[WATER]   shore: anchor=(${shore.anchor.x},${shore.anchor.z}) `
                         + `heading=${shore.heading}deg crossing=(${shore.crossing.x},${shore.crossing.z}) `
                         + `dist=${shore.crossing.dist}m ring=${shore.ringCount}/36 waterY=${shore.waterY} `
                         + `seawardLimit=${shore.seawardLimit}m skirt=${shore.skirtRadius ?? 'none within 500m'}`);
 
-                    for (const pose of shore.poses) {
+                    for (const pose of poses) {
                         const name = `${scene}__${tod.id}__${pose.id}.png`;
                         try {
                             const png = await shootPose(page, pose, tod);
@@ -562,6 +840,7 @@ async function main() {
                             session.shots.push({
                                 id: pose.id, file: name, ok: true, bytes: png.length,
                                 subject: pose.subject, pos: pose.pos, target: pose.target,
+                                framing: pose.framing ?? null,
                             });
                             console.log(`[WATER]   ${pose.id} -> ${name} ${(png.length / 1024).toFixed(0)}kB`);
                         } catch (err) {
@@ -589,7 +868,37 @@ async function main() {
 
     report.frames = frames;
     report.failures = failures;
-    const reportPath = resolve(args.outDir, 'water-before-report.json');
+
+    if (args.compareDir) {
+        const names = report.sessions.flatMap(s => s.shots.filter(x => x.ok).map(x => x.file));
+        report.paletteComparison = {
+            method: 'hue/saturation histogram, 12 hue buckets x 2 saturation bands, frames resized to 400x225',
+            cobaltWedge: 'hue 200-265 deg with saturation >= 0.5',
+            rows: await compareAgainst(args.compareDir, args.outDir, names),
+        };
+        console.log('\n[WATER] palette histogram, before -> after');
+        for (const row of report.paletteComparison.rows) {
+            if (!row.ok) { console.log(`[WATER]   ${row.file}  SKIPPED (${row.reason})`); continue; }
+            console.log(`[WATER]   ${row.file.padEnd(44)} cobalt frame ${(row.before.cobaltFraction * 100).toFixed(1)}%`
+                + ` -> ${(row.after.cobaltFraction * 100).toFixed(1)}%   water band `
+                + `${(row.before.lowerBand.cobaltFraction * 100).toFixed(1)}% -> ${(row.after.lowerBand.cobaltFraction * 100).toFixed(1)}%`
+                + `   mean rgb [${row.before.lowerBand.meanRgb}] -> [${row.after.lowerBand.meanRgb}]`);
+        }
+        const usable = report.paletteComparison.rows.filter(r => r.ok);
+        if (usable.length) {
+            const mean = (pick) => usable.reduce((acc, r) => acc + pick(r), 0) / usable.length;
+            report.paletteComparison.meanCobaltBefore = Math.round(mean(r => r.before.cobaltFraction) * 10000) / 10000;
+            report.paletteComparison.meanCobaltAfter = Math.round(mean(r => r.after.cobaltFraction) * 10000) / 10000;
+            report.paletteComparison.meanWaterBandCobaltBefore = Math.round(mean(r => r.before.lowerBand.cobaltFraction) * 10000) / 10000;
+            report.paletteComparison.meanWaterBandCobaltAfter = Math.round(mean(r => r.after.lowerBand.cobaltFraction) * 10000) / 10000;
+            console.log(`[WATER]   mean cobalt fraction: whole frame `
+                + `${(report.paletteComparison.meanCobaltBefore * 100).toFixed(1)}% -> ${(report.paletteComparison.meanCobaltAfter * 100).toFixed(1)}%`
+                + `, water band ${(report.paletteComparison.meanWaterBandCobaltBefore * 100).toFixed(1)}%`
+                + ` -> ${(report.paletteComparison.meanWaterBandCobaltAfter * 100).toFixed(1)}%`);
+        }
+    }
+
+    const reportPath = resolve(args.outDir, 'water-report.json');
     await writeFile(reportPath, JSON.stringify(report, null, 2));
 
     console.log(`[WATER] ${frames} frames written to ${args.outDir}`);
@@ -601,4 +910,9 @@ async function main() {
     process.exit(failures ? 1 : 0);
 }
 
-main().catch((err) => { console.error('[WATER] fatal:', err); process.exit(2); });
+// Only run when invoked directly. tests/water-look-poses.spec.js imports
+// buildWaterPoses from here, and importing a module that launches Chrome as a
+// side effect is how a unit test turns into a browser session.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+    main().catch((err) => { console.error('[WATER] fatal:', err); process.exit(2); });
+}

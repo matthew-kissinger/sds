@@ -93,32 +93,67 @@ export function waterBaseColorSrgbBytes(depthT) {
 export const WATER_FOAM_THICKNESS = 2.5;
 
 /**
- * The depth floor keeps radial-boundary islands from showing a turquoise disc;
- * coastline scenes (Newsheepdogland) pass the lower floor so a real shallow
- * band reads along the shore (Cycle 90).
+ * The heightfield-interface foam band, as multiples of WATER_FOAM_THICKNESS, in
+ * METRES OF SEABED (the branch keys on |terrainY - waterY|, not on horizontal
+ * distance).
  *
- * Measured, Cycle 118: at 0.82 the visible depthT is pinned to the floor until
- * the seabed is 13.18 m (Rolling Hills) / 23.03 m (Open Country) below the
- * water plane, so everything from the foam line out to that depth is a single
- * flat colour. At 0.45 on Newsheepdogland the pin ends at 6.41 m. Phase 3 owns
- * re-ranging this; Phase 2 only moves it into one place.
+ * Cycle 118 Phase 3 narrowed it from 0.18-1.15 (0.45 m to 2.875 m of seabed).
+ * Because the threshold is a depth, the band's WIDTH on screen is set by the
+ * bathymetry: on Rolling Hills' cliff coast 2.875 m of seabed is a couple of
+ * metres and it reads as a line, but on Newsheepdogland's 3 m shelf it covers
+ * most of the visible sea, and the before-capture shows that scene's near shore
+ * as a single white field. Cobalt hid it; a pastoral sea does not.
+ *
+ * This does not fix the underlying shape - foam keyed to depth will always
+ * widen on a gentle shelf - it just stops the widest case swallowing the water.
+ * Keying foam on the horizontal distance to the interface is the real fix and
+ * it needs its own pass. Recorded in the cycle plan as not fixed.
  */
-export const WATER_DEFAULT_MIN_DEPTH_T = 0.82;
-export const WATER_COASTLINE_MIN_DEPTH_T = 0.45;
-
-/** smoothstep bounds for the heightfield-driven depth resolve. */
-export const WATER_DEPTH_FROM_HEIGHTFIELD = Object.freeze({
-    start: 0.2,
-    falloffScale: 0.45,
-    falloffFloor: 0.25,
+export const WATER_FOAM_INTERFACE_BAND = Object.freeze({
+    start: 0.08,
+    end: 0.70,
 });
 
-export function waterDepthFalloffFromHeightfield(shorelineFalloff) {
-    return Math.max(
-        shorelineFalloff * WATER_DEPTH_FROM_HEIGHTFIELD.falloffScale,
-        WATER_DEPTH_FROM_HEIGHTFIELD.falloffFloor
-    );
-}
+/**
+ * The depth floor, and the ONE branch that still takes it (Cycle 118 Phase 3).
+ *
+ * It used to floor the resolved depth on both branches, which is why the whole
+ * near-shore band was a single flat colour: at 0.82 the visible depthT stayed
+ * pinned until the seabed was 13.18 m down on Rolling Hills and 23.03 m on Open
+ * Country, and no shipped seabed is that deep (measured: -12 m, -10 m, -3 m).
+ * The floor was compensating for a mis-ranged ramp, not expressing a look.
+ *
+ * Phase 3 re-ranged the ramp (see WATER_DEPTH_FROM_HEIGHTFIELD) and scoped the
+ * floor to the heightfield-LESS branch, which is the one it was authored for:
+ * without a heightfield the resolve is `distance from the boundary circle`,
+ * which reads as a turquoise disc drawn around the island rather than as depth.
+ * Every shipped water scene binds a heightfield, so this is the degraded-boot
+ * guard now and nothing else.
+ */
+export const WATER_DEFAULT_MIN_DEPTH_T = 0.82;
+
+/**
+ * The shore-to-deep ramp, in METRES OF SEABED under the water plane.
+ *
+ * Was `smoothstep(0.2, max(shorelineFalloff * 0.45, 0.25), depth)`, which
+ * derived a depth range from a horizontal falloff distance: 18 m on Rolling
+ * Hills, 31.5 m on Open Country, 13.5 m on Newsheepdogland. Those are the
+ * distances the shoreline gradient fades over, not the depths the seabed
+ * reaches, so the ramp asked for water three to ten times deeper than any of
+ * these scenes has and never left its first few percent. Measured seabeds:
+ * -12 m (Rolling Hills), -10 m (Open Country), -3 m (Newsheepdogland).
+ *
+ * A depth range is now a depth range. `full` is deliberately shallower than the
+ * two island seabeds so their open water sits at the deep colour and the whole
+ * ramp is spent where it is visible - between the foam line and the drop-off.
+ * At 6 m Newsheepdogland's 3 m shelf resolves to 0.467, within two hundredths
+ * of the 0.45 floor that scene was hand-tuned to in Cycle 90, so its overall
+ * tone is preserved while its shore gains the gradient it never had.
+ */
+export const WATER_DEPTH_FROM_HEIGHTFIELD = Object.freeze({
+    start: 0.25,
+    full: 6.0,
+});
 
 /**
  * Off-GPU shoreline metrics for the radial-boundary case. Unit-testable mirror
@@ -238,10 +273,11 @@ export function buildWaterNoiseNodes(TSL) {
  * uses (see .claude/rules/scene-and-render.md): a single noise reads as a
  * coherent front.
  *
- * SLOPE AMPLITUDE, measured Cycle 118 against the shipped scale of 0.055: the
- * per-axis sums are NOT unit-bounded (three waves, each up to 1 + w2), so the
- * naive atan(0.055) = 3.1 degrees understates it. True max tilt is 8.26
- * degrees, RMS 2.88. Phase 3 raises WATER_SLOPE_SCALE and records both numbers.
+ * SLOPE AMPLITUDE. The per-axis sums are NOT unit-bounded (three waves, each up
+ * to 1 + w2), so reading the tilt off atan(scale) understates it by a factor of
+ * 2.64. At the scale Cycle 118 Phase 2 inherited, 0.055, the max tilt was 8.26
+ * degrees and the RMS 2.88 - and the surface photographed as a mirror. Phase 3
+ * raises it; the numbers it lands on are recorded on WATER_SLOPE_SCALE below.
  *
  * Cycle 118 Phase 2 also gave the WebGL twin this normal. It shaded against a
  * hardcoded up-vector before, which is why WATER_BEFORE.md read the whole
@@ -262,7 +298,135 @@ export const WATER_SLOPE_WAVES = Object.freeze([
 ]);
 
 export const WATER_SLOPE_NORMALISE = 0.6667;
-export const WATER_SLOPE_SCALE = 0.055;
+
+/**
+ * Cycle 118 Phase 3. 0.055 -> 0.138: max tilt 8.26 -> 20.01 degrees, RMS 2.88 ->
+ * 7.06 (both measured by tests/water-surface-model.spec.js, the max analytically
+ * from the wave amplitudes and the RMS over a 200 m x 200 m x 8 s sample grid).
+ *
+ * The waves this rides are long - the fastest term is 2*pi/0.052 = 121 m - so
+ * raising the amplitude buys broad, slow undulation rather than chop, which is
+ * the right currency for a painterly surface and the only safe one for an
+ * analytic normal with no mip chain: short waves at this amplitude would alias
+ * into shimmer everywhere past the first fifty metres.
+ */
+export const WATER_SLOPE_SCALE = 0.138;
+
+/**
+ * How hard the slope shades the surface, as a fraction of the sun colour added
+ * per unit of `dot(N, sun) - dot(up, sun)`.
+ *
+ * This is the term that makes the normal read as FORM rather than as gloss, and
+ * before Phase 3 it did not exist: the only two consumers of the normal were
+ * specular lobes, so a wave face pointing away from the sun was exactly as
+ * bright as one pointing into it and the surface could only ever read flat.
+ */
+export const WATER_WAVE_SHADE_GAIN = 0.30;
+
+/**
+ * The glint's near-shore fade, in resolved depthT.
+ *
+ * The retired expression here was `smoothstep(0.08, 0.55, depthT)`, authored for
+ * an unfloored depthT and then left identically 1.0 for the entire life of the
+ * 0.82 floor. Phase 3 un-floors depthT, so those constants would have gone live
+ * as a side effect of a different change - a look nobody has ever seen, chosen
+ * by a shader author who could not have known what the new ramp would resolve
+ * to. They are replaced with constants authored against the new ramp: the shore
+ * keeps a third of its glint rather than losing all of it, and the fade is spent
+ * inside the shallow band instead of running halfway out to the drop-off.
+ */
+export const WATER_GLINT_SHORE_FADE = Object.freeze({
+    floor: 0.35,
+    start: 0.0,
+    end: 0.30,
+});
+
+/**
+ * The weight of the two specular lobes, and the whole of Phase 3's rebalance.
+ *
+ * `broad` is a sun path evaluated against the FLAT up-vector: it does not read
+ * the perturbed normal at all, so it cannot know the surface has waves. `ripple`
+ * is the sharp Blinn lobe on the slope normal, and it is the only term that
+ * turns slope amplitude into something you can see. They shipped at 0.70 / 0.22
+ * in the material's defaults and 0.32 / 0.42 in the presets, and because the
+ * broad lobe is `pow(x, 8)` against the sharp one's `pow(x, 64)` it covered
+ * enough of the frame to carry the picture at either weighting. Reversed here.
+ *
+ * The preset tuning still overrides per sky preset; these are the defaults both
+ * render paths fall back to, and the WebGL twin (which has no preset plumbing)
+ * uses them directly.
+ */
+export const WATER_GLINT_GAIN_DEFAULTS = Object.freeze({
+    broad: 0.16,
+    ripple: 0.60,
+});
+
+/**
+ * How far the slow swell nudges the depth the colour ramp reads, either way.
+ *
+ * The swell used to be a hardcoded `vec3(0.02, 0.08, 0.10)` added on top of the
+ * ramp, which is a fourth colour spelled outside the palette and one that could
+ * only ever add blue. Reading it as depth instead is the truer model - a swell
+ * changes the colour by changing how much water you look through - and it lets
+ * the swell darken as well as lighten.
+ */
+export const WATER_SWELL_DEPTH_SWING = 0.12;
+
+/**
+ * The surface's response to the height of the sun.
+ *
+ * Both render paths are UNLIT - MeshBasicNodeMaterial on the node path, a bare
+ * ShaderMaterial on the twin - so without this the sea holds full daylight
+ * brightness while the terrain, the grass and the sky all fall away at dusk.
+ * The before-capture shows it plainly: at t=0.74 the Rolling Hills cliff is
+ * nearly black and the water beside it is at noon strength. It reads as a lit
+ * plane laid over a dark world, and the pastoral palette makes it MORE obvious
+ * rather than less, because a bright teal draws the eye where a dark navy hid.
+ *
+ * Driven off the sun's elevation, which is the one light quantity already on
+ * this material (sunDirection.y, repushed every frame by the controls update).
+ * Measured on the capture poses: 0.94 at noon, 0.15 at dusk.
+ *
+ * This is a light response, not a colour scale, so it is applied AFTER the foam
+ * mix - the foam keeps its documented exemption from the colour chain and still
+ * only ever sees foamScale, but it stops glowing white through a night.
+ */
+export const WATER_SUN_LEVEL = Object.freeze({
+    night: 0.32,
+    elevationLow: -0.06,
+    elevationHigh: 0.42,
+});
+
+/**
+ * Off-GPU reference of the slope field, from the same constants as the TSL
+ * builder and the GLSL. It exists so the tilt a scale produces is a MEASURED
+ * number in CI rather than a claim in a plan - the 0.055 scale shipped for two
+ * cycles described as a 3.1-degree tilt when the real figure was 8.26, because
+ * nothing could evaluate the field off a GPU to check.
+ */
+export function waterSlopeNormalAt(x, z, t, slopeScale = WATER_SLOPE_SCALE) {
+    let slopeX = 0;
+    let slopeZ = 0;
+    for (let index = 0; index < WATER_SLOPE_ROTATIONS.length; index += 1) {
+        const rot = WATER_SLOPE_ROTATIONS[index];
+        const wave = WATER_SLOPE_WAVES[index];
+        const proj = x * rot[0] + z * rot[1];
+        const term = Math.sin(proj * wave.f1 + t * wave.s1)
+            + Math.sin(proj * wave.f2 + t * wave.s2) * wave.w2;
+        slopeX += term * rot[0];
+        slopeZ += term * rot[1];
+    }
+    const nx = slopeX * WATER_SLOPE_NORMALISE * slopeScale;
+    const nz = slopeZ * WATER_SLOPE_NORMALISE * slopeScale;
+    const length = Math.hypot(nx, 1, nz);
+    return [nx / length, 1 / length, nz / length];
+}
+
+/** Tilt of the surface normal away from vertical, in degrees. */
+export function waterSlopeTiltDegrees(x, z, t, slopeScale = WATER_SLOPE_SCALE) {
+    const normal = waterSlopeNormalAt(x, z, t, slopeScale);
+    return Math.acos(Math.min(1, Math.max(-1, normal[1]))) * 180 / Math.PI;
+}
 
 /**
  * TSL twin of the GLSL waterSlopeNormal below. `worldXZ` and `time` are nodes;
@@ -345,6 +509,25 @@ ${waterSlopeGlslBody()}
     slopeX *= ${glslFloat(WATER_SLOPE_NORMALISE)};
     slopeZ *= ${glslFloat(WATER_SLOPE_NORMALISE)};
     return normalize(vec3(slopeX * slopeScale, 1.0, slopeZ * slopeScale));
+  }
+
+  // Metres of seabed under the water plane -> the ramp both paths mix on.
+  float waterDepthFromSeabed(float seabedDepth) {
+    return smoothstep(${glslFloat(WATER_DEPTH_FROM_HEIGHTFIELD.start)}, ${glslFloat(WATER_DEPTH_FROM_HEIGHTFIELD.full)}, seabedDepth);
+  }
+
+  float waterGlintShoreFade(float depthT) {
+    return mix(${glslFloat(WATER_GLINT_SHORE_FADE.floor)}, 1.0, smoothstep(${glslFloat(WATER_GLINT_SHORE_FADE.start)}, ${glslFloat(WATER_GLINT_SHORE_FADE.end)}, depthT));
+  }
+
+  // Signed against the flat reference, so troughs darken as crests lift.
+  float waterWaveShade(vec3 normal, vec3 sunDirection) {
+    return (dot(normal, sunDirection) - dot(vec3(0.0, 1.0, 0.0), sunDirection)) * ${glslFloat(WATER_WAVE_SHADE_GAIN)};
+  }
+
+  // Both paths are unlit, so the surface dims with the sun or it does not dim.
+  float waterSunLevel(float sunElevationY) {
+    return mix(${glslFloat(WATER_SUN_LEVEL.night)}, 1.0, smoothstep(${glslFloat(WATER_SUN_LEVEL.elevationLow)}, ${glslFloat(WATER_SUN_LEVEL.elevationHigh)}, sunElevationY));
   }
 `;
 

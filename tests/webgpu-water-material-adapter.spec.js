@@ -13,6 +13,13 @@ import {
     createWebGpuWaterMaterial,
     shouldApplyWebGpuWater,
 } from '../js/water/webgpuWaterMaterialAdapter.js';
+import {
+    WATER_GLINT_GAIN_DEFAULTS,
+    WATER_PALETTE_SRGB_BYTES,
+} from '../js/water/waterSurfaceModel.js';
+
+/** Derived, not re-spelled: the palette has exactly one definition site. */
+const paletteHex = (key) => WATER_PALETTE_SRGB_BYTES[key].reduce((acc, byte) => (acc << 8) | byte, 0);
 
 const boundary = Object.freeze({
     center: { x: 3, z: -2 },
@@ -90,13 +97,18 @@ describe('webgpu water material adapter', () => {
             expect(contexts[0].shoreline.falloff).toBe(40);
             expect(contexts[0].waterY).toBe(-0.25);
             expect(contexts[0].hasHeightfield).toBe(false);
-            expect(contexts[0].shallowColor.getHex()).toBe(0x6fd7d2);
-            expect(contexts[0].deepColor.getHex()).toBe(0x103662);
-            expect(contexts[0].foamColor.getHex()).toBe(0xeaf6ff);
+            expect(contexts[0].shallowColor.getHex()).toBe(paletteHex('shallow'));
+            expect(contexts[0].deepColor.getHex()).toBe(paletteHex('deep'));
+            expect(contexts[0].foamColor.getHex()).toBe(paletteHex('foam'));
             expect(contexts[0].rippleStrength).toBe(1);
             expect(contexts[0].sparkleStrength).toBe(0.7);
-            expect(contexts[0].sunSpecularIntensity).toBe(0.6);
-            expect(contexts[0].sunColor.toArray()).toEqual([1, 1, 1]);
+            // Cycle 118 Phase 3: the two keys the twin must NOT forward. The
+            // node factory resolves `context.X ?? bootPacket.X`, so forwarding
+            // the twin's placeholders made skyFogPresetTuning's
+            // sunSpecularIntensity (0.48) permanently unreachable and gave every
+            // material a white birth sun. Absence here is the fix.
+            expect(contexts[0]).not.toHaveProperty('sunSpecularIntensity');
+            expect(contexts[0]).not.toHaveProperty('sunColor');
             expect(contexts[0].sunColorSource).toBe('skyFog.sunColor');
         } finally {
             material.dispose();
@@ -134,12 +146,20 @@ describe('webgpu water material adapter', () => {
             expect(material.depthWrite).toBe(true);
             expect(material.userData.webgpuWaterWorldSpaceHeightfield).toBe(true);
             expect(material.userData.webgpuWaterSunCameraGlint).toBe(true);
-            expect(material.userData.webgpuWaterGlintMode).toBe('masked-flat-normal-broad-sun-path-plus-ripple-v4');
-            expect(material.userData.webgpuWaterGlintGain).toBe(0.70);
-            expect(material.userData.webgpuWaterRippleGlintGain).toBe(0.22);
+            // Cycle 118 Phase 3 renamed the mode and reversed the two gains:
+            // the slope-normal lobe leads and the flat broad sun path is the
+            // wash behind it. js/main.js's visual probe reads glintMode too.
+            expect(material.userData.webgpuWaterGlintMode).toBe('slope-normal-lobe-lead-plus-broad-sun-path-wash-v5');
+            expect(material.userData.webgpuWaterGlintGain).toBe(WATER_GLINT_GAIN_DEFAULTS.broad);
+            expect(material.userData.webgpuWaterRippleGlintGain).toBe(WATER_GLINT_GAIN_DEFAULTS.ripple);
+            expect(material.userData.webgpuWaterRippleGlintGain)
+                .toBeGreaterThan(material.userData.webgpuWaterGlintGain);
             expect(material.userData.webgpuWaterSunSpecularIntensity).toBe(0.6);
             expect(material.userData.webgpuWaterSunColorSource).toBe('skyFog.sunColor');
-            expect(material.userData.webgpuWaterNodeUniforms.sunColor.value.toArray()).toEqual([1, 1, 1]);
+            // No longer white: with the twin's placeholder no longer shadowing
+            // the boot packet, an unconfigured factory falls back to the sun
+            // colour its own defaults carry rather than to (1, 1, 1).
+            expect(material.userData.webgpuWaterNodeUniforms.sunColor.value.toArray()).not.toEqual([1, 1, 1]);
             expect(material.userData.webgpuWaterNodeUniforms.sunSpecularIntensity.value).toBe(0.6);
             expect(material.userData.webgpuWaterMaterialControls?.update).toBeInstanceOf(Function);
             material.userData.webgpuWaterMaterialControls.update({

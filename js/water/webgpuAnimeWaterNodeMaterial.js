@@ -5,11 +5,16 @@ import {
   WATER_COLOR_SPACE,
   WATER_DEFAULT_MIN_DEPTH_T,
   WATER_DEPTH_FROM_HEIGHTFIELD,
+  WATER_FOAM_INTERFACE_BAND,
   WATER_FOAM_THICKNESS,
+  WATER_GLINT_GAIN_DEFAULTS,
+  WATER_GLINT_SHORE_FADE,
   WATER_SLOPE_SCALE,
+  WATER_SUN_LEVEL,
+  WATER_SWELL_DEPTH_SWING,
+  WATER_WAVE_SHADE_GAIN,
   buildWaterNoiseNodes,
   buildWaterSlopeNormalNode,
-  waterDepthFalloffFromHeightfield,
 } from './waterSurfaceModel.js';
 
 export function createWebGpuAnimeWaterNodeMaterial(
@@ -50,29 +55,47 @@ export function createWebGpuAnimeWaterNodeMaterial(
   const radialDistance = length(waterWorld.sub(vec2(...water.shoreline.center)));
   const boundaryDistance = abs(radialDistance.sub(water.shoreline.radius));
   const depthFromBoundary = smoothstep(0.0, Math.max(water.shoreline.falloff, 0.001), boundaryDistance);
+  // Cycle 118 Phase 3: metres of seabed, not a horizontal falloff distance
+  // reused as one. See WATER_DEPTH_FROM_HEIGHTFIELD for what the old range
+  // asked for and what the shipped seabeds actually are.
   const depthFromHeightfield = smoothstep(
     WATER_DEPTH_FROM_HEIGHTFIELD.start,
-    waterDepthFalloffFromHeightfield(water.shoreline.falloff),
+    WATER_DEPTH_FROM_HEIGHTFIELD.full,
     terrainDepth
   );
-  // The depth floor keeps radial-boundary islands from showing a turquoise
-  // disc; coastline scenes (NSL) pass a lower floor so a real shallow band
-  // reads along the shore (Cycle 90). Default preserves the tuned look.
+  // The floor now applies to the boundary branch ONLY - the heightfield-less
+  // fallback, where the resolve is distance-from-a-circle and an unfloored one
+  // paints a turquoise disc around the island. Every shipped water scene binds
+  // a heightfield, so the branch a player sees is un-floored and the near-shore
+  // band has a real gradient in it for the first time.
   const minDepthT = water.minDepthT ?? WATER_DEFAULT_MIN_DEPTH_T;
-  const depthT = max(mix(depthFromBoundary, depthFromHeightfield, hasHeightfield), minDepthT);
+  const depthT = mix(max(depthFromBoundary, minDepthT), depthFromHeightfield, hasHeightfield);
   const rippleUv = waterWorld.mul(0.035).add(vec2(waterTime.mul(0.18), waterTime.mul(0.08)));
   const rippleA = valueNoise(rippleUv);
   const rippleB = valueNoise(rippleUv.mul(2.35).add(vec2(waterTime.mul(0.05), waterTime.mul(-0.03))));
-  const ripple = smoothstep(0.56, 0.66, rippleA.mul(0.68).add(rippleB.mul(0.32)))
+  // Cycle 118 Phase 3 retired the cel quantisation here. This was
+  // smoothstep(0.56, 0.66, ...), a 0.1-wide window on a [0, 1] noise field, so
+  // 90% of the surface sat at one of the two rail values and the ripple read as
+  // painted bands with hard edges. It is a continuous signed field now, which
+  // darkens troughs as well as lifting crests.
+  const ripple = rippleA.mul(0.68).add(rippleB.mul(0.32)).sub(0.5).mul(2.0)
     .mul(water.rippleStrength * 0.13);
-  const rippleLightScale = water.rippleLightScale ?? 0.78;
+  const rippleLightScale = water.rippleLightScale ?? 0.30;
   const slowSwell = valueNoise(waterWorld.mul(0.012).add(vec2(waterTime.mul(0.025), waterTime.mul(-0.018))));
   const foamNoise = valueNoise(waterWorld.mul(vec2(0.12, 0.055)).add(vec2(waterTime.mul(0.10), 0.0)));
   const foamThickness = water.foamThickness ?? WATER_FOAM_THICKNESS;
   const boundaryFoam = float(1.0)
     .sub(smoothstep(foamThickness * 0.55, foamThickness * 1.8, boundaryDistance.add(foamNoise.mul(0.3))));
+  // Cycle 118 Phase 3 narrowed this band; see WATER_FOAM_INTERFACE_BAND for
+  // why a depth-keyed threshold reads as a line on a cliff and as a field on a
+  // shelf. The BRANCH is untouched - hard stop 3, and Newsheepdogland's
+  // synthesised bbox radius makes the boundary branch meaningless there.
   const heightInterfaceFoam = float(1.0)
-    .sub(smoothstep(foamThickness * 0.18, foamThickness * 1.15, shorelineDelta.add(foamNoise.mul(0.25))));
+    .sub(smoothstep(
+      foamThickness * WATER_FOAM_INTERFACE_BAND.start,
+      foamThickness * WATER_FOAM_INTERFACE_BAND.end,
+      shorelineDelta.add(foamNoise.mul(0.25))
+    ));
   const foamBand = max(
     boundaryFoam.mul(float(1.0).sub(hasHeightfield)),
     heightInterfaceFoam.mul(hasHeightfield)
@@ -88,10 +111,20 @@ export function createWebGpuAnimeWaterNodeMaterial(
     time: waterTime,
     slopeScale: WATER_SLOPE_SCALE,
   });
+  const flatNormal = vec3(0.0, 1.0, 0.0);
   const ndh = max(dot(rippleNormal, halfVector), 0.0);
   const spec = pow(ndh, 64.0);
-  const flatNdh = max(dot(vec3(0.0, 1.0, 0.0), halfVector), 0.0);
+  const flatNdh = max(dot(flatNormal, halfVector), 0.0);
   const broadSunPath = pow(flatNdh, 8.0).mul(sunSpecularIntensity);
+  // Cycle 118 Phase 3: the surface's own shading, and the term that was missing
+  // entirely. Both consumers of the normal below are specular lobes, so before
+  // this a wave face turned away from the sun was exactly as bright as one
+  // turned into it - the slope could only ever add gloss, never form, which is
+  // why raising its amplitude alone would not have made the water read. Signed
+  // against the flat reference so troughs darken as much as crests lift, and
+  // carried in the sun's own colour so the shading is light rather than paint.
+  const waveShade = dot(rippleNormal, sunDir).sub(dot(flatNormal, sunDir))
+    .mul(WATER_WAVE_SHADE_GAIN);
   const glintAxisRaw = vec2(sunDir.x.add(viewDir.x), sunDir.z.add(viewDir.z));
   const glintAxis = glintAxisRaw.div(max(length(glintAxisRaw), 0.001));
   const glintSide = vec2(glintAxis.y.negate(), glintAxis.x);
@@ -102,24 +135,37 @@ export function createWebGpuAnimeWaterNodeMaterial(
     0.9,
     valueNoise(vec2(axisCoord.mul(0.055).add(waterTime.mul(0.16)), sideCoord.mul(0.11).sub(waterTime.mul(0.07))))
   );
-  // DEAD AT THE CURRENT DEPTH FLOOR, deliberately left as-is (Cycle 118 Phase
-  // 4 decision). minDepthT is 0.82 on the radial islands and 0.45 on
-  // Newsheepdogland, and smoothstep(0.08, 0.55, depthT) is identically 1.0
-  // above 0.55, so this term has not suppressed anything in the life of the
-  // floor - its constants prove it was authored for an unfloored depthT.
-  // Phase 4 deleted the fogStrength term that was depthT's only other
-  // consumer besides the base colour, so if Phase 3 lowers the floor to give
-  // the shore a real gradient, THIS REACTIVATES and the glint fades near
-  // shore for the first time. That is Phase 3's call to make with pixels in
-  // front of it, not a side effect to discover afterwards.
-  const horizonSuppression = smoothstep(0.08, 0.55, depthT);
-  const rippleGlint = spec.mul(glintMask.mul(0.72).add(0.28)).mul(horizonSuppression).mul(sparkleStrength).mul(water.sparkleScale).mul(0.22);
-  const broadGlintGain = water.broadGlintGain ?? 0.70;
-  const rippleGlintGain = water.rippleGlintGain ?? 0.22;
+  // Phase 4 left `smoothstep(0.08, 0.55, depthT)` here with a warning that
+  // un-flooring depthT would reactivate it. Phase 3 un-floored it and took the
+  // decision rather than the side effect: those constants were authored blind,
+  // against a depth model that no longer exists, and would have taken the glint
+  // to exactly zero across the whole shallow band. WATER_GLINT_SHORE_FADE is
+  // authored against the new ramp - the shore keeps a third of its glint, and
+  // the fade is spent inside the shallow band rather than halfway to the
+  // drop-off. It is a real term now instead of a constant 1.0.
+  const shoreFade = mix(
+    float(WATER_GLINT_SHORE_FADE.floor),
+    1.0,
+    smoothstep(WATER_GLINT_SHORE_FADE.start, WATER_GLINT_SHORE_FADE.end, depthT)
+  );
+  // Cycle 118 Phase 3 rebalanced the two lobes and dropped the 0.22 round-trip
+  // the ripple gain used to make (multiply by 0.22 here, divide by it below).
+  // The broad lobe reads the FLAT up-vector: it is a sun path painted on a
+  // plane and it cannot know the surface has waves, yet at the shipped weights
+  // it carried the picture. The sharp lobe is the only term that reads the
+  // perturbed normal, so the slope amplitude Phase 3 bought is invisible until
+  // this is the term you can see. Broad drops to a horizon wash; sharp leads.
+  const rippleGlint = spec
+    .mul(glintMask.mul(0.72).add(0.28))
+    .mul(shoreFade)
+    .mul(sparkleStrength)
+    .mul(water.sparkleScale);
+  const broadGlintGain = water.broadGlintGain ?? WATER_GLINT_GAIN_DEFAULTS.broad;
+  const rippleGlintGain = water.rippleGlintGain ?? WATER_GLINT_GAIN_DEFAULTS.ripple;
   const broadGlintPath = broadSunPath
     .mul(glintMask.mul(0.65).add(0.20))
-    .mul(horizonSuppression);
-  const glint = broadGlintPath.mul(broadGlintGain).add(rippleGlint.mul(rippleGlintGain / 0.22));
+    .mul(shoreFade);
+  const glint = broadGlintPath.mul(broadGlintGain).add(rippleGlint.mul(rippleGlintGain));
   // Cycle 118 Phase 2 retired `colorTint`, the fifth palette site: a per-preset
   // multiplier of [0.22, 0.40, 1.42] applied right here, which is what turned
   // the authored teal (#064e62 through the tone curve) into the shipped cobalt
@@ -131,15 +177,37 @@ export function createWebGpuAnimeWaterNodeMaterial(
     deep: colorArray(water.deepColor),
     foam: colorArray(water.foamColor),
   };
-  const baseColor = mix(vec3(...paletteLinear.shallow), vec3(...paletteLinear.deep), depthT)
+  // Cycle 118 Phase 3: the slow swell moved from a hardcoded blue-green triplet
+  // added on top of the ramp to a signed nudge of the depth the ramp reads. A
+  // swell does change the water's colour by changing how much water you are
+  // looking through, so expressing it as depth is both the truer model and one
+  // fewer colour spelled outside the palette; the old form could only ever add
+  // blue, which is the direction this cycle is moving away from.
+  const swellDepthT = clamp(
+    depthT.add(slowSwell.sub(0.5).mul(WATER_SWELL_DEPTH_SWING)),
+    0.0,
+    1.0
+  );
+  const baseColor = mix(vec3(...paletteLinear.shallow), vec3(...paletteLinear.deep), swellDepthT)
     .add(vec3(ripple, ripple, ripple).mul(rippleLightScale))
-    .add(vec3(0.02, 0.08, 0.10).mul(slowSwell.mul(0.34)))
-    .add(sunColor.mul(glint))
+    .add(sunColor.mul(waveShade.add(glint)))
     .mul(water.colorScale);
   // Foam sits OUTSIDE the tint-and-scale chain the base colour rides and only
   // ever sees foamScale. That was true before Phase 2 and stays true; the
   // single palette does not silently unify it.
   const colorWithFoam = mix(baseColor, vec3(...paletteLinear.foam).mul(water.foamScale), foamBand);
+  // Cycle 118 Phase 3: the light response. This material is MeshBasic, so
+  // without it the sea holds noon brightness through a dusk that has taken the
+  // terrain almost to black - see WATER_SUN_LEVEL. Applied after the foam mix
+  // because it is lighting on the finished surface rather than another scale on
+  // the palette, which keeps foam's exemption above intact and stops it glowing
+  // white through Newsheepdogland's night.
+  const sunLevel = mix(
+    float(WATER_SUN_LEVEL.night),
+    1.0,
+    smoothstep(WATER_SUN_LEVEL.elevationLow, WATER_SUN_LEVEL.elevationHigh, sunDir.y)
+  );
+  const litColor = colorWithFoam.mul(sunLevel);
 
   const material = new MeshBasicNodeMaterial();
   material.name = 'webgpu-node-anime-water';
@@ -171,7 +239,7 @@ export function createWebGpuAnimeWaterNodeMaterial(
   // was a WebGL-shaped assumption with no effect, and deleting it changes no
   // pixels while removing the false claim that this material lives in a
   // different output space from the terrain it meets at the shoreline.
-  material.colorNode = colorWithFoam;
+  material.colorNode = litColor;
   material.fog = true;
   material.side = DoubleSide;
   material.depthWrite = true;
@@ -183,7 +251,12 @@ export function createWebGpuAnimeWaterNodeMaterial(
   material.userData.webgpuWaterMinDepthT = minDepthT;
   material.userData.webgpuWaterWorldSpaceHeightfield = true;
   material.userData.webgpuWaterSunCameraGlint = true;
-  material.userData.webgpuWaterGlintMode = 'masked-flat-normal-broad-sun-path-plus-ripple-v4';
+  // Cycle 118 Phase 3 renamed this because the mode changed under it: the read
+  // is the slope-normal lobe now and the flat broad sun path is the wash behind
+  // it, which is the reverse of what v4 described. js/main.js's visual probe and
+  // tests/webgpu-water-material-adapter.spec.js both read the value, so this is
+  // a consumer migration and both were updated with it.
+  material.userData.webgpuWaterGlintMode = 'slope-normal-lobe-lead-plus-broad-sun-path-wash-v5';
   material.userData.webgpuWaterGlintGain = broadGlintGain;
   material.userData.webgpuWaterRippleGlintGain = rippleGlintGain;
   material.userData.webgpuWaterSunSpecularIntensity = water.sunSpecularIntensity ?? 0.6;
@@ -196,6 +269,9 @@ export function createWebGpuAnimeWaterNodeMaterial(
   material.userData.webgpuWaterColorSpace = WATER_COLOR_SPACE;
   material.userData.webgpuWaterPaletteLinear = paletteLinear;
   material.userData.webgpuWaterSlopeScale = WATER_SLOPE_SCALE;
+  material.userData.webgpuWaterWaveShadeGain = WATER_WAVE_SHADE_GAIN;
+  material.userData.webgpuWaterGlintShoreFadeFloor = WATER_GLINT_SHORE_FADE.floor;
+  material.userData.webgpuWaterDepthFullMetres = WATER_DEPTH_FROM_HEIGHTFIELD.full;
   material.userData.webgpuWaterSunColorSource = water.sunColorSource ?? 'skyFog.sunColor';
   material.userData.webgpuWaterNodeUniforms = {
     sunDirection,

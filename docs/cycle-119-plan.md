@@ -6,7 +6,7 @@
 
 Payload before more features (D31). Three cycles of the front-door program still have to land and every one of them adds code, so the ratchets need headroom that arbitrates design merit rather than running order. This cycle takes the measured dead weight out of the shipped bundle without raising a single budget, and it takes the largest items first so the remaining cycles inherit room rather than a queue.
 
-**The first thing it did was disqualify its own biggest item.** Phase 2's 38,900-byte ZSTD decoder turned out to decode all ten shipped impostor atlases rather than nothing, so it is retained and the phase is dropped. That is the measurement working, not the cycle failing: the same discipline is what made Phase 1 worth 56 KiB.
+**Measurement disqualified two of its four remaining phases before either started.** Phase 2's 38,900-byte ZSTD decoder turned out to decode all ten shipped impostor atlases rather than nothing, so it is retained and the phase is dropped. Phase 4's premise was worse: the ratchet counts every emitted chunk including lazy ones, and four of its five items are already dynamically imported, so "gate the import" saves nothing measurable and the phase is worth 4,314 B rather than 17,644. That is the measurement working, not the cycle failing. The same discipline is what made Phase 1 worth 56 KiB, and **Phase 3 is now the cycle's main event** because shader text lives inside chunks that are counted.
 
 ## The one rule this cycle exists to protect
 
@@ -78,21 +78,34 @@ Constraints:
 
 ## Phase 4 - Dev surfaces that ship to production (~3hr)
 
-Five items, **17,644 B** together. Each is reachable only behind a URL param or a dev flag, and the fix is the same for all five: gate the **import**, not the render, so Rollup can drop the chunk. A `const X = await import(...)` inside the `if` is the shape; a static import with an `if` around the JSX is not.
+**Re-scoped 2026-07-26 after measurement. The roadmap's premise for this phase is wrong, and it is wrong in a way that matters for how the ratchet is reasoned about at all.**
 
-| item | trigger | bytes |
-|---|---|---:|
-| `ExtremeTuningPanel` | none, dead import in `App.js`, never rendered | 4,314 |
-| PlaytestNote | `?notes=1` | 4,656 |
-| wolf harness | `?wolf=1` | 4,192 |
-| grassInteractionProof | `?grassInteractionProof` | 2,962 |
-| ScreenshotCapture | F12, imported unconditionally on every production boot | 1,520 |
+The roadmap says these five are fixed by "gating the *import* (not the render), so Rollup can drop the chunk", and totals them at **17,644 B**. Two measurements kill that:
 
-**Take `ExtremeTuningPanel` first.** It is the largest of the five and it is a dead import with no consumer, so it is a deletion rather than a gating change, and it is the only one of the five that cannot regress a working feature.
+**1. The ratchet counts every emitted chunk, lazy ones included.** `tests/refactor-baseline/baseline.spec.ts:129-146` walks `dist/assets` and sums **every** `*.js` file into a family by filename prefix, with no notion of whether a chunk is ever fetched. So gating an import does not remove bytes from the measurement. It **moves** them, typically out of `main` and into the `other` catchall. That is genuinely valuable while `main` is the tightest budget in the program, but it is a different claim from "the bundle gets smaller", and conflating the two is how a phase reports a saving it did not make.
 
-**Read the verifier's objection on PlaytestNote before starting it.** The roadmap records that half the proposed change is unimplementable as written. That objection was not preserved in a validation directory, so it has to be re-derived: work out for yourself what about `?notes=1` resists import-gating, and record the answer here. If it turns out to be genuinely unimplementable, drop it and say so rather than forcing it.
+**2. Four of the five are already dynamically imported.** Measured against current source:
 
-**Acceptance (EARS):** When Phase 4 ships, then a production boot with no URL params shall not download any of the five chunks. When `?notes=1`, `?wolf=1` or `?grassInteractionProof` is present, then the corresponding surface shall still work exactly as it does today. When `ExtremeTuningPanel` is removed, then `grep -rn ExtremeTuningPanel js/` shall return nothing.
+| item | actual shape today | ratchet saving from gating |
+|---|---|---|
+| `ExtremeTuningPanel` | dynamic in `App.js:129`, destructured at `:87`, **and never rendered anywhere** | none, but **deletion** is real |
+| PlaytestNote | dynamic at `App.js:132`, rendered at `App.js:1042` | none, already lazy |
+| wolf harness | dynamic at `js/main.js:3373`, already gated behind `?wolf=1` with an early return | none, already gated |
+| grassInteractionProof | dynamic at `js/main.js:559`, already gated behind the param | none, already gated |
+| ScreenshotCapture | dynamic at `js/main.js:3379`, **ungated, fires on every production boot** | none for bytes; real for cold load |
+
+So the phase's realistic yield is **4,314 B**, from deleting `ExtremeTuningPanel`, plus a cold-load improvement from gating `ScreenshotCapture`. Not 17,644 B.
+
+What to do:
+
+1. **Delete `ExtremeTuningPanel`.** It is dynamically imported, destructured, and has no render site. Genuinely dead, and the only one of the five that cannot regress a working feature.
+2. **Gate `ScreenshotCapture`.** It is an unconditional fetch on every boot for an F12 tool. This buys nothing on the ratchet and belongs to D17's cold-load budget instead, so measure it there with `validation:coldload` rather than claiming it here.
+3. **Leave the other three alone** and record why, so the next person does not re-propose them. They are already gated and already lazy; the only way to take their bytes off the ratchet is to delete them or exclude them from the production build entirely, and both change what is available on the deployed site for playtesting.
+4. **The PlaytestNote verifier objection is now explained.** The roadmap records that "half the proposed change is unimplementable as written" without preserving why. This is why: `?notes=1` is already lazily imported, so there is no import left to gate.
+
+**Surfaced, not decided:** whether the three live dev surfaces should exist on the deployed site at all. Excluding them at build time (a `import.meta.env.DEV` guard that Rollup can statically prove dead) would genuinely remove roughly 11.8 KB, but it removes playtest affordances from production. **That is Matt's call, not an agent's**, and it sits alongside the `freeFly` question below.
+
+**Acceptance (EARS):** When Phase 4 ships, then `grep -rn "ExtremeTuningPanel" js/` shall return nothing. When Phase 4 ships, then `ScreenshotCapture` shall not be fetched on a production boot with no URL params, and the cold-load delta shall be measured rather than asserted. When `?notes=1`, `?wolf=1` or `?grassInteractionProof` is present, then the corresponding surface shall work exactly as it does today. When Phase 4 ships, then this plan shall record that gating an already-lazy import saves zero ratchet bytes, so the claim is not made again.
 
 ## Phase 5 - Measure, and close the ratchet story (~2hr)
 
@@ -134,8 +147,9 @@ Five items, **17,644 B** together. Each is reachable only behind a URL param or 
 - [x] When Phase 2 ships, then the `supercompressionScheme` of every shipped `.ktx2` shall be recorded in this plan. **All 10 are ZSTD; the decoder is retained and the phase is dropped as scoped.**
 - [ ] When Phase 3 ships, then GLSL comments shall be absent from the build and present in source.
 - [ ] When Phase 3 ships, then the golden harness shall show no render change attributable to the shader strip.
-- [ ] When Phase 4 ships, then a production boot with no URL params shall download none of the five dev chunks.
 - [ ] When Phase 4 ships, then `grep -rn "ExtremeTuningPanel" js/` shall return nothing.
+- [ ] When Phase 4 ships, then `ScreenshotCapture` shall not be fetched on a production boot with no URL params, with the cold-load delta measured.
+- [ ] When Phase 4 ships, then this plan shall record that gating an already-lazy import saves zero ratchet bytes.
 - [ ] When the cycle closes, then measured before and after bytes for `main`, `other` and `three` shall be recorded here.
 - [ ] When the cycle closes, then `__sdsCinema.freeFly()` shall still exist, unless Matt has answered the open question.
 

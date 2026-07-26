@@ -128,6 +128,36 @@ The look work, authored against Phase 2's model, on both paths.
 
 **Acceptance (EARS):** When Phase 3 ships, then the water shall carry a perturbed normal whose slope scale is recorded in the plan and is greater than the shipped 0.055. When Phase 3 ships, then no cel quantisation step and no sparkle pass shall remain on either path. While a scene is at noon or at dusk, the water shall read as the same surface in both, differing by light rather than by palette.
 
+### What Phase 3 shipped, and the decisions it was asked to record
+
+Lock-in test [`tests/water-surface-look.spec.js`](../tests/water-surface-look.spec.js), 11 specs. Every one of them was proven red by mutation (12 mutations, listed at the end of this section); the two that survived the first pass were spec weaknesses and were strengthened until they caught.
+
+**Slope scale 0.055 to 0.138. Max tilt 8.26 to 20.01 degrees, RMS 2.86 to 7.12 degrees.** The max is the analytic bound from the wave amplitudes (the three per-axis terms are each bounded by 1 + w2 and are not unit-bounded, which is why `atan(scale)` reads 3.1 and is wrong by a factor of 2.64). The RMS is measured, over a 1200 m by 1200 m grid across 24 seconds; the same grid gives a sampled max of 6.26 degrees before and 15.38 after, since the three rotated terms rarely align. Both numbers are now computable off-GPU: `waterSlopeNormalAt` / `waterSlopeTiltDegrees` are a pure-JS reference of the same constant set, added for exactly this reason. The wavelengths were deliberately not shortened. The fastest term is 121 m, and an analytic normal with no mip chain would alias short waves into shimmer everywhere past the first fifty metres.
+
+**Raising the amplitude alone would have changed almost nothing, and that is the more important finding.** Both consumers of the normal were specular lobes, so a wave face turned away from the sun was exactly as bright as one turned into it: the slope could add gloss and never form. Phase 3 adds `WATER_WAVE_SHADE_GAIN` (0.30), a signed `dot(N, sun) - dot(up, sun)` carried in the sun's own colour, on both paths. The lobe weighting is reversed with it: `WATER_GLINT_GAIN_DEFAULTS` goes from broad 0.70 / ripple 0.22 to broad 0.16 / ripple 0.60, and the presets from 0.32 / 0.42 to 0.16 / 0.60 (dusk) and 0.16 / 0.66 (golden-hour). The 0.22 round-trip (multiply the ripple lobe by 0.22, then divide the gain by 0.22) is gone, so the preset numbers now mean what they read as.
+
+**Cel quantisation and sparkle, both paths.** The twin's `step(0.15, ripple) * 0.5 + step(0.55, ripple) * 0.5` and its `step(0.85, spec) * step(0.55, sparkleMask)` are gone, and so is the third `step()` on the foam edge; the spec asserts no bare `step(` survives in that file or in the generated GLSL. The node path's equivalent was `smoothstep(0.56, 0.66, ...)`, a 0.1-wide window on a [0, 1] noise field that parked 90% of the surface on one of two rails; the ripple is a continuous signed field now, and the spec fails any smoothstep on that path whose window is narrower than 0.15 of its range.
+
+**Un-flooring `depthT`: taken, and the ramp re-ranged so that it means something.** The floor was compensating for a ramp that asked for water three to ten times deeper than any scene has: `smoothstep(0.2, max(shorelineFalloff * 0.45, 0.25), depth)` derived a DEPTH range from a HORIZONTAL falloff distance, giving 18 m on Rolling Hills, 31.5 m on Open Country and 13.5 m on Newsheepdogland against measured seabeds of 12 m, 10 m and 3 m. `WATER_DEPTH_FROM_HEIGHTFIELD` is now 0.25 m to 6.0 m of seabed. At 6.0 the two islands reach the deep colour a short way offshore and spend the whole ramp where it is visible, and Newsheepdogland's 3 m shelf resolves to 0.467, within two hundredths of the 0.45 floor that scene was hand-tuned to in Cycle 90 - so re-ranging preserves its tone rather than re-grading it as a side effect. `minDepthT` survives, scoped to the heightfield-LESS branch, which is the one it was authored for (distance-from-a-circle reads as a turquoise disc drawn around the island). No shipped water scene takes that branch, so `js/boot/initWorld.js`'s coastline override was deleted as dead config.
+
+**`:105`'s dead glint suppression: retired, not inherited.** Un-flooring `depthT` would have made `smoothstep(0.08, 0.55, depthT)` live for the first time, and those constants were authored blind against a depth model that no longer exists. Against the new ramp they take the glint to exactly zero across the whole shallow band. Replaced with `WATER_GLINT_SHORE_FADE` (floor 0.35, fading in over depthT 0.0 to 0.30), authored against the ramp that ships with pixels in front of it: the shore keeps a third of its glint and the fade is spent inside the shallow band rather than halfway to the drop-off. It is a real term now instead of a constant 1.0.
+
+**`sunSpecularIntensity`: wired, not deleted.** Both carryovers had one cause. `js/water/AnimeWater.js` forwarded the WebGL twin's placeholder uniforms into the node factory's context, and the factory resolves `context.X ?? bootPacket.X`, so the twin's defaults shadowed the boot packet. The context no longer carries `sunColor` or `sunSpecularIntensity`. The preset's 0.48 is live in production (confirmed on-device in the after-capture's `nodeUniformValues`), which is per-preset control over the exact term Phase 3 is rebalancing; deleting it would have thrown that away for nothing.
+
+**The white birth sun: fixed, and the spec migrated.** The material now takes the boot packet's `skyFog.sunColor` rather than `THREE.Color(1, 1, 1)`. `tests/webgpu-water-material-adapter.spec.js` pinned the white value at `:142` and was updated deliberately: it asserts the birth sun is NOT white, and asserts the two context keys are absent, which is the invariant rather than a value.
+
+**The palette: `#6fd7d2` / `#103662` to `#8fd0c0` / `#436b7d`, foam unchanged.** Authored against the full chain (colorScale 0.58 through ACES at exposure 1.0) rather than picked in isolation: shallow resolves on-screen to `#82b1a6` and deep to `#214c5f`, a sage-teal shelf falling to a muted slate, against the retired `#6bb6b3` to `#00163e` (and `#002477` at the shipped floor with `colorTint` still in the chain). Foam stays `#eaf6ff`: it sits outside the colorScale chain, reads as a soft `#c7cccf` once tone mapped, and a near-white surf is correct against a desaturated sea.
+
+**Three changes the phase made that the plan did not ask for, each with a reason.**
+
+- **A light response, `WATER_SUN_LEVEL`.** Both paths are unlit, so the sea held noon brightness under a dusk that had taken the terrain nearly to black. The before-capture shows it and the pastoral palette makes it worse rather than better, because a bright teal draws the eye where a dark navy hid. Driven off `sunDirection.y` (0.94 at noon, 0.15 at dusk on the capture poses), applied after the foam mix so foam keeps its documented exemption from the colour chain and stops glowing white through Newsheepdogland's night. This is what makes the noon-versus-dusk acceptance line true in the frame rather than only in the palette.
+- **The slow swell became depth.** It was `vec3(0.02, 0.08, 0.10)` added on top of the ramp: a fourth colour spelled outside the palette that Phase 2's single-declaration guard cannot see, and one that could only ever add blue. It is a signed nudge of the depth the ramp reads now (`WATER_SWELL_DEPTH_SWING` 0.12), which is the truer model and lets the swell darken as well as lighten.
+- **`WATER_FOAM_INTERFACE_BAND` narrowed from 0.18-1.15 to 0.08-0.70,** and `foamScale` from 0.62 / 0.64 to 0.45 / 0.47. Once the sea stopped being navy the surf was the brightest thing in frame after the sun. The branch is untouched (hard stop 3); only the band and the scale moved.
+
+**`webgpuWaterGlintMode` renamed `masked-flat-normal-broad-sun-path-plus-ripple-v4` to `slope-normal-lobe-lead-plus-broad-sun-path-wash-v5`,** because the mode reversed under it. That key is read by `js/main.js`'s visual probe and asserted by the adapter spec, so it is a consumer migration and both moved with it. Three additive `userData` keys were added for the after-capture to record: `webgpuWaterWaveShadeGain`, `webgpuWaterGlintShoreFadeFloor`, `webgpuWaterDepthFullMetres`.
+
+**Mutation proof.** Twelve reverts, each run against the spec that claims to guard it, each confirmed red and then reverted: slope scale to 0.055; wave-shade gain to 0; glint gains to broad-leads; depth ramp `full` to 18; the heightfield foam branch removed from the twin; the cel ripple band back; the cel sparkle pass back; the quantising window back on the node path; the depth floor back over both branches; the dead glint suppression back; the hardcoded swell colour back; the cobalt palette back.
+
 ## Phase 4 - Fog that tracks the sky (~3hr)
 
 The water has its own horizon seam, and it is the same defect class Cycle 112 Phase 6 fixed for the terrain.
@@ -186,6 +216,29 @@ All five touches, on the corrected line numbers. Lock-in test [`tests/water-cloc
 
 **Acceptance (EARS):** When Phase 6 ships, then all three water scenes shall have been captured after the rewrite and compared against the before set. When the comparison runs, then it shall report a per-frame palette histogram. When `shore-out` is captured on Rolling Hills, then the frame shall contain shoreline.
 
+### What Phase 6 shipped
+
+24 frames in `cycle118-validation/water-after/` plus `water-report.json`, all on `engine=webgpu-production` (`assertWebGpuEngaged` untouched, headed installed Chrome). Lock-in test [`tests/water-look-poses.spec.js`](../tests/water-look-poses.spec.js), 5 specs, all proven red by mutation.
+
+**The `shore-out` pitch, fixed before anything was captured, and the poses moved out of the page to fix it.** `deriveShorelineInPage` now returns the geometry and the ground height under each camera; `buildWaterPoses` is a pure exported function that builds the four poses from it, and `shorelineIsInFrame` answers the acceptance question off-browser. The framing maths was inside `page.evaluate` before, where nothing could see it, and it was wrong in a way no browser run could report: both frames rendered perfectly, they just did not contain their subject.
+
+The solve aims the view axis at the BISECTOR of the shoreline and the horizon, so both land the same angular distance from frame centre and the composition degrades gracefully on any coast, rather than fixing the target at 150 m and hoping. Measured on Rolling Hills: camera 14.72 m up, 12 m inland, shoreline 50.9 degrees below horizontal. Old pitch 5.4 degrees put the shoreline 45.5 degrees below the axis against a 37.5-degree half-frame, which is why two of that scene's four frames were duplicates of `open-water`. New pitch 25.5 degrees puts the shoreline 25.5 below and the horizon 25.5 above, both comfortably inside. Newsheepdogland, the soft case, solves to 11.9 degrees. `MIN_PITCH_DEG` / `MAX_PITCH_DEG` only bite outside that range and neither is reached on any shipped coast.
+
+**The comparison is a palette histogram, not SSIM.** 12 hue buckets by 2 saturation bands on frames resized to 400x225, with a headline `cobaltFraction`: the share of pixels in the saturated blue wedge (hue 200-265, saturation at or above 0.5) that the retired palette occupied. SSIM answers "are these two frames structurally the same", which an animated surface fails against itself by ripple phase alone; the histogram is blind to phase and reads the thing under test. A spec pins both properties: `#002477` scores 1.0 and `#214c5f` scores 0.0, and two frames with their light and dark halves swapped score identically.
+
+The whole-frame number is diluted by sky, because the dusk sky is itself a saturated blue inside the same wedge, so the report also scores the bottom 45% of each frame on its own. That band is water in `shore-out`, `shore-along` and `open-water`, and land in `water-wide`.
+
+| | whole frame | water band |
+|---|---|---|
+| mean cobalt fraction, before | 51.0% | 61.5% |
+| mean cobalt fraction, after | 16.1% | **2.4%** |
+
+Per scene, water band: Rolling Hills 77.3% to 2.0%, Open Country 66.1% to 5.0%, Newsheepdogland 41.3% to 0.0%. The residual whole-frame 16.1% is almost entirely dusk sky; the largest single water-band residual is `open-country__dusk__open-water` at 22.9%, which is the fogged far water taking the dusk sky's own colour.
+
+**The `userData.webgpuWater*` contract held.** The reader filters scalar keys on that prefix; Phase 3 changed one value and added three keys and renamed no key at all, so the after-report records 18 values where the before-report had 13. `webgpuWaterFogStrength` is absent, correctly, since Phase 4 deleted it.
+
+**One tool change beyond the plan:** the default `--out` moved from `water-before` to `water-after` and the report file from `water-before-report.json` to `water-report.json`, so a bare `npm run validation:water` can no longer overwrite Phase 1's frozen reference. `--compare` and `--compare-only` were added, and `main()` is now gated on being the entry module so a spec can import `buildWaterPoses` without launching Chrome.
+
 ## Frozen files
 
 - **`js/water/AnimeWater.js` and `js/water/webgpuAnimeWaterNodeMaterial.js`** are the rewrite target, authorised by D-W and D30.
@@ -205,6 +258,14 @@ All five touches, on the corrected line numbers. Lock-in test [`tests/water-cloc
 - **`tools/konveyor-production-water-proof.mjs:53`**, which asserts a material name retired in Cycle 87. A cycle-pinned historical probe; leave it.
 - **The bake-time heightmap double-multiply** (`scripts/bake-heightmap.mjs:202` writes metres, `Heightfield.sample` multiplies by `peakHeight` again). Found during Cycle 117 reconnaissance, load-bearing for the current look, needs its own cycle.
 
+## Found in Phase 3 and Phase 6 and deliberately NOT fixed
+
+- **Foam is keyed on metres of seabed, not on horizontal distance to the interface.** So its width on screen is set by the bathymetry: on Rolling Hills' cliff coast it reads as a line, and on Newsheepdogland's 3 m shelf it covers most of the visible sea. The before-capture shows that scene's near shore as a single white field, so this predates the rewrite; cobalt hid it and a pastoral sea does not. Phase 3 narrowed the band (`WATER_FOAM_INTERFACE_BAND`, 0.18-1.15 to 0.08-0.70) and pulled `foamScale` down, which stops the widest case swallowing the water, but the shape is unchanged. Keying on horizontal distance to the interface is the real fix and it needs a pass with Newsheepdogland's beach in front of it, because that scene is where it both matters most and can most easily be broken (hard stop 3).
+- **Vertical streaking in the mid-water at grazing angles.** Visible on `open-country__*__shore-out` as light vertical strokes and on `rolling-hills__*__shore-along` as a fan converging at the vanishing point. Byte-for-byte the same shape in the before-capture, so not a Phase 3 regression. It reads like the heightfield `DataTexture` (R32F, `LinearFilter`, `generateMipmaps = false`) being sampled per fragment across a 4,000 m plane, where a near-horizontal view puts many texels inside one pixel with no mip chain to average them. Diagnosing it properly means a texture-sampling pass, not a colour one.
+- **The WebGL twin's raw-output tone mismatch.** Unchanged from Phase 4's recorded decision: `:201` writes `gl_FragColor` with no tonemapping or colorspace chunk while `fog: true` blends toward the same pre-tone-map `scene.fog.color`. Phase 3 touched that shader heavily and still did not fix it, for Phase 4's reason plus one more: correction A's rider flags `paintedHorizon.js`'s inverse-tone-map justification as empirically compensating for something not yet identified, and that is still not identified.
+- **`js/water/AnimeWater.js` is now a misnomer.** What the name describes is exactly what Phase 3 retired. The file name is load-bearing across `js/boot/initWorld.js`, `js/diagnostics/webgpuDiagnostic.js`, the validation tools and several specs, so renaming it is its own mechanical pass. The file header now says so.
+- **`js/boot/initWorld.js` still hard-codes the water plane size and segment count** as `isMobile ? 3200 : 64`-style ternaries at the call site rather than reading them from a scene def. Untouched: hard stop 5 covers the plane size, and nothing in this cycle needed it.
+
 ## Success criteria (cycle close)
 
 - [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
@@ -213,13 +274,39 @@ All five touches, on the corrected line numbers. Lock-in test [`tests/water-cloc
 - [ ] When Phase 2 ships, then every consumer shall import the model's single palette, in one stated colour space, pinned by a spec that fails on any re-declaration in any spelling.
 - [ ] When Phase 2 ships, then `grep -rn "colorTint" js/water/` shall return nothing and neither water block in `skyFogPresetTuning.js` shall carry the key.
 - [ ] When Phase 2 ships, then the noise strategy taken shall be recorded here.
-- [ ] When Phase 3 ships, then the slope scale shall exceed 0.055 and the resulting **max and RMS tilt in degrees** shall be recorded here, and no cel quantisation or sparkle pass shall remain on either path.
+- [x] When Phase 3 ships, then the slope scale shall exceed 0.055 and the resulting **max and RMS tilt in degrees** shall be recorded here, and no cel quantisation or sparkle pass shall remain on either path. **0.138; max 20.01 degrees (analytic bound) / 15.38 sampled, RMS 7.12.**
 - [ ] When Phase 4 ships, then the plan shall record whether the WebGL twin's raw-fog mismatch was fixed alongside production or deliberately left.
 - [ ] When Phase 4 ships, then `:113`'s `fogStrength` term shall be gone and `:105`'s dead glint suppression shall be given a deliberate decision rather than reactivated as a side effect.
 - [ ] When the sun moves, then the water's horizon shall move with the sky's.
 - [ ] When the sim is paused, then the water surface shall not advance.
-- [ ] When Phase 6 ships, then all three water scenes shall have been captured after and compared by palette histogram.
-- [ ] When the cycle closes, then `bundle-sizes.json` shall be unmodified.
+- [x] When Phase 6 ships, then all three water scenes shall have been captured after and compared by palette histogram. **24 frames, all `webgpu-production`; water-band cobalt 61.5% to 2.4%.**
+- [x] When the cycle closes, then `bundle-sizes.json` shall be unmodified. **Unmodified. `main` 679,508 to 679,444 B (SHRANK 64 B, from deleting `initWorld`'s dead `minDepthT` config), 1,516 B under the chunk budget. `other` 653,370 to 656,578 B, 52,030 B of headroom. `webgpuDiagnostic` byte-identical at 86,192 B, 848 B of headroom. Every other family unchanged.**
+
+## Scene goldens
+
+Re-baselined after `npm run validation:screenshots -- --diff`, and the delta was attributed by block before that happened rather than after.
+
+| cell | SSIM against the pinned golden |
+|---|---:|
+| `field__sun085` | 0.9988 |
+| `field__sun05` | 0.9964 |
+| `rolling-hills__sun085` | 0.9688 |
+| `rolling-hills__sun05` | 0.9465 |
+| `open-country__sun085` | 0.9843 |
+| `open-country__sun05` | 0.9720 |
+
+**Home Field has no water and it did not move**, which is the control this attribution rests on. For the other four cells, mean absolute luma difference was measured separately over the pixels the golden classifies as sea and over everything else:
+
+| cell | sea as % of frame | mean abs dL, sea | mean abs dL, not sea |
+|---|---:|---:|---:|
+| `field__sun085` | 0.0% | - | 0.56 |
+| `field__sun05` | 0.0% | - | 1.73 |
+| `rolling-hills__sun085` | 15.4% | 16.81 | 1.11 |
+| `rolling-hills__sun05` | 15.4% | 22.25 | 1.22 |
+| `open-country__sun085` | 3.3% | 14.75 | 2.34 |
+| `open-country__sun05` | 3.3% | 25.30 | 2.95 |
+
+Every non-sea figure sits inside the range the two water-free Home Field cells set on their own, so the whole delta is the water and none of it is terrain, grass, foliage or flock. Attribution by block was necessary rather than pedantic: the harness replaces `Math.random` globally with one seeded stream and `js/OptimizedSheep.js` draws from it 32 times for the flock layout, so a moved flock is not evidence about a render change (recorded in [`BACKLOG.md`](BACKLOG.md)). In this run the flock did not move; the max per-pixel non-sea difference of 150-200 is the same sub-pixel grass and sheep jitter the water-free cells show.
 
 ## References
 

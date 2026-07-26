@@ -38,10 +38,27 @@ export const WATER_COLOR_SPACE = 'linear-srgb';
  * tests/water-surface-model.spec.js fails on any file that re-declares them in
  * any spelling (hex, 0x byte array, decimal byte array, sRGB float, linear
  * float).
+ *
+ * CYCLE 118 PHASE 3 - the pastoral palette. Was #6fd7d2 / #103662 / #eaf6ff, a
+ * saturated turquoise running to a navy. Through the preset colorScale of 0.58
+ * and the ACES curve those landed on-screen at #6bb6b3 near the shore and
+ * #00163e in deep water, and with the retired `colorTint` still in the chain the
+ * deep end was #002477: the cobalt D-W was called against.
+ *
+ * The replacement is authored against the same chain rather than picked in
+ * isolation - shallow #8fd0c0 resolves to #82b1a6 on-screen and deep #436b7d to
+ * #214c5f, a sage-teal shelf falling to a muted slate. Both sit in the same
+ * desaturated register as the grass and the dusk sky they meet, which is what
+ * D9's stylised-painterly target asks for and what a saturated blue could not
+ * do at any depth.
+ *
+ * Foam is unchanged. It sits outside the colorScale chain (only foamScale
+ * touches it), it reads as a soft #c7cccf rather than a hard white once tone
+ * mapped, and a near-white foam is correct against a desaturated sea.
  */
 export const WATER_PALETTE_SRGB_BYTES = Object.freeze({
-    shallow: Object.freeze([0x6f, 0xd7, 0xd2]),
-    deep: Object.freeze([0x10, 0x36, 0x62]),
+    shallow: Object.freeze([0x8f, 0xd0, 0xc0]),
+    deep: Object.freeze([0x43, 0x6b, 0x7d]),
     foam: Object.freeze([0xea, 0xf6, 0xff]),
 });
 
