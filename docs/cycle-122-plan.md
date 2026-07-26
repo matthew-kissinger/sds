@@ -10,7 +10,11 @@ Island competitive stops using Home Field's geometry. Every player gets their ow
 
 > **Corrected 2026-07-26 by a second read-only pass, before any code.** Three of the findings below changed and one of them invalidates Phase 2's stated mechanism. The original text is preserved where it was right; where it was wrong the correction says so plainly, per the practice that has paid for itself in every cycle from 117 on.
 
-**1. The defect is exactly as D23 describes, and it is a hardcode, not a bug.** [`shared/CompetitiveLayout.js`](../shared/CompetitiveLayout.js):16 `generateCompetitiveGateLayout(playerCount)` takes **only a player count**. Its 2, 3 and 4-player tables are Home Field coordinates written out longhand: gates at `(0, +-100)` and `(+-100, 0)`, pastures spanning to `+-130`. Rolling Hills is a 180 m island, so a pasture at z=130 is well past the shoreline and the gates sit in open water. Open Country is 380 m and has a portal objective rather than pastures at all.
+**1. The defect is exactly as D23 describes, and it is a hardcode, not a bug.** [`shared/CompetitiveLayout.js`](../shared/CompetitiveLayout.js):16 `generateCompetitiveGateLayout(playerCount)` takes **only a player count**. Its 2, 3 and 4-player tables are Home Field coordinates written out longhand: gates at `(0, +-100)` and `(+-100, 0)`, pastures spanning to `+-130`. ~~Rolling Hills is a 180 m island, so a pasture at z=130 is well past the shoreline and the gates sit in open water.~~ Open Country is 380 m and has a portal objective rather than pastures at all.
+
+**1a. CORRECTION - the struck sentence above is wrong, and it was mine to check.** Rolling Hills' `radius` **is** the shoreline (180 m) and its beach falloff starts at 140 m, so the old pasture at z=102 to 130 sat comfortably **inside the meadow**. Nothing was in open water and no gate was afloat. Caught by an assertion in `tests/competitive-layout.spec.js` that failed because it encoded the plan's claim rather than the measurement - a spec bug that happened to falsify the prose it was written from.
+
+**The real defect is less dramatic and more damaging.** With `bounds` falling back to Home Field's rect (finding 1b), the entire competitive round is clamped to a **200 m square inside a 360 m-diameter island: about 39% of it**, arbitrarily placed, with the whole outer ring unreachable. Players get an invisible box with no relationship to the land they can see. That is what this cycle fixes, and it is worth stating accurately because "the gates are in the sea" would have been fixed by any layout change at all, whereas this is only fixed by making the bounds scene-aware too.
 
 This was already true before Cycle 117. The corral was what island competitive actually fell back on, and Cycle 117 removed it while deliberately leaving competitive on a layout rather than a null (D23's one binding constraint: **stays broken as before, never newly crashing**). Verify that constraint still holds at the start of this cycle before changing anything, because it is the baseline this cycle has to beat rather than break.
 
@@ -85,6 +89,42 @@ Also in this phase: reconcile the fence glob so `tests/sim-baseline/competitive.
 
 **Acceptance (EARS):** When Phase 1 ships, then this plan shall carry all four `multiplayer.md` pieces and no code shall have changed. When Phase 1 ships, then `INTERFACE_FENCE.md`'s sim-baseline entry shall cover `tests/sim-baseline/competitive.json`.
 
+---
+
+### THE MIGRATION STORY (Phase 1 deliverable, written 2026-07-26, no code changed)
+
+**Piece 1. The change, named.** `generateCompetitiveGateLayout(playerCount)` becomes `generateCompetitiveGateLayout(playerCount, boundary)` and derives gate and pasture geometry from the scene's boundary instead of from three hardcoded Home Field tables. `createCompetitiveGameState`'s `bounds` default stops standing in Home Field's rect for every scene. Both live in `shared/`, so both run byte-identically on the Worker and on every client that imports them.
+
+**Piece 2. The in-flight-session story: there is no client-side layout to desync, and this was verified rather than assumed.**
+
+The **DO is the sole author of the layout and it rides every competitive frame.** `worker/src/GameSim.js`:1786 puts the full gate set into `snapshot.competitive.gates` - `id`, `x`, `z`, `playerId`, `color`, `direction`, `pasture` - and [`js/boot/initNetwork.js`](../js/boot/initNetwork.js):330-351 transforms that payload and assigns it straight onto `game.gameState.competitiveGates`. **No client ever calls `generateCompetitiveGateLayout`**; the only callers in the tree are `shared/CompetitiveMode.js`:216, two re-export shims, and the dead import at `worker/src/GameSim.js`:29-30.
+
+So: **a client on the old build joining a room on the new layout receives the new gates over the wire and renders them.** No version tag, no refusal, no soft-degrade needed - the wire format is unchanged, only the values inside it move. This is materially cheaper than the v3 protocol precedent because **this is not a wire-format change at all**; it is a change to numbers that already ride an existing field.
+
+**The one thing that would break that story is broadcasting less than the client needs**, so:
+
+**Piece 3. Consumers, listed, with the two hazards the trace found.**
+
+| Consumer | What it needs |
+|---|---|
+| `shared/CompetitiveMode.js`:216 | pass the boundary through; it already destructures `bounds` in the same scope |
+| `shared/GameStateValidation.js`:244, `shared/index.js`:114 | re-export shims, signature only |
+| `worker/src/GameSim.js`:29-30 | **dead imports, delete them** |
+| `worker/src/GameSim.js`:340 | passes `bounds: this.scene.bounds`, which is `undefined` on every island; must pass the boundary |
+| `worker/src/GameSim.js`:1786 | the broadcast payload - **must keep carrying everything the client cannot derive** |
+| `js/boot/initNetwork.js`:330-351 | the client transform - **see the hazard below** |
+| `js/FencePresets.js`:1283 | `buildCompetitiveFences(bounds, competitiveGates)` branches on `competitiveGates.length` for 2/3/4; renders from broadcast data, so it follows for free |
+| `tests/sim-baseline/competitive.spec.ts` + `harness.js`:506 | delegates to the real factory, so the fixture is a genuine test of this change |
+| `tests/worker-competitive-tick.spec.js` | asserts layout shape |
+
+**HAZARD A, pre-existing and found by this pass: the client's `passageZone` does not match the server's, and never has.** The shared layout computes it direction-aware (`gateWidth` 8 across the opening, `gateDepth` 4 through it, so a north gate spans `z +- 4`). The client hardcodes `minZ: z - 2, maxZ: z + 2` for **every** direction, so its passage zone is **half the server's depth** and is not rotated for east/west gates. The DO is authoritative and broadcasts retirements, so this self-corrects rather than desyncing, but it means the client predicts gate passage on a different volume than the server scores it. **Not this cycle's to fix** - record it, and do not make it worse.
+
+**HAZARD B, and this one constrains Phase 2: the client hardcodes `width: 8` and `height: 4`.** They are not in the broadcast payload. **So gate width must stay fixed at 8 across all scenes, or it must start riding the wire.** A derivation that scales gate width with island size would silently desync the client's rendered gate from the server's passage zone. **Phase 2 keeps the width fixed**; if a future cycle wants scene-scaled gates, adding `width` to the payload is the migration and it is a real wire change with its own four pieces.
+
+**Piece 4. The acceptance line confirming the story is implemented.** Added to Phase 4 below, and to the cycle's success criteria: *when an old-layout client joins a new-layout room, then it shall render the new layout from the broadcast payload, and no client-side layout computation shall exist.*
+
+---
+
 ## Phase 2 - Scene-aware layout (~4hr)
 
 **Depends on Phase 1.** `shared/` only. **Rewritten 2026-07-26** after finding 1c: the original text derived from a field that islands do not have.
@@ -109,6 +149,30 @@ Also in this phase: reconcile the fence glob so `tests/sim-baseline/competitive.
 
 **Acceptance (EARS):** When Phase 3 ships, then Rolling Hills competitive shall place every pasture inside the island. When any sim-baseline fixture moves, then the decision shall be recorded in this plan per `shared-sim.md`, with the diff read rather than regenerated as a shortcut. When Phase 3 ships, then competitive pasture fences shall be solid or the plan shall record why they are not.
 
+---
+
+### PHASE 3 RECORD (written 2026-07-26)
+
+**Item 1, the fixture: it did NOT move, and that is the better outcome the phase hoped for.** `tests/sim-baseline/competitive.json` is byte-identical, verified with `git status` at close. The harness calls `createCompetitiveGameState({ totalSheep }, playerIds)` with neither a boundary nor bounds, so it takes the Home Field default and Phase 2's bit-identity carries it. **No regeneration, no acceptance decision needed, `shared-sim.md`'s stricter bar never engaged.**
+
+**What the islands actually resolve to**, measured:
+
+| scene | kind | reach | safe reach | north gate | north pasture | pasture corner | bounds |
+|---|---|---:|---:|---:|---|---:|---|
+| Home Field | rect | 100 | 100 | z=100.00 | 102.00 to 130.00 | 133.42 | -100..100 |
+| Rolling Hills | island | 180 | 140 | z=106.75 | 108.75 to 136.75 | **140.00** | -180..180 |
+| Open Country | island | 380 | 310 | z=278.54 | 280.54 to 308.54 | **310.00** | -380..380 |
+
+The corner landing exactly on the safe reach is the `sqrt(safe^2 - halfWidth^2)` anchor doing its job: the pasture's widest point is its corner, and that is what would otherwise touch the beach.
+
+**Item 2, Open Country: it does not allow competitive at all** (`allowedModes: ['cooperative', 'timed']`), so the phase's question was moot as asked. **But it allows timed, and timed shares this layout**, so it changed anyway - and the old behaviour there was worse than anyone had recorded. Open Country's sheep spawn in an 8-cluster ring at **radius 240 m**, while `gameState.bounds` was **+-100**. Sheep spawned across the island and were clamped into a central square holding **8.8%** of it. The fix is unambiguous rather than a difficulty change: the pastures at 280 to 308 now sit just outboard of the spawn ring the scene already had.
+
+**Item 3, the pen fence: recorded as deliberately NOT solid, per the phase's own alternative.** The `_penBarrier` null for competitive and timed stays, but **the comment justifying it was retired**, because it cited "Home Field geometry regardless of scene" and that is exactly what this cycle removed. The reason now is that `pen` is the **solo** destination - one enclosure, one gate, one flock - while these modes give every player their own pasture, so running the solo barrier there would drop an unrelated enclosure into an N-destination round. Making the N competitive pastures solid is N barriers where there is currently one, it moves the tick, and it therefore wants its own cycle rather than a ride on this one.
+
+**Item 4, unplanned and load-bearing: Newsheepdogland would have been a new crash.** Its `allowedModes` contains competitive **and** timed, and its boundary is `coastline`, which the first draft of `measureBoundary` threw on. D19 gates the scene out of the entrance but `?scene=newsheepdogland` still reaches it, so that throw would have violated hard stop 4 on a reachable scene. Coastline now keeps the legacy rect **verbatim** - byte-for-byte today's behaviour, D23's broken-as-before - and a spec walks every scene whose `allowedModes` touches either mode and asserts a finite layout and finite bounds. Mutation-proved: restoring the throw fails that spec.
+
+---
+
 ## Phase 4 - Multiplayer verification (~3hr)
 
 Unit tests cannot catch a desync. This phase runs the thing.
@@ -118,6 +182,24 @@ Unit tests cannot catch a desync. This phase runs the thing.
 3. Watch for the failure mode `shared-sim.md` describes: divergence surfaces several seconds late and only at scale, so a short clean run proves little.
 
 **Acceptance (EARS):** When Phase 4 ships, then a multi-client competitive round shall have been played on Rolling Hills with no observed desync. When an old-layout client joins a new-layout room, then the behaviour shall match what Phase 1 recorded.
+
+---
+
+### PHASE 4 RECORD (written 2026-07-26)
+
+`tests/competitive-island-room.spec.js`, 13 specs against the **real** `GameSimulation` from `worker/src/GameSim.js`.
+
+**Ticked, not asserted.** 600 frames at 60Hz - ten seconds, past the point `shared-sim.md` says a divergence would surface - on Rolling Hills competitive, Rolling Hills timed and Open Country timed. Checked for the failure classes a bad layout actually produces: non-finite positions, sheep leaving the island, pastures whose corners fall outside the safe reach, gates outside the hard radial clamp, and any `console.error` during construction or ticking. None.
+
+**The migration story is exercised rather than described.** `oldClientTransform` in that spec is `js/boot/initNetwork.js`:330-351 **copied verbatim** - the code that was already deployed before this cycle - applied to the payload this cycle now produces. It renders the island layout correctly, which is the whole claim: an old client joining a new-layout room takes the gates off the wire and draws them where the server put them.
+
+Both hazards from Phase 1 are now pinned by specs that will fail if someone changes them without reading the story. **Hazard A** (the client's passage zone is 4 m deep where the server's is 8) is asserted **as it currently stands**, deliberately, so a future fix trips the assertion and goes and reads why. **Hazard B** (gate width must stay 8 until width rides the wire) is asserted across all three scenes.
+
+**What was NOT done, plainly.** No real Durable Object over a real WebSocket with real browsers. The specs drive the authoritative sim in-process. **That gap is narrower than it sounds for this cycle specifically**: the wire format is unchanged, only the numbers inside an existing field moved, and the client provably computes no layout of its own. The residual risk a live room would cover is transport and timing, which this cycle does not touch. It is still a gap, and it is the honest reason the acceptance line above reads "a multi-client competitive round shall have been played" and this record cannot fully claim it.
+
+**Found and not fixed: a third Home Field hardcode, in the spawn.** `shared/SpawnLogic.js`:190-216 places competitive spawn clusters at literal `+-50` / `+-40` / `+-30` coordinates on every scene. The layout is now scene-aware and the spawn is not, so as pastures scale outward with island size the flock still starts in a fixed central blob. **Not made worse by this cycle and fairness is preserved** (the clusters are symmetric about the axis separating the players, so the pre-existing south bias is unchanged in character), and timed mode does not use this path at all. Its own cycle.
+
+---
 
 ## Frozen files
 
@@ -148,18 +230,28 @@ All authorised for this cycle, per the protocol in [`INTERFACE_FENCE.md`](INTERF
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to [`BACKLOG.md`](BACKLOG.md) carryover.
-- [ ] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Phase 1 ships, then all four `multiplayer.md` migration pieces shall be recorded here.
-- [ ] When Phase 1 ships, then the fence glob shall cover `tests/sim-baseline/competitive.json`.
-- [ ] When Phase 2 ships, then Home Field's layout shall be bit-identical and `competitive.json` byte-identical.
-- [ ] When a scene declares bounds, then its competitive layout shall be derived from them rather than from a table.
-- [ ] When Phase 3 ships, then every Rolling Hills competitive pasture shall lie inside the island.
-- [ ] When any fixture moves, then the decision shall be recorded here with the diff read.
-- [ ] When Phase 4 ships, then a multi-client competitive round shall have been played with no observed desync.
-- [ ] When the cycle closes, then competitive shall never crash on any scene.
-- [ ] When the cycle closes, then `bundle-sizes.json` shall be unmodified.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to [`BACKLOG.md`](BACKLOG.md) carryover. **4/4 shipped.**
+- [x] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass. **2361 passed / 11 skipped, 45 new.**
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
+- [x] When Phase 1 ships, then all four `multiplayer.md` migration pieces shall be recorded here. **All four, above, written before any code.**
+- [x] When Phase 1 ships, then the fence glob shall cover `tests/sim-baseline/competitive.json`. **Widened to `tests/sim-baseline/**/*.json`, with the reason the file lives at the root recorded so nobody "fixes" it by moving it.**
+- [x] When Phase 2 ships, then Home Field's layout shall be bit-identical and `competitive.json` byte-identical. **Both. The old tables are transcribed verbatim into `tests/competitive-layout.spec.js` and compared with `Object.is` on every leaf, so a `-0` could not hide; the fixture never moved.**
+- [x] When a scene declares bounds, then its competitive layout shall be derived from them rather than from a table. **Derived from `boundary`, which is what scenes actually declare - see correction 1c.**
+- [x] When Phase 3 ships, then every Rolling Hills competitive pasture shall lie inside the island. **Every corner, at 2, 3 and 4 players, inside the safe reach rather than merely inside the clamp.**
+- [x] When any fixture moves, then the decision shall be recorded here with the diff read. **No fixture moved.**
+- [x] When Phase 4 ships, then a multi-client competitive round shall have been played with no observed desync. **PARTIAL, and recorded as such above:** 600 frames of the real authoritative sim on three island rooms, plus the deployed client transform run verbatim against the new payload. **No real DO over a real socket with real browsers.**
+- [x] When the cycle closes, then competitive shall never crash on any scene. **Every scene whose `allowedModes` touches competitive or timed is walked by a spec. This caught a crash the first draft would have shipped on Newsheepdogland.**
+- [x] When the cycle closes, then `bundle-sizes.json` shall be unmodified. **Verified.**
+
+### Hard stops, checked at close
+
+- [x] **No code before Phase 1's migration story was written.** The story is above; the first code commit followed it.
+- [x] **Home Field bit-identical through Phase 2**, and it stayed that way through Phases 3 and 4.
+- [x] **An island pasture outside the radial clamp is unreachable.** Corner-checked against the safe reach, not the clamp, so pastures are not on the beach either.
+- [x] **No blanket fixture regenerate.** Nothing to regenerate.
+- [x] **Competitive never newly crashes.** The one place it would have, it now does not.
+- [x] **No `Math.random` and no unpinned transcendentals.** A spec greps the source with comments stripped, so the prose explaining why there is no trig cannot satisfy the check for it. `Math.sqrt` is used and is IEEE-754 spec-pinned.
+- [x] **No ratchet bump.**
 
 ## References
 

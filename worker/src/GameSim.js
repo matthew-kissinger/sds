@@ -26,12 +26,11 @@ import {
     createGameState,
     createBoidConfig,
     createMovementConfig,
-    generateCompetitiveGateLayout,
-    assignGatesToPlayers,
     updateCompetitiveSheepRetirements,
     checkCompetitiveCompletion,
     createCompetitiveGameState,
     checkGatePassage,
+    resolveBoundary,
     loadScene,
     DEFAULT_SCENE_ID,
     createObjective,
@@ -335,9 +334,15 @@ export class GameSimulation {
 
         // Initialize game state based on mode
         if (this.isCompetitive || this.isTimedMode) {
+            // Cycle 122: `this.scene.bounds` is the LEGACY rect-only field and
+            // only Home Field declares it, so this used to hand every island
+            // `undefined` and let the factory fall back to Home Field's rect -
+            // both for the gate layout and for the sheep clamp. Resolve the
+            // real boundary, exactly as the cooperative branch below has always
+            // done via createGameState.
             this.gameState = createCompetitiveGameState({
                 totalSheep: roomSheepCount,
-                bounds: this.scene.bounds
+                boundary: resolveBoundary(this.scene)
             }, playerIds);
         } else {
             // Use cooperative mode (existing logic)
@@ -376,11 +381,19 @@ export class GameSimulation {
         // instance rather than building a second one, so the wolves, the day
         // loop and the retirement count all read one `pennedCount`.
         //
-        // Competitive and timed are excluded: `shared/CompetitiveLayout.js` lays
-        // its gates and pastures out on Home Field geometry regardless of scene
-        // (a known, deliberately unfixed limitation - see DECISIONS D23), so a
-        // mid-island fence would sit across the competitive pastures. Those
-        // modes keep the retirement path they have always had.
+        // Competitive and timed are still excluded, but NOT for the reason this
+        // comment used to give. Cycle 122 made the layout scene-aware, so
+        // "Home Field geometry regardless of scene" is no longer true and that
+        // justification is retired.
+        //
+        // The reason now is that `pen` is the SOLO destination - one enclosure,
+        // one gate, one flock - while competitive and timed give every player
+        // their own pasture. Running the solo pen barrier in those modes would
+        // drop an unrelated solid enclosure into the middle of an N-destination
+        // round. Making the N competitive pastures themselves solid is real
+        // deterministic-sim work (N barriers where there is currently one, and
+        // it moves the tick), so it is deliberately not a side effect of the
+        // layout change. Recorded in the Cycle 122 plan, Phase 3.
         this._penBarrier = (this.isCompetitive || this.isTimedMode)
             ? null
             : createScenePenBarrier(this.scene, this.seed);

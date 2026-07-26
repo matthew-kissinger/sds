@@ -2,7 +2,11 @@
 // Copyright (c) 2026 Matthew Kissinger
 import { Vector2D } from './Vector2D.js';
 import { checkGatePassage } from './BoundaryCollision.js';
-import { generateCompetitiveGateLayout, assignGatesToPlayers } from './CompetitiveLayout.js';
+import {
+    generateCompetitiveGateLayout,
+    assignGatesToPlayers,
+    competitiveBoundsFromBoundary
+} from './CompetitiveLayout.js';
 
 /**
  * Competitive-mode scoring, completion, and game-state construction
@@ -202,18 +206,24 @@ export function validateCompetitiveGameState(gameState) {
  * @returns {Object} - Competitive game state
  */
 export function createCompetitiveGameState(config = {}, playerIds = []) {
-    const {
-        totalSheep = 200,
-        bounds = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 }
-    } = config;
-    
+    const { totalSheep = 200, boundary = null, bounds = null } = config;
+
+    // Cycle 122: `bounds` used to default to Home Field's rect, and because
+    // only Home Field declares a legacy `bounds` field at all, EVERY island
+    // silently took that default - a 200 m square inside a 360 m island, about
+    // 39% of it, with the outer ring unreachable. The boundary is now the
+    // primary input and `bounds` is derived from it, matching what
+    // `createGameState` has always done on the cooperative path.
+    const effectiveBoundary = boundary ?? (bounds ? { kind: 'rect', ...bounds } : null);
+    const effectiveBounds = competitiveBoundsFromBoundary(effectiveBoundary);
+
     const playerCount = playerIds.length;
     if (playerCount < 2 || playerCount > 4) {
         throw new Error('Competitive mode requires 2-4 players');
     }
-    
-    // Generate competitive gate layout
-    const competitiveGates = generateCompetitiveGateLayout(playerCount);
+
+    // Generate competitive gate layout from the scene's own geometry
+    const competitiveGates = generateCompetitiveGateLayout(playerCount, effectiveBoundary ?? undefined);
     const assignedGates = assignGatesToPlayers(competitiveGates, playerIds);
     
     // Initialize player scores
@@ -222,9 +232,9 @@ export function createCompetitiveGameState(config = {}, playerIds = []) {
         playerScores[playerId] = 0;
     }
     
-            return {
-            gameMode: 'racing',
-            bounds,
+    return {
+        gameMode: 'racing',
+        bounds: effectiveBounds,
         competitiveGates: assignedGates,
         playerScores,
         params: {

@@ -50,7 +50,7 @@ Changes to any of these require sim-baseline regeneration with **explicit accept
 
 ### Test ratchets
 
-- **[`tests/sim-baseline/__fixtures__/*.json`](../tests/sim-baseline/__fixtures__/)** - captured 60Hz traces from the deterministic sim.
+- **[`tests/sim-baseline/**/*.json`](../tests/sim-baseline/)** - captured 60Hz traces from the deterministic sim. **Covers both locations**: the legacy `__fixtures__/` directory and the directory root, where [`tests/sim-baseline/competitive.json`](../tests/sim-baseline/competitive.json) deliberately lives because `docs/hardening/phase-0-foundation.md` [P0-DETTEST] names that exact path (see the reason recorded at `competitive.spec.ts`:23). The glob previously read `__fixtures__/*.json` and so missed `competitive.json`, while [`.claude/rules/shared-sim.md`](../.claude/rules/shared-sim.md) plainly covered it ("`tests/sim-baseline/*.json` capture 60Hz traces"). Widened in Cycle 122 Phase 1 so the rule and the fence agree. **Do not resolve this the other way by moving the file** - its path is named by the phase plan that created it.
 - **[`tests/refactor-baseline/__fixtures__/*.json`](../tests/refactor-baseline/__fixtures__/)** - characterization-test goldens for god-module refactors.
 
 Don't regenerate as a shortcut to make tests pass. Read the diff, decide, regenerate with the decision recorded in the cycle plan's Acceptance section.
