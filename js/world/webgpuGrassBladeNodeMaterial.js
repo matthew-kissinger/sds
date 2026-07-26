@@ -29,6 +29,10 @@ export function createWebGpuGrassBladeNodeMaterial(
   const windDirection = uniform(vector2(grassBlade.windDirection));
   const windStrength = uniform(grassBlade.windStrength);
   const sunDirection = uniform(vector3(grassBlade.sunDirection));
+  // Cycle 123: the twin of the WebGL path's `uGrassLight`. White until the
+  // first update, which is what the reference preset resolves to, so a frame
+  // drawn before the first setGrassLight is the shipped noon look.
+  const grassLight = uniform(vector3([1, 1, 1]));
   const maxNodeInteractors = Math.max(1, Math.min(8, grassBlade.maxNodeInteractors ?? 4));
   const interactorPositions = Array.from({ length: maxNodeInteractors }, () => uniform(vector3([0, -10000, 0])));
   const interactorFacings = Array.from({ length: maxNodeInteractors }, () => uniform(vector2([0, 1])));
@@ -261,8 +265,11 @@ export function createWebGpuGrassBladeNodeMaterial(
   const MaterialClass = MeshBasicNodeMaterial ?? MeshStandardNodeMaterial;
   const material = new MaterialClass();
   material.name = 'webgpu-node-grass-blade';
+  // Cycle 123: the scene light multiplies the blade INSIDE the fog mix, exactly
+  // as the WebGL twin does it. Outside would scale the fog colour too, and the
+  // fog colour is the sky, which Atmosphere already darkens at night.
   material.colorNode = mix(
-    grassColor,
+    grassColor.mul(grassLight),
     vec3(...linearColor(grassBlade.fogColor)),
     fogBlend
   );
@@ -305,13 +312,17 @@ export function createWebGpuGrassBladeNodeMaterial(
     viewBacklightStrength,
     colorTint,
   };
+  // Cycle 123: no longer "unlit". The shader still owns its entire colour
+  // graph (no material-class lighting), but it now takes the scene's light as
+  // one multiplier via `grassLight`, from js/world/grassLighting.js.
   material.userData.webgpuGrassLighting = material.isMeshBasicNodeMaterial
-    ? 'shader-owned-unlit'
+    ? 'shader-owned-scene-lit'
     : 'standard-fallback';
   material.userData.webgpuGrassBladeNodeUniforms = {
     windDirection,
     windStrength,
     sunDirection,
+    grassLight,
     interactorPositions,
     interactorFacings,
     interactorTypes,
@@ -382,6 +393,12 @@ function createWebGpuGrassBladeNodeMaterialControls(material) {
     },
     setSunDirection(state = {}) {
       copyNodeValue(nodes.sunDirection, state.sunDir);
+    },
+    setGrassLight(state = {}) {
+      const f = state.factor;
+      const node = nodes.grassLight;
+      if (!node?.value || !f || !Number.isFinite(f.r)) return;
+      node.value.set(f.r, f.g, f.b);
     },
     setInteractionShadowStrength(state = {}) {
       if (Number.isFinite(state.strength)) {

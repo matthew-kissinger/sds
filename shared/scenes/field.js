@@ -120,6 +120,25 @@ export const field = {
         { id: 'chaos', count: 5000, ranked: true, label: 'Chaos', blurb: 'The flock becomes the antagonist.' },
     ],
 
+    // Cycle 123 P3, closing D25. Cycle 115 built a dusk lamp on the farmhouse
+    // whose ramp is exactly correct (0 above 19 degrees of elevation, full at
+    // -6) and bound it to the one public scene with no day loop, so the sun sat
+    // pinned and it could never fire. Cycle 120 then made the sun honest, which
+    // left the last piece: Home Field needed a sundown to arrive.
+    //
+    // The values are deliberately conservative. An hour-long day holds the noon
+    // everyone recognises for about six minutes, brings golden hour around ten
+    // and starts the lamp near twelve, so a normal round is lit the way it has
+    // always been and only a long session sees the evening.
+    //
+    // This moves the ENTRANCE BACKDROP as well as the round: DEFAULT_SCENE_ID
+    // is `field`, and the entrance renders the live scene behind its panel.
+    // That is the reason this waited for grass lighting rather than shipping in
+    // Cycle 120 - before it, sundown here would have produced a glowing pasture
+    // over near-black ground on the default scene, which is the first thing
+    // anyone sees.
+    dayNight: { enabled: true, secondsPerDay: 3600, initialT: 0.5, dayLoop: true },
+
     allowedModes: ['cooperative', 'competitive', 'timed'],
     defaultMode: 'cooperative'
 };

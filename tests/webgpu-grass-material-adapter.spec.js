@@ -360,7 +360,13 @@ describe('webgpu grass material adapter', () => {
             expect(material.name).toBe('webgpu-node-grass-blade');
             expect(material.isMeshBasicNodeMaterial).toBe(true);
             expect(material.isNodeMaterial).toBe(true);
-            expect(material.userData.webgpuGrassLighting).toBe('shader-owned-unlit');
+            // Cycle 123: was 'shader-owned-unlit'. The shader still owns its
+            // entire colour graph - no material-class lighting, which is what
+            // "shader-owned" means and is unchanged - but it is no longer
+            // unlit: it takes the scene's light as one multiplier from
+            // js/world/grassLighting.js. Updated deliberately rather than
+            // relaxed, so the tag keeps saying something true.
+            expect(material.userData.webgpuGrassLighting).toBe('shader-owned-scene-lit');
             expect(material.side).toBe(THREE.FrontSide);
             expect(material.transparent).toBe(false);
             expect(material.depthWrite).toBe(true);

@@ -10,6 +10,7 @@ import { SceneManager } from './SceneManager.js';
 import { GameState } from './GameState.js';
 import { GameTimer } from './GameTimer.js';
 import { TerrainBuilder } from './TerrainBuilder.js';
+import { grassLightFactor, lightsFromRig } from './world/grassLighting.js';
 import { StructureBuilder, resolveSceneEnclosure } from './StructureBuilder.js';
 import { InputHandler } from './InputHandler.js';
 import { MobileControls } from './MobileControls.js';
@@ -2987,6 +2988,16 @@ class SheepDogSimulation {
         // of day every frame.
         if (sunDir) {
             this.terrainBuilder?.grassSystem?.setSunDirection?.(sunDir);
+        }
+        // Cycle 123: and how much light there is, which the grass never took.
+        // The direction has been live since Cycle 14, so the field dutifully
+        // re-aimed its highlight at a setting sun and never dimmed - which is
+        // why night was a self-lit pasture over near-black ground. Read off the
+        // SceneLightingRig, the authority Cycle 120 built, rather than
+        // re-deriving a level from the preset here.
+        const grassLights = lightsFromRig(this.sceneManager?.sceneLightingRig);
+        if (grassLights) {
+            this.terrainBuilder?.grassSystem?.setGrassLight?.(grassLightFactor(grassLights));
         }
         // Cycle 14 Phase 4: feed sun light color to rocks for rim-light
         // tinting. Tracks sunrise/sunset hue without per-rock state.

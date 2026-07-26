@@ -833,6 +833,12 @@ export class GrassSystem {
             // (overhead noon) so the term is harmless before first update.
             uSunDirection: { value: new THREE.Vector3(0, 1, 0) },
 
+            // Cycle 123: the scene light's contribution, as a per-channel
+            // multiplier. White until the first update, which is exactly what
+            // the reference preset resolves to, so a frame drawn before the
+            // first setSunLight is the shipped noon look rather than a guess.
+            uGrassLight: { value: new THREE.Vector3(1, 1, 1) },
+
             // Distance-based blade-height fade (smooth LOD transition)
             grassFadeStart: { value: this.config.grassFadeStart },
             grassFadeEnd: { value: this.config.grassFadeEnd }
@@ -1319,6 +1325,7 @@ export class GrassSystem {
             uniform float fogDensity;
             uniform vec3 uCameraPos;
             uniform vec3 uSunDirection;
+            uniform vec3 uGrassLight;
 
             varying vec2 vUv;
             varying vec3 vWorldPos;
@@ -1381,6 +1388,14 @@ export class GrassSystem {
                 // read.
                 float verticalRim = pow(max(dot(toCamera, vec3(0.0, 1.0, 0.0)), 0.0), 4.0);
                 color += verticalRim * tipColor * 0.2 * tipMask;
+
+                // Cycle 123: the scene's light, as one multiplier over the
+                // whole blade. BEFORE the fog mix on purpose - fogColor is the
+                // sky, which Atmosphere already darkens at night, so scaling it
+                // here would darken the night sky twice. Exactly white at the
+                // reference preset (js/world/grassLighting.js), so the shipped
+                // noon look is an identity through this line.
+                color *= uGrassLight;
 
                 // FogExp2 — matches scene.fog (Atmosphere keeps the color
                 // and density in sync with the sky horizon every frame).
@@ -2738,6 +2753,36 @@ export class GrassSystem {
         }
         if (this.grassMaterial.uniforms?.uSunDirection) {
             this.grassMaterial.uniforms.uSunDirection.value.copy(sunDir);
+        }
+    }
+
+    /**
+     * Cycle 123: how much light the grass is standing in, per channel.
+     *
+     * This sits beside `setSunDirection` rather than replacing it because the
+     * two are genuinely different quantities on different update paths - the
+     * direction comes from `Atmosphere`, the level comes from the
+     * `SceneLightingRig` - but it deliberately mirrors its shape, including
+     * the streamed material, so the two cannot drift apart in coverage. That
+     * symmetry is the point: the WebGPU node material and the GLSL twin take
+     * the same factor from the same authority.
+     *
+     * A null or unreadable factor is a no-op, not a darkening. A missing
+     * lighting rig must leave the field at its shipped look.
+     *
+     * @param {{ r: number, g: number, b: number } | null} factor from
+     *   `grassLightFactor` in js/world/grassLighting.js. Exactly white at the
+     *   reference preset, which is what keeps noon an identity.
+     */
+    setGrassLight(factor) {
+        if (!factor || !Number.isFinite(factor.r) || !this.grassMaterial) return;
+        if (this.webgpuGrassBladeMaterialControls?.setGrassLight) {
+            this.webgpuGrassBladeMaterialControls.setGrassLight({ factor, material: this.grassMaterial });
+            this._streamedBladeControls?.setGrassLight?.({ factor, material: this._streamedMaterial });
+            return;
+        }
+        if (this.grassMaterial.uniforms?.uGrassLight) {
+            this.grassMaterial.uniforms.uGrassLight.value.set(factor.r, factor.g, factor.b);
         }
     }
 

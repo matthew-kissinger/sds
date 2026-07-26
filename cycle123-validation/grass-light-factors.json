@@ -1,0 +1,328 @@
+{
+  "rows": [
+    {
+      "scene": "field",
+      "t": 0.5,
+      "label": "noon",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 0.8920416732748777,
+        "g": 1.016824207574075,
+        "b": 1.151236385107791
+      },
+      "sunIntensity": 3.455751918948773,
+      "sunColor": {
+        "r": 1,
+        "g": 0.8690629770265761,
+        "b": 0.6433024445083722
+      },
+      "ambientIntensity": 2.356194490192345,
+      "daylight": 1,
+      "factor": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+      },
+      "elevationDeg": 70
+    },
+    {
+      "scene": "field",
+      "t": 0.72,
+      "label": "late-day",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 1.5508630641164343,
+        "g": 0.8801884936904398,
+        "b": 0.5647604138704075
+      },
+      "sunIntensity": 3.455751918948773,
+      "sunColor": {
+        "r": 1,
+        "g": 0.4775896327448358,
+        "b": 0.09845648197452027
+      },
+      "ambientIntensity": 1.7992757925105176,
+      "daylight": 1,
+      "factor": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+      },
+      "elevationDeg": 12.752000000000008
+    },
+    {
+      "scene": "field",
+      "t": 0.75,
+      "label": "sundown",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 1.5508630641164343,
+        "g": 0.8801884936904398,
+        "b": 0.5647604138704075
+      },
+      "sunIntensity": 3.455751918948773,
+      "sunColor": {
+        "r": 1,
+        "g": 0.3197233304525651,
+        "b": 0.02796101050924121
+      },
+      "ambientIntensity": 1.7992757925105176,
+      "daylight": 1,
+      "factor": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+      },
+      "elevationDeg": 7.999999999999999
+    },
+    {
+      "scene": "field",
+      "t": 0.78,
+      "label": "dusk",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 1.5015903838322606,
+        "g": 0.8852077244055377,
+        "b": 0.6601290845210626
+      },
+      "sunIntensity": 0.717937908645392,
+      "sunColor": {
+        "r": 1,
+        "g": 0.03415649338629962,
+        "b": 0.00002507082047658104
+      },
+      "ambientIntensity": 1.021988650145974,
+      "daylight": 0.20775157635267583,
+      "factor": {
+        "r": 0.30282138719035473,
+        "g": 0.30282138719035473,
+        "b": 0.30282138719035473
+      },
+      "elevationDeg": -2.3680000000000008
+    },
+    {
+      "scene": "field",
+      "t": 0.85,
+      "label": "golden-cell",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 0.5913942891158952,
+        "g": 0.9779261267537436,
+        "b": 2.42183944985711
+      },
+      "sunIntensity": 0,
+      "sunColor": {
+        "r": 1,
+        "g": 0.20902058851143265,
+        "b": 0.007397433812083255
+      },
+      "ambientIntensity": 0.599758597503506,
+      "daylight": 0,
+      "factor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.12
+      },
+      "elevationDeg": -13.468749999999995
+    },
+    {
+      "scene": "field",
+      "t": 0.95,
+      "label": "night",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 0.5913942891158952,
+        "g": 0.9779261267537436,
+        "b": 2.42183944985711
+      },
+      "sunIntensity": 0,
+      "sunColor": {
+        "r": 1,
+        "g": 0.2521768198484526,
+        "b": 0.01336882345529054
+      },
+      "ambientIntensity": 0.599758597503506,
+      "daylight": 0,
+      "factor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.12
+      },
+      "elevationDeg": -19.74305555555555
+    },
+    {
+      "scene": "rolling-hills",
+      "t": 0.5,
+      "label": "noon",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 0.8920416732748777,
+        "g": 1.016824207574075,
+        "b": 1.151236385107791
+      },
+      "sunIntensity": 3.455751918948773,
+      "sunColor": {
+        "r": 1,
+        "g": 0.8690629770265761,
+        "b": 0.6433024445083722
+      },
+      "ambientIntensity": 2.356194490192345,
+      "daylight": 1,
+      "factor": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+      },
+      "elevationDeg": 70
+    },
+    {
+      "scene": "rolling-hills",
+      "t": 0.72,
+      "label": "late-day",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 1.5508630641164343,
+        "g": 0.8801884936904398,
+        "b": 0.5647604138704075
+      },
+      "sunIntensity": 3.455751918948773,
+      "sunColor": {
+        "r": 1,
+        "g": 0.4775896327448358,
+        "b": 0.09845648197452027
+      },
+      "ambientIntensity": 1.7992757925105176,
+      "daylight": 1,
+      "factor": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+      },
+      "elevationDeg": 12.752000000000008
+    },
+    {
+      "scene": "rolling-hills",
+      "t": 0.75,
+      "label": "sundown",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 1.5508630641164343,
+        "g": 0.8801884936904398,
+        "b": 0.5647604138704075
+      },
+      "sunIntensity": 3.455751918948773,
+      "sunColor": {
+        "r": 1,
+        "g": 0.3197233304525651,
+        "b": 0.02796101050924121
+      },
+      "ambientIntensity": 1.7992757925105176,
+      "daylight": 1,
+      "factor": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+      },
+      "elevationDeg": 7.999999999999999
+    },
+    {
+      "scene": "rolling-hills",
+      "t": 0.78,
+      "label": "dusk",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 1.5015903838322606,
+        "g": 0.8852077244055377,
+        "b": 0.6601290845210626
+      },
+      "sunIntensity": 0.717937908645392,
+      "sunColor": {
+        "r": 1,
+        "g": 0.03415649338629962,
+        "b": 0.00002507082047658104
+      },
+      "ambientIntensity": 1.021988650145974,
+      "daylight": 0.20775157635267583,
+      "factor": {
+        "r": 0.30282138719035473,
+        "g": 0.30282138719035473,
+        "b": 0.30282138719035473
+      },
+      "elevationDeg": -2.3680000000000008
+    },
+    {
+      "scene": "rolling-hills",
+      "t": 0.85,
+      "label": "golden-cell",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 0.5913942891158952,
+        "g": 0.9779261267537436,
+        "b": 2.42183944985711
+      },
+      "sunIntensity": 0,
+      "sunColor": {
+        "r": 1,
+        "g": 0.20902058851143265,
+        "b": 0.007397433812083255
+      },
+      "ambientIntensity": 0.599758597503506,
+      "daylight": 0,
+      "factor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.12
+      },
+      "elevationDeg": -13.468749999999995
+    },
+    {
+      "scene": "rolling-hills",
+      "t": 0.95,
+      "label": "night",
+      "profile": "webgpu-production",
+      "drivesSun": true,
+      "ambientAnchor": 2.356194490192345,
+      "ambientColorRaw": {
+        "r": 0.5913942891158952,
+        "g": 0.9779261267537436,
+        "b": 2.42183944985711
+      },
+      "sunIntensity": 0,
+      "sunColor": {
+        "r": 1,
+        "g": 0.2521768198484526,
+        "b": 0.01336882345529054
+      },
+      "ambientIntensity": 0.599758597503506,
+      "daylight": 0,
+      "factor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.12
+      },
+      "elevationDeg": -19.74305555555555
+    }
+  ]
+}
