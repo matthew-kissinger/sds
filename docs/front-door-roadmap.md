@@ -152,9 +152,15 @@ Also recorded and unverified beyond a code read: on the production WebGPU path t
 
 D26 and D27, deliberately one cycle rather than two. Cycle 114's grass exclusion smoothstep is correct, but a zero-grass zone with nothing in it reads as a flat painted plane, and the transition still reads as the knife edge the cycle set out to remove. The pen interior, the 80m farmhouse yard and the gate approach are all the same surface: ground where grass has been removed. They get one treatment.
 
+**CLOSED 2026-07-26, 3/3 phases.** One zone list with two readers, taken by reference. **This entry's instinct about the falloff was wrong and the cycle recorded why:** the transition read as a knife edge because the ground under the grass never changed, so `EXCLUSION_FALLOFF_M` stayed at 4.0 and the ground was shaded instead. Widening the band would have softened the wrong thing.
+
+Two defects this entry did not know about. **Rolling Hills and Newsheepdogland had no grass exclusion at all** (the registration was keyed on `pasture`, which only Home Field declares), so grass grew inside the island pasture every ranked solo run drives into. And **every mode start rebuilt the exclusion list from Home Field's default rect on every scene**, which nothing re-scattered against, so it had never shown. Full entry atop [`BACKLOG.md`](BACKLOG.md).
+
 ## Cycle 122 - N pastures
 
 D24. One pasture per player for island competitive, which needs `shared/CompetitiveLayout.js` made scene-aware. Deterministic-sim work that moves `competitive.json`, touching live multiplayer rooms, so it needs an in-flight-session migration story per [`../.claude/rules/multiplayer.md`](../.claude/rules/multiplayer.md). Last of the four because it is the riskiest.
+
+**De-risked read-only on 2026-07-26, and the plan's central mechanism did not exist.** It derived the layout from the scene's `bounds`; `bounds` is the legacy rect-only field and **only Home Field declares it**, so on every island `createCompetitiveGameState` silently fell back to a hardcoded Home Field rect that then drove the competitive sheep clamp. Two stacked hardcodes, not one. The cardinal-ring derivation is now proven against all three shipped tables, and running it on the islands is what showed it would place every island pasture outside a hard radial clamp, where a sheep cannot arrive and the round cannot complete. Placement is kind-aware, not just measurement. See the plan's corrected "What the trace found".
 
 Until it ships, Rolling Hills competitive uses the wrong layout and is knowingly left that way (D23). The one constraint: it stays broken as it is, never newly crashing.
 

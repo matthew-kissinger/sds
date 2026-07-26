@@ -85,17 +85,25 @@ The look work, authored against Phase 1's zone list, on both paths through `grou
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's [`BACKLOG.md`](BACKLOG.md) carryover.
-- [ ] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
-- [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Phase 1 ships, then Rolling Hills' pasture and Newsheepdogland's homestead pen shall each carry a grass exclusion.
-- [ ] When a scene declares a pen in any supported form, then one resolved zone shall drive both grass thinning and terrain shading, pinned by a spec.
-- [ ] When Phase 2 ships, then a worn zone shall shade the terrain on both render paths from one definition in `js/world/groundShading.js`.
-- [ ] When the cycle closes, then `EXCLUSION_FALLOFF_M` shall be recorded as changed with before and after, or as deliberately unchanged.
-- [ ] When the cycle closes, then `shared/` shall be unmodified.
-- [ ] When the cycle closes, then `bundle-sizes.json` shall be unmodified.
-- [ ] When Phase 3 ships, then all three treated surfaces shall have been viewed in a browser.
-- [ ] When the goldens are re-baselined, then any moved cell outside the treated zones shall be explained.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to next cycle's [`BACKLOG.md`](BACKLOG.md) carryover. **3/3 shipped.**
+- [x] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass. **2316 passed / 11 skipped, lint and typecheck clean, one clean build.**
+- [x] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
+- [x] When Phase 1 ships, then Rolling Hills' pasture and Newsheepdogland's homestead pen shall each carry a grass exclusion. **Both gaps confirmed in a browser first, not from a grep: `isExcluded` false for 0 of 81 samples across the RH pen, 7 of 81 on NSL (farmhouse corner only).**
+- [x] When a scene declares a pen in any supported form, then one resolved zone shall drive both grass thinning and terrain shading, pinned by a spec. **One array object with two readers, taken by reference. `exclusionKeepProbability` is `1 - wornZoneCoverage01` exactly; 1,600 points agree to 1e-12. Independently mutation-checked at close: perturbing the identity by 0.1% fails 5 of 29.**
+- [x] When Phase 2 ships, then a worn zone shall shade the terrain on both render paths from one definition in `js/world/groundShading.js`. **`GROUND_WEAR` feeds the GLSL chunk by template interpolation and the TSL builder directly; a spec transliterates the GLSL back into JS and checks it reproduces `groundWear01` on every scene.**
+- [x] When the cycle closes, then `EXCLUSION_FALLOFF_M` shall be recorded as changed with before and after, or as deliberately unchanged. **Deliberately unchanged at 4.0; recorded under Phase 2 above.**
+- [x] When the cycle closes, then `shared/` shall be unmodified. **Verified clean at close, `PenBarrier.js` included.**
+- [x] When the cycle closes, then `bundle-sizes.json` shall be unmodified. **Verified clean.**
+- [x] When Phase 3 ships, then all three treated surfaces shall have been viewed in a browser. **Genuine WebGPU, `assertWebGpuEngaged` on every cell.**
+- [x] When the goldens are re-baselined, then any moved cell outside the treated zones shall be explained. **Noise floor measured on Open Country, which resolves zero zones. The Rolling Hills second band was traced offline to Cycle 114's shared scatter PRNG (a zone-free chunk re-scatters 840/840 because the pen chunk consumed a different number of draws) rather than waved off as noise.**
+
+### Hard stops, checked at close
+
+- [x] **No scene-ID branches in render code.** Grepped the changed render files for scene names and `sceneId ===`; clean.
+- [x] **No decomposition of `GrassSystem.js`.**
+- [x] **Both render paths keep one shared shape.**
+- [x] **No `shared/` edit.**
+- [x] **The grass falloff was not widened before the ground was shaded.** It was not widened at all.
 
 ## References
 
