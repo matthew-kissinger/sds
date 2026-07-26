@@ -268,17 +268,17 @@ Per scene, water band: Rolling Hills 77.3% to 2.0%, Open Country 66.1% to 5.0%, 
 
 ## Success criteria (cycle close)
 
-- [ ] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
-- [ ] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass.
+- [x] When the cycle closes, all phases shall be shipped or explicitly deferred to `BACKLOG.md` carryover.
+- [x] When `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` run at cycle close, all four shall pass. **2250 passed / 11 skipped.**
 - [ ] When the close commit lands on `main`, sheepdogsim.com deploy shall succeed via GH Actions.
-- [ ] When Phase 2 ships, then every consumer shall import the model's single palette, in one stated colour space, pinned by a spec that fails on any re-declaration in any spelling.
-- [ ] When Phase 2 ships, then `grep -rn "colorTint" js/water/` shall return nothing and neither water block in `skyFogPresetTuning.js` shall carry the key.
-- [ ] When Phase 2 ships, then the noise strategy taken shall be recorded here.
+- [x] When Phase 2 ships, then every consumer shall import the model's single palette, in one stated colour space, pinned by a spec that fails on any re-declaration in any spelling. **linear-srgb, pinned by `tests/water-surface-model.spec.js`, which fails on re-declaration in hex, byte-array or decimal-float spelling.**
+- [x] When Phase 2 ships, then `grep -rn "colorTint" js/water/` shall return nothing and neither water block in `skyFogPresetTuning.js` shall carry the key. **Live code carries none; the 3 remaining matches are comments recording the retirement, and both preset water blocks are clean.**
+- [x] When Phase 2 ships, then the noise strategy taken shall be recorded here. **(ii): the twin transcribes the TSL value-noise; (i) is unachievable off-GPU.**
 - [x] When Phase 3 ships, then the slope scale shall exceed 0.055 and the resulting **max and RMS tilt in degrees** shall be recorded here, and no cel quantisation or sparkle pass shall remain on either path. **0.138; max 20.01 degrees (analytic bound) / 15.38 sampled, RMS 7.12.**
-- [ ] When Phase 4 ships, then the plan shall record whether the WebGL twin's raw-fog mismatch was fixed alongside production or deliberately left.
-- [ ] When Phase 4 ships, then `:113`'s `fogStrength` term shall be gone and `:105`'s dead glint suppression shall be given a deliberate decision rather than reactivated as a side effect.
-- [ ] When the sun moves, then the water's horizon shall move with the sky's.
-- [ ] When the sim is paused, then the water surface shall not advance.
+- [x] When Phase 4 ships, then the plan shall record whether the WebGL twin's raw-fog mismatch was fixed alongside production or deliberately left. **Deliberately left, production only, with three reasons recorded.**
+- [x] When Phase 4 ships, then `:113`'s `fogStrength` term shall be gone and `:105`'s dead glint suppression shall be given a deliberate decision rather than reactivated as a side effect. **Gone. `:105` retired rather than inherited, since un-flooring `depthT` would have made it live with constants authored blind.**
+- [x] When the sun moves, then the water's horizon shall move with the sky's. **`tests/water-scene-fog.spec.js`, mirroring the terrain's five.**
+- [x] When the sim is paused, then the water surface shall not advance. **`tests/water-clock.spec.js`.**
 - [x] When Phase 6 ships, then all three water scenes shall have been captured after and compared by palette histogram. **24 frames, all `webgpu-production`; water-band cobalt 61.5% to 2.4%.**
 - [x] When the cycle closes, then `bundle-sizes.json` shall be unmodified. **Unmodified. `main` 679,508 to 679,444 B (SHRANK 64 B, from deleting `initWorld`'s dead `minDepthT` config), 1,516 B under the chunk budget. `other` 653,370 to 656,578 B, 52,030 B of headroom. `webgpuDiagnostic` byte-identical at 86,192 B, 848 B of headroom. Every other family unchanged.**
 
