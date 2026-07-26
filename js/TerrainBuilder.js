@@ -60,8 +60,13 @@ import {
     GROUND_CONTACT,
     GROUND_CONTACT_GLSL,
     GROUND_VARIATION_GLSL,
+    GROUND_WEAR_GLSL,
+    WORN_ZONE_SLOTS,
+    WORN_ZONE_UNIFORMS,
+    packWornZones,
     resolveEntityFacing,
     resolveGateApproach,
+    resolveWornGroundZones,
 } from './world/groundShading.js';
 import { TIER_PRESETS } from './HardwareTier.js';
 import { shouldApplyWebGpuRendererFlag } from './rendering/webgpuRuntimeMode.js';
@@ -269,7 +274,17 @@ export class TerrainBuilder {
             minZ: 120,
             maxZ: 200
         };
-        
+
+        // Cycle 121: the ground this scene has walked bare, resolved once from
+        // scene data. Same reasoning as gateApproach above and the same seam:
+        // the terrain material shades these zones, the grass scatter thins over
+        // them, and one list means the two cannot describe different ground.
+        // Resolved AFTER farmHouseExclusionArea, which it reads.
+        /** @type {Array<object>} */
+        this.wornZones = resolveWornGroundZones(sceneDef, {
+            farmHouseArea: this.farmHouseExclusionArea,
+        });
+
         // LOD settings
         this.lodDistances = {
             near: 50,
@@ -1001,6 +1016,19 @@ export class TerrainBuilder {
                 uApproachStrength: { value: this.gateApproach ? 1 : 0 }
             }
         ]);
+        // Cycle 121: the worn zones. Assigned AFTER the merge rather than inside
+        // it because UniformsUtils.clone shallow-copies an array uniform, so a
+        // merged Vector4 list would be shared with the source object; these are
+        // written per-frame-ish by _syncWornZones and want to be this material's
+        // own. Names and slot count come from js/world/groundShading.js, which is
+        // also what declares them in GROUND_WEAR_GLSL.
+        const wornPack = packWornZones(this.wornZones);
+        uniforms[WORN_ZONE_UNIFORMS.rect] = {
+            value: wornPack.rect.map((v) => new THREE.Vector4(v[0], v[1], v[2], v[3])),
+        };
+        uniforms[WORN_ZONE_UNIFORMS.shape] = {
+            value: wornPack.shape.map((v) => new THREE.Vector4(v[0], v[1], v[2], v[3])),
+        };
         const createDefaultMaterial = () => new THREE.ShaderMaterial({
             uniforms,
             fog: true,
@@ -1044,6 +1072,7 @@ export class TerrainBuilder {
                 ${GROUND_VARIATION_GLSL}
                 ${GROUND_CONTACT_GLSL}
                 ${GROUND_APPROACH_GLSL}
+                ${GROUND_WEAR_GLSL}
 
                 // Simple noise function
                 float hash(vec2 p) {
@@ -1103,11 +1132,19 @@ export class TerrainBuilder {
                     // js/world/groundShading.js, so the WebGPU twin renders the
                     // same approach even though its ambient dirt strength is a
                     // per-scene 0.26-0.34 against this path's 0.4.
+                    // Cycle 121: the worn zones join the SAME mask on the same
+                    // terms. The pen interior, the farmhouse yard and the gate
+                    // approach are one surface with three names, so they differ
+                    // in shape and in intensity and never in material. MAX
+                    // again, all the way down: a natural dirt patch, a worn
+                    // zone and the gate fan that all land on one fragment agree
+                    // with each other rather than stacking.
                     float dirtMask = smoothstep(0.55, 0.7, n1 * n2);
                     float approachDirt = sdsGroundApproachDirt(
                         vWorldPos.xz, uApproachMouth, uApproachAxis, uApproachWidth
                     ) * uApproachStrength;
-                    color = mix(color, dirtColor, max(dirtMask * 0.4, approachDirt));
+                    float wornDirt = sdsGroundWearDirt(vWorldPos.xz);
+                    color = mix(color, dirtColor, max(max(dirtMask * 0.4, approachDirt), wornDirt));
 
                     // Add fine detail variation
                     color *= 0.9 + n3 * 0.2;
@@ -1175,6 +1212,8 @@ export class TerrainBuilder {
                 // Cycle 115 Phase 4. Null on a scene with no pen gate, which is
                 // how the node material knows to leave the dirt mask alone.
                 approach: this.gateApproach,
+                // Cycle 121. The same list the grass scatter thins over.
+                wornZones: this.wornZones,
                 fog: true,
                 side: THREE.FrontSide,
                 polygonOffset: {
@@ -1231,61 +1270,22 @@ export class TerrainBuilder {
         const { GrassSystem } = await import('./GrassSystem.js');
         this.grassSystem = new GrassSystem(this.scene, this.isMobile, this.sceneDef?.grass, this.heightfield, this.sceneDef?.boundary ?? null, { tier });
 
-        // Add exclusion zone for farm house — only if the scene actually
-        // has one (Field has farmHouse; RH/OC don't).
-        if (this.sceneDef?.farmHouse) {
-            this.grassSystem.addExclusionZone(
-                this.farmHouseExclusionArea.minX,
-                this.farmHouseExclusionArea.maxX,
-                this.farmHouseExclusionArea.minZ,
-                this.farmHouseExclusionArea.maxZ
-            );
-        }
-
-        // Cycle 7 fix: legacy pasture exclusion at z=98-138 was hardcoded
-        // for Field's pen, but applied to every scene — leaving a bare
-        // 70×40m patch on RH and on OC's spawn→portal corridor. Only
-        // apply when the scene has a pasture.
+        // Cycle 121: the farmhouse yard and the pen interior, from the one list
+        // resolved in the constructor. This used to be two `addExclusionZone`
+        // calls here, and the pen call was keyed on `sceneDef.pasture` - which
+        // ONLY Home Field declares. Rolling Hills declares a nested `pen` rect
+        // and Newsheepdogland a `pen: {center, radius}`, so neither got an
+        // exclusion at all and the island pasture every ranked solo run drives
+        // into had grass growing inside it (confirmed in a browser before the
+        // fix, cycle121-validation/before/rh-pasture.png). The Cycle 114
+        // derive-rather-than-hardcode correction for Home Field's two-metre
+        // fence offset lives in resolveWornGroundZones now; see it there.
         //
-        // Cycle 114 Phase 1: Cycle 7 guarded the call on `sceneDef.pasture` but
-        // never migrated the numbers, so a 60m x 28m fence stood inside a 70m x
-        // 40m bald rectangle: grass stopped 5m outside each side fence, 2m in
-        // front of the gate line and a full 10m behind the back fence.
-        //
-        // The exclusion is derived from where the pen fence ACTUALLY STANDS,
-        // which is not the same rect the scene declares. `pasture` gives the
-        // pen its DIMENSIONS but not its origin: js/FencePresets.js builds
-        // createPenStructure({ width, depth }, 'north') at z = bounds.maxZ and
-        // puts the back fence at depth, so the pen occupies
-        // z[bounds.maxZ, bounds.maxZ + depth] while the scene declares
-        // z[pasture.minZ, pasture.maxZ]. On Home Field that is z[100,128]
-        // against a declared z[102,130), a two-metre offset. Excluding the
-        // declared rect would leave grass inside the front of the pen and a
-        // bald strip behind its back fence, which is the same class of defect
-        // this phase exists to remove, just smaller.
-        //
-        // Derive rather than hardcode, so a scene that moves its bounds or
-        // resizes its pasture keeps the bare ground under its own fence.
-        //
-        // This moves grass placement on Home Field, which moves the goldens;
-        // that is the intended change.
-        const pasture = this.sceneDef?.pasture;
-        const penBounds = this.sceneDef?.bounds;
-        if (pasture && penBounds) {
-            const halfWidth = (pasture.maxX - pasture.minX) / 2;
-            const depth = pasture.maxZ - pasture.minZ;
-            const centerX = (pasture.maxX + pasture.minX) / 2;
-            this.grassSystem.addExclusionZone(
-                centerX - halfWidth,
-                centerX + halfWidth,
-                penBounds.maxZ,
-                penBounds.maxZ + depth
-            );
-        } else if (pasture) {
-            // No bounds on the scene def: fall back to the declared rect rather
-            // than skipping the exclusion entirely.
-            this.grassSystem.addExclusionZone(pasture.minX, pasture.maxX, pasture.minZ, pasture.maxZ);
-        }
+        // Pushed in rather than read off the SceneDef inside GrassSystem,
+        // because GrassSystem is only handed `sceneDef.grass` and giving it the
+        // whole def to reach three fields would be a wider door than this needs.
+        // Must land before init(), which is when the scatter runs.
+        this.grassSystem.setWornZones(this.wornZones);
 
         // Cycle 115 Phase 4: the worn approach to the pen gate, from the same
         // resolved geometry the terrain material shades. Pushed in rather than
@@ -1395,6 +1395,46 @@ export class TerrainBuilder {
             const f = nodes.facing.value;
             if (f && typeof f.set === 'function') f.set(fx, fz);
             nodes.strength.value = strength;
+        }
+    }
+
+    /**
+     * Push the resolved worn zones to whichever terrain material is live.
+     *
+     * Cycle 121. The twin of `_syncGroundContact` above and the reason Cycle 115
+     * made the approach uniforms live rather than baked: a scene swap and a
+     * sandbox rebuild both re-resolve the zone list, and without this the
+     * terrain would keep shading the zones it booted with while the regenerated
+     * grass thinned over the new ones. Two systems describing the same ground
+     * and disagreeing about it is the defect this cycle exists to remove; a
+     * stale uniform is just a slower way of reintroducing it.
+     *
+     * Never rebuilds the material. The slot count is fixed and every slot always
+     * exists, so a list that grew or shrank is a uniform write.
+     */
+    _syncWornZones() {
+        const material = this.terrainMesh?.material;
+        if (!material) return;
+        const pack = packWornZones(this.wornZones);
+
+        // WebGL: two arrays of Vector4 on the raw ShaderMaterial.
+        const u = material.uniforms;
+        const rects = u?.[WORN_ZONE_UNIFORMS.rect]?.value;
+        const shapes = u?.[WORN_ZONE_UNIFORMS.shape]?.value;
+        if (Array.isArray(rects) && Array.isArray(shapes)) {
+            for (let i = 0; i < WORN_ZONE_SLOTS; i++) {
+                rects[i]?.set?.(pack.rect[i][0], pack.rect[i][1], pack.rect[i][2], pack.rect[i][3]);
+                shapes[i]?.set?.(pack.shape[i][0], pack.shape[i][1], pack.shape[i][2], pack.shape[i][3]);
+            }
+        }
+
+        // WebGPU: one uniform pair per slot, published on userData.
+        const slots = material.userData?.wornGroundNodeUniforms?.slots;
+        if (Array.isArray(slots)) {
+            for (let i = 0; i < slots.length && i < WORN_ZONE_SLOTS; i++) {
+                slots[i].rect?.value?.set?.(pack.rect[i][0], pack.rect[i][1], pack.rect[i][2], pack.rect[i][3]);
+                slots[i].shape?.value?.set?.(pack.shape[i][0], pack.shape[i][1], pack.shape[i][2], pack.shape[i][3]);
+            }
         }
     }
 
@@ -2205,6 +2245,14 @@ export class TerrainBuilder {
         // no pen clears it rather than keeping the previous scene's.
         this.gateApproach = resolveGateApproach(sceneDef);
         this.grassSystem?.setGateApproach?.(this.gateApproach);
+        // Cycle 121: same seam, same reasoning. A builder that booted on Home
+        // Field would otherwise carry Home Field's pen and farmhouse yard onto
+        // an island as two brown rectangles in open meadow.
+        this.wornZones = resolveWornGroundZones(sceneDef, {
+            farmHouseArea: this.farmHouseExclusionArea,
+        });
+        this.grassSystem?.setWornZones?.(this.wornZones);
+        this._syncWornZones();
     }
 
     /**

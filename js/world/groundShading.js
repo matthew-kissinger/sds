@@ -182,6 +182,77 @@ export const GROUND_APPROACH = Object.freeze({
     grassKeepMin: 0.18,
 });
 
+/**
+ * Worn ground: the zones that have been walked bare (Cycle 121).
+ *
+ * The pen interior, the farmhouse yard and the gate approach are the same
+ * surface with three names. Until this cycle two separate systems described
+ * them and neither knew about the other: grass removal was a rect list on
+ * `js/GrassSystem.js`, ground wear was the approach term above, and nothing
+ * connected them. So the grass thinned over a band around a rect the terrain
+ * did not shade, and the terrain shaded a corridor the grass did not thin
+ * against. Ground that does not change under a fading grass line is read by the
+ * eye AS the line, which is why Cycle 114's falloff kept reading as a knife
+ * edge no matter how carefully it was measured.
+ *
+ * One zone list therefore feeds both. `resolveWornGroundZones` builds it from
+ * scene data; `wornZoneCoverage01` is the pure geometry both consumers read
+ * (`GrassSystem.exclusionKeepProbability` is one minus it, exactly, which
+ * tests/worn-ground.spec.js pins); and `groundWear01` scales that same coverage
+ * by each zone's own intensity for the terrain. Shape and intensity differ per
+ * zone. The material never does.
+ */
+export const GROUND_WEAR = Object.freeze({
+    // Metres over which the ground eases back to untouched outside a zone edge.
+    // Cycle 114 Phase 1 measured this at 4m (about two dog-lengths: wide enough
+    // to read as worn, narrow enough that a pen still reads as a pen) and it
+    // lived in js/GrassSystem.js as a grass-only number. Cycle 121 moved it here
+    // unchanged, because the terrain now fades over the same band and one
+    // falloff read by both is the whole point of this section.
+    falloff: 4.0,
+    // Peak fraction toward the terrain's own dirt colour at full wear. The SAME
+    // number the gate approach peaks at, by reference rather than by copy: D26
+    // and D27 are one cycle because the three surfaces get one treatment.
+    dirtBlend: GROUND_APPROACH.dirtBlend,
+    // Peak wear per zone kind, 0..1. This is the "differ in intensity" half.
+    //
+    // A pen interior is small, fenced, and every sheep in the run ends up
+    // standing in it, so it goes to full wear. A farmhouse yard is the clearance
+    // rect around a building - 80m x 80m on Home Field - and only the part near
+    // the house sees traffic, so a full-strength yard would read as a painted
+    // brown square rather than as dry ground around a homestead.
+    kindWear: Object.freeze({
+        pen: 1.0,
+        farmyard: 0.5,
+    }),
+});
+
+/**
+ * How many worn zones the terrain shaders carry.
+ *
+ * Every scene the game ships resolves at most two (a pen and a farmhouse yard),
+ * so three is one slot of headroom. The term is branchless and stays in the
+ * graph on scenes that fill none of them, for the reason the gate approach does
+ * (see js/world/webgpuTerrainNodeMaterial.js): shaping the graph per scene would
+ * buy a rounding error and cost the two render paths their one common shape.
+ * Each unused slot is about sixteen ALU ops with no transcendental in it, under
+ * six value-noise evaluations that run four sines each.
+ *
+ * `resolveWornGroundZones` truncates past this rather than letting the grass
+ * thin over a zone the terrain cannot shade, which would be the exact defect
+ * this section exists to remove.
+ */
+export const WORN_ZONE_SLOTS = 3;
+
+/**
+ * The uniform names both terrain paths bind the packed zones to. Exported so
+ * the GLSL that declares them and the JS that writes them cannot drift.
+ */
+export const WORN_ZONE_UNIFORMS = Object.freeze({
+    rect: 'uWornZoneRect',
+    shape: 'uWornZoneShape',
+});
+
 const glslFloat = (value) => {
     const text = String(value);
     return /[.eE]/.test(text) ? text : `${text}.0`;
@@ -302,6 +373,56 @@ float sdsGroundApproachDirt(vec2 worldXZ, vec2 mouth, vec2 axis, float gateWidth
 `;
 
 /**
+ * GLSL for the worn zones. Injected into the WebGL terrain fragment shader.
+ *
+ * This chunk DECLARES its own uniforms, which the other chunks in this file do
+ * not. They take theirs as function parameters because each is a single vec2 or
+ * float that the shader has an obvious name for. These are two fixed-length
+ * arrays whose length, element packing and names all come from one constant, and
+ * a consumer that hand-wrote `uniform vec4 uWornZoneRect[3];` would be a fourth
+ * place WORN_ZONE_SLOTS could drift. `packWornZones` below writes the values, so
+ * the declaration and the write have exactly one author.
+ *
+ * Packing, per slot:
+ *   rect  = (centreX, centreZ, halfX, halfZ)
+ *   shape = (cosAngle, sinAngle, wear, 0)
+ *
+ * An unused slot is rect (0,0,0,0) with shape (1,0,0,0): an identity rotation
+ * and a zero wear, so it contributes nothing and cannot divide by zero.
+ */
+export const GROUND_WEAR_GLSL = `
+// Worn ground zones - generated from js/world/groundShading.js.
+// Do not hand-edit the constants or the array length here; change GROUND_WEAR
+// and WORN_ZONE_SLOTS instead.
+uniform vec4 ${WORN_ZONE_UNIFORMS.rect}[${WORN_ZONE_SLOTS}];
+uniform vec4 ${WORN_ZONE_UNIFORMS.shape}[${WORN_ZONE_SLOTS}];
+float sdsGroundWearZone(vec2 worldXZ, vec4 rect, vec4 shape) {
+    vec2 d = worldXZ - rect.xy;
+    // Rotate into the zone's own frame. The cos/sin pair is baked with the sign
+    // convention js/GrassSystem.js#addRotatedExclusionZone uses, so an axis
+    // aligned zone carries (1, 0) and this is two multiplies and an add.
+    vec2 local = vec2(d.x * shape.x - d.y * shape.y, d.x * shape.y + d.y * shape.x);
+    vec2 q = abs(local) - rect.zw;
+    float sdf = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
+    float t = clamp(sdf / ${glslFloat(GROUND_WEAR.falloff)}, 0.0, 1.0);
+    return (1.0 - t * t * (3.0 - 2.0 * t)) * shape.z;
+}
+float sdsGroundWear(vec2 worldXZ) {
+    // MAX, not sum, for the reason the approach combines with the natural dirt
+    // mask by MAX: two zones whose falloff bands overlap should wear the ground
+    // the way the nearer one does. A sum would stack the overlap into a slick.
+    float wear = 0.0;
+    for (int i = 0; i < ${WORN_ZONE_SLOTS}; i++) {
+        wear = max(wear, sdsGroundWearZone(worldXZ, ${WORN_ZONE_UNIFORMS.rect}[i], ${WORN_ZONE_UNIFORMS.shape}[i]));
+    }
+    return wear;
+}
+float sdsGroundWearDirt(vec2 worldXZ) {
+    return sdsGroundWear(worldXZ) * ${glslFloat(GROUND_WEAR.dirtBlend)};
+}
+`;
+
+/**
  * TSL primitives for the ground field. Returned rather than exported as nodes
  * because the TSL namespace arrives at runtime from the lazily-loaded
  * three.webgpu bundle (see js/world/webgpuModules.js).
@@ -418,6 +539,46 @@ export function buildGroundApproachWearNode(TSL, worldXZ, { mouth, axis, gateWid
  */
 export function buildGroundApproachDirtNode(TSL, worldXZ, uniforms) {
     return buildGroundApproachWearNode(TSL, worldXZ, uniforms).mul(GROUND_APPROACH.dirtBlend);
+}
+
+/**
+ * The worn zones as a TSL node. The twin of GROUND_WEAR_GLSL above: same
+ * packing, same falloff, same MAX combine, so the two terrain paths cannot
+ * describe different ground.
+ *
+ * Unrolled in JS rather than looped in TSL, which is the same divergence the
+ * GLSL twin's `for` and this loop already are: GLSL indexes a uniform array,
+ * TSL takes one uniform node per slot. Both read WORN_ZONE_SLOTS, so the shape
+ * is one number in one file either way.
+ *
+ * @param {object} TSL
+ * @param {object} worldXZ vec2 node of world (x, z)
+ * @param {Array<{rect: object, shape: object}>} slots vec4 uniform nodes per slot
+ * @returns {object} 0..1 wear
+ */
+export function buildGroundWearNode(TSL, worldXZ, slots) {
+    const { abs, clamp, float, length, max, min, vec2 } = TSL;
+    let wear = null;
+    for (const slot of slots ?? []) {
+        const dx = worldXZ.x.sub(slot.rect.x);
+        const dz = worldXZ.y.sub(slot.rect.y);
+        const localX = dx.mul(slot.shape.x).sub(dz.mul(slot.shape.y));
+        const localZ = dx.mul(slot.shape.y).add(dz.mul(slot.shape.x));
+        const qx = abs(localX).sub(slot.rect.z);
+        const qz = abs(localZ).sub(slot.rect.w);
+        const sdf = length(vec2(max(qx, 0.0), max(qz, 0.0))).add(min(max(qx, qz), 0.0));
+        const t = clamp(sdf.div(GROUND_WEAR.falloff), 0.0, 1.0);
+        const term = float(1.0).sub(t.mul(t).mul(float(3.0).sub(t.mul(2.0)))).mul(slot.shape.z);
+        wear = wear === null ? term : max(wear, term);
+    }
+    return wear === null ? float(0.0) : wear;
+}
+
+/**
+ * The worn zones' contribution to the terrain's dirt blend, as a TSL node.
+ */
+export function buildGroundWearDirtNode(TSL, worldXZ, slots) {
+    return buildGroundWearNode(TSL, worldXZ, slots).mul(GROUND_WEAR.dirtBlend);
 }
 
 // --- CPU reference implementations. Used by tests and by any placement-time
@@ -695,4 +856,290 @@ export function groundApproachGrassKeep(x, z, approach) {
     const wear = groundApproachWear(x, z, approach);
     if (wear <= 0) return 1;
     return 1 - (1 - GROUND_APPROACH.grassKeepMin) * wear;
+}
+
+// --- Worn zones. One list, two consumers. ---
+
+/**
+ * Signed distance in metres from (x, z) to a worn zone's edge. Negative inside,
+ * zero on the edge, positive outside.
+ *
+ * The rounded-rectangle SDF that `js/GrassSystem.js#_exclusionZoneDistance` has
+ * run since Cycle 114, moved here so the terrain shaders measure the ground with
+ * the same ruler the grass scatter does. `GrassSystem` now delegates to it.
+ *
+ * @param {{type?: string, minX?: number, maxX?: number, minZ?: number, maxZ?: number,
+ *          centerX?: number, centerZ?: number, width?: number, depth?: number,
+ *          cosAngle?: number, sinAngle?: number}} zone
+ * @param {number} x
+ * @param {number} z
+ * @returns {number} metres, negative inside
+ */
+export function wornZoneDistance(zone, x, z) {
+    let localX, localZ, halfWidth, halfDepth;
+    if (zone.type === 'rotated') {
+        const dx = x - zone.centerX;
+        const dz = z - zone.centerZ;
+        // Rotate the point by -angle to align with the rectangle's local axes.
+        localX = dx * zone.cosAngle - dz * zone.sinAngle;
+        localZ = dx * zone.sinAngle + dz * zone.cosAngle;
+        halfWidth = zone.width / 2;
+        halfDepth = zone.depth / 2;
+    } else {
+        halfWidth = (zone.maxX - zone.minX) / 2;
+        halfDepth = (zone.maxZ - zone.minZ) / 2;
+        localX = x - (zone.minX + zone.maxX) / 2;
+        localZ = z - (zone.minZ + zone.maxZ) / 2;
+    }
+    const qx = Math.abs(localX) - halfWidth;
+    const qz = Math.abs(localZ) - halfDepth;
+    return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0);
+}
+
+/**
+ * How thoroughly the ground at (x, z) is worn by a zone list, ignoring how hard
+ * each zone wears it. 1 inside any zone, easing to 0 over GROUND_WEAR.falloff
+ * metres outside, composed by MAXIMUM.
+ *
+ * This is the pure geometry both consumers share.
+ * `GrassSystem.exclusionKeepProbability` is `1 - this`, exactly: a minimum over
+ * per-zone smoothsteps is one minus a maximum over their complements, so the
+ * grass thins over precisely the band the terrain darkens under. The equality is
+ * pinned by tests/worn-ground.spec.js rather than left as a comment.
+ *
+ * @param {number} x
+ * @param {number} z
+ * @param {Array<object> | null | undefined} zones
+ * @returns {number} 0..1
+ */
+export function wornZoneCoverage01(x, z, zones) {
+    if (!zones) return 0;
+    let coverage = 0;
+    for (const zone of zones) {
+        const distance = wornZoneDistance(zone, x, z);
+        if (distance <= 0) return 1;
+        if (distance >= GROUND_WEAR.falloff) continue;
+        const t = distance / GROUND_WEAR.falloff;
+        const zoneCoverage = 1 - t * t * (3 - 2 * t);
+        if (zoneCoverage > coverage) coverage = zoneCoverage;
+    }
+    return coverage;
+}
+
+/**
+ * The terrain's wear at (x, z): the same coverage above, scaled by each zone's
+ * own peak intensity and composed by MAXIMUM. The CPU twin of GROUND_WEAR_GLSL
+ * and buildGroundWearNode.
+ *
+ * @param {number} x
+ * @param {number} z
+ * @param {Array<object> | null | undefined} zones
+ * @returns {number} 0..1
+ */
+export function groundWear01(x, z, zones) {
+    if (!zones) return 0;
+    let wear = 0;
+    for (const zone of zones) {
+        const peak = Number.isFinite(zone.wear) ? zone.wear : 0;
+        if (!(peak > 0)) continue;
+        const distance = wornZoneDistance(zone, x, z);
+        if (distance >= GROUND_WEAR.falloff) continue;
+        const t = Math.min(1, Math.max(0, distance / GROUND_WEAR.falloff));
+        const value = (1 - t * t * (3 - 2 * t)) * peak;
+        if (value > wear) wear = value;
+    }
+    return wear;
+}
+
+const rectZone = (kind, rect, wear) => ({
+    kind,
+    type: 'rect',
+    minX: Math.min(rect.minX, rect.maxX),
+    maxX: Math.max(rect.minX, rect.maxX),
+    minZ: Math.min(rect.minZ, rect.maxZ),
+    maxZ: Math.max(rect.minZ, rect.maxZ),
+    wear,
+});
+
+const isFiniteRect = (r) => Number.isFinite(r?.minX) && Number.isFinite(r?.maxX)
+    && Number.isFinite(r?.minZ) && Number.isFinite(r?.maxZ);
+
+/**
+ * The pen box a scene declares, in whichever of the two supported forms.
+ *
+ * A deliberate third copy of the normalisation in `shared/PenBarrier.js`'s
+ * constructor and `js/StructureBuilder.js#resolvePenBox`, for the reason the
+ * second one exists: `PenBarrier` is fence-frozen deterministic-sim code that
+ * nothing on the render path may import render concerns into, and
+ * `StructureBuilder` pulls in three.js. This file is read by four shader paths
+ * and must stay free of both. `tests/worn-ground.spec.js` pins this against
+ * `resolvePenBox` on the real scenes so the copies cannot drift.
+ *
+ * @param {{center?: {x: number, z: number}, radius?: number, minX?: number, maxX?: number, minZ?: number, maxZ?: number} | null | undefined} pen
+ * @returns {{minX: number, maxX: number, minZ: number, maxZ: number} | null}
+ */
+function penBox(pen) {
+    if (isFiniteRect(pen)) {
+        return {
+            minX: Math.min(pen.minX, pen.maxX), maxX: Math.max(pen.minX, pen.maxX),
+            minZ: Math.min(pen.minZ, pen.maxZ), maxZ: Math.max(pen.minZ, pen.maxZ),
+        };
+    }
+    if (pen?.center && pen.radius > 1) {
+        const { x, z } = pen.center;
+        return { minX: x - pen.radius, maxX: x + pen.radius, minZ: z - pen.radius, maxZ: z + pen.radius };
+    }
+    return null;
+}
+
+/**
+ * Where a scene's ground has been walked bare, resolved once from scene data so
+ * the grass thinning and the terrain shading read the same answer (Cycle 121).
+ *
+ * Two kinds today:
+ *
+ * - **`pen`**, from whichever pen form the scene declares. Home Field declares
+ *   `pasture` (plus `bounds`), Rolling Hills declares a nested `pen` rect and
+ *   Newsheepdogland declares `pen: {center, radius}`. Before this function only
+ *   the first was read, so the island pasture every ranked solo run drives into
+ *   had grass growing inside it and nobody had looked.
+ * - **`farmyard`**, from `farmHouse.exclusionArea`.
+ *
+ * The `pasture` branch keeps Cycle 114 Phase 1's correction: `pasture` gives the
+ * pen its DIMENSIONS but not its origin, because `js/FencePresets.js` builds
+ * `createPenStructure({width, depth}, 'north')` at `z = bounds.maxZ`, so the
+ * fence stands at `z[bounds.maxZ, bounds.maxZ + depth]` while the scene declares
+ * `z[pasture.minZ, pasture.maxZ]`. On Home Field that is z[100,128] against a
+ * declared z[102,130]. Excluding the declared rect leaves grass inside the front
+ * of the pen and a bald strip behind its back fence. Derive, never hardcode, so
+ * a scene that moves its bounds keeps bare ground under its own fence.
+ *
+ * No scene-id branch anywhere: every gate is on declared data, and a future
+ * scene that declares a pen gets worn ground for free.
+ *
+ * @param {object | null | undefined} sceneDef
+ * @param {{farmHouseArea?: object | null, pasture?: object | null}} [overrides]
+ *   `pasture` REPLACES the scene's pen and is for the sandbox resize, which is
+ *   the one caller that legitimately moves it. The mode-start reset path must
+ *   not pass one: `gameState.pasture` there is `js/FieldConfig.js`'s default rect
+ *   (z[102,125] off Home Field's bounds) on every scene, which is two metres off
+ *   Home Field's real fence and nowhere near the islands'.
+ *   `farmHouseArea` overrides the rect only, and only when the scene has a
+ *   farmhouse at all.
+ * @returns {Array<object>} zones, at most WORN_ZONE_SLOTS of them
+ */
+export function resolveWornGroundZones(sceneDef, overrides = {}) {
+    const zones = [];
+
+    // Farmhouse first, then the pen: the order js/TerrainBuilder.js#createGrass
+    // registered them in before this function existed. Composition is by
+    // minimum/maximum and so order-independent, but the scatter iterates the
+    // list and there is no reason to make a golden re-baseline explain that.
+    if (sceneDef?.farmHouse) {
+        const position = sceneDef.farmHouse.position;
+        const area = overrides.farmHouseArea
+            ?? sceneDef.farmHouse.exclusionArea
+            ?? (Number.isFinite(position?.x) && Number.isFinite(position?.z)
+                ? { minX: position.x - 40, maxX: position.x + 40, minZ: position.z - 40, maxZ: position.z + 40 }
+                : null);
+        if (isFiniteRect(area)) zones.push(rectZone('farmyard', area, GROUND_WEAR.kindWear.farmyard));
+    }
+
+    const penWear = GROUND_WEAR.kindWear.pen;
+    const override = overrides.pasture;
+    if (isFiniteRect(override)) {
+        if (override.edgeAngle) {
+            const width = override.maxX - override.minX;
+            const depth = override.maxZ - override.minZ;
+            zones.push({
+                kind: 'pen',
+                type: 'rotated',
+                centerX: (override.minX + override.maxX) / 2,
+                centerZ: (override.minZ + override.maxZ) / 2,
+                width,
+                depth,
+                angle: override.edgeAngle,
+                cosAngle: Math.cos(-override.edgeAngle),
+                sinAngle: Math.sin(-override.edgeAngle),
+                wear: penWear,
+            });
+        } else {
+            zones.push(rectZone('pen', override, penWear));
+        }
+    } else {
+        const pasture = sceneDef?.pasture;
+        const bounds = sceneDef?.bounds;
+        if (isFiniteRect(pasture) && Number.isFinite(bounds?.maxZ)) {
+            const halfWidth = (pasture.maxX - pasture.minX) / 2;
+            const depth = pasture.maxZ - pasture.minZ;
+            const centerX = (pasture.maxX + pasture.minX) / 2;
+            zones.push(rectZone('pen', {
+                minX: centerX - halfWidth,
+                maxX: centerX + halfWidth,
+                minZ: bounds.maxZ,
+                maxZ: bounds.maxZ + depth,
+            }, penWear));
+        } else if (isFiniteRect(pasture)) {
+            // No bounds on the scene def: fall back to the declared rect rather
+            // than skipping the pen entirely.
+            zones.push(rectZone('pen', pasture, penWear));
+        } else {
+            const box = penBox(sceneDef?.pen);
+            if (box) zones.push(rectZone('pen', box, penWear));
+        }
+    }
+
+    if (zones.length > WORN_ZONE_SLOTS) {
+        // Truncate rather than let the grass thin over ground the terrain has no
+        // slot to shade, which is the exact disconnect this cycle removes.
+        console.warn(
+            `[GROUND] ${zones.length} worn zones resolved but only ${WORN_ZONE_SLOTS} slots exist; `
+            + 'dropping the surplus. Raise WORN_ZONE_SLOTS in js/world/groundShading.js.'
+        );
+        zones.length = WORN_ZONE_SLOTS;
+    }
+    return zones;
+}
+
+/**
+ * Pack a zone list into the two vec4-per-slot arrays both terrain paths bind.
+ * The single seam through which the resolved list reaches a shader.
+ *
+ *   rect  = (centreX, centreZ, halfX, halfZ)
+ *   shape = (cosAngle, sinAngle, wear, 0)
+ *
+ * An unused slot gets an identity rotation and a zero wear, never a zero-sized
+ * rotation matrix: the shader multiplies by it unconditionally.
+ *
+ * @param {Array<object> | null | undefined} zones
+ * @param {number} [slots]
+ * @returns {{rect: number[][], shape: number[][], used: number}}
+ */
+export function packWornZones(zones, slots = WORN_ZONE_SLOTS) {
+    const rect = [];
+    const shape = [];
+    let used = 0;
+    for (let i = 0; i < slots; i++) {
+        const zone = zones?.[i] ?? null;
+        const wear = Number.isFinite(zone?.wear) ? zone.wear : 0;
+        if (!zone || !(wear > 0)) {
+            rect.push([0, 0, 0, 0]);
+            shape.push([1, 0, 0, 0]);
+            continue;
+        }
+        if (zone.type === 'rotated') {
+            rect.push([zone.centerX, zone.centerZ, zone.width / 2, zone.depth / 2]);
+            shape.push([zone.cosAngle, zone.sinAngle, wear, 0]);
+        } else {
+            rect.push([
+                (zone.minX + zone.maxX) / 2,
+                (zone.minZ + zone.maxZ) / 2,
+                (zone.maxX - zone.minX) / 2,
+                (zone.maxZ - zone.minZ) / 2,
+            ]);
+            shape.push([1, 0, wear, 0]);
+        }
+        used++;
+    }
+    return { rect, shape, used };
 }

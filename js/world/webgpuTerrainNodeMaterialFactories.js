@@ -78,6 +78,10 @@ export function createWebGpuTerrainNodeMaterialFactories(webGpuModules, options 
         // from the SceneDef's gate + pasture. Null (no gate) is the common case
         // and leaves the dirt mask exactly as it was.
         approach: context.approach ?? terrainDefaults.approach ?? options.approach ?? null,
+        // Cycle 121: the worn zones, resolved by TerrainBuilder from the
+        // SceneDef's pen and farmhouse. An empty list is the Open Country case
+        // and leaves the dirt mask exactly as it was.
+        wornZones: context.wornZones ?? terrainDefaults.wornZones ?? options.wornZones ?? null,
         polygonOffset,
       }, heightTexture);
       material.userData.heightTexture = heightTexture;

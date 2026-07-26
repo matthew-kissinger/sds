@@ -14,9 +14,12 @@ import {
     GROUND_CONTACT_GLSL,
     GROUND_VARIATION_GLSL,
     GRASS_VARIATION_TINT,
+    GROUND_WEAR,
     groundApproachGrassKeep,
     groundPositionHash01,
     resolveEntityFacing,
+    wornZoneCoverage01,
+    wornZoneDistance,
 } from './world/groundShading.js';
 
 // Cycle 20 Phase 2 v3 (2026-05-04): minimum displaced-terrain Y under which
@@ -27,19 +30,23 @@ import {
 // shore visually meets the water.
 const SHORELINE_Y_MIN = 0.5;
 
-// Cycle 114 Phase 1: metres over which grass thins OUTSIDE an exclusion zone's
-// edge instead of stopping dead at it. Every zone used to be a hard boolean, so
-// the pen and the farmhouse yard each sat inside a knife-edged bald rectangle -
-// the first defect the front-door review named. 4m is about two dog-lengths:
-// wide enough to read as ground worn down on the approach, narrow enough that
-// the pen's footprint still reads as a pen rather than as a soft smear.
+// Cycle 114 Phase 1 introduced the metres over which grass thins OUTSIDE an
+// exclusion zone's edge instead of stopping dead at it. Every zone used to be a
+// hard boolean, so the pen and the farmhouse yard each sat inside a knife-edged
+// bald rectangle - the first defect the front-door review named. 4m is about two
+// dog-lengths: wide enough to read as ground worn down on the approach, narrow
+// enough that the pen's footprint still reads as a pen rather than as a soft
+// smear.
 //
-// This is a module constant rather than a SceneDef field on purpose (Cycle 114
-// open question Q2). The scene-knobs rule in .claude/rules/scene-and-render.md
-// is about branching on scene ID, which this does not do: one falloff width
-// applied uniformly to every zone is a property of the effect, not of a scene.
-// It also keeps the fence-frozen shared/scenes/types.js untouched.
-const EXCLUSION_FALLOFF_M = 4.0;
+// It stays a module constant rather than a SceneDef field (Cycle 114 open
+// question Q2). The scene-knobs rule in .claude/rules/scene-and-render.md is
+// about branching on scene ID, which this does not do: one falloff width applied
+// uniformly to every zone is a property of the effect, not of a scene. It also
+// keeps the fence-frozen shared/scenes/types.js untouched.
+//
+// Cycle 121 moved the NUMBER to GROUND_WEAR.falloff in js/world/groundShading.js,
+// unchanged at 4.0. The terrain now darkens over the same band the grass thins
+// over, and two copies of one width is how they would come to disagree.
 
 // Blade height at the very edge of an exclusion zone, as a fraction of full
 // height. Density alone thins to a speckle, which reads as instances gone
@@ -2172,24 +2179,11 @@ export class GrassSystem {
      * @returns {number} metres, negative inside
      */
     _exclusionZoneDistance(zone, x, z) {
-        let localX, localZ, halfWidth, halfDepth;
-        if (zone.type === 'rotated') {
-            const dx = x - zone.centerX;
-            const dz = z - zone.centerZ;
-            // Rotate the point by -angle to align with the rectangle's local axes.
-            localX = dx * zone.cosAngle - dz * zone.sinAngle;
-            localZ = dx * zone.sinAngle + dz * zone.cosAngle;
-            halfWidth = zone.width / 2;
-            halfDepth = zone.depth / 2;
-        } else {
-            halfWidth = (zone.maxX - zone.minX) / 2;
-            halfDepth = (zone.maxZ - zone.minZ) / 2;
-            localX = x - (zone.minX + zone.maxX) / 2;
-            localZ = z - (zone.minZ + zone.maxZ) / 2;
-        }
-        const qx = Math.abs(localX) - halfWidth;
-        const qz = Math.abs(localZ) - halfDepth;
-        return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0);
+        // Cycle 121: the body moved to js/world/groundShading.js#wornZoneDistance
+        // so the terrain shaders measure the ground with the same ruler. Kept as
+        // a method because the two scatter mirrors and several tests call it
+        // through the prototype.
+        return wornZoneDistance(zone, x, z);
     }
 
     /**
@@ -2212,16 +2206,13 @@ export class GrassSystem {
      * @returns {number} 0..1
      */
     exclusionKeepProbability(x, z) {
-        let keep = 1;
-        for (const zone of this.exclusionZones) {
-            const distance = this._exclusionZoneDistance(zone, x, z);
-            if (distance <= 0) return 0;
-            if (distance >= EXCLUSION_FALLOFF_M) continue;
-            const t = distance / EXCLUSION_FALLOFF_M;
-            const zoneKeep = t * t * (3 - 2 * t);
-            if (zoneKeep < keep) keep = zoneKeep;
-        }
-        return keep;
+        // Cycle 121: one minus the shared worn-ground coverage, which is the same
+        // arithmetic Cycle 114 wrote here (a MINIMUM over per-zone smoothsteps is
+        // one minus a MAXIMUM over their complements) expressed against the
+        // function the terrain shaders read. That identity is what makes the
+        // grass thin over exactly the band the ground darkens under, and
+        // tests/worn-ground.spec.js pins it rather than trusting this comment.
+        return 1 - wornZoneCoverage01(x, z, this.exclusionZones);
     }
 
     /**
@@ -2298,10 +2289,30 @@ export class GrassSystem {
     }
 
     /**
-     * Add an exclusion zone (axis-aligned rectangle)
+     * Adopt the scene's resolved worn-ground zones (Cycle 121).
+     *
+     * THE list, not a copy of it: `js/TerrainBuilder.js` resolves it once from
+     * scene data and hands the same array to the terrain material's uniforms and
+     * to this. Two systems used to describe this ground and neither knew about
+     * the other, which is why the grass thinned over a rect the terrain never
+     * shaded. Must land before `init()`, which is when the scatter runs.
+     *
+     * @param {Array<object> | null | undefined} zones
      */
-    addExclusionZone(minX, maxX, minZ, maxZ) {
-        this.exclusionZones.push({ minX, maxX, minZ, maxZ, type: 'rect' });
+    setWornZones(zones) {
+        this.exclusionZones = Array.isArray(zones) ? zones : [];
+    }
+
+    /**
+     * Add an exclusion zone (axis-aligned rectangle).
+     *
+     * `wear` defaults to the pen intensity rather than to zero: a zone added
+     * here thins grass, and ground that thins without darkening is the defect
+     * Cycle 121 removed. A caller that wants grass gone without touching the
+     * ground has to say so.
+     */
+    addExclusionZone(minX, maxX, minZ, maxZ, wear = GROUND_WEAR.kindWear.pen) {
+        this.exclusionZones.push({ minX, maxX, minZ, maxZ, type: 'rect', wear });
     }
 
     /**
@@ -2311,8 +2322,9 @@ export class GrassSystem {
      * @param {number} width - Width of the rectangle (before rotation)
      * @param {number} depth - Depth of the rectangle (before rotation)
      * @param {number} angle - Rotation angle in radians
+     * @param {number} [wear] - Peak terrain wear, 0..1. See addExclusionZone.
      */
-    addRotatedExclusionZone(centerX, centerZ, width, depth, angle) {
+    addRotatedExclusionZone(centerX, centerZ, width, depth, angle, wear = GROUND_WEAR.kindWear.pen) {
         this.exclusionZones.push({
             type: 'rotated',
             centerX,
@@ -2322,7 +2334,8 @@ export class GrassSystem {
             angle,
             // Pre-calculate cos and sin for efficiency
             cosAngle: Math.cos(-angle),
-            sinAngle: Math.sin(-angle)
+            sinAngle: Math.sin(-angle),
+            wear
         });
     }
 

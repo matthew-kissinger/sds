@@ -11,6 +11,33 @@
  */
 
 import { getSceneManager } from '../GameBridge.js';
+import { resolveWornGroundZones } from './groundShading.js';
+
+/**
+ * Re-resolve the builder's worn-ground zones and push them to both consumers.
+ *
+ * Cycle 121. Before this, both rebuild paths hand-rolled their own zone list:
+ * they cleared `grassSystem.exclusionZones` and re-added the farmhouse rect plus
+ * whatever `pasture` they were handed. That is how a second description of the
+ * same ground got in, and the runtime proved it - probed live on 2026-07-26,
+ * EVERY scene came out of `startGame` carrying `{-30,30,102,125}`, which is
+ * js/FieldConfig.js's default rect off Home Field's medium bounds. It is two
+ * metres off Home Field's real fence line (Cycle 114 measured z[100,128]) and
+ * about a kilometre from Newsheepdogland's homestead. Nothing re-scattered
+ * afterwards, so it never showed; the moment the terrain reads the zone list it
+ * would show as a brown rectangle in the middle of an island.
+ *
+ * @param {object} builder TerrainBuilder instance.
+ * @param {object | null} [pastureOverride] Only from the genuine sandbox resize.
+ */
+function syncWornZones(builder, pastureOverride = null) {
+    builder.wornZones = resolveWornGroundZones(builder.sceneDef, {
+        farmHouseArea: builder.farmHouseExclusionArea,
+        pasture: pastureOverride,
+    });
+    builder.grassSystem?.setWornZones?.(builder.wornZones);
+    builder._syncWornZones?.();
+}
 
 /**
  * @param {object} builder TerrainBuilder instance.
@@ -72,38 +99,16 @@ export function setDynamicBounds(builder, bounds, pasture) {
         console.log('[TERRAIN] Updated pasture area:', pasture);
     }
 
-    // Update grass system exclusion zones if available
-    if (builder.grassSystem) {
-        builder.grassSystem.exclusionZones = [];
-
-        builder.grassSystem.addExclusionZone(
-            builder.farmHouseExclusionArea.minX,
-            builder.farmHouseExclusionArea.maxX,
-            builder.farmHouseExclusionArea.minZ,
-            builder.farmHouseExclusionArea.maxZ
-        );
-
-        // Add pasture exclusion if available (no grass in pen)
-        if (pasture) {
-            if (pasture.edgeAngle !== undefined && pasture.edgeAngle !== 0) {
-                const centerX = (pasture.minX + pasture.maxX) / 2;
-                const centerZ = (pasture.minZ + pasture.maxZ) / 2;
-                const width = pasture.maxX - pasture.minX;
-                const depth = pasture.maxZ - pasture.minZ;
-                builder.grassSystem.addRotatedExclusionZone(centerX, centerZ, width, depth, pasture.edgeAngle);
-            } else {
-                builder.grassSystem.addExclusionZone(
-                    pasture.minX,
-                    pasture.maxX,
-                    pasture.minZ,
-                    pasture.maxZ
-                );
-            }
-        }
-
-        // NOTE: We want grass INSIDE the field, so no bounds exclusion
-        console.log('[TERRAIN] Updated grass exclusion zones');
-    }
+    // Cycle 121: re-resolve the worn zones from scene data. Deliberately NO
+    // pasture override here, even though one was handed in. This is the
+    // mode-start "reset to default bounds" path (js/main.js#startGame), and the
+    // `pasture` it carries is `gameState.pasture`, which is js/FieldConfig.js's
+    // default rect on every scene - not the pen any of them actually has. The
+    // genuine sandbox resize passes its own pasture through regenerateGrass
+    // below, which is the one caller that legitimately moves a pen.
+    //
+    // NOTE: we want grass INSIDE the field, so no bounds exclusion.
+    syncWornZones(builder);
 }
 
 /**
@@ -204,39 +209,20 @@ export async function regenerateGrass(builder, bounds, pasture) {
         { tier }
     );
 
-    builder.grassSystem.addExclusionZone(
-        builder.farmHouseExclusionArea.minX,
-        builder.farmHouseExclusionArea.maxX,
-        builder.farmHouseExclusionArea.minZ,
-        builder.farmHouseExclusionArea.maxZ
-    );
-
     // Cycle 115 Phase 4: carry the scene's worn gate approach across the
     // rebuild. This is a fresh GrassSystem, so without the line the terrain
     // would keep shading the approach while the regenerated grass stopped
     // thinning over it, and the two would disagree about the same ground.
     builder.grassSystem.setGateApproach(builder.gateApproach ?? null);
 
-    if (pasture) {
-        if (pasture.edgeAngle !== undefined && pasture.edgeAngle !== 0) {
-            const centerX = (pasture.minX + pasture.maxX) / 2;
-            const centerZ = (pasture.minZ + pasture.maxZ) / 2;
-            const width = pasture.maxX - pasture.minX;
-            const depth = pasture.maxZ - pasture.minZ;
-            builder.grassSystem.addRotatedExclusionZone(centerX, centerZ, width, depth, pasture.edgeAngle);
-            console.log(`[TERRAIN] Added rotated pasture exclusion: center(${centerX.toFixed(1)}, ${centerZ.toFixed(1)}), size(${width}x${depth}), angle=${pasture.edgeAngle.toFixed(2)}rad`);
-        } else {
-            builder.grassSystem.addExclusionZone(
-                pasture.minX,
-                pasture.maxX,
-                pasture.minZ,
-                pasture.maxZ
-            );
-        }
-    }
-
-    // NOTE: We DO want grass inside the play area/field. Only exclude
-    // farmhouse and pasture.
+    // Cycle 121: the farmhouse yard and the pen, from the one resolved list.
+    // This IS the genuine sandbox resize (rebuildEnvironment is the only caller
+    // and js/main.js skips it on island scenes), so the pasture it was handed is
+    // authoritative and overrides the scene's declared pen. Must land before
+    // init(), which is when the scatter runs.
+    //
+    // NOTE: we DO want grass inside the play area. Only the yard and the pen.
+    syncWornZones(builder, pasture ?? null);
 
     await builder.grassSystem.init();
 

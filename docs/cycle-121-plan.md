@@ -53,6 +53,8 @@ The look work, authored against Phase 1's zone list, on both paths through `grou
 
 **Acceptance (EARS):** When Phase 2 ships, then a worn zone shall shade the terrain beneath it on both render paths, expressed once in `js/world/groundShading.js`. When the shared shape changes, then both paths shall change with it and a spec shall fail if only one does. When Phase 2 ships, then any change to `EXCLUSION_FALLOFF_M` shall be recorded here with the before and after, or the constant shall be stated as deliberately unchanged.
 
+**The falloff record (Phase 2 item 3): DELIBERATELY UNCHANGED at 4.0 m.** The number moved file, not value: it lives at `GROUND_WEAR.falloff` in [`js/world/groundShading.js`](../js/world/groundShading.js) now, because the terrain darkens over the same band the grass thins over and two copies of one width is how they would come to disagree. Judged after the ground was shaded, at close range along Home Field's west pen fence (`cycle121-validation/after/field-pen-edge.png`): the blades shorten and thin into ground that is already browning under them, so the transition reads as a couple of metres of worn ground rather than as a line. The knife edge was the ground not changing, exactly as the trace predicted; widening the band would have softened the wrong thing. `EXCLUSION_EDGE_HEIGHT_MIN` is unchanged at 0.45 and stays in `js/GrassSystem.js`, since blade height is grass-only.
+
 ## Phase 3 - The browser probe and the goldens (~2hr)
 
 1. Capture Home Field's pen and farmhouse yard, Rolling Hills' pasture and gate approach, and Newsheepdogland's homestead, on the production WebGPU path. `assertWebGpuEngaged` is not optional.

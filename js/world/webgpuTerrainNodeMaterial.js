@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-import { Vector2 as ThreeVector2, Vector3 as ThreeVector3 } from 'three';
+import { Vector2 as ThreeVector2, Vector3 as ThreeVector3, Vector4 as ThreeVector4 } from 'three';
 import {
+  WORN_ZONE_SLOTS,
   buildGroundApproachDirtNode,
   buildGroundContactNode,
   buildGroundNoiseNodes,
   buildGroundVariationNode,
+  buildGroundWearDirtNode,
+  packWornZones,
 } from './groundShading.js';
 
 export function createWebGpuTerrainHeightfieldNodeMaterial(
-  { MeshLambertNodeMaterial, DoubleSide, Vector2 = ThreeVector2, Vector3 = ThreeVector3, TSL },
+  { MeshLambertNodeMaterial, DoubleSide, Vector2 = ThreeVector2, Vector3 = ThreeVector3, Vector4 = ThreeVector4, TSL },
   terrain,
   heightTexture
 ) {
@@ -85,6 +88,26 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
     axis: approachAxis,
     gateWidth: approachWidth,
   }).mul(approachStrength);
+  // Cycle 121: the worn zones. Same term, same reasoning, one slot per zone. The
+  // pen interior, the farmhouse yard and the gate approach are one surface with
+  // three names, so they differ in shape and intensity and never in material.
+  //
+  // No strength uniform of its own: a slot's wear IS its strength, and an unused
+  // slot carries zero. Live uniforms for the same reason the approach's are, and
+  // this time something drives them - TerrainBuilder#_syncWornZones pushes the
+  // resolved list on a scene swap and on a sandbox rebuild, which is what stops
+  // the shaded ground and the scattered grass drifting apart mid-session.
+  const wornPack = packWornZones(terrain.wornZones ?? null);
+  const wornSlots = [];
+  for (let i = 0; i < WORN_ZONE_SLOTS; i++) {
+    const r = wornPack.rect[i];
+    const s = wornPack.shape[i];
+    wornSlots.push({
+      rect: uniform(typeof Vector4 === 'function' ? new Vector4(r[0], r[1], r[2], r[3]) : r.slice()),
+      shape: uniform(typeof Vector4 === 'function' ? new Vector4(s[0], s[1], s[2], s[3]) : s.slice()),
+    });
+  }
+  const wornDirt = buildGroundWearDirtNode(TSL, worldXZ, wornSlots);
   const detailBase = terrain.detailBase ?? 0.88;
   const detailStrength = terrain.detailStrength ?? 0.20;
   const aoFloor = terrain.aoFloor ?? 0.86;
@@ -94,7 +117,7 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
   const baseColor = mix(
     mix(mix(low, mid, midBlend), high, highBlend),
     dirt,
-    max(dirtMask.mul(terrain.dirtStrength ?? 0.26), approachDirt)
+    max(max(dirtMask.mul(terrain.dirtStrength ?? 0.26), approachDirt), wornDirt)
   ).mul(detail).mul(ao);
 
   const material = new MeshLambertNodeMaterial();
@@ -202,6 +225,9 @@ export function createWebGpuTerrainHeightfieldNodeMaterial(
     width: approachWidth,
     strength: approachStrength,
   };
+  // The worn zones' handle. Picked up by TerrainBuilder#_syncWornZones, which is
+  // the twin of the WebGL path's uniform writes.
+  material.userData.wornGroundNodeUniforms = { slots: wornSlots };
   // Read by tests/terrain-scene-fog.spec.js as the standing answer to "where
   // does this material's fog come from": scene.fog, and only scene.fog.
   material.userData.webgpuTerrainFogSource = 'scene-fog';
