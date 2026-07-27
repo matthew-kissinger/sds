@@ -49,4 +49,19 @@ Progress:
 - Corrected the farmhouse record from Matt's current visual verdict: Cycle 105 did replace the file, but the current undersized, holed Kiln GLB is not the final house. A dedicated deterministic procedural farmhouse/baker cycle is now in the backlog.
 
 TODO:
-- Close the cycle docs, commit/tag `v2.6.3`, deploy, and verify the exact production head.
+- Completed in release `v2.6.3`.
+
+## Survival HUD ownership hotfix
+
+Original prompt: Keep the Midday/day-night chip and Skip to Dusk controls exclusive to Survival; remove them from Home Field and every other mode.
+
+Progress:
+- Traced the regression to Cycle 123's valid Home Field sun-cycle opt-in colliding with an older `initWorld` predicate that treated any `dayNight.dayLoop` scene as Survival.
+- Restricted the Survival day-loop subsystem owner to scenes that explicitly declare `survival`, while preserving Home Field's ambient sun/lamp cycle.
+- Added a registry-wide regression test proving Newsheepdogland is the only scene allowed to mount the Survival day-loop UI.
+- Focused tests passed 23/23; the full suite passed 2,403/2,403 with 11 intentional skips.
+- Production build, lint, typecheck, and the focused Chromium gameplay test passed.
+- Inspected the Home Field gameplay screenshot: normal HUD present, Survival time controls absent.
+
+TODO:
+- Commit, tag, deploy, and verify `v2.6.4`.

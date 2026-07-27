@@ -4,6 +4,19 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.6.4] - 2026-07-26
+
+### Fixed
+
+- The Survival day/phase chip and Skip to Dusk control no longer appear on Home Field or any other non-survival scene.
+- Home Field keeps its ambient sun and farmhouse-lamp progression without inheriting Survival phases, wolves, economy, gate scheduling, or HUD controls.
+
+### Validation
+
+- A registry-wide ownership test proves Newsheepdogland is the only scene allowed to initialize the Survival day loop.
+- Chromium gameplay proof confirms Home Field reaches an active three-sheep Just Play round with no Survival run, day loop, day/phase chip, or Skip to Dusk element.
+- `npm test`, `npm run build`, `npm run lint`, and `npm run typecheck` pass.
+
 ## [2.6.3] - 2026-07-26
 
 ### Changed

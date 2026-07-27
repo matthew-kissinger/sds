@@ -1,6 +1,6 @@
 # Sheep Dog Sim Launch Checklist
 
-Use this after Matt approves a web release action. The current web release target is the `v2.6.3` web beta hotfix.
+Use this after Matt approves a web release action. The current web release target is the `v2.6.4` web beta hotfix.
 
 ## Pre-Tag Verification
 
@@ -33,15 +33,15 @@ npm --prefix native/desktop-electron run proof:webgpu
 ## Tag
 
 ```bash
-git tag -a v2.6.3 -m "release: v2.6.3"
-git push origin v2.6.3
+git tag -a v2.6.4 -m "release: v2.6.4"
+git push origin v2.6.4
 ```
 
 ## GitHub Release
 
 1. Open GitHub Releases for `matthew-kissinger/sds`.
-2. Draft a release for tag `v2.6.3`.
-3. Use `docs/launch/v2.6.3-play-start-performance-release-notes.md` as source copy for this hotfix.
+2. Draft a release for tag `v2.6.4`.
+3. Use `docs/launch/v2.6.4-survival-ui-ownership-release-notes.md` as source copy for this hotfix.
 4. Do not attach desktop artifacts unless Matt explicitly approves native distribution.
 5. Publish only after production deploy is green.
 
@@ -61,11 +61,11 @@ powershell -NoProfile -Command "Invoke-WebRequest https://sheepdogsim.com/sitema
 powershell -NoProfile -Command "Invoke-WebRequest https://sds-worker.matt-m-kissinger.workers.dev/healthz -UseBasicParsing | Select-Object StatusCode,Content"
 ```
 
-Also inspect the deployed HTML and game flow for the `v2.6.3` beta hotfix claims: three public scenes, immediate monotonic loading cover, one-click mobile high-count starts, stable public WebGL, streamed music without restarts, sandbox/local starts, controller/touch/keyboard input, Newsheepdogland gated lab, support/privacy pages, public lobby discovery, and leaderboard posture.
+Also inspect the deployed Home Field flow for the `v2.6.4` beta hotfix claim: the scene retains its ambient sun cycle while the Survival day/phase chip, Skip to Dusk control, Survival run, and gameplay day loop are absent.
 
 ## Itch Update
 
-Deferred for the `v2.6.3` web beta hotfix. Do not upload or publish unless Matt explicitly reopens itch.
+Deferred for the `v2.6.4` web beta hotfix. Do not upload or publish unless Matt explicitly reopens itch.
 
 If reopened:
 
@@ -77,7 +77,7 @@ If reopened:
 
 ## Steam Continuation
 
-Do not continue during the `v2.6.3` web beta hotfix. Steam remains a long-term target only.
+Do not continue during the `v2.6.4` web beta hotfix. Steam remains a long-term target only.
 
 Required before submission:
 

@@ -137,6 +137,10 @@ function createLazyWolfPack(config) {
     };
 }
 
+export function ownsSurvivalDayLoop(scene) {
+    return Boolean(scene?.survival && scene.dayNight?.dayLoop && scene.gate);
+}
+
 /**
  * @param {object} game SheepDogSimulation instance.
  * @param {(step: string, detail?: string) => void} [logStep]
@@ -349,11 +353,10 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             game._penBarrier = null;
         }
 
-        // Cycle 65: the day loop. Only on scenes that opt into it
-        // (Newsheepdogland). Its enclosure went up with every other scene's
-        // above; the DayLoop + the day/night HUD chip are created here, and a
-        // per-frame runner is stashed on the game for the main loop to call.
-        if (game.currentScene.dayNight?.dayLoop && game.currentScene.gate) {
+        // The survival day loop owns gameplay phases, the day/night HUD,
+        // skip-to-dusk, wolves and the survival economy. A scene may animate its
+        // sun without owning these systems.
+        if (ownsSurvivalDayLoop(game.currentScene)) {
             const pen = penDef;
             const needsSurvivalRun = Boolean(game.currentScene.survival && !game.isMultiplayer);
             const needsMinimap = Boolean(game.currentScene.survival && Array.isArray(game.currentScene.boundary?.points));
