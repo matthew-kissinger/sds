@@ -429,8 +429,13 @@ export function installCinemaApi(game) {
         lodFocus: null,
 
         /** Wraps SheepDogSimulation.startSoloGame for Playwright shot drives. */
-        startSolo(dogId = 'jep', mode = 'classic') {
-            game.startSoloGame?.(dogId, mode);
+        async startSolo(dogId = 'jep', mode = 'classic') {
+            window.__sdsBootLoading = true;
+            try {
+                return await game.startSoloGame?.(dogId, mode);
+            } finally {
+                window.__sdsBootLoading = false;
+            }
         },
 
         /**

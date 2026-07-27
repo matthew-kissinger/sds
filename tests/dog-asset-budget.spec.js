@@ -3,13 +3,13 @@
 /**
  * Cycle 112 Phase 2: the dog GLB budget and the clip contract.
  *
- * Jep is the default dog and the only dog in GameAssetLoader's critical set, so
- * its bytes gate the first playable frame for every new player. It shipped at
+ * Jep is the default dog, so its bytes gate the first playable frame for every
+ * new player. It shipped at
  * 1,301 KB against 206 KB of mesh: 84% of the heaviest file on the critical
  * path was keyframe data, and eight of its nineteen clips were unreachable.
  *
- * Nothing guarded any of that. There is no test on GameAssetLoader, none on the
- * critical asset list, and none on dog animation, so a future bake could
+ * Nothing guarded any of that. There was no asset-budget or dog-animation
+ * contract, so a future bake could
  * silently put the weight back. This spec is that guard.
  *
  * The clip contract is pinned in BOTH directions on purpose:

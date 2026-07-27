@@ -18,7 +18,6 @@ import { Sheepdog } from './Sheepdog.js';
 import { PerformanceMonitor } from './PerformanceMonitor.js';
 import { MenuController } from './MenuController.js';
 import { AudioManager } from './AudioManager.js';
-import { GameAssetLoader } from './GameAssetLoader.js';
 import { MultiplayerState } from './MultiplayerState.js';
 import { Vector2D } from './Vector2D.js';
 import { setGameInstance, emitGameEvent } from './GameBridge.js';
@@ -134,8 +133,10 @@ class SheepDogSimulation {
         // cheap drifting-boid field as first frame instead of building the
         // hero scene; the picker overlay floats on top and the real scene
         // streams in on the first pick. Any deep-link that needs a built scene
-        // opts out: ?scene=, an #/r/ room invite, an #s/ sandbox config, or the
-        // ?autostart / ?testNoCanvas / ?cinematic harness flags. `_attractMode`
+        // opts out: ?scene=, an #/r/ room invite, or the ?autostart /
+        // ?testNoCanvas / ?cinematic harness flags. Sandbox configs remain on
+        // the cheap field until Start, then build only their selected scene.
+        // `_attractMode`
         // flips true in init() once the field actually mounts; rebuildScene
         // clears it when the first real scene is built.
         this._bootAttract = shouldBootAttract({
@@ -590,7 +591,6 @@ class SheepDogSimulation {
         window.__sds.atmosphereRef = this.atmosphere;
         window.__sds.terrainBuilderRef = this.terrainBuilder;
         this.webVitalsMonitor = new WebVitalsMonitor();
-        this.gameAssetLoader = new GameAssetLoader();
         this.menuController = new MenuController(this.sceneManager);
 
         // Cycle 24 Phase 1: install MP probe immediately after MenuController
@@ -904,11 +904,6 @@ class SheepDogSimulation {
         try {
             logStep('Starting initialization', `mobile=${this.sceneManager.isMobile}`);
 
-            // Start progressive asset loading for SEO performance. First-run-only;
-            // not repeated on scene swaps.
-            logStep('Loading critical assets');
-            await this.gameAssetLoader.loadCriticalAssets();
-
             // Cycle 46 Phase 1: zen attract field as first paint. Skip the
             // heavy per-scene construction (sun billboard + buildSceneBody)
             // entirely and mount the cheap drifting-boid field instead; the
@@ -1025,12 +1020,10 @@ class SheepDogSimulation {
             return new Promise(() => {});
         }
 
-        // Cycle 46 Phase 2: out of the zen attract field, let the idle GLB
-        // prefetch finish before building so the build reuses the warmed dog +
-        // sheep + fence caches (models/fenceModels stages drop to ~0, no double
-        // fetch). The field keeps drifting during this await — no black frame.
-        if (this._attractMode && this._attractPrefetchPromise) {
-            try { await this._attractPrefetchPromise; } catch {}
+        // If Play beats the idle callback, start the same single-flight work
+        // immediately instead of waiting for the callback's 2.5s timeout.
+        if (this._attractMode && this._startAttractPrefetch) {
+            try { await this._startAttractPrefetch(); } catch {}
         }
 
         // Cycle 46 Phase 2 / Cycle 52 P1: when a reveal layer is armed it is kept
@@ -1054,6 +1047,7 @@ class SheepDogSimulation {
 
         try {
             const newSceneDef = loadScene(toId);
+            void this.terrainBuilder?.preloadHomesteadPlayfieldProps?.(newSceneDef);
             await this.disposeScene();
             // Layer survived teardown (above) for the dissolve; release the
             // guard now so any later dispose cleans up a lingering layer.
@@ -1287,6 +1281,22 @@ class SheepDogSimulation {
         }
     }
 
+    async _compileGameplayStartShaders() {
+        const renderer = this.sceneManager?.getRenderer?.();
+        if (!renderer?.isWebGPURenderer || typeof renderer.compileAsync !== 'function') return;
+        this._reportLoadStep('Optimizing first frame');
+        const started = performance.now();
+        try {
+            await renderer.compileAsync(
+                this.sceneManager.getScene(),
+                this.sceneManager.getCamera(),
+            );
+            console.log(`[PREWARM] gameplay compileAsync ${Math.round(performance.now() - started)}ms`);
+        } catch (err) {
+            console.warn('[PREWARM] gameplay compileAsync failed; lazy compile fallback:', err?.message || err);
+        }
+    }
+
     async createSunBillboard(initialPreset) {
         const { SunBillboard } = await import('./effects/SunBillboard.js');
         this._sunBillboard = new SunBillboard(this.sceneManager.getScene());
@@ -1327,19 +1337,27 @@ class SheepDogSimulation {
      * loads normally. One-shot via the stored promise.
      */
     _prefetchSceneAssets() {
-        if (this._attractPrefetchPromise) return;
-        const run = () => Promise.allSettled([
-            this.terrainBuilder?.loadModels?.(),
-            this.structureBuilder?.loadModels?.(),
-        ]);
-        this._attractPrefetchPromise = new Promise((resolve) => {
-            const kick = () => { run().then(resolve, resolve); };
-            if (typeof window !== 'undefined' && window.requestIdleCallback) {
-                window.requestIdleCallback(kick, { timeout: 2500 });
-            } else {
-                setTimeout(kick, 300);
-            }
-        });
+        if (this._startAttractPrefetch) return;
+        const run = () => {
+            this._gateColumnModulePromise ??= import('./effects/GateColumn.js');
+            this._penContainmentModulePromise ??= import('./gamestate/penContainment.js');
+            return Promise.allSettled([
+                this.terrainBuilder?.loadModels?.(),
+                this.structureBuilder?.loadModels?.(),
+                this._gateColumnModulePromise,
+                this._penContainmentModulePromise,
+            ]);
+        };
+        this._startAttractPrefetch = () => {
+            this._attractPrefetchPromise ??= run();
+            return this._attractPrefetchPromise;
+        };
+        const kick = () => { void this._startAttractPrefetch(); };
+        if (typeof window !== 'undefined' && window.requestIdleCallback) {
+            window.requestIdleCallback(kick, { timeout: 2500 });
+        } else {
+            setTimeout(kick, 300);
+        }
     }
 
     /**
@@ -1937,6 +1955,11 @@ class SheepDogSimulation {
         // For multiplayer games, we'll set the specific game mode (competitive/timed) later when we have the data
         this.gameState.startGame(mode, null, singlePlayerMode, { skipVisibleFlockReset: true });
 
+        if (!this.gameState.optimizedSheepSystem) {
+            this.gameState.createSheepFlock(this.sceneManager.getScene());
+            this.registerSystemTriangleCounts();
+        }
+
         // Reset terrain builder to default bounds (in case switching from sandbox)
         if (this.terrainBuilder) {
             this.terrainBuilder.setDynamicBounds(
@@ -1977,10 +2000,7 @@ class SheepDogSimulation {
         // Reset competitive audio state
         this.endgameMusicPlaying = false;
         
-        // Start appropriate gameplay music
-        if (this.audioManager?.isMusicReady?.()) {
-            this.audioManager.playGameplayMusic();
-        }
+        void this.audioManager?.prepareRound?.(selectedDogType, mode);
 
         // Optional local developer replay capture (?devClip=1 on localhost).
         this._startReplay();
@@ -2052,6 +2072,8 @@ class SheepDogSimulation {
             // Reset camera to default position for solo mode
             this.sceneManager.resetCameraToDefault();
         }
+
+        await this._compileGameplayStartShaders();
     }
 
     /**
@@ -2154,8 +2176,12 @@ class SheepDogSimulation {
             console.log(`[SANDBOX] Island scene ${sandboxConfig.sceneId}: scene owns terrain + structures, skipping sandbox rebuild`);
         }
 
-        // Check if we need to recreate the sheep flock due to count change
-        if (this.gameState.needsFlockRecreation) {
+        // Create the configured flock after any environment rebuild so the
+        // measured transaction constructs it once against final bounds.
+        if (!this.gameState.optimizedSheepSystem) {
+            this.gameState.createSheepFlock(this.sceneManager.getScene());
+            this.gameState.needsFlockRecreation = false;
+        } else if (this.gameState.needsFlockRecreation) {
             console.log('[SANDBOX] Recreating sheep flock due to count change');
             this.gameState.recreateSheepFlock(this.sceneManager.getScene());
             this.gameState.needsFlockRecreation = false;
@@ -2192,19 +2218,12 @@ class SheepDogSimulation {
         this.menuController.isActive = false;
         this.menuController.gameStarted = true;
 
-        // Fade out menu music and start gameplay music
-        if (this.audioManager) {
-            this.audioManager.fadeOutCurrentMusic(800);
-            setTimeout(() => {
-                if (this.audioManager?.isMusicReady?.()) {
-                    this.audioManager.playGameplayMusic();
-                }
-            }, 900);
-        }
+        void this.audioManager?.prepareRound?.(dogType, 'solo');
 
         // Optional local developer replay capture (?devClip=1 on localhost).
         this._startReplay();
 
+        await this._compileGameplayStartShaders();
         console.log('[SANDBOX] Game started successfully');
     }
 
@@ -2311,6 +2330,10 @@ class SheepDogSimulation {
         // Start game state
         this.gameState.startGame('solo', null, 'classic');
         this.gameState.gameMode = 'local';
+        if (!this.gameState.optimizedSheepSystem) {
+            this.gameState.createSheepFlock(this.sceneManager.getScene());
+            this.registerSystemTriangleCounts();
+        }
 
         // Build structures based on mode
         if (localConfig.mode === 'versus') {
@@ -2364,19 +2387,12 @@ class SheepDogSimulation {
         this.menuController.isActive = false;
         this.menuController.gameStarted = true;
 
-        // Start music
-        if (this.audioManager) {
-            this.audioManager.fadeOutCurrentMusic(800);
-            setTimeout(() => {
-                if (this.audioManager?.isMusicReady?.()) {
-                    this.audioManager.playGameplayMusic();
-                }
-            }, 900);
-        }
+        void this.audioManager?.prepareRound?.(localConfig.player1Dog, 'solo');
 
         // Optional local developer replay capture (?devClip=1 on localhost).
         this._startReplay();
 
+        await this._compileGameplayStartShaders();
         console.log('[LOCAL] Game started successfully');
     }
 
@@ -2756,6 +2772,8 @@ class SheepDogSimulation {
     }
 
     runFrame(deltaTime, options = {}) {
+        if (window.__sdsBootLoading === true) return false;
+
         // Cycle 11 Phase 1: hard early-out while disposeScene/rebuildScene is
         // mid-flight. Renderer + scene + camera persist across swaps, so a
         // single render keeps the canvas alive under the SceneSwapOverlay.
@@ -3460,11 +3478,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     emitRendererModeTelemetry(gameInstance);
 
-    // P1-MOBILE-FALLBACK: if this load landed on WebGL because WebGPU was
-    // unavailable (capability-driven, not an explicit ?renderer=webgl or the
-    // experimentalWebGpu opt-out), surface a one-per-session non-blocking
-    // compatibility-rendering toast and emit `renderer_fallback`. Lazy import
-    // keeps i18n/telemetry out of the critical boot path.
+    // If an explicit WebGPU diagnostic falls back, surface a one-per-session
+    // non-blocking compatibility toast and emit `renderer_fallback`. The public
+    // WebGL default has no fallback reason and stays silent.
     import('./rendering/rendererFallbackNotice.js')
         .then((m) => m.maybeNotifyRendererFallback())
         .catch(() => {});
@@ -3500,7 +3516,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Delegate menu/network flows from gameInstance to menuController for GameBridge
     gameInstance.startSoloGame = (dogType, singlePlayerMode = 'classic') => {
-        gameInstance.menuController.selectSolo(dogType, singlePlayerMode);
+        return gameInstance.menuController.selectSolo(dogType, singlePlayerMode);
     };
 
     // Note: startSandboxGame is already defined on the class, no need to override

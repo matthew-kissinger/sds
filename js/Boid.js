@@ -215,7 +215,7 @@ export class Boid {
         this.forceAccumulator.multiply(0); // Reset force accumulator
         
         // Store previous velocity for smoothing
-        this.previousVelocity = this.velocity.clone();
+        this.previousVelocity.set(this.velocity.x, this.velocity.z);
         
         // Update velocity
         this.velocity.add(this.acceleration);
@@ -225,15 +225,18 @@ export class Boid {
         this.velocity.multiply(this.dampingFactor);
         
         // Smooth velocity with previous velocity to reduce jittering
-        const smoothedVelocity = this.previousVelocity.clone()
-            .multiply(this.velocitySmoothing)
-            .add(this.velocity.clone().multiply(1 - this.velocitySmoothing));
+        const smoothedX = this.previousVelocity.x * this.velocitySmoothing
+            + this.velocity.x * (1 - this.velocitySmoothing);
+        const smoothedZ = this.previousVelocity.z * this.velocitySmoothing
+            + this.velocity.z * (1 - this.velocitySmoothing);
+        this.velocity.set(smoothedX, smoothedZ);
         
         // Only apply movement if above threshold to prevent micro-movements
-        if (smoothedVelocity.magnitude() > this.minMovementThreshold) {
-            this.velocity = smoothedVelocity;
+        if (this.velocity.magnitude() > this.minMovementThreshold) {
             // Frame-rate independent movement: deltaTime ensures consistent speed regardless of FPS
-            this.position.add(this.velocity.clone().multiply(deltaTime * this.velocityScale));
+            const movementScale = deltaTime * this.velocityScale;
+            this.position.x += this.velocity.x * movementScale;
+            this.position.z += this.velocity.z * movementScale;
         } else {
             // Stop micro-movements
             this.velocity.multiply(0);
@@ -253,4 +256,4 @@ export class Boid {
             }
         }
     }
-} 
+}

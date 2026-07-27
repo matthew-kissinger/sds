@@ -68,7 +68,7 @@ node tools/asset-gen/integrate.mjs --compress    # also draco-compress after cop
 node tools/asset-gen/integrate.mjs --dry-run     # show what would be copied
 ```
 
-**Important:** the loader at [`js/TerrainBuilder.js`](../../js/TerrainBuilder.js) reads `rock1.glb / rock2.glb / rock3.glb` by literal path, and [`js/GameAssetLoader.js`](../../js/GameAssetLoader.js) reads `tree1.glb / tree2.glb / pine.glb` the same way. The integrate script renames picks to those names so the loader keeps working unchanged. If picks > slots, the extras keep their descriptive names — you'd need to widen the loader array manually.
+**Important:** the loader at [`js/TerrainBuilder.js`](../../js/TerrainBuilder.js) reads the production rock and tree slots by literal path. The integrate script renames picks to those names so the loader keeps working unchanged. If picks exceed the available slots, the extras keep their descriptive names - widen the loader arrays deliberately.
 
 ## Optional escape hatch: turnkey 3D AI (Meshy)
 

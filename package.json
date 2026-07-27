@@ -1,6 +1,6 @@
 {
   "name": "sheep-dog-sim",
-  "version": "2.6.2",
+  "version": "2.6.3",
   "description": "Free browser herding game with three public scenes, solo challenges, 2-4 player multiplayer, mobile controls, gamepad support, and flocks up to 5,000 sheep",
   "type": "module",
   "main": "index.html",
@@ -75,6 +75,8 @@
     "validation:perf": "node tools/validation/frame-time-histogram.mjs",
     "validation:coldload": "node tools/validation/cold-load.mjs --runs=3",
     "validation:coldload:mobile": "node tools/validation/cold-load.mjs --profile=mobile --runs=3",
+    "validation:playstart": "node tools/validation/play-start.mjs",
+    "validation:audio": "node tools/validation/audio-assets.mjs",
     "validation:seam": "node tools/validation/horizon-seam.mjs",
     "validation:seam:fixtures": "node tools/validation/horizon-seam.mjs --fixtures",
     "validation:water": "node tools/validation/water-look.mjs",

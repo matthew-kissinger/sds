@@ -193,7 +193,7 @@ async function main() {
 
     const treePicks = copied.filter((p) => p.category === 'trees');
     if (treePicks.length > 0) {
-        console.log('\n  Trees: edit js/GameAssetLoader.js if you want to add these to the critical/deferred lists,');
+        console.log('\n  Trees: edit js/TerrainBuilder.js if you want to add these to the production loader,');
         console.log('  then update tests/tree-assets.spec.js TREE_FILES to keep the contract spec honest.');
         console.log('  Files copied:');
         for (const p of treePicks) console.log(`    - ${p.dest}`);

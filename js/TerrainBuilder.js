@@ -1851,6 +1851,12 @@ export class TerrainBuilder {
         return promise;
     }
 
+    preloadHomesteadPlayfieldProps(sceneDef = this.sceneDef) {
+        const sceneId = sceneDef?.id ?? this.sceneDef?.id ?? null;
+        const placements = getHomesteadPlayfieldPlacements(sceneId);
+        return Promise.allSettled(placements.map((placement) => this._loadHomesteadPlayfieldProp(placement)));
+    }
+
     _measureHomesteadPlayfieldProp(root) {
         let meshes = 0;
         let triangles = 0;

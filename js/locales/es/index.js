@@ -118,14 +118,6 @@ export default {
         chaosDesc: '¡Pastorea 5000 ovejas - locura absoluta!'
     },
 
-    // P1-MOBILE-WARN: aviso de rendimiento previo a la partida en móviles.
-    mobileWarning: {
-        title: 'Un rebaño grande para este dispositivo',
-        body: '{{sheep}} ovejas son muchas para un teléfono o una tableta. Pueden perderse fotogramas. Puedes continuar, o volver y elegir un rebaño más pequeño.',
-        continue: 'Continuar igualmente',
-        goBack: 'Volver'
-    },
-
     // P1-MOBILE-FALLBACK: aviso de renderizado de compatibilidad (WebGPU -> WebGL).
     rendererFallback: {
         title: 'Renderizado de compatibilidad',
@@ -159,8 +151,6 @@ export default {
         qualityOption: 'Calidad - Mejores visuales',
         shadows: 'Sombras',
         shadowsDesc: 'Activar sombras dinámicas (solo escritorio)',
-        experimentalWebGpu: 'Renderizador WebGPU',
-        experimentalWebGpuDesc: 'Experimental. Usa WebGPU cuando esté disponible; desactívalo para recargar con WebGL.',
         rendererDiagnostics: 'Estado del renderizador',
         shadowQuality: 'Calidad de Sombras',
         low: 'Baja',

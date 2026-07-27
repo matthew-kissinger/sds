@@ -118,16 +118,6 @@ export default {
         chaosDesc: 'Herd all 5000 sheep - absolute madness!'
     },
 
-    // P1-MOBILE-WARN: pre-round performance warning for mobile clients arming
-    // a >1000-sheep solo mode (Insane 3000 / Chaos 5000). Two choices, the
-    // player's call - never a permanent block.
-    mobileWarning: {
-        title: 'A big flock for this device',
-        body: '{{sheep}} sheep is a lot for a phone or tablet. Frames may drop. You can keep going, or go back and pick a smaller flock.',
-        continue: 'Continue anyway',
-        goBack: 'Go back'
-    },
-
     // P1-MOBILE-FALLBACK: one-per-session toast when the boot lands on WebGL
     // because WebGPU was unavailable (never for an explicit ?renderer=webgl).
     rendererFallback: {
@@ -167,8 +157,6 @@ export default {
         // Graphics
         shadows: 'Shadows',
         shadowsDesc: 'Enable dynamic shadows (desktop only)',
-        experimentalWebGpu: 'WebGPU renderer',
-        experimentalWebGpuDesc: 'Experimental. Uses WebGPU when available; turn off to reload with WebGL.',
         rendererDiagnostics: 'Renderer status',
         shadowQuality: 'Shadow Quality',
         low: 'Low',

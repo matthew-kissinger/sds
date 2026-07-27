@@ -415,7 +415,6 @@ The server-to-client state snapshot is the same shape the legacy Geckos server u
 │   ├── AudioManager.js     Sound
 │   ├── MenuController.js   Menu flow + NetworkManager owner + game-start callback
 │   ├── PerformanceMonitor.js FPS / triangles / per-system
-│   ├── GameAssetLoader.js  GLB / audio / texture loader
 │   ├── Boid.js             Sheep flocking primitives
 │   ├── FencePresets.js     Fence configurations
 │   ├── Vector2D.js         2D math

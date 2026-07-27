@@ -304,7 +304,7 @@
     <noscript>
         <div style="max-width: 640px; margin: 3rem auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; color: #e8f5e8; background: #0f1a0f;">
             <h1 style="color: #a7f3d0;">Sheep Dog Sim</h1>
-            <p>Sheep Dog Sim is a free browser-based herding game built with Three.js, WebGL fallback, and progressive WebGPU. The game requires JavaScript to run; please enable it in your browser settings to play.</p>
+            <p>Sheep Dog Sim is a free browser-based herding game built with Three.js and WebGL. The game requires JavaScript to run; please enable it in your browser settings to play.</p>
             <p>Guide your sheepdog across three public scenes. Home Field is a flat starter pasture. Rolling Hills is a 180-metre sunset island with a fenced pasture. Open Country is a 380-metre island with a multi-stage gather-and-portal objective. Newsheepdogland is a gated lab for directed testing. Public modes scale from quiet practice to 5,000-sheep chaos, with real-time multiplayer rooms for 2-4 players.</p>
             <p>The game is free to play, with no ads or signup. Source is licensed AGPL-3.0-or-later and assets are CC BY-SA 4.0. <a href="/about" style="color: #34d399;">Read more about Sheep Dog Sim</a>, <a href="/support" style="color: #34d399;">get support</a>, <a href="/privacy" style="color: #34d399;">read the privacy note</a>, or <a href="https://github.com/matthew-kissinger/sds" style="color: #34d399;">browse the source code on GitHub</a>.</p>
         </div>
@@ -370,22 +370,12 @@
     <script>
         (() => {
             const params = new URLSearchParams(window.location.search);
-            const readExperimentalWebGpuPreference = () => {
-                try {
-                    const raw = localStorage.getItem('sds-settings');
-                    if (!raw) return true;
-                    const settings = JSON.parse(raw);
-                    return settings.experimentalWebGpu !== false;
-                } catch {
-                    return true;
-                }
-            };
             // Cycle 87 Phase 1: the renderer is never demoted on frame budget.
             // Older builds wrote a 24h sticky 'sds-renderer-fallback' record that
             // forced WebGL across all scenes; delete any stale record so devices
             // branded by those builds boot per the normal capability check.
             try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
-            const requested = params.get('renderer') || (readExperimentalWebGpuPreference() ? 'webgpu' : 'webgl');
+            const requested = params.get('renderer') || 'webgl';
             const diagnostic = params.get('diagnostic') === '1';
             const webgpuApiAvailable = !!navigator.gpu;
             const productionWebGpu = requested === 'webgpu' &&

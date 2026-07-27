@@ -5,6 +5,7 @@
  * Handles loading, saving, and applying game settings
  */
 import { getTerrainBuilder, getAudioManager, getPerformanceMonitor, getSceneManager, getGrassSystem } from '../../GameBridge.js';
+
 import { getDefaultGamepadPrefs, normalizeGamepadPrefs } from '../../gamepadPrefs.js';
 
 // Default key bindings. Must mirror InputHandler's DEFAULT_BINDINGS: the
@@ -87,7 +88,6 @@ export function getDefaultSettings() {
         grassDensity: 0.7,        // 0.3-1.0
         pixelRatio: 1.5,          // 1-2
         antialias: true,
-        experimentalWebGpu: true,
 
         // Audio
         audioEnabled: true,
@@ -119,6 +119,7 @@ export function loadSettings() {
             const parsed = JSON.parse(saved);
             // Merge with defaults to ensure all keys exist
             const settings = { ...getDefaultSettings(), ...parsed };
+            delete settings.experimentalWebGpu;
             // Ensure keyBindings has all keys
             settings.keyBindings = { ...DEFAULT_KEY_BINDINGS, ...parsed.keyBindings };
             // Ensure gamepad prefs are complete and sane ([P4-GAMEPAD-UI])
@@ -141,25 +142,6 @@ export function saveSettings(settings) {
     }
 }
 
-function applyRendererPreference(settings) {
-    if (typeof window === 'undefined' || !settings) return;
-    const wantsWebGpu = settings.experimentalWebGpu !== false;
-    const desired = wantsWebGpu ? 'webgpu' : 'webgl';
-    if (window.__sdsRendererMode?.requested === desired) return;
-
-    const url = new URL(window.location.href);
-    if (wantsWebGpu) {
-        // Cycle 87 Phase 1: clear any legacy sticky fallback record so opting
-        // into WebGPU always takes effect on the reload (the boot shim also
-        // deletes stale records defensively).
-        try { localStorage.removeItem('sds-renderer-fallback'); } catch {}
-        url.searchParams.delete('renderer');
-    } else {
-        url.searchParams.set('renderer', 'webgl');
-    }
-    window.location.replace(url.href);
-}
-
 // Apply a performance preset
 export function applyPerformancePreset(presetName, currentSettings) {
     const preset = PERFORMANCE_PRESETS[presetName];
@@ -177,11 +159,8 @@ export function applyPerformancePreset(presetName, currentSettings) {
 }
 
 // Apply settings to the game instance
-export function applySettingsToGame(settings, options = {}) {
+export function applySettingsToGame(settings) {
     console.log('[SETTINGS] Applying settings to game:', settings);
-    if (options.applyRenderer) {
-        applyRendererPreference(settings);
-    }
 
     // Apply performance mode settings
     const sceneManager = getSceneManager();

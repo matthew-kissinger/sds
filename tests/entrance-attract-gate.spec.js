@@ -39,9 +39,9 @@ describe('Cycle 46 entrance gate — shouldBootAttract', () => {
         expect(shouldBootAttract({ hash: '#/r/ABCD' })).toBe(false);
     });
 
-    it('skips the zen field for an #s/ or #/s/ sandbox deep-link', () => {
-        expect(shouldBootAttract({ hash: '#s/eyJzY2VuZSI6ImZpZWxkIn0' })).toBe(false);
-        expect(shouldBootAttract({ hash: '#/s/eyJzY2VuZSI6ImZpZWxkIn0' })).toBe(false);
+    it('defers scene construction for #s/ and #/s/ sandbox deep-links', () => {
+        expect(shouldBootAttract({ hash: '#s/eyJzY2VuZSI6ImZpZWxkIn0' })).toBe(true);
+        expect(shouldBootAttract({ hash: '#/s/eyJzY2VuZSI6ImZpZWxkIn0' })).toBe(true);
     });
 
     it('skips the zen field for the ?autostart=1 share-card harness', () => {

@@ -28,7 +28,6 @@ import {
 // fields this component reads/writes and allow the rest through.
 interface GameSettings {
     performanceMode?: string;
-    experimentalWebGpu?: boolean;
     audioEnabled?: boolean;
     audioVolume?: number;
     telemetryEnabled?: boolean;
@@ -134,7 +133,7 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }: InGam
         const newSettings = { ...settings, [key]: value };
         onSettingsChange(newSettings);
         saveSettings(newSettings);
-        applySettingsToGame(newSettings, { applyRenderer: key === 'experimentalWebGpu' });
+        applySettingsToGame(newSettings);
     };
 
     const handlePresetChange = (preset: string) => {
@@ -248,27 +247,6 @@ function InGameSettings({ settings, onSettingsChange, onBack, isCompact }: InGam
                         {t('settings.qualityOption')}
                     </button>
                 </div>
-            </div>
-
-            <div style={rowStyle}>
-                <div
-                    style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', marginRight: '0.75rem' }}
-                >
-                    <span style={labelStyle}>{t('settings.experimentalWebGpu')}</span>
-                    <span
-                        style={{
-                            color: alpha(pastoral.cream, 55),
-                            fontSize: isCompact ? '0.68rem' : '0.72rem'
-                        }}
-                    >
-                        {t('settings.experimentalWebGpuDesc')}
-                    </span>
-                </div>
-                <Toggle
-                    value={settings.experimentalWebGpu !== false}
-                    onChange={(v) => handleChange('experimentalWebGpu', v)}
-                    color={pastoral.accentMeadow}
-                />
             </div>
 
             {/* Audio toggle */}

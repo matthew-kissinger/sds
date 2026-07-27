@@ -50,6 +50,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`native-desktop-package-cycle-54.md`](native-desktop-package-cycle-54.md) | Reference | Cycle 54 desktop package path: electron-builder Windows installer/portable targets, signing posture, WebGL/WebGPU packaged proof, resize proof, and Steam handoff. |
 | [`native-desktop-package-cycle-109.md`](native-desktop-package-cycle-109.md) | Reference | Historical v2.4.0 Windows desktop package proof: installer/portable artifacts, WebGL/WebGPU packaged proofs, signing posture, and Steam no-go items. |
 | [`archive/cycles/cycle-54-plan.md`](archive/cycles/cycle-54-plan.md) | Reference / Explanation | Closed Cycle 54: Windows Electron distributor path, WebGL/WebGPU package proof, native resize proof, and Steam/store-prep handoff. |
+| [`archive/cycles/cycle-124-plan.md`](archive/cycles/cycle-124-plan.md) | Reference / Explanation | Closed Cycle 124: state-asserted Play-start performance, renderer/audio/flock lifecycle cleanup, bad-data rails, and v2.6.3 release proof. |
 | [`archive/cycles/cycle-53-plan.md`](archive/cycles/cycle-53-plan.md) | Reference / Explanation | Closed Cycle 53: native shell proof 1, WebGL/WebGPU shell evidence, and `v2.2.0` release close. |
 | [`archive/cycles/cycle-42-plan.md`](archive/cycles/cycle-42-plan.md) | Reference / Explanation | Closed Cycle 42: WebGPU scene-material parity, darker water, sun/sky repaint, octahedral proof, and `v2.1.10` release approval state. |
 | [`archive/cycles/cycle-41-plan.md`](archive/cycles/cycle-41-plan.md) | Reference / Explanation | Closed Cycle 41: WebGPU painterly sun/sky/water parity, art-lock matrix, and v2.1.9 release proof. |
@@ -76,6 +77,7 @@ Cycle plans + research dossiers are archived under [`archive/`](archive/) — re
 | [`launch/leaderboard-season-plan.md`](launch/leaderboard-season-plan.md) | Reference | Seasonal leaderboard model: preserve all-time records, add beta seasons intentionally, and avoid reset shortcuts. |
 | [`launch/release-candidate.md`](launch/release-candidate.md) | Reference | Historical v2.4.0 release-candidate status, validation summary, deploy posture, and risks. |
 | [`launch/release-checklist.md`](launch/release-checklist.md) | How-to | Exact commands and manual steps for approved tag, deploy, itch update, Steam continuation, and rollback. |
+| [`launch/v2.6.3-play-start-performance-release-notes.md`](launch/v2.6.3-play-start-performance-release-notes.md) | Reference | Current Play-start performance release notes for the web beta. |
 | [`launch/v2.6.2-controller-camera-hotfix-release-notes.md`](launch/v2.6.2-controller-camera-hotfix-release-notes.md) | Reference | Current controller, camera, and tutorial hotfix release notes for the web beta. |
 | [`launch/v2.6.1-hotfix-release-notes.md`](launch/v2.6.1-hotfix-release-notes.md) | Reference | WebGPU Counting Sheep hotfix release notes for the web beta. |
 | [`launch/v2.6.0-beta-release-notes.md`](launch/v2.6.0-beta-release-notes.md) | Reference | Web beta release notes for the public support/privacy/copy/lobby alignment pass. |

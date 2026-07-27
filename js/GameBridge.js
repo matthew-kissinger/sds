@@ -75,11 +75,11 @@ export const getSelectedDog = () => gameInstance?.getSelectedDog?.() ?? null;
 
 // Action methods. Delegate to the instance; no-op (or reject, for async) when not booted.
 export function startSoloGame(dogType, mode = 'classic') {
-    gameInstance?.startSoloGame?.(dogType, mode);
+    return gameInstance?.startSoloGame?.(dogType, mode);
 }
 
 export function startSandboxGame(dogType, sandboxConfig) {
-    gameInstance?.startSandboxGame?.(dogType, sandboxConfig);
+    return gameInstance?.startSandboxGame?.(dogType, sandboxConfig);
 }
 
 export function selectDog(dogType) {
@@ -87,7 +87,7 @@ export function selectDog(dogType) {
 }
 
 export function startMultiplayerGame() {
-    gameInstance?.startMultiplayerGame?.();
+    return gameInstance?.startMultiplayerGame?.();
 }
 
 export function leaveRoom() {

@@ -44,6 +44,12 @@ describe('bindable action set', () => {
 });
 
 describe('persistence round-trip', () => {
+    it('retires the player-facing experimental WebGPU preference', () => {
+        expect(getDefaultSettings()).not.toHaveProperty('experimentalWebGpu');
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ experimentalWebGpu: true }));
+        expect(loadSettings()).not.toHaveProperty('experimentalWebGpu');
+    });
+
     it('updateKeyBinding persists and loadSettings reads it back', () => {
         updateKeyBinding('sprint', 'KeyQ');
         expect(loadSettings().keyBindings.sprint).toBe('KeyQ');

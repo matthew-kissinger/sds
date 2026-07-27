@@ -76,10 +76,9 @@ Acceptance:
 
 Result:
 
-- Solo entry point (the world-first entrance, not StartScreen - the old mode-selection leaves retired in Cycle 51): Play in `js/components/entrance/Entrance.tsx` now routes through `shouldWarnMobileSheep()` (`js/utils/mobileSheepWarning.js`, threshold >1000, reuses `js/utils/isMobileClient.js` - no new UA sniffer). When it fires, `js/components/entrance/MobilePerfWarning.tsx` (new, entrance glass styling) names the sheep count and offers "Continue anyway" (commits the round - player choice wins, never a permanent block) or "Go back". Counting runs are exempt (5,000 ceiling but they start at one sheep). Survival (10) and all <=1000 rungs never trigger.
+- Cycle 124 retirement: the solo mobile warning was removed after the guarded phone/touch performance matrix made the second confirmation an obsolete source of Play friction. High-count multiplayer admission remains Worker-enforced; solo Play now commits every selectable count directly.
 - Multiplayer entry point: verified the worker already rejects EVERY mobile client (host included, UA check) at the WS upgrade for rooms over 1000 sheep (`worker/src/RoomDO.ts` `MOBILE_GUEST_MAX_SHEEP_COUNT`), so a mobile client cannot actually start a >1000 round there. Per spec, noted instead of adding a dead continue-anyway dialog: `RoomCreation.js` now shows a mobile host picking Insane/Chaos a first-person notice (this device cannot join the room it creates) in place of the desktop-host guest notice.
-- Strings localized in all 5 locales (`mobileWarning.*` + `multiplayer.mobileHostHighSheep` in en/es/ja/pt/zh-CN; real translations, parity ratchet untouched). Interpolation uses `{{sheep}}` because i18next reserves `count` for plurals.
-- Spec: `tests/ui/MobilePerfWarning.spec.tsx` (8 tests: gate fires mobile+3000/5000, not at <=1000 / desktop / counting; dialog renders both choices; continue fires onContinue, go back fires onBack only).
+- The retired `mobileWarning.*` strings, dialog, gate, and dialog spec were deleted together. `multiplayer.mobileHostHighSheep` remains because multiplayer rooms still enforce the mobile admission ceiling.
 - Validation: lint clean, typecheck clean, `npm test` 1199 passed / 8 skipped (includes parallel sessions' in-flight work), build green.
 
 ---

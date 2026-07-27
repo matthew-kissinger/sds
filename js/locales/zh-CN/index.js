@@ -118,14 +118,6 @@ export default {
         chaosDesc: '将5000只羊赶入牧场 - 彻底失控！'
     },
 
-    // P1-MOBILE-WARN: 移动端开局前的性能提示。
-    mobileWarning: {
-        title: '对这台设备来说羊群太大了',
-        body: '{{sheep}} 只羊对手机或平板来说负担很大，可能会掉帧。你可以继续，也可以返回选一个小一点的羊群。',
-        continue: '仍要继续',
-        goBack: '返回'
-    },
-
     // P1-MOBILE-FALLBACK: 兼容渲染提示（WebGPU -> WebGL 回退）。
     rendererFallback: {
         title: '兼容渲染模式',
@@ -159,8 +151,6 @@ export default {
         qualityOption: '画质优先 - 最佳视觉效果',
         shadows: '阴影',
         shadowsDesc: '启用动态阴影（仅桌面端）',
-        experimentalWebGpu: 'WebGPU 渲染器',
-        experimentalWebGpuDesc: '实验性功能。可用时使用 WebGPU；关闭后将以 WebGL 重新加载。',
         rendererDiagnostics: '渲染器状态',
         shadowQuality: '阴影质量',
         low: '低',

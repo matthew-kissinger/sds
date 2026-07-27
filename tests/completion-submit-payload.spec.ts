@@ -73,6 +73,11 @@ describe('completion submit payload — pausedMs contract (Cycle 57 P8)', () => 
     expect(submitSpy).not.toHaveBeenCalled();
   });
 
+  it('does not submit for local two-player rounds', () => {
+    submitScoreToLeaderboard(soloState({ gameMode: 'local' }), 120);
+    expect(submitSpy).not.toHaveBeenCalled();
+  });
+
   it('does not submit for practice mode', () => {
     submitScoreToLeaderboard(soloState({ singlePlayerMode: 'practice' }), 120);
     expect(submitSpy).not.toHaveBeenCalled();

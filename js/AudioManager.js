@@ -2,6 +2,79 @@
 // Copyright (c) 2026 Matthew Kissinger
 import * as THREE from 'three';
 
+const SOUND_FILES = Object.freeze({
+    uiClick: 'assets/sounds_compressed/ui_click.mp3',
+    rewardingChime: 'assets/sounds_compressed/rewarding_chime.mp3',
+    scoreSound: 'assets/sounds_compressed/effect_score.mp3',
+    opponentScoreSound: 'assets/sounds_compressed/effect_opponent_score.mp3',
+    winSound: 'assets/sounds_compressed/music_victory.mp3',
+    loseSound: 'assets/sounds_compressed/effect_lose.mp3',
+});
+const SHEEP_BLEAT_FILES = Object.freeze([
+    'assets/sounds_compressed/sheep_bleat_agitated.mp3',
+    'assets/sounds_compressed/sheep_bleat_short.mp3',
+    'assets/sounds_compressed/sheep_bleat_cartoon.mp3',
+    'assets/sounds_compressed/sheep_bleat_cheerful.mp3',
+]);
+const DOG_BARK_FILES = Object.freeze({
+    jep: 'assets/sounds_compressed/dog_bark_jep.mp3',
+    pip: 'assets/sounds_compressed/dog_bark_pip.mp3',
+    sally: 'assets/sounds_compressed/dog_bark_sally.mp3',
+    shiloh: 'assets/sounds_compressed/dog_bark_shiloh.mp3',
+    george_washington: 'assets/sounds_compressed/dog_bark_george_washington.mp3',
+});
+const MUSIC_FILES = Object.freeze({
+    gameplay1: 'assets/sounds_compressed/music_gameplay_1.mp3',
+    gameplay2: 'assets/sounds_compressed/music_gameplay_2.mp3',
+    gameplay3: 'assets/sounds_compressed/music_gameplay_3.mp3',
+    competitive1: 'assets/sounds_compressed/music_competitive_1.mp3',
+    competitive2: 'assets/sounds_compressed/music_competitive_2.mp3',
+    competitiveEndgame: 'assets/sounds_compressed/music_competitive_endgame.mp3',
+});
+
+class StreamedMusicTrack {
+    constructor(listener, path) {
+        this.element = document.createElement('audio');
+        this.element.preload = 'none';
+        this.element.src = path;
+        this.element.loop = true;
+        this.output = new THREE.Audio(listener);
+        this.output.setMediaElementSource(this.element);
+    }
+
+    get isPlaying() {
+        return !this.element.paused && !this.element.ended;
+    }
+
+    setLoop(loop) {
+        this.element.loop = loop;
+    }
+
+    setVolume(volume) {
+        this.output.setVolume(volume);
+    }
+
+    getVolume() {
+        return this.output.getVolume();
+    }
+
+    async play() {
+        if (this.isPlaying) return true;
+        try {
+            await this.element.play();
+            return true;
+        } catch (error) {
+            console.warn('[AUDIO] Streamed music playback failed:', error);
+            return false;
+        }
+    }
+
+    stop() {
+        this.element.pause();
+        this.element.currentTime = 0;
+    }
+}
+
 /**
  * AudioManager - Handles all game audio with Three.js audio system
  * Provides simple interface for playing sounds with proper 3D audio support
@@ -41,11 +114,9 @@ export class AudioManager {
 
         // Music tracks
         this.music = {
-            startMusic: null,
             gameplay1: null,
             gameplay2: null,
             gameplay3: null,
-            winMusic: null,
             // Competitive mode music
             competitive1: null,
             competitive2: null,
@@ -54,16 +125,11 @@ export class AudioManager {
 
         // Track loading state
         this.isLoaded = false;
-        this.musicLoaded = false;
-        this.loadingPromises = [];
-        this.musicLoadingPromises = [];
-
-        // Loading progress tracking
-        this.loadingProgress = {
-            sounds: { loaded: 0, total: 0 },
-            music: { loaded: 0, total: 0 }
-        };
-        this.onLoadingProgress = null; // Callback for progress updates
+        this._assetLoads = new Map();
+        this._soundLoads = new Map();
+        this._sheepBleatLoad = null;
+        this._musicTransitionToken = 0;
+        this._activationInstalled = false;
 
         // Volume settings
         this.masterVolume = 0.7;
@@ -110,8 +176,7 @@ export class AudioManager {
         // Setup audio context activation FIRST (before loading)
         this.setupAudioContextActivation();
 
-        this.loadSounds();
-        this.loadMusic();
+        void this.loadSounds({ essential: true });
     }
 
     /**
@@ -147,225 +212,105 @@ export class AudioManager {
         return false;
     }
     
-    /**
-     * Load all sound files
-     */
-    loadSounds() {
-        const soundFiles = {
-            uiClick: 'assets/sounds_compressed/ui_click.mp3',
-            rewardingChime: 'assets/sounds_compressed/rewarding_chime.mp3',
-            // Competitive mode sounds
-            scoreSound: 'assets/sounds_compressed/effect_score.mp3',
-            opponentScoreSound: 'assets/sounds_compressed/effect_opponent_score.mp3',
-            winSound: 'assets/sounds_compressed/music_victory.mp3',
-            loseSound: 'assets/sounds_compressed/effect_lose.mp3'
-        };
-
-        // Multiple sheep bleat sound files for variety
-        const sheepBleatFiles = [
-            'assets/sounds_compressed/sheep_bleat_agitated.mp3',
-            'assets/sounds_compressed/sheep_bleat_short.mp3',
-            'assets/sounds_compressed/sheep_bleat_cartoon.mp3',
-            'assets/sounds_compressed/sheep_bleat_cheerful.mp3'
-        ];
-
-        // Dog-specific bark sound files
-        const dogBarkFiles = {
-            'jep': 'assets/sounds_compressed/dog_bark_jep.mp3',
-            'pip': 'assets/sounds_compressed/dog_bark_pip.mp3',
-            'sally': 'assets/sounds_compressed/dog_bark_sally.mp3',
-            'shiloh': 'assets/sounds_compressed/dog_bark_shiloh.mp3',
-            'george_washington': 'assets/sounds_compressed/dog_bark_george_washington.mp3'
-        };
-        
-        // Load regular sound files
-        Object.keys(soundFiles).forEach(soundKey => {
-            const promise = new Promise((resolve, _reject) => {
-                this.loader.load(
-                    soundFiles[soundKey],
-                    (buffer) => {
-                        // Create Audio object
-                        this.sounds[soundKey] = new THREE.Audio(this.listener);
-                        this.sounds[soundKey].setBuffer(buffer);
-                        
-                        // Apply specific volume multiplier for this sound type
-                        const volumeMultiplier = this.soundVolumeMultipliers[soundKey] || 1.0;
-                        this.sounds[soundKey].setVolume(this.masterVolume * this.sfxVolume * volumeMultiplier);
-                        
-                        console.log(`Loaded sound: ${soundKey}`);
-                        resolve();
-                    },
-                    (_progress) => {
-                        // Loading progress
-                    },
-                    (error) => {
-                        console.warn(`Failed to load sound ${soundKey}:`, error);
-                        // Create a dummy audio object to prevent errors
-                        this.sounds[soundKey] = { 
-                            play: () => {}, 
-                            stop: () => {}, 
-                            isPlaying: false 
-                        };
-                        resolve(); // Resolve anyway to not block other sounds
-                    }
-                );
-            });
-            
-            this.loadingPromises.push(promise);
+    _loadBuffer(path) {
+        if (this._assetLoads.has(path)) return this._assetLoads.get(path);
+        const promise = this.loader.loadAsync(path).catch((error) => {
+            this._assetLoads.delete(path);
+            console.warn(`Failed to load audio ${path}:`, error);
+            return null;
         });
-
-        // Load sheep bleat sounds
-        sheepBleatFiles.forEach((filePath, index) => {
-            const promise = new Promise((resolve, _reject) => {
-                this.loader.load(
-                    filePath,
-                    (buffer) => {
-                        // Create Audio object and add to sheep bleats array
-                        const sheepBleat = new THREE.Audio(this.listener);
-                        sheepBleat.setBuffer(buffer);
-                        
-                        // Apply sheep bleat volume multiplier
-                        const volumeMultiplier = this.soundVolumeMultipliers.sheepBleats || 0.5;
-                        sheepBleat.setVolume(this.masterVolume * this.sfxVolume * volumeMultiplier);
-                        
-                        this.sounds.sheepBleats.push(sheepBleat);
-                        
-                        console.log(`Loaded sheep bleat ${index + 1}: ${filePath.split('/').pop()}`);
-                        resolve();
-                    },
-                    (_progress) => {
-                        // Loading progress
-                    },
-                    (error) => {
-                        console.warn(`Failed to load sheep bleat ${filePath}:`, error);
-                        // Create a dummy audio object to prevent errors
-                        this.sounds.sheepBleats.push({ 
-                            play: () => {}, 
-                            stop: () => {}, 
-                            isPlaying: false 
-                        });
-                        resolve(); // Resolve anyway to not block other sounds
-                    }
-                );
-            });
-            
-            this.loadingPromises.push(promise);
-        });
-
-        // Load dog bark sounds
-        Object.keys(dogBarkFiles).forEach(dogType => {
-            const promise = new Promise((resolve, _reject) => {
-                this.loader.load(
-                    dogBarkFiles[dogType],
-                    (buffer) => {
-                        // Create Audio object for this dog type
-                        this.sounds.dogBarks[dogType] = new THREE.Audio(this.listener);
-                        this.sounds.dogBarks[dogType].setBuffer(buffer);
-                        
-                        // Apply dog bark volume multiplier
-                        const volumeMultiplier = this.soundVolumeMultipliers.dogBarks || 0.5;
-                        this.sounds.dogBarks[dogType].setVolume(this.masterVolume * this.sfxVolume * volumeMultiplier);
-                        
-                        console.log(`Loaded dog bark for ${dogType}: ${dogBarkFiles[dogType].split('/').pop()}`);
-                        resolve();
-                    },
-                    (_progress) => {
-                        // Loading progress
-                    },
-                    (error) => {
-                        console.warn(`Failed to load dog bark for ${dogType}:`, error);
-                        // Create a dummy audio object to prevent errors
-                        this.sounds.dogBarks[dogType] = { 
-                            play: () => {}, 
-                            stop: () => {}, 
-                            isPlaying: false 
-                        };
-                        resolve(); // Resolve anyway to not block other sounds
-                    }
-                );
-            });
-            
-            this.loadingPromises.push(promise);
-        });
-        
-        // Wait for all sounds to load
-        Promise.all(this.loadingPromises).then(() => {
-            this.isLoaded = true;
-            console.log(`All sounds loaded successfully: ${this.sounds.sheepBleats.length} sheep bleats, ${Object.keys(this.sounds.dogBarks).length} dog barks`);
-        }).catch((error) => {
-            console.warn('Some sounds failed to load:', error);
-            this.isLoaded = true; // Still mark as loaded to allow game to continue
-        });
+        this._assetLoads.set(path, promise);
+        return promise;
     }
-    
-    /**
-     * Load all music files
-     */
-    loadMusic() {
-        const musicFiles = {
-            startMusic: 'assets/sounds_compressed/music_start.mp3',
-            gameplay1: 'assets/sounds_compressed/music_gameplay_1.mp3',
-            gameplay2: 'assets/sounds_compressed/music_gameplay_2.mp3',
-            gameplay3: 'assets/sounds_compressed/music_gameplay_3.mp3',
-            winMusic: 'assets/sounds_compressed/music_victory.mp3',
-            // Competitive mode music
-            competitive1: 'assets/sounds_compressed/music_competitive_1.mp3',
-            competitive2: 'assets/sounds_compressed/music_competitive_2.mp3',
-            competitiveEndgame: 'assets/sounds_compressed/music_competitive_endgame.mp3'
-        };
-        
-        // Load each music track
-        Object.keys(musicFiles).forEach(musicKey => {
-            const promise = new Promise((resolve, _reject) => {
-                this.loader.load(
-                    musicFiles[musicKey],
-                    (buffer) => {
-                        // Create Audio object
-                        this.music[musicKey] = new THREE.Audio(this.listener);
-                        this.music[musicKey].setBuffer(buffer);
-                        this.music[musicKey].setVolume(this.masterVolume * this.musicVolume);
-                        this.music[musicKey].setLoop(true); // Most music should loop
-                        
-                        console.log(`Loaded music: ${musicKey}`);
-                        resolve();
-                    },
-                    (progress) => {
-                        // Loading progress
-                        console.log(`Loading music ${musicKey}: ${Math.round(progress.loaded / progress.total * 100)}%`);
-                    },
-                    (error) => {
-                        console.warn(`Failed to load music ${musicKey}:`, error);
-                        // Create a dummy audio object to prevent errors
-                        this.music[musicKey] = { 
-                            play: () => {}, 
-                            stop: () => {}, 
-                            pause: () => {},
-                            setLoop: () => {},
-                            setVolume: () => {},
-                            isPlaying: false 
-                        };
-                        resolve(); // Resolve anyway to not block other music
-                    }
-                );
-            });
-            
-            this.musicLoadingPromises.push(promise);
+
+    _loadSound(soundKey, path, volumeMultiplier) {
+        if (this.sounds[soundKey]) return this.sounds[soundKey];
+        if (this._soundLoads.has(soundKey)) return this._soundLoads.get(soundKey);
+        const promise = this._loadBuffer(path).then((buffer) => {
+            if (!buffer) return null;
+            const sound = new THREE.Audio(this.listener);
+            sound.setBuffer(buffer);
+            sound.setVolume(this.masterVolume * this.sfxVolume * volumeMultiplier);
+            this.sounds[soundKey] = sound;
+            return sound;
+        }).finally(() => this._soundLoads.delete(soundKey));
+        this._soundLoads.set(soundKey, promise);
+        return promise;
+    }
+
+    _loadDogBark(dogType) {
+        const resolved = DOG_BARK_FILES[dogType] ? dogType : 'jep';
+        if (this.sounds.dogBarks[resolved]) return this.sounds.dogBarks[resolved];
+        const loadKey = `dogBark:${resolved}`;
+        if (this._soundLoads.has(loadKey)) return this._soundLoads.get(loadKey);
+        const promise = this._loadBuffer(DOG_BARK_FILES[resolved]).then((buffer) => {
+            if (!buffer) return null;
+            const sound = new THREE.Audio(this.listener);
+            sound.setBuffer(buffer);
+            sound.setVolume(this.masterVolume * this.sfxVolume * this.soundVolumeMultipliers.dogBarks);
+            this.sounds.dogBarks[resolved] = sound;
+            return sound;
+        }).finally(() => this._soundLoads.delete(loadKey));
+        this._soundLoads.set(loadKey, promise);
+        return promise;
+    }
+
+    async loadSounds({ essential = false, dogType = null } = {}) {
+        const loads = [];
+        if (essential) {
+            loads.push(this._loadSound('uiClick', SOUND_FILES.uiClick, this.soundVolumeMultipliers.uiClick));
+        }
+        if (dogType) loads.push(this._loadDogBark(dogType));
+        await Promise.all(loads);
+        this.isLoaded = true;
+    }
+
+    _loadSheepBleat() {
+        if (this.sounds.sheepBleats.length) return this.sounds.sheepBleats[0];
+        if (this._sheepBleatLoad) return this._sheepBleatLoad;
+        const path = SHEEP_BLEAT_FILES[Math.floor(Math.random() * SHEEP_BLEAT_FILES.length)];
+        this._sheepBleatLoad = this._loadBuffer(path).then((buffer) => {
+            if (!buffer) return null;
+            const sound = new THREE.Audio(this.listener);
+            sound.setBuffer(buffer);
+            sound.setVolume(this.masterVolume * this.sfxVolume * this.soundVolumeMultipliers.sheepBleats);
+            this.sounds.sheepBleats.push(sound);
+            return sound;
+        }).finally(() => {
+            this._sheepBleatLoad = null;
         });
-        
-        // Wait for all music to load
-        Promise.all(this.musicLoadingPromises).then(() => {
-            this.musicLoaded = true;
-            console.log('All music loaded successfully');
-            
-            // Apply mute state to music
-            this.updateAllVolumes();
-            
-            // Set up user interaction listener to start audio context
-            this.setupAudioContextActivation();
-        }).catch((error) => {
-            console.warn('Some music failed to load:', error);
-            this.musicLoaded = true; // Still mark as loaded to allow game to continue
-        });
+        return this._sheepBleatLoad;
+    }
+
+    _loadGameplaySound(soundKey) {
+        return this._loadSound(
+            soundKey,
+            SOUND_FILES[soundKey],
+            this.soundVolumeMultipliers[soundKey] ?? 1,
+        );
+    }
+
+    async loadMusic(musicKey) {
+        if (!MUSIC_FILES[musicKey]) return null;
+        if (this.music[musicKey]) return this.music[musicKey];
+        const track = new StreamedMusicTrack(this.listener, MUSIC_FILES[musicKey]);
+        track.setVolume(this.masterVolume * this.musicVolume);
+        track.setLoop(true);
+        this.music[musicKey] = track;
+        return track;
+    }
+
+    _pickGameplayMusicKey() {
+        const keys = this.gameMode === 'competitive'
+            ? ['competitive1', 'competitive2']
+            : ['gameplay1', 'gameplay2', 'gameplay3'];
+        return keys[Math.floor(Math.random() * keys.length)];
+    }
+
+    async prepareRound(dogType, mode = 'solo') {
+        this.gameMode = mode === 'multiplayer' ? 'competitive' : mode;
+        void this.loadSounds({ dogType });
+        return this.playGameplayMusic();
     }
     
     /**
@@ -382,16 +327,15 @@ export class AudioManager {
      * Ensures audio context is activated and sound is ready to play
      */
     playUIClick() {
+        if (!this.sounds.uiClick) {
+            void this.loadSounds({ essential: true }).then(() => this.playUIClick());
+            return;
+        }
         // Ensure audio context is activated on user interaction
         if (!this.audioContextActivated && this.listener.context.state === 'suspended') {
             this.listener.context.resume().then(() => {
                 this.audioContextActivated = true;
                 console.log('Audio context activated via UI click');
-                
-                // Start music if not already playing
-                if (this.musicLoaded && !this.currentMusic) {
-                    this.playStartMusic();
-                }
                 
                 // Play the click sound after activation
                 if (this.sounds.uiClick && !this.sounds.uiClick.isPlaying) {
@@ -412,6 +356,10 @@ export class AudioManager {
      * Play rewarding chime sound (for sheep passing gate or game completion)
      */
     playRewardingChime() {
+        if (!this.sounds.rewardingChime) {
+            void this._loadGameplaySound('rewardingChime').then(() => this.playRewardingChime());
+            return;
+        }
         if (this.sounds.rewardingChime && !this.sounds.rewardingChime.isPlaying) {
             this.sounds.rewardingChime.play();
         }
@@ -426,7 +374,11 @@ export class AudioManager {
             return; // Still in cooldown
         }
         
-        if (this.sounds.scoreSound && !this.sounds.scoreSound.isPlaying) {
+        if (!this.sounds.scoreSound) {
+            void this._loadGameplaySound('scoreSound').then(() => this.playScoreSound());
+            return;
+        }
+        if (!this.sounds.scoreSound.isPlaying) {
             this.sounds.scoreSound.play();
             this.lastPlayTimes.scoreSound = now;
         }
@@ -441,7 +393,11 @@ export class AudioManager {
             return; // Still in cooldown
         }
         
-        if (this.sounds.opponentScoreSound && !this.sounds.opponentScoreSound.isPlaying) {
+        if (!this.sounds.opponentScoreSound) {
+            void this._loadGameplaySound('opponentScoreSound').then(() => this.playOpponentScoreSound());
+            return;
+        }
+        if (!this.sounds.opponentScoreSound.isPlaying) {
             this.sounds.opponentScoreSound.play();
             this.lastPlayTimes.opponentScoreSound = now;
         }
@@ -451,6 +407,10 @@ export class AudioManager {
      * Play victory sound
      */
     playVictorySound() {
+        if (!this.sounds.winSound) {
+            void this._loadGameplaySound('winSound').then(() => this.playVictorySound());
+            return;
+        }
         if (this.sounds.winSound && !this.sounds.winSound.isPlaying) {
             this.sounds.winSound.play();
         }
@@ -460,6 +420,10 @@ export class AudioManager {
      * Play loss sound
      */
     playLossSound() {
+        if (!this.sounds.loseSound) {
+            void this._loadGameplaySound('loseSound').then(() => this.playLossSound());
+            return;
+        }
         if (this.sounds.loseSound && !this.sounds.loseSound.isPlaying) {
             this.sounds.loseSound.play();
         }
@@ -474,6 +438,11 @@ export class AudioManager {
             return; // Still in cooldown
         }
         
+        if (this.sounds.sheepBleats.length === 0) {
+            void this._loadSheepBleat().then(() => this.playSheepBleat());
+            return;
+        }
+
         // Randomly select a sheep bleat sound
         if (this.sounds.sheepBleats.length > 0) {
             const randomBleat = this.sounds.sheepBleats[Math.floor(Math.random() * this.sounds.sheepBleats.length)];
@@ -495,7 +464,10 @@ export class AudioManager {
             return; // Still in cooldown
         }
         
-        if (this.sounds.sheepBleats.length === 0) return;
+        if (this.sounds.sheepBleats.length === 0) {
+            void this._loadSheepBleat().then(() => this.playGroupSheepBleats(sheepCount));
+            return;
+        }
         
         // Limit to 5 simultaneous bleats for audio clarity
         const maxBleats = Math.min(sheepCount, 5);
@@ -566,91 +538,47 @@ export class AudioManager {
             console.log(`[AUDIO] ${dogType} barked`);
         };
 
-        if (this.listener?.context?.state === 'suspended') {
-            this.ensureAudioContext().then((ready) => {
-                if (ready) playLoadedBark();
-            });
-        } else {
-            playLoadedBark();
-        }
-    }
-    
-    /**
-     * Play start screen music
-     * Ensures audio context is active and music is loaded before playing
-     */
-    async playStartMusic() {
-        // Wait for music to be loaded
-        if (!this.musicLoaded) {
-            console.log('[AUDIO] Waiting for music to load before playing start music...');
-            try {
-                await Promise.all(this.musicLoadingPromises);
-            } catch (error) {
-                console.warn('[AUDIO] Some music failed to load, continuing anyway');
-            }
-        }
-
-        // Ensure audio context is active
-        await this.ensureAudioContext();
-
-        if (this.music.startMusic && !this.music.startMusic.isPlaying) {
-            this.stopAllMusic();
-            this.currentMusic = this.music.startMusic;
-            this.music.startMusic.play();
-            console.log('[AUDIO] Start music playing');
-        }
+        Promise.all([this._loadDogBark(dogType), this.ensureAudioContext()])
+            .then(([, ready]) => { if (ready) playLoadedBark(); });
     }
     
     /**
      * Play appropriate gameplay background music based on game mode
      */
     playGameplayMusic() {
-        let gameplayTracks;
-        
-        if (this.gameMode === 'competitive') {
-            // Use competitive music tracks
-            gameplayTracks = [this.music.competitive1, this.music.competitive2];
-        } else {
-            // Use normal gameplay tracks
-            gameplayTracks = [this.music.gameplay1, this.music.gameplay2, this.music.gameplay3];
-        }
-        
-        const randomTrack = gameplayTracks[Math.floor(Math.random() * gameplayTracks.length)];
-        
-        if (randomTrack && !randomTrack.isPlaying) {
-            this.stopAllMusic();
-            this.currentMusic = randomTrack;
-            randomTrack.play();
-        }
+        return this._playMusicKey(this._pickGameplayMusicKey());
     }
     
     /**
      * Play competitive endgame music for tense final moments
      */
     playCompetitiveEndgameMusic() {
-        if (this.music.competitiveEndgame && !this.music.competitiveEndgame.isPlaying) {
-            this.stopAllMusic();
-            this.currentMusic = this.music.competitiveEndgame;
-            this.music.competitiveEndgame.play();
-        }
+        return this._playMusicKey('competitiveEndgame');
     }
     
-    /**
-     * Play win music (doesn't loop)
-     */
-    playWinMusic() {
-        if (this.music.winMusic) {
-            this.stopAllMusic();
-            this.currentMusic = this.music.winMusic;
-            this.music.winMusic.setLoop(false); // Win music plays once
-            this.music.winMusic.play();
+    async _playMusicKey(musicKey) {
+        const token = ++this._musicTransitionToken;
+        const track = await this.loadMusic(musicKey);
+        const ready = await this.ensureAudioContext();
+        if (!track || !ready || token !== this._musicTransitionToken) return false;
+        for (const candidate of Object.values(this.music)) {
+            if (candidate && candidate !== track && candidate.isPlaying) candidate.stop();
         }
+        this.currentMusic = track;
+        const played = await track.play();
+        if (!played || token !== this._musicTransitionToken) {
+            track.stop();
+            if (this.currentMusic === track) this.currentMusic = null;
+            return false;
+        }
+        return true;
     }
     
     /**
      * Stop all music
      */
     stopAllMusic() {
+        this._musicTransitionToken++;
         Object.values(this.music).forEach(track => {
             if (track && track.isPlaying) {
                 track.stop();
@@ -664,16 +592,17 @@ export class AudioManager {
      */
     fadeOutCurrentMusic(duration = 1000) {
         if (!this.currentMusic || !this.currentMusic.isPlaying) return;
-        
-        const startVolume = this.currentMusic.getVolume();
+
+        const track = this.currentMusic;
+        const token = ++this._musicTransitionToken;
+        const startVolume = track.getVolume();
         const fadeSteps = 20;
         const stepDuration = duration / fadeSteps;
         const volumeStep = startVolume / fadeSteps;
         
         let currentStep = 0;
         const fadeInterval = setInterval(() => {
-            // Check if music was stopped externally
-            if (!this.currentMusic) {
+            if (token !== this._musicTransitionToken || this.currentMusic !== track) {
                 clearInterval(fadeInterval);
                 return;
             }
@@ -682,16 +611,14 @@ export class AudioManager {
             const newVolume = startVolume - (volumeStep * currentStep);
 
             if (currentStep >= fadeSteps || newVolume <= 0) {
-                if (this.currentMusic) {
-                    this.currentMusic.stop();
-                    this.currentMusic.setVolume(startVolume); // Reset volume for next play
+                if (this.currentMusic === track) {
+                    track.stop();
+                    track.setVolume(startVolume);
                     this.currentMusic = null;
                 }
                 clearInterval(fadeInterval);
             } else {
-                if (this.currentMusic) {
-                    this.currentMusic.setVolume(newVolume);
-                }
+                track.setVolume(newVolume);
             }
         }, stepDuration);
     }
@@ -863,57 +790,34 @@ export class AudioManager {
     }
     
     /**
-     * Check if music system is ready
-     */
-    isMusicReady() {
-        return this.musicLoaded;
-    }
-    
-    /**
      * Set up audio context activation on user interaction
      * Modern web audio best practice: activate on ANY user interaction
      */
     setupAudioContextActivation() {
+        if (this._activationInstalled) return;
+        this._activationInstalled = true;
         this.audioContextActivated = false;
-        
+
+        const interactionEvents = ['click', 'keydown', 'touchstart'];
         const activateAudio = () => {
+            for (const eventType of interactionEvents) {
+                document.removeEventListener(eventType, activateAudio);
+            }
             if (this.listener.context.state === 'suspended') {
                 this.listener.context.resume().then(() => {
                     console.log('Audio context activated');
                     this.audioContextActivated = true;
-                    
-                    // Start music if we're on the start screen and music is loaded
-                    if (this.musicLoaded && !this.currentMusic) {
-                        this.playStartMusic();
-                    }
                 }).catch((error) => {
                     console.warn('Failed to activate audio context:', error);
                 });
             } else {
                 this.audioContextActivated = true;
-                
-                // Start music if we're on the start screen and music is loaded
-                if (this.musicLoaded && !this.currentMusic) {
-                    this.playStartMusic();
-                }
             }
         };
-        
-        // Listen for any user interaction (modern web audio best practice)
-        // Keep listeners active throughout the session for robustness
-        const interactionEvents = ['click', 'keydown', 'touchstart'];
+
         interactionEvents.forEach(eventType => {
-            document.addEventListener(eventType, activateAudio, { once: true });
+            document.addEventListener(eventType, activateAudio);
         });
-    }
-    
-    /**
-     * Manually trigger start music (for delayed start)
-     */
-    triggerStartMusic() {
-        if (this.musicLoaded && !this.currentMusic && this.audioContextActivated) {
-            this.playStartMusic();
-        }
     }
     
     /**

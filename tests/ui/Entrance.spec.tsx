@@ -58,6 +58,7 @@ function makeFlow(over = {}) {
         families: [SOLO, COUNTING], family,
         setFamily: vi.fn(), setMode: vi.fn(), setDog: vi.fn(),
         armWorld: vi.fn(), nextWorld: vi.fn(), prevWorld: vi.fn(), commit: vi.fn(),
+        committing: false,
         loading: { pct: 0, label: '', done: false },
         reducedMotion: true,
         ...over,
@@ -101,6 +102,15 @@ describe('Entrance - one primary action (D3)', () => {
         render(<Entrance flow={flow} nav={nav()} />);
         fireEvent.click(screen.getByRole('button', { name: 'Play' }));
         expect(flow.commit).toHaveBeenCalled();
+    });
+
+    it('disables Play while the first commit owns the transition', () => {
+        const flow = makeFlow({ committing: true });
+        render(<Entrance flow={flow} nav={nav()} />);
+        const play = screen.getByRole('button', { name: 'Play' });
+        expect(play.hasAttribute('disabled')).toBe(true);
+        fireEvent.click(play);
+        expect(flow.commit).not.toHaveBeenCalled();
     });
 
     it('refuses to commit a coming-soon world (D19)', () => {

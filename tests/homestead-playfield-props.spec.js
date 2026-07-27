@@ -6,6 +6,7 @@ import {
     getHomesteadPlayfieldPlacements,
     getHomesteadPlayfieldSceneSummary,
 } from '../js/world/homesteadPlayfieldProps.js';
+import { TerrainBuilder } from '../js/TerrainBuilder.js';
 
 describe('homestead playfield props', () => {
     it('places the approved packyard set in homestead scenes', () => {
@@ -51,5 +52,22 @@ describe('homestead playfield props', () => {
             count: 0,
             assets: [],
         });
+    });
+
+    it('preloads every prop through the same cached loader used by scene construction', async () => {
+        const loaded = [];
+        const builder = {
+            sceneDef: { id: 'rolling-hills' },
+            _loadHomesteadPlayfieldProp: async (placement) => {
+                loaded.push(placement.key);
+                return placement.key;
+            },
+        };
+
+        const results = await TerrainBuilder.prototype.preloadHomesteadPlayfieldProps.call(builder);
+
+        expect(results).toHaveLength(4);
+        expect(results.every((result) => result.status === 'fulfilled')).toBe(true);
+        expect(loaded).toEqual(['stone-marker', 'wildflower-a', 'wildflower-b', 'log-pile-stump']);
     });
 });

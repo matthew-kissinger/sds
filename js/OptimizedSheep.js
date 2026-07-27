@@ -124,6 +124,10 @@ export class OptimizedSheepSystem {
         // which likewise filters the active list once per frame before the loop.
         this._activeSheepScratch = [];
         this._sheepCollisionScratch = createSheepCollisionScratch();
+        this._positionUpdateContext = {
+            fenceSystem: null,
+            possibleGateAreas: null,
+        };
         this._profileCollisions = typeof window !== 'undefined' &&
             new URLSearchParams(window.location.search).get('collisionProbe') === '1';
         this._lastCollisionProfile = null;
@@ -629,6 +633,8 @@ export class OptimizedSheepSystem {
         const dummy = this._dummy;
         const profileCollisions = this._profileCollisions === true;
         const updateStarted = profileCollisions ? performance.now() : 0;
+        let extremeBoidMs = 0;
+        let sheepLoopMs = 0;
         let dogCollisionMs = 0;
         let dogCorrections = 0;
 
@@ -679,7 +685,9 @@ export class OptimizedSheepSystem {
         if (this.useExtremeBoids && this.extremeBoidSystemInitialized) {
             const extremeSystem = getExtremeBoidSystem();
             extremeSystem.setParams(params);
+            const extremeStarted = profileCollisions ? performance.now() : 0;
             extremeSystem.update(this.sheep, deltaTime);
+            if (profileCollisions) extremeBoidMs = performance.now() - extremeStarted;
         }
 
         // Store competitive gates reference for sheep to access
@@ -696,6 +704,10 @@ export class OptimizedSheepSystem {
         const gameState = getGameState();
         const isHighDifficultyMode = gameState?.gameMode === 'solo' &&
             isHighDifficultyCount(gameState.totalSheep);
+        const obstacles = gameState?.obstacles ?? null;
+        const positionContext = this._positionUpdateContext;
+        positionContext.fenceSystem = getFenceCollisionSystem();
+        positionContext.possibleGateAreas = FieldConfig.getPossibleGateAreas();
 
         const animationUpdateStride = Math.max(1, Math.round(1 / this.animationUpdateRate));
         const animationFrame = this._animationUpdateFrame;
@@ -716,6 +728,7 @@ export class OptimizedSheepSystem {
             }
         }
 
+        const sheepLoopStarted = profileCollisions ? performance.now() : 0;
         // Update each sheep
         for (let i = 0; i < this.activeCount; i++) {
             const sheep = this.sheep[i];
@@ -723,38 +736,7 @@ export class OptimizedSheepSystem {
             // Provide competitive gates access to individual sheep
             sheep.competitiveGates = this.competitiveGates;
 
-            // Check if this sheep is being chased (before updating behavior)
-            // Check both sheepdogs and respond to the closer one
-            if (sheep.position) {
-                let closestSheepdogDistance = Infinity;
-                let closestSheepdog = null;
-
-                if (sheepdog) {
-                    const dist = sheep.position.distanceTo(sheepdog.position);
-                    if (dist < closestSheepdogDistance) {
-                        closestSheepdogDistance = dist;
-                        closestSheepdog = sheepdog;
-                    }
-                }
-
-                if (sheepdog2) {
-                    const dist = sheep.position.distanceTo(sheepdog2.position);
-                    if (dist < closestSheepdogDistance) {
-                        closestSheepdogDistance = dist;
-                        closestSheepdog = sheepdog2;
-                    }
-                }
-
-                if (closestSheepdog) {
-                    const fleeRadius = closestSheepdog.fleeRadius || sheep.fleeRadius || 8;
-                    const isBeingChased = closestSheepdogDistance < fleeRadius;
-
-                    if (isBeingChased && !sheep.wasBeingChased) {
-                        sheepBeingChased++;
-                        shouldPlayGroupBleat = true;
-                    }
-                }
-            }
+            const wasBeingChased = sheep.wasBeingChased;
 
             // Update behavior (flocking, movement, etc.)
             // Pass skipFlocking=true when extreme boid system handles flocking.
@@ -771,9 +753,14 @@ export class OptimizedSheepSystem {
                 sheepdog2,
                 skipFlocking,
                 isHighDifficultyMode,
-                activeSheepList
+                activeSheepList,
+                obstacles
             );
-            sheep.updatePosition(deltaTime);
+            if (!wasBeingChased && sheep.wasBeingChased) {
+                sheepBeingChased++;
+                shouldPlayGroupBleat = true;
+            }
+            sheep.updatePosition(deltaTime, positionContext);
 
             // Cycle 56: dog<->sheep hard separation (client predictor / solo).
             // After per-sheep integration so the dog can't ghost through the
@@ -861,28 +848,13 @@ export class OptimizedSheepSystem {
 
             dummy.updateMatrix();
 
-            // Defensive check for NaN/Infinity in the dummy matrix before setting instanceMatrix
-            let matrixIsValid = true;
-            for (let j = 0; j < 16; j++) {
-                if (isNaN(dummy.matrix.elements[j]) || !isFinite(dummy.matrix.elements[j])) {
-                    matrixIsValid = false;
-                    break;
-                }
-            }
-
-            if (matrixIsValid) {
-                this.instancedMesh.setMatrixAt(i, dummy.matrix);
-            } else {
-                console.warn(`Sheep ${sheep.id} produced invalid matrix. Skipping update for this instance.`);
-                // Optionally, set to an identity matrix or last known good matrix for this instance
-                // For now, we just skip, which means it won't update its visual position/rotation
-                // which might make it appear stuck, but it's better than a crash or full invisibility.
-            }
+            this.instancedMesh.setMatrixAt(i, dummy.matrix);
             
             if (animationUpdateStride === 1 || ((i + animationFrame) % animationUpdateStride) === 0) {
                 this.updateInstanceAttributes(i, sheep);
             }
         }
+        if (profileCollisions) sheepLoopMs = performance.now() - sheepLoopStarted;
 
         const sheepCollisionStarted = profileCollisions ? performance.now() : 0;
         const sheepCollision = resolveSheepSheepCollisions(this.sheep, {
@@ -920,6 +892,8 @@ export class OptimizedSheepSystem {
                 dogCorrections,
                 dogRepushCorrections,
                 dogCollisionMs,
+                extremeBoidMs,
+                sheepLoopMs,
                 sheepCollisionMs,
                 rewriteMs,
                 totalUpdateMs: performance.now() - updateStarted
@@ -1670,7 +1644,7 @@ export class OptimizedSheepInstance extends Boid {
         this.visualBounceAmount = this.startupVisualBounce;
     }
     
-    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null, skipFlocking = false, isHighDifficultyMode = false, activeSheep = null) {
+    updateBehavior(allSheep, sheepdog, gate, pasture, bounds, params, enableIndividualBleating = true, isMultiplayer = false, sheepdog2 = null, skipFlocking = false, isHighDifficultyMode = false, activeSheep = null, frameObstacles = null) {
         // If retiring, seek retirement target or graze
         if (this.isRetiring) {
             if (this.retirementTarget) {
@@ -1878,24 +1852,8 @@ export class OptimizedSheepInstance extends Boid {
 
             if (closestGate) {
                 // Find the closest dog for gate attraction
-                let closestDog = null;
-                let closestDogDistance = Infinity;
-
-                if (sheepdog) {
-                    const dist = this.position.distanceTo(sheepdog.position);
-                    if (dist < closestDogDistance) {
-                        closestDogDistance = dist;
-                        closestDog = sheepdog;
-                    }
-                }
-
-                if (sheepdog2) {
-                    const dist = this.position.distanceTo(sheepdog2.position);
-                    if (dist < closestDogDistance) {
-                        closestDogDistance = dist;
-                        closestDog = sheepdog2;
-                    }
-                }
+                const closestDog = closestSheepdog;
+                const closestDogDistance = closestDistance;
 
                 if (closestDog) {
                     // Use closest dog's fleeRadius for dog-specific interaction distances
@@ -1933,7 +1891,7 @@ export class OptimizedSheepInstance extends Boid {
         // (Field has zero obstacles). obstacleAvoidance returns a fresh {x,z}
         // each call and applyForce only reads .x/.z (never retains the arg), so
         // the force object is passed straight through (no throwaway Vector2D).
-        const obstacles = getGameState()?.obstacles;
+        const obstacles = frameObstacles ?? getGameState()?.obstacles;
         if (obstacles && (obstacles.trees.length > 0 || obstacles.rocks.length > 0)) {
             if (obstacles.trees.length > 0) {
                 const nearbyTrees = obstacles.queryTrees(this.position, SHEEP_OBSTACLE_QUERY_RADIUS);
@@ -1972,14 +1930,14 @@ export class OptimizedSheepInstance extends Boid {
         this.forceAccumulator.z += Math.sin(this.ambientWanderAngle) * strength;
     }
     
-    updatePosition(deltaTime) {
+    updatePosition(deltaTime, frameContext = null) {
         // Standard Boid update
         this.updateAmbientMotion(deltaTime);
         super.update(deltaTime); // This updates this.position and this.velocity
         
         // HARD BOUNDARY CONSTRAINT - Apply different logic based on sheep state
         // For sandbox mode with polygon shapes, skip rectangular bounds - fence collision handles it
-        const fenceSystem = getFenceCollisionSystem();
+        const fenceSystem = frameContext?.fenceSystem ?? getFenceCollisionSystem();
         const usePolygonBoundary = fenceSystem && fenceSystem.fenceSegments.length > 0 && this.borderPoints;
 
         if (this.bounds && !usePolygonBoundary) {
@@ -1993,7 +1951,7 @@ export class OptimizedSheepInstance extends Boid {
                 let currentGateConstraints = null;
 
                 // Get gate areas dynamically from FieldConfig based on current bounds
-                const possibleGateAreas = FieldConfig.getPossibleGateAreas();
+                const possibleGateAreas = frameContext?.possibleGateAreas ?? FieldConfig.getPossibleGateAreas();
 
                 for (const gateArea of possibleGateAreas) {
                     if (this.position.x >= gateArea.minX && this.position.x <= gateArea.maxX &&
@@ -2144,12 +2102,9 @@ export class OptimizedSheepInstance extends Boid {
      * Update interpolated render position for smooth visual movement
      */
     updateRenderPosition(deltaTime) {
-        // Interpolate position smoothly towards actual physics position
-        const positionDiff = this.position.clone().subtract(this.renderPosition);
         const interpolationAmount = Math.min(1.0, this.interpolationSpeed * deltaTime);
-        
-        // Apply position interpolation
-        this.renderPosition.add(positionDiff.multiply(interpolationAmount));
+        this.renderPosition.x += (this.position.x - this.renderPosition.x) * interpolationAmount;
+        this.renderPosition.z += (this.position.z - this.renderPosition.z) * interpolationAmount;
         
         // Interpolate facing direction smoothly
         if (this.currentSpeed > 0.001) {

@@ -118,14 +118,6 @@ export default {
         chaosDesc: '5000匹の羊を牧場へ - まさに大混乱！'
     },
 
-    // P1-MOBILE-WARN: モバイル端末向けのラウンド前パフォーマンス警告。
-    mobileWarning: {
-        title: 'この端末には大きな群れです',
-        body: '{{sheep}}匹の羊はスマートフォンやタブレットには負荷が大きく、フレーム落ちすることがあります。このまま続けるか、戻って小さな群れを選んでください。',
-        continue: 'このまま続ける',
-        goBack: '戻る'
-    },
-
     // P1-MOBILE-FALLBACK: 互換レンダリング通知（WebGPU -> WebGL フォールバック）。
     rendererFallback: {
         title: '互換レンダリング',
@@ -159,8 +151,6 @@ export default {
         qualityOption: 'クオリティ - 最高のビジュアル',
         shadows: '影',
         shadowsDesc: '動的な影を有効にする（デスクトップのみ）',
-        experimentalWebGpu: 'WebGPUレンダラー',
-        experimentalWebGpuDesc: '実験的機能です。利用可能な場合はWebGPUを使います。オフにするとWebGLで再読み込みします。',
         rendererDiagnostics: 'レンダラーの状態',
         shadowQuality: '影の品質',
         low: '低',

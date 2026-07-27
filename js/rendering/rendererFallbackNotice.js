@@ -14,9 +14,8 @@
  * misses no longer demote the renderer (Cycle 87 Phase 1), so
  * webgpu-frame-budget is a legacy reason that can only arrive via URL.
  *
- * A voluntary WebGL run stays silent: an explicit `?renderer=webgl` or the
- * experimentalWebGpu setting turned off produces no fallbackReason, so the
- * decision below never fires for it.
+ * The public WebGL default and an explicit `?renderer=webgl` stay silent. A
+ * notice can only follow a failed query-requested WebGPU diagnostic.
  *
  * The decision is a pure function so the gating is unit-testable
  * (tests/ui/rendererFallbackNotice.spec.ts); the orchestrator wires it to
@@ -117,8 +116,7 @@ export function maybeNotifyRendererFallback({
 
 /**
  * Default notice surface: a small self-dismissing toast in the warm-glass
- * entrance language (cream glass, ink text - same family as
- * MobilePerfWarning.tsx). Vanilla DOM on purpose: it fires from the main.js
+ * entrance language (cream glass, ink text). Vanilla DOM on purpose: it fires from the main.js
  * boot path before/independent of the lazy React overlay, and App.js is the
  * React mount owner. `pointer-events: none` keeps it strictly non-blocking;
  * `role="status"` keeps it polite for screen readers. The toast is intentionally

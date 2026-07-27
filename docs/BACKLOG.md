@@ -6,9 +6,28 @@
 
 ### Current release follow-up
 
-The web-only `v2.6.2` beta hotfix release line is current: the `v2.6.0` beta posture plus WebGPU Counting Sheep, controller menu, camera zoom, and tutorial framing fixes. The beta still centers three public scenes, Newsheepdogland as a gated lab, support/privacy surfaces, mobile first-session polish, public lobby verification, leaderboard-season planning, and community/playtest scaffolding. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md). Do not publish paid, irreversible, or third-party marketplace submissions unless Matt explicitly authorizes the exact action.
+The web-only `v2.6.3` beta hotfix release line is current: the `v2.6.0` beta posture plus Counting Sheep, controller/camera, tutorial, and Play-start performance fixes. Public production uses stable WebGL; WebGPU remains an explicit diagnostic. The beta still centers three public scenes, Newsheepdogland as a gated lab, support/privacy surfaces, public lobby verification, leaderboard-season planning, and community/playtest scaffolding. The active pickup surface is [`../NEXT_SESSION.md`](../NEXT_SESSION.md). Do not publish paid, irreversible, or third-party marketplace submissions unless Matt explicitly authorizes the exact action.
+
+### Future high-count GPGPU cutover
+
+Keep production CPU boids as the preferred path for ordinary SDS flock sizes. The standalone [`sds-gpu-boids`](https://github.com/matthew-kissinger/sds-gpu-boids) repository is the R&D and validation lab for a later single-player GPU path, not code to transplant during the Play-start hotfix. The intended first product ladder is 5K, 25K, and 100K sheep. Any graduation needs an explicit capability and renderer contract, direct storage-buffer rendering, bounded diagnostic readback, gameplay/objective parity, a CPU oracle plus browser benchmark evidence, and a clean separation from deterministic Worker-backed multiplayer. Decide whether 5K cuts over or remains a CPU fallback only in that future cycle.
+
+### Procedural farmhouse rebuild
+
+The Cycle 105 Kiln farmhouse is a replacement asset, not the finished SDS house direction. Matt's current visual verdict supersedes its old approval note: the live house is too small, poorly constructed, and visibly holed. Replace it in a dedicated authored-asset cycle with SDS-owned procedural geometry and a repeatable baker, following the fence pipeline rather than another opaque one-off GLB. Acceptance must cover playable scale, watertight surfaces, coherent roof/wall/trim/door/window construction, stable pivots and named parts, explicit collision and shadow proxies, bounded triangles/materials/textures, deterministic rebuild output, and scene-level visual proof in Home Field plus the gated Newsheepdogland lab. Do not fold this art/geometry rebuild into the Play-start performance hotfix.
 
 ## Recently Completed
+
+### Cycle 124 - `play-start-performance` (closed 2026-07-26)
+
+- **Shipped: 8/8 phases.** Public Play now reaches proven dog movement in roughly 2.6 seconds cold and 1.6 seconds HTTP-warm at the median, instead of the reproduced 8-34 second range. The round enters through one painted, awaitable transaction; partial scenes, overlapping starts, duplicate pregame flocks, and competing audio transitions are gone.
+- Plan: [docs/archive/cycles/cycle-124-plan.md](archive/cycles/cycle-124-plan.md). Release evidence is under ignored `cycle124-validation/`; player-facing notes are in [v2.6.3 release notes](launch/v2.6.3-play-start-performance-release-notes.md).
+- **Renderer truth:** stable WebGL is the public default. Genuine WebGPU remains query-only after reproducing 14.301 seconds to movement, 21.482 seconds to settled gameplay, and a 6.588-second blocking task even after lifecycle cleanup.
+- **State-asserted matrix:** desktop cold 26/26, phone/touch 26/26, sandbox/local 9/9, gamepad 4/4, HTTP-warm 4/4, and same-page restart 1/1. Every retained case asserts the live scene, mode, selected dog, expected sheep count, real movement, audio/request ownership, and browser health.
+- **Bad-data rails:** the first mode pass was rejected because it rendered zero sheep; the visual harness was rejected when Matt caught it repeatedly showing victory; and multiple jitter windows were discarded when a foreign renderer consumed the host. The final harness asserts active state, awaits cinematic starts, samples the machine throughout performance captures, and aggregates only audited-clean runs.
+- **CPU boundary:** ordinary counts remain on the characterized CPU boid path; 5,000 remains a supported stress tier. The separate `sds-gpu-boids` lab owns future 5K/25K/100K single-player work and remains outside deterministic Worker multiplayer.
+- **Locked-lab discrepancy:** Newsheepdogland startup passes its direct diagnostic, but its cold and warm sustained-jitter batteries miss a historical WebGPU-era budget on the new WebGL diagnostic path. It remains a dev-gated lab and is recorded for its future architecture cycle rather than misrepresented as a public pass.
+- **Farmhouse correction:** Cycle 105 did replace the file, but Matt rejects the current undersized, visibly holed Kiln GLB as the final SDS house. The planned procedural-house rebuild above is a separate authored-asset cycle, not part of this loading hotfix.
 
 ### Cycle 123 - `grass reads the light` (closed 2026-07-26)
 

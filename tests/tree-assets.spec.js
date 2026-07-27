@@ -14,8 +14,8 @@ import { MeshoptDecoder } from 'meshoptimizer';
  *
  * The trees are seed→build-time GLBs baked by `tools/bake-trees.mjs` into
  * `assets/models/trees/`. The committed bytes ARE the contract — the
- * runtime loader at `js/GameAssetLoader.js` references these paths
- * directly, and `js/TerrainBuilder.js` wires them into the
+ * runtime loader at `js/TerrainBuilder.js` references these paths
+ * directly and wires them into the
  * `InstancedMesh2.addLOD` chain (LOD0 → LOD1 → cross-billboard).
  *
  * Cycle 16 added a sibling LOD1 GLB per tree (reduced leaf count + Single

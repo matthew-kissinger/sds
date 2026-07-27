@@ -11,7 +11,7 @@
  * game), and the loading bar is driven by the real per-stage build marks via
  * js/boot/loadProgress.js. No simulated RAF here.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { WORLDS, DOGS, MODES, WAYS, DEFAULT_WORLD_INDEX, worldIndexFromSearch, modesForWorld, familiesForWorld, type World, type Dog, type Mode, type Way, type ModeFamily } from './worlds';
 import { subscribeGameEvent } from '../../GameBridge.js';
@@ -58,7 +58,8 @@ export interface BootFlow {
   prevWorld: () => void;
   setMode: (id: string) => void;
   setDog: (id: string) => void;
-  commit: () => void;
+  commit: () => Promise<void>;
+  committing: boolean;
   loading: BootLoading;
   reducedMotion: boolean;
 }
@@ -67,7 +68,7 @@ export interface BootFlowOptions {
   /** Called when Play commits; receives the armed selection + the family's
    * top-level gameMode ('solo' | 'counting') so the caller dispatches the
    * right start path. */
-  onPlay: (world: World, dog: Dog, mode: Mode, gameMode: string) => void;
+  onPlay: (world: World, dog: Dog, mode: Mode, gameMode: string) => Promise<void>;
 }
 
 export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
@@ -86,6 +87,8 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   const [curveId, setCurveId] = useState(() => readLS(LAST_CURVE) ?? COUNTING_CURVES[0]);
   const [familyId, setFamilyId] = useState(() => readLS(LAST_FAMILY) ?? '');
   const [dogId, setDogId] = useState(() => readLS(LAST_DOG) ?? readLS(LEGACY_LAST_DOG) ?? DOGS[0].id);
+  const [committing, setCommitting] = useState(false);
+  const commitInFlight = useRef(false);
 
   // The real loading bar: the boot emits 'scene-load-step' per build mark; we
   // map the raw label (carried on a window global) to a friendly caption + a
@@ -143,9 +146,17 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
   }, [isCounting]);
   const setDog = useCallback((id: string) => { setDogId(id); writeLS(LAST_DOG, id); }, []);
 
-  const commit = useCallback(() => {
+  const commit = useCallback(async () => {
+    if (commitInFlight.current) return;
+    commitInFlight.current = true;
+    setCommitting(true);
     setLoad({ pct: 0, label: FIRST_LOAD_LABEL }); // reset the bar for this build
-    onPlay(world, dog, mode, family.gameMode);
+    try {
+      await onPlay(world, dog, mode, family.gameMode);
+    } catch {
+      commitInFlight.current = false;
+      setCommitting(false);
+    }
   }, [onPlay, world, dog, mode, family.gameMode]);
 
   return {
@@ -166,6 +177,7 @@ export function useBootFlow({ onPlay }: BootFlowOptions): BootFlow {
     setMode,
     setDog,
     commit,
+    committing,
     loading: {
       pct: load.pct,
       label: load.label,

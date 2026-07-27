@@ -268,9 +268,8 @@ export class FencePresets {
         // COLOR_0 channel the weathering in `js/world/fenceWear.js` needs. v1
         // was an opaque binary with no authoring source at all, which is what
         // blocked all three of the cycle's asks. It is still on disk and still
-        // in `assets/_originals`, so reverting is this one constant plus its
-        // twin in `js/GameAssetLoader.js`. The palette texture is the SAME 32x4
-        // image, lifted verbatim out of v1 by the bake.
+        // in `assets/_originals`, so reverting is this one constant. The palette
+        // texture is the SAME 32x4 image, lifted verbatim out of v1 by the bake.
         const KIT_PATH = 'assets/models/Fence_Kit-v2.0.0.glb';
         const GATE_PATH = 'assets/models/Gate_Assembly-v1.0.0.glb';
         const kitNodeNames = {
@@ -1303,44 +1302,49 @@ export class FenceConfigBuilder {
      */
     build2PlayerFences(bounds, gates) {
         const fences = new THREE.Group();
-        
-        // North fence with gate
-        const northGate = gates.find(g => g.position.z > 50);
-        const northFence = this.presets.createBorderWithGate(
-            bounds.maxX - bounds.minX,
-            northGate.width,
-            northGate.position.x,
-            'horizontal',
-            northGate
-        );
-        northFence.position.set(0, 0, bounds.maxZ);
-        fences.add(northFence);
-        
-        // South fence with gate
-        const southGate = gates.find(g => g.position.z < -50);
-        const southFence = this.presets.createBorderWithGate(
-            bounds.maxX - bounds.minX,
-            southGate.width,
-            southGate.position.x,
-            'horizontal',
-            southGate
-        );
-        southFence.position.set(0, 0, bounds.minZ);
-        fences.add(southFence);
-        
-        // Side fences (no gates). Same length and orientation as each other, so
-        // each names itself in the jitter salt.
-        const eastFence = this.presets.createBorderSegment(bounds.maxZ - bounds.minZ, 'vertical', {
-            seedKey: 'border-east'
-        });
-        eastFence.position.set(bounds.maxX, 0, 0);
-        fences.add(eastFence);
+        const gatesOnXAxis = gates[0].direction === 'east' || gates[0].direction === 'west';
 
-        const westFence = this.presets.createBorderSegment(bounds.maxZ - bounds.minZ, 'vertical', {
-            seedKey: 'border-west'
-        });
-        westFence.position.set(bounds.minX, 0, 0);
-        fences.add(westFence);
+        if (gatesOnXAxis) {
+            for (const direction of ['west', 'east']) {
+                const gate = gates.find((candidate) => candidate.direction === direction);
+                const fence = this.presets.createBorderWithGate(
+                    bounds.maxZ - bounds.minZ,
+                    gate.width,
+                    gate.position.z,
+                    'vertical',
+                    gate
+                );
+                fence.position.set(direction === 'west' ? bounds.minX : bounds.maxX, 0, 0);
+                fences.add(fence);
+            }
+            for (const direction of ['south', 'north']) {
+                const fence = this.presets.createBorderSegment(bounds.maxX - bounds.minX, 'horizontal', {
+                    seedKey: `border-${direction}`
+                });
+                fence.position.set(0, 0, direction === 'south' ? bounds.minZ : bounds.maxZ);
+                fences.add(fence);
+            }
+        } else {
+            for (const direction of ['south', 'north']) {
+                const gate = gates.find((candidate) => candidate.direction === direction);
+                const fence = this.presets.createBorderWithGate(
+                    bounds.maxX - bounds.minX,
+                    gate.width,
+                    gate.position.x,
+                    'horizontal',
+                    gate
+                );
+                fence.position.set(0, 0, direction === 'south' ? bounds.minZ : bounds.maxZ);
+                fences.add(fence);
+            }
+            for (const direction of ['west', 'east']) {
+                const fence = this.presets.createBorderSegment(bounds.maxZ - bounds.minZ, 'vertical', {
+                    seedKey: `border-${direction}`
+                });
+                fence.position.set(direction === 'west' ? bounds.minX : bounds.maxX, 0, 0);
+                fences.add(fence);
+            }
+        }
         
         // Add pens for each gate
         gates.forEach(gate => {

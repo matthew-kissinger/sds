@@ -14,7 +14,7 @@
  * - GameHUD/     - In-game HUD components (GameTimer, SheepCounter, MobileHUD)
  * - Multiplayer/ - Multiplayer UI (Lobby, Leaderboard, Scoreboard)
  */
-import React, { createElement, useState, useEffect, useCallback, Fragment, Component } from 'react';
+import React, { createElement, useState, useEffect, useCallback, useRef, Fragment, Component } from 'react';
 import { Z } from '../ui/zIndex.js';
 import { markBoot } from '../boot/loadTimeline.js';
 import { createRoot } from 'react-dom/client';
@@ -243,6 +243,7 @@ export async function initReactUI() {
             const [gameSettings, setGameSettings] = useState(loadSettings());
             const [sandboxConfig, setSandboxConfig] = useState(() => SandboxConfig.createDefault());
             const [pendingInviteCode, setPendingInviteCode] = useState(null);
+            const secondaryStartInFlight = useRef(false);
             const platform = usePlatform();
 
             // Cycle 51 P6: world-first Play commits here. Build the armed world's
@@ -252,7 +253,7 @@ export async function initReactUI() {
             const handleEntrancePlay = useCallback(async (world, dog, mode, gameMode) => {
                 try { window.__sdsBootLoading = true; } catch {}
                 setScreen('loading');
-                await new Promise(requestAnimationFrame);
+                await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0))));
                 try {
                     const game = await waitForGameInstance();
                     await game.waitForInitialization?.();
@@ -294,6 +295,7 @@ export async function initReactUI() {
                     try { window.__sdsBootLoading = false; } catch { /* ignore */ }
                     setScreen('entrance');
                     alert('The game failed to load. Please refresh the page to try again.');
+                    throw err;
                 }
             }, []);
 
@@ -311,7 +313,14 @@ export async function initReactUI() {
                 onAchievements: () => setScreen('achievements'),
                 onSettings: () => setScreen('settings'),
                 onSandbox: () => setScreen('sandboxSetup'),
-                onLocal: () => setScreen('localModeSetup'),
+                onLocal: () => {
+                    void Promise.all([
+                        import('../LocalMultiplayerManager.js'),
+                        import('../LocalInputHandler.js'),
+                        import('../TwoPlayerCamera.js'),
+                    ]).catch(() => {});
+                    setScreen('localModeSetup');
+                },
                 onMultiplayer: async () => {
                     const nm = getNetworkManager();
                     if (nm && !nm.connected && !nm.connecting) {
@@ -376,41 +385,60 @@ export async function initReactUI() {
                 }
             }, []);
 
-            const handleStartSandbox = () => {
+            const handleStartSandbox = async () => {
+                if (secondaryStartInFlight.current) return;
                 console.log('[UI] Starting sandbox game:', selectedDog, sandboxConfig);
-                if (!getGameInstance()) return;
+                const game = getGameInstance();
+                if (!game) return;
+                secondaryStartInFlight.current = true;
 
-                // If the sandbox's sceneId differs from the currently-loaded
-                // scene, route through SheepDogSimulation.swapScene with the
-                // encoded config in the hash so we land back on the sandbox
-                // setup screen on the correct scene. swapScene rebuilds
-                // in-process against the persistent renderer for single-player
-                // (multiplayer hard-reloads).
+                // If the sandbox's scene differs, swap and then continue into
+                // the round in the same transaction. The encoded hash keeps the
+                // shareable configuration without forcing an eager scene build.
                 const desiredScene = sandboxConfig.sceneId || 'field';
                 const currentSceneId = (typeof window !== 'undefined' && window.__currentSceneId) || 'field';
-                if (desiredScene !== currentSceneId) {
-                    try {
-                        const encoded = sandboxConfig.serialize();
-                        getGameInstance().swapScene(desiredScene, { hash: `s/${encoded}` });
-                        return;
-                    } catch (err) {
-                        console.error('[UI] Failed to encode sandbox cross-scene reload:', err);
-                        // Fall through to attempt a same-scene start anyway.
-                    }
-                }
-
                 selectDog(selectedDog);
                 const dog = getSelectedDog() || selectedDog;
-                startSandboxGame(dog, sandboxConfig);
+                try { window.__sdsBootLoading = true; } catch {}
+                setScreen('loading');
+                await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0))));
+                try {
+                    if (desiredScene !== currentSceneId) {
+                        const encoded = sandboxConfig.serialize();
+                        await game.swapScene(desiredScene, { hash: `s/${encoded}`, noCrossfade: true });
+                    }
+                    await startSandboxGame(dog, sandboxConfig);
+                    secondaryStartInFlight.current = false;
+                } catch (error) {
+                    secondaryStartInFlight.current = false;
+                    console.error('[UI] Sandbox start failed:', error);
+                    try { window.__sdsBootLoading = false; } catch {}
+                    setScreen('sandboxSetup');
+                    alert('The sandbox failed to load. Please try again.');
+                }
             };
 
-            const handleStartLocal = (localConfig) => {
+            const handleStartLocal = async (localConfig) => {
+                if (secondaryStartInFlight.current) return;
                 console.log('[UI] Starting local 2-player game:', localConfig);
                 if (!getGameInstance()) return;
 
-                const menuController =getMenuController();
+                const menuController = getMenuController();
                 if (menuController) {
-                    menuController.selectLocal(localConfig);
+                    secondaryStartInFlight.current = true;
+                    try { window.__sdsBootLoading = true; } catch {}
+                    setScreen('loading');
+                    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0))));
+                    try {
+                        await menuController.selectLocal(localConfig);
+                        secondaryStartInFlight.current = false;
+                    } catch (error) {
+                        secondaryStartInFlight.current = false;
+                        console.error('[UI] Local 2-player start failed:', error);
+                        try { window.__sdsBootLoading = false; } catch {}
+                        setScreen('localModeSetup');
+                        alert('The local game failed to load. Please try again.');
+                    }
                 }
             };
 

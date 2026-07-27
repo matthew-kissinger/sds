@@ -28,7 +28,7 @@
  *
  * Output defaults to `assets/models/Fence_Kit-v2.0.0.glb`, ALONGSIDE the v1
  * kit rather than over it, so reverting is one constant in
- * `js/FencePresets.js` (plus its twin in `js/GameAssetLoader.js`).
+ * `js/FencePresets.js`.
  *
  * Usage:
  *   node tools/bake-fence.mjs

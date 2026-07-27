@@ -12,7 +12,11 @@
  *   - `#/r/<code>`      a multiplayer room invite — the room locks the scene,
  *                       so it must build directly and keep the hard-reload swap
  *                       path (the attract crossfade never engages for MP).
- *   - `#s/<cfg>` / `#/s/<cfg>`  a sandbox deep-link carries a built config.
+ *
+ * Sandbox deep-links stay on the attract scaffold until Start. Their config
+ * already identifies the requested scene, and building a default scene while
+ * the player is still editing the config only creates competing main-thread
+ * work at the eventual Start click.
  *   - `?autostart=1`    the share-card / OG harness jumps straight into a game.
  *   - `?testNoCanvas=1` the headless test harness skips init() entirely.
  *   - cinematic mode    capture sessions pose a real scene, never the field.
@@ -30,10 +34,7 @@
 export function shouldBootAttract({ hash = '', search = '', cinematic = false } = {}) {
     const params = new URLSearchParams(search);
     const requestedScene = params.get('scene');
-    const needsBuiltScene =
-        hash.startsWith('#/r/') ||  // multiplayer room invite
-        hash.startsWith('#s/') ||   // sandbox deep-link
-        hash.startsWith('#/s/');    // sandbox deep-link (alt form)
+    const needsBuiltScene = hash.startsWith('#/r/');
     return (
         !requestedScene &&
         !needsBuiltScene &&

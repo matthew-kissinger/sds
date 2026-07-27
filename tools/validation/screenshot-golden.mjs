@@ -128,13 +128,22 @@ async function canvasShot(page) {
 }
 
 function parseArgs(argv) {
-  const args = { mode: 'capture' };
+  const args = { mode: 'capture', case: null };
   for (const a of argv.slice(2)) {
     if (a === '--capture') args.mode = 'capture';
     else if (a === '--diff') args.mode = 'diff';
     else if (a === '--baseline') args.mode = 'baseline';
+    else if (a.startsWith('--case=')) args.case = a.slice('--case='.length);
   }
   return args;
+}
+
+function selectCells(pattern) {
+  if (!pattern) return MATRIX;
+  const matcher = new RegExp(pattern, 'i');
+  const cells = MATRIX.filter((cell) => matcher.test(cellId(cell)));
+  if (!cells.length) throw new Error(`no golden cells match --case=${pattern}`);
+  return cells;
 }
 
 // Single-window SSIM on normalized luma. Inputs are flat Buffers in RGBA order.
@@ -173,11 +182,10 @@ function ssimLuma(a, b, width, height) {
     ((muA * muA + muB * muB + C1) * (sigA2 + sigB2 + C2));
 }
 
-// Cycle 103 P1: fail closed if the session is not on the production WebGPU path.
-// main.js sets productionWebGpu.ok=false and rendererMode.effective='webgl' on any
-// WebGPU boot/preflight failure (the headless-demotion case), so a WebGL frame can
-// never be silently re-pinned as a WebGPU golden. The renderer-instance check is
-// advisory in the message; ok + effective are the definitely-set hard signals.
+// Fail closed unless both the effective mode and renderer instance are WebGPU.
+// The full production gate also checks live sheep materials; that gate is false
+// before Play now that the attract scene intentionally owns no pregame flock.
+// Those nonvisual checks do not decide whether this scene-only golden is WebGPU.
 async function assertWebGpuEngaged(page, id) {
   const r = await page.evaluate(() => ({
     ok: window.__sdsG?.productionWebGpu?.ok === true,
@@ -187,7 +195,7 @@ async function assertWebGpuEngaged(page, id) {
     reason: window.__sdsG?.productionWebGpu?.error
       ?? window.__sdsRendererMode?.fallbackReason ?? null,
   }));
-  if (!r.ok || r.effective === 'webgl') {
+  if (r.effective !== 'webgpu-production' || !r.isWebGpuRenderer) {
     throw new Error(
       `[GOLDEN] WebGPU did not engage for ${id} `
       + `(ok=${r.ok}, effective=${r.effective}, isWebGPURenderer=${r.isWebGpuRenderer}, reason=${r.reason}). `
@@ -211,10 +219,10 @@ async function captureCell(page, cell) {
   await page.goto(url.toString(), { waitUntil: 'load', timeout: 90_000 });
   await page.waitForFunction(() => !!window.__sdsCinema, null, { timeout: 30_000 });
   await page.evaluate(() => window.__sdsCinema.waitReady(90_000));
-  await page.evaluate(({ seed }) => {
+  await page.evaluate(async ({ seed }) => {
     window.__sdsSetVisualGoldenSeed?.(seed);
     window.__sdsCinema.pauseSimulation();
-    window.__sdsCinema.startSolo('jep', 'classic');
+    await window.__sdsCinema.startSolo('jep', 'classic');
   }, { seed: cellSeed(`${id}__gameplay`) });
   await page.waitForFunction(() => window.__perfHarness?.isReady?.() === true, null, { timeout: 90_000 });
   // Cycle 103 P1: refuse to capture unless this session is actually on WebGPU.
@@ -278,12 +286,12 @@ async function decodePngFromBuffer(buf) {
   };
 }
 
-async function modeCapture(targetDir) {
+async function modeCapture(targetDir, cells = MATRIX) {
   await mkdir(targetDir, { recursive: true });
   const browser = await launchWebGpuBrowser();
 
   const captured = [];
-  for (const cell of MATRIX) {
+  for (const cell of cells) {
     const id = cellId(cell);
     console.log(`[GOLDEN] capturing ${id}`);
     const { context, page } = await newCellPage(browser, id);
@@ -300,7 +308,7 @@ async function modeCapture(targetDir) {
   console.log(`[GOLDEN] wrote ${captured.length} captures to ${targetDir}`);
 }
 
-async function modeDiff() {
+async function modeDiff(cells = MATRIX) {
   if (!existsSync(GOLDEN_DIR)) {
     console.error(`[GOLDEN] golden dir missing: ${GOLDEN_DIR}. Run --baseline first.`);
     process.exit(1);
@@ -310,7 +318,7 @@ async function modeDiff() {
 
   const results = [];
   const missing = [];
-  for (const cell of MATRIX) {
+  for (const cell of cells) {
     const id = cellId(cell);
     const goldenPath = resolve(GOLDEN_DIR, `${id}.png`);
     if (!existsSync(goldenPath)) {
@@ -340,7 +348,7 @@ async function modeDiff() {
 
   const summary = {
     cells: results.length,
-    expectedCells: MATRIX.length,
+    expectedCells: cells.length,
     mean: results.reduce((s, r) => s + (r.ssim || 0), 0) / Math.max(1, results.length),
     fails: results.filter((r) => (r.ssim || 0) < 0.95).map((r) => r.id),
     missing,
@@ -361,16 +369,17 @@ async function modeDiff() {
   }
 }
 
-async function modeBaseline() {
+async function modeBaseline(cells = MATRIX) {
   console.log(`[GOLDEN] baselining → ${GOLDEN_DIR}`);
-  await modeCapture(GOLDEN_DIR);
+  await modeCapture(GOLDEN_DIR, cells);
 }
 
 async function main() {
   const args = parseArgs(process.argv);
-  if (args.mode === 'capture') await modeCapture(CAPTURE_DIR);
-  else if (args.mode === 'diff') await modeDiff();
-  else if (args.mode === 'baseline') await modeBaseline();
+  const cells = selectCells(args.case);
+  if (args.mode === 'capture') await modeCapture(CAPTURE_DIR, cells);
+  else if (args.mode === 'diff') await modeDiff(cells);
+  else if (args.mode === 'baseline') await modeBaseline(cells);
   else { console.error(`unknown mode: ${args.mode}`); process.exit(2); }
 }
 

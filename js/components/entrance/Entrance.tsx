@@ -40,9 +40,6 @@ import { WorldImage, Masthead } from './sceneComponents';
 import { Icon } from '../ui/Icon';
 import { formatSheep } from './worlds';
 import { COUNTING_GAME_MODE } from '../../../shared/countingModes.js';
-import { isMobileClient } from '../../utils/isMobileClient.js';
-import { shouldWarnMobileSheep } from '../../utils/mobileSheepWarning.js';
-import { MobilePerfWarning } from './MobilePerfWarning';
 import { EntrancePicker } from './EntrancePicker';
 import type { BootFlow } from './useBootFlow';
 
@@ -142,9 +139,6 @@ function CornerMenu({ nav }: { nav: EntranceNav }) {
 
 export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  // P1-MOBILE-WARN: a mobile client arming a >1000-sheep solo mode gets a
-  // performance warning before the round builds. Continue commits anyway.
-  const [perfWarnOpen, setPerfWarnOpen] = useState(false);
   // A coming-soon world (Newsheepdogland, gated per D19) is non-committable.
   // The badge and the disabled Play reflect it; this guard is the belt against
   // a keyboard or controller commit reaching flow.commit().
@@ -152,11 +146,7 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
 
   const handlePlay = () => {
     if (comingSoon) return;
-    if (shouldWarnMobileSheep({ sheepCount: flow.mode.sheep, gameMode: flow.family.gameMode, isMobile: isMobileClient() })) {
-      setPerfWarnOpen(true);
-      return;
-    }
-    flow.commit();
+    void flow.commit();
   };
 
   // Controller and keyboard navigation over the entrance controls. Escape
@@ -227,8 +217,8 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
             type="button"
             className="sds-ent-play"
             onClick={handlePlay}
-            disabled={comingSoon}
-            aria-disabled={comingSoon}
+            disabled={comingSoon || flow.committing}
+            aria-disabled={comingSoon || flow.committing}
             data-nav-default=""
           >
             {comingSoon ? 'Coming soon' : <><Icon name="play" size={20} /> Play</>}
@@ -241,13 +231,6 @@ export function Entrance({ flow, nav }: { flow: BootFlow; nav: EntranceNav }) {
         </div>
       </div>
 
-      {perfWarnOpen && (
-        <MobilePerfWarning
-          sheepCount={flow.mode.sheep}
-          onContinue={() => { setPerfWarnOpen(false); flow.commit(); }}
-          onBack={() => setPerfWarnOpen(false)}
-        />
-      )}
     </div>
   );
 }

@@ -16,7 +16,6 @@
 import * as THREE from 'three';
 
 import { Heightfield } from '../../shared/terrain/Heightfield.js';
-import { Sheepdog } from '../Sheepdog.js';
 import { resolveSceneEnclosure } from '../StructureBuilder.js';
 import { resolveAssetUrl } from '../utils/assetUrl.js';
 import { log as probeLog } from '../diagnostics/glProbe.js';
@@ -59,6 +58,8 @@ const STAGE_KEYS = {
     'Adding homestead props': 'homesteadProps',
     'Loading fence models': 'fenceModels',
     'Building structures': 'structures',
+    'Preparing pen containment': 'penContainment',
+    'Binding gate cue': 'gateCue',
     'Building anime water': 'water',
     'Creating sheepdog': 'sheepdog',
     'Creating sheep flock': 'flock',
@@ -340,8 +341,9 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // instead of two `if (sceneDef.X)` lines that drift apart. disposeScene
         // clears it, so a swap away from a pen scene does not inherit one.
         if (game.gameState) game.gameState.pen = penDef;
+        logStep('Preparing pen containment');
         if (enclosure && !game.isMultiplayer) {
-            const { PenBarrier } = await import('../gamestate/penContainment.js');
+            const { PenBarrier } = await (game._penContainmentModulePromise ?? import('../gamestate/penContainment.js'));
             game._penBarrier = new PenBarrier(enclosure.pen, enclosure.gate);
         } else {
             game._penBarrier = null;
@@ -694,8 +696,9 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
         // keeps the cue and the descriptor out of the measured main-*.js
         // ratchet. Its own try/catch: a cue that fails to load must not take
         // the scene build down with it.
+        logStep('Binding gate cue');
         try {
-            const { bindGateCue } = await import('../effects/GateColumn.js');
+            const { bindGateCue } = await (game._gateColumnModulePromise ?? import('../effects/GateColumn.js'));
             bindGateCue(game);
         } catch (err) {
             console.warn('[CUE] bind:', err);
@@ -753,27 +756,10 @@ export async function buildSceneBody(game, logStep = (s) => console.log(`[BUILD]
             }
         }
 
-        // Verify jep model before creating sheepdog
-        if (!game.terrainBuilder.models.animals['jep']) {
-            throw new Error('Jep model not available - cannot create sheepdog');
-        }
-
-        // Create sheepdog (but don't add to scene yet in pre-game state)
-        // Cycle 64: scenes may override the spawn (Newsheepdogland's origin is the
-        // instep bay = water); existing scenes omit dogSpawn -> (0, -30).
+        // The opaque world-first entrance no longer renders a pre-game actor
+        // layer. startGame constructs the selected dog and selected flock once.
         logStep('Creating sheepdog');
-        const preDogSpawn = game.currentScene?.dogSpawn ?? { x: 0, z: -30 };
-        const sheepdog = new Sheepdog(preDogSpawn.x, preDogSpawn.z, 'jep', game.heightfield);
-        game.sheepdog = sheepdog;
-        game.sheepdogMesh = sheepdog.createMesh();
-        game.gameState.setSheepdog(sheepdog);
-
-        // Connect audio manager to sheepdog
-        sheepdog.setAudioManager(game.audioManager);
-
-        // Create optimized sheep flock (visible during start screen)
         logStep('Creating sheep flock');
-        game.gameState.createSheepFlock(game.sceneManager.getScene());
 
         // Cycle 88 Phase 2: settle the cold scatter/cache before the scene
         // reads as complete. Stage-attribution reality (comment fixed Cycle 91

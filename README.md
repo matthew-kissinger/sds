@@ -139,14 +139,14 @@ content, release-candidate proof, native and Steam readiness, itch and portals) 
 June 2026 and shipped as `v2.4.0`. Cycle 111 followed with core bark, onboarding,
 leaderboard motivation and completion UX.
 
-The repo is currently in a front-door program (Cycles 112 to 118): the entrance, the art
-that sells it, grounding and props, gate legibility, and a water rewrite. Cycles 112 and
-113 have shipped. See `docs/front-door-roadmap.md` for the shape and `docs/BACKLOG.md`
-for what each closed cycle delivered.
+The front-door program (Cycles 112 to 123) is closed: the entrance, the art that sells it,
+grounding and props, gate legibility, water, and scene lighting now ship as one coherent
+surface. See `docs/front-door-roadmap.md` for the shape and `docs/BACKLOG.md` for what each
+closed cycle delivered.
 
 ## Release State
 
-The current player-visible release line is `v2.6.2 beta`: the `v2.6.0` web beta posture with WebGPU Counting Sheep, controller menu, camera zoom, and tutorial framing hotfixes. The beta remains web-only with three public scenes, support/privacy surfaces, leaderboard-season planning, community/playtest scaffolding, and the continued Newsheepdogland lab gate.
+The current player-visible release line is `v2.6.3 beta`: the `v2.6.0` web beta posture plus the Counting Sheep, controller/camera, tutorial, and Play-start performance hotfixes. The public game now uses stable WebGL for fast starts while WebGPU remains an explicit developer diagnostic. The beta remains web-only with three public scenes, support/privacy surfaces, leaderboard-season planning, community/playtest scaffolding, and the continued Newsheepdogland lab gate.
 
 No store upload, Steam submission, paid platform action, or third-party portal publication is implied by this README. Those remain separate owner-approved actions.
 

@@ -54,49 +54,17 @@ async function captureDefaultMode({ context, baseUrl }) {
   const page = await context.newPage();
   try {
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await page.waitForFunction(() => {
-      const state = window.__sdsG?.productionWebGpu;
-      return state?.ok === true || !!state?.error;
-    }, null, { timeout: 120_000 });
+    await page.waitForFunction(() => window.__sds?.sceneManagerRef, null, { timeout: 60_000 });
     const state = await page.evaluate(() => ({
       rendererMode: window.__sdsRendererMode ?? null,
       productionWebGpuState: window.__sdsG?.productionWebGpu ?? null,
     }));
     const checks = {
-      defaultRequestedWebGpu: state.rendererMode?.requested === 'webgpu',
-      defaultProductionWebGpu: state.rendererMode?.effective === 'webgpu-production',
+      defaultRequestedWebGl: state.rendererMode?.requested === 'webgl',
+      defaultEffectiveWebGl: state.rendererMode?.effective === 'webgl',
       defaultHasNoFallback: state.rendererMode?.fallbackReason == null,
-      defaultProductionStateOk: state.productionWebGpuState?.ok === true,
-      defaultDevicePreflightOk: state.productionWebGpuState?.devicePreflight?.ok === true,
-    };
-    return {
-      url: baseUrl,
-      ...state,
-      checks,
-      ok: Object.values(checks).every(Boolean),
-    };
-  } finally {
-    await page.close().catch(() => {});
-  }
-}
-
-async function captureStoredWebGlPreferenceMode({ context, baseUrl }) {
-  const page = await context.newPage();
-  try {
-    await page.addInitScript(() => {
-      localStorage.setItem('sds-settings', JSON.stringify({ experimentalWebGpu: false }));
-    });
-    await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    const state = await page.evaluate(() => ({
-      rendererMode: window.__sdsRendererMode ?? null,
-      productionWebGpuState: window.__sdsG?.productionWebGpu ?? null,
-    }));
-    const checks = {
-      storedPreferenceRequestedWebGl: state.rendererMode?.requested === 'webgl',
-      storedPreferenceEffectiveWebGl: state.rendererMode?.effective === 'webgl',
-      storedPreferenceHasNoFallback: state.rendererMode?.fallbackReason == null,
-      storedPreferenceNotProductionWebGpu: state.rendererMode?.productionWebGpu === false,
-      storedPreferenceNoProductionState: state.productionWebGpuState == null,
+      defaultNotProductionWebGpu: state.rendererMode?.productionWebGpu === false,
+      defaultNoProductionState: state.productionWebGpuState == null,
     };
     return {
       url: baseUrl,
@@ -441,10 +409,6 @@ async function run() {
         context,
         baseUrl: args.baseUrl,
       });
-      const storedWebGlPreferenceMode = await captureStoredWebGlPreferenceMode({
-        context,
-        baseUrl: args.baseUrl,
-      });
       const explicitWebGlMode = await captureExplicitWebGlMode({
         context,
         baseUrl: args.baseUrl,
@@ -468,12 +432,10 @@ async function run() {
         channel: args.channel,
         chromiumArgs: CHROMIUM_GPU_ARGS,
         defaultMode,
-        storedWebGlPreferenceMode,
         explicitWebGlMode,
         webGpuUnavailableMode,
         webGpuDeviceFailureMode,
         ok: defaultMode.ok
-          && storedWebGlPreferenceMode.ok
           && explicitWebGlMode.ok
           && scenes.every((scene) => scene.ok),
         scenes,

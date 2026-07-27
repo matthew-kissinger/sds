@@ -4,6 +4,28 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.6.3] - 2026-07-26
+
+### Changed
+
+- Play now enters every public scene through one painted, single-flight loading transaction instead of exposing partial scene construction or accepting overlapping starts.
+- The public web game uses the stable WebGL renderer. WebGPU remains available only through an explicit developer query for diagnostics.
+- Gameplay music streams from its first playback request instead of blocking startup on full-track decoding or opening a metadata request that Chromium aborts and retries; only the selected track and dog bark are prepared before a round.
+- Sandbox and local two-player starts now use the same loading and failure-recovery contract as solo play.
+- The CPU flock path removes per-frame allocation and duplicated neighbor, fence, obstacle, dog-distance, and interpolation work without changing deterministic shared simulation contracts.
+
+### Fixed
+
+- Removed duplicate pregame dog/flock construction, duplicate audio ownership, stale music transitions, and sandbox deep-link scene races that made Play appear to loop or stall.
+- Mobile high-count solo play no longer requires a second confirmation after Play.
+- Local versus fences support east/west gates, local rounds create their intended flock, and local scores no longer enter online leaderboards.
+
+### Validation
+
+- A new production-preview harness measures loading-cover paint, real dog movement, a two-second stable frame window, long tasks, renderer identity, requests, audio, console errors, and machine quiescence.
+- Current-build WebGL matrices passed 26/26 desktop cold cases, 26/26 phone/touch cases, 9/9 sandbox/local cases, 4/4 gamepad cases, 4/4 warm-navigation cases, and same-page restart while verifying the live scene, mode, selected dog, and active sheep count.
+- The explicit WebGPU diagnostic reproduced the rejected path at 14.301 seconds to input and 21.482 seconds to settled gameplay.
+
 ## [2.6.2] - 2026-07-07
 
 ### Changed

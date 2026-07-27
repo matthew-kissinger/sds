@@ -11,7 +11,7 @@
  *
  * react-i18next has no instance in tests, so useTranslation is mocked to
  * echo keys (with the date interpolation made visible), matching the
- * MobilePerfWarning spec pattern.
+ * lightweight modal spec pattern.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, screen, fireEvent } from '@testing-library/react';

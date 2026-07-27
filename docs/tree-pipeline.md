@@ -17,13 +17,13 @@ assets/_originals/models/trees/*.glb   ← uncompressed originals (backup cache;
         │
         ├─────────────────────────────────────────────┐
         ▼                                             ▼
-js/GameAssetLoader.js                   tools/bake-tree-impostors.mjs (Cycle 20)
+TerrainBuilder.loadModels()            tools/bake-tree-impostors.mjs (Cycle 20)
         │                                             │  (calls Pixel Forge / Kiln CLI)
         │                                             ▼
         │                          assets/models/trees/<name>.imposter.{png,normal.png,depth.png,json}
         │                                             │
         ▼                                             ▼
-js/TerrainBuilder.js  ←  Cycle-20 LOD2: kiln-impostor-material reads sidecar + samples atlases
+TerrainBuilder tree LOD chain  ←  Cycle-20 LOD2: kiln-impostor-material reads sidecar + samples atlases
 ```
 
 The runtime never generates a tree from scratch. All variation comes from the seed → bake pipeline. The Cycle-20 impostor atlases are also seed → bake-time and pinned by `tests/imposter-sidecar.spec.js`.
@@ -89,17 +89,20 @@ candidate bake with gallery, material, impostor, visual, perf, and native gates.
 
 ## Loader contract
 
-`js/GameAssetLoader.js` splits the active tree assets by load priority:
+`js/TerrainBuilder.js` is the single runtime owner for active tree GLBs. Its
+`loadModels()` promise is also used by the entrance idle prefetch, so prefetch
+and scene construction share the same loader/cache rather than fetching a
+second catalog:
 
-- `assets/models/trees/tree1.glb` — **critical**. Loaded before scene init.
-- `assets/models/trees/tree2.glb` — **deferred**. Loaded via `requestIdleCallback` after the menu mounts.
+- `assets/models/trees/tree1.glb` - primary production species.
+- `assets/models/trees/tree2.glb` - secondary production species.
 
 If you add another production tree slot in `bake-trees.mjs`, also add it to
-either `defineCriticalAssets()` or `defineDeferredAssets()` in
-`GameAssetLoader.js`, add it to `TREE_FILES` in `tests/tree-assets.spec.js`,
-and add it to the `TREES` list in `tests/imposter-sidecar.spec.js` when it has
-an impostor. Total committed GLB size must stay under the test ceiling; if you
-need more, raise the ceiling deliberately rather than letting it drift.
+`TerrainBuilder.loadModels()`, add it to `TREE_FILES` in
+`tests/tree-assets.spec.js`, and add it to the `TREES` list in
+`tests/imposter-sidecar.spec.js` when it has an impostor. Total committed GLB
+size must stay under the test ceiling; if you need more, raise the ceiling
+deliberately rather than letting it drift.
 
 ## InstancedMesh2 quaternion gotcha
 
@@ -153,7 +156,7 @@ Cycle 20 Phase 0 ran a 2D barycentric simulation of the runtime shader and corro
 - Don't generate another production tree at runtime via EZ-Tree directly. The deterministic seed contract requires the bake to be the single source of truth.
 - Don't edit GLB files by hand. Re-author the recipe and re-bake.
 - Don't bypass the `_originals/` rm step on re-bake. The compress-glbs cache will silently replay stale bytes.
-- Don't add a recipe without also updating `GameAssetLoader.js` AND `tests/tree-assets.spec.js`.
+- Don't add a recipe without also updating `TerrainBuilder.loadModels()` AND `tests/tree-assets.spec.js`.
 - Don't gate tree placement on runtime randomness; use seeded `mulberry32(seed)` from `shared/Random.js` so client + Worker compute identical positions.
 - Don't bake impostors from `assets/models/trees/*.glb` (the Draco-compressed runtime path). Pixel Forge's harness has no `DRACOLoader` and will error. Always bake from `assets/_originals/models/trees/*.glb`.
 - Don't invoke Pixel Forge via `bun run` on Windows — Playwright CDP handshake hangs. Use the bake script (`npm run bake-tree-impostors`) which routes through Node + tsx.

@@ -161,6 +161,80 @@ async function sampleBoxState() {
     return state;
 }
 
+async function sampleQuiescence() {
+    if (process.platform !== 'win32') {
+        return { cpuPercent: null, externalHeadlessBrowsers: 0 };
+    }
+    const script = [
+        "$cpu=(Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average",
+        "$headless=@(Get-Process chrome-headless-shell -ErrorAction SilentlyContinue).Count",
+        "[pscustomobject]@{cpuPercent=$cpu;externalHeadlessBrowsers=$headless}|ConvertTo-Json -Compress",
+    ].join(';');
+    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', script], { timeout: 15_000 });
+    return JSON.parse(stdout.trim());
+}
+
+async function waitForQuiescence() {
+    const samples = [];
+    let consecutive = 0;
+    const deadline = Date.now() + 120_000;
+    let attempt = 0;
+    while (Date.now() < deadline) {
+        const sample = await sampleQuiescence();
+        samples.push({ ...sample, at: new Date().toISOString() });
+        const quiet = sample.externalHeadlessBrowsers === 0
+            && (sample.cpuPercent == null || sample.cpuPercent <= 50);
+        consecutive = quiet ? consecutive + 1 : 0;
+        if (consecutive >= 2) return samples;
+        if (attempt > 0 && attempt % 15 === 0) {
+            console.log(`[C89-JITTER] waiting for quiescence cpu=${sample.cpuPercent ?? 'n/a'} headless=${sample.externalHeadlessBrowsers}`);
+        }
+        attempt += 1;
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
+    }
+    throw new Error(`machine did not become quiescent: ${JSON.stringify(samples.slice(-5))}`);
+}
+
+async function captureAuditedRun(args, params) {
+    let monitoring = true;
+    const environmentSamples = [];
+    const monitor = (async () => {
+        while (monitoring) {
+            try {
+                environmentSamples.push({ ...await sampleQuiescence(), at: new Date().toISOString() });
+            } catch (error) {
+                environmentSamples.push({ error: String(error?.message || error), at: new Date().toISOString() });
+            }
+            if (monitoring) await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
+        }
+    })();
+    let result;
+    try {
+        result = await captureRun(args, params);
+    } finally {
+        monitoring = false;
+        await monitor;
+    }
+    let highCpuStreak = 0;
+    let maxHighCpuStreak = 0;
+    for (const sample of environmentSamples) {
+        highCpuStreak = sample.cpuPercent >= 90 ? highCpuStreak + 1 : 0;
+        maxHighCpuStreak = Math.max(maxHighCpuStreak, highCpuStreak);
+    }
+    const reasons = [];
+    if (environmentSamples.some((sample) => sample.error)) reasons.push('machine-state sampling failed');
+    if (environmentSamples.some((sample) => sample.externalHeadlessBrowsers > 0)) reasons.push('external headless browser active');
+    if (maxHighCpuStreak >= 2) reasons.push('host CPU at or above 90% in consecutive samples');
+    return {
+        result,
+        environmentAudit: {
+            clean: reasons.length === 0,
+            reasons,
+            samples: environmentSamples,
+        },
+    };
+}
+
 // Cycle 92: fold a CDP sampling heap profile (HeapProfiler.stopSampling tree)
 // into top allocation sites by self-sampled bytes. Run this against a
 // --minify=false production build so callframe names survive.
@@ -982,15 +1056,68 @@ async function runCheck(args) {
         console.error(`[C89-JITTER] no budgets at ${budgetPath} - derive them from a baseline run first`);
         process.exit(1);
     }
+    const requiredRuns = Math.min(args.runs, 3);
     const runs = [];
-    for (let i = 1; i <= Math.min(args.runs, 3); i++) {
-        runs.push(await captureRun(args, { scene: args.scene, mode: args.mode, config: { id: 'full' }, runIndex: i }));
+    const quiescenceSamples = [];
+    const environmentAudits = [];
+    const maxAttempts = requiredRuns * 3;
+    for (let attempt = 1; runs.length < requiredRuns && attempt <= maxAttempts; attempt++) {
+        quiescenceSamples.push(await waitForQuiescence());
+        const audited = await captureAuditedRun(args, {
+            scene: args.scene,
+            mode: args.mode,
+            config: { id: 'full' },
+            runIndex: attempt,
+        });
+        environmentAudits.push({ attempt, ...audited.environmentAudit });
+        if (!audited.environmentAudit.clean) {
+            console.warn(`[C89-JITTER] discarded contaminated attempt ${attempt}: ${audited.environmentAudit.reasons.join(', ')}`);
+            continue;
+        }
+        runs.push(audited.result);
+    }
+    if (runs.length < requiredRuns) {
+        throw new Error(`only ${runs.length}/${requiredRuns} clean runs after ${maxAttempts} attempts`);
     }
     const summary = aggregateRuns(runs);
     const pass = summary.meanHitchRatePer30s <= budgets.maxHitchRatePer30s
         && summary.minOnePercentLowFps >= budgets.minOnePercentLowFps
         && (!Number.isFinite(budgets.maxWorstDeltaMs) || summary.worstMaxMs <= budgets.maxWorstDeltaMs);
-    console.log(JSON.stringify({ summary, budgets, pass }, null, 2));
+    const report = {
+        contract: 'jitter-regression-check',
+        capturedAt: new Date().toISOString(),
+        baseUrl: args.baseUrl,
+        scene: args.scene,
+        mode: args.mode,
+        warmupMs: args.warmupMs,
+        measureMs: args.measureMs,
+        drive: args.drive,
+        summary,
+        budgets,
+        quiescenceSamples,
+        environmentAudits,
+        runs,
+        pass,
+    };
+    if (args.out) {
+        const outPath = resolve(ROOT, args.out);
+        await mkdir(dirname(outPath), { recursive: true });
+        await writeFile(outPath, JSON.stringify(report, null, 2));
+        console.log('Wrote', outPath);
+    }
+    console.log(JSON.stringify({
+        summary,
+        budgets,
+        environmentAudits: environmentAudits.map((audit) => ({
+            attempt: audit.attempt,
+            clean: audit.clean,
+            reasons: audit.reasons,
+            sampleCount: audit.samples.length,
+            peakCpuPercent: Math.max(...audit.samples.map((sample) => sample.cpuPercent ?? 0)),
+            peakExternalHeadlessBrowsers: Math.max(...audit.samples.map((sample) => sample.externalHeadlessBrowsers ?? 0)),
+        })),
+        pass,
+    }, null, 2));
     if (!pass) process.exit(2);
 }
 

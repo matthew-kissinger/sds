@@ -311,41 +311,49 @@ export class ExtremeBoidSystem {
             const bvx = this.vx[i];
             const bvz = this.vz[i];
 
-            // Get neighbors using spatial hash
-            const neighborCount = this.getNeighbors(i);
-
-            // Initialize force accumulators
+            const minCx = Math.max(0, Math.floor((bx - this.bounds.minX - this.perception) / this.gridCellSize) + 1);
+            const maxCx = Math.min(this.gridWidth - 1, Math.floor((bx - this.bounds.minX + this.perception) / this.gridCellSize) + 1);
+            const minCz = Math.max(0, Math.floor((bz - this.bounds.minZ - this.perception) / this.gridCellSize) + 1);
+            const maxCz = Math.min(this.gridHeight - 1, Math.floor((bz - this.bounds.minZ + this.perception) / this.gridCellSize) + 1);
+            const perceptionSq = this.perception * this.perception;
             let sepX = 0, sepZ = 0;
             let aliX = 0, aliZ = 0;
             let cohX = 0, cohZ = 0;
+            let neighborCount = 0;
+            let sepCount = 0;
+
+            neighborSearch:
+            for (let cz = minCz; cz <= maxCz; cz++) {
+                for (let cx = minCx; cx <= maxCx; cx++) {
+                    const cellIdx = cz * this.gridWidth + cx;
+                    const cellBoids = this.gridCells[cellIdx];
+                    const count = this.cellCounts[cellIdx];
+                    for (let n = 0; n < count; n++) {
+                        const j = cellBoids[n];
+                        if (j === i) continue;
+                        const dx = bx - this.px[j];
+                        const dz = bz - this.pz[j];
+                        const distSq = dx * dx + dz * dz;
+                        if (distSq >= perceptionSq || distSq <= 0.0001) continue;
+
+                        if (distSq < sepDistSq) {
+                            const distance = Math.sqrt(distSq);
+                            const invDist = 1 / distance;
+                            sepX += dx * invDist / distance;
+                            sepZ += dz * invDist / distance;
+                            sepCount++;
+                        }
+                        aliX += this.vx[j];
+                        aliZ += this.vz[j];
+                        cohX += this.px[j];
+                        cohZ += this.pz[j];
+                        neighborCount++;
+                        if (neighborCount === MAX_NEIGHBORS) break neighborSearch;
+                    }
+                }
+            }
 
             if (neighborCount > 0) {
-                let sepCount = 0;
-
-                // Calculate flocking forces
-                for (let n = 0; n < neighborCount; n++) {
-                    const j = this.neighborIndices[n];
-                    const dx = bx - this.px[j];
-                    const dz = bz - this.pz[j];
-                    const distSq = dx * dx + dz * dz;
-
-                    // Separation (only for close neighbors)
-                    if (distSq < sepDistSq && distSq > 0.0001) {
-                        const invDist = 1 / Math.sqrt(distSq);
-                        sepX += dx * invDist / Math.sqrt(distSq);
-                        sepZ += dz * invDist / Math.sqrt(distSq);
-                        sepCount++;
-                    }
-
-                    // Alignment
-                    aliX += this.vx[j];
-                    aliZ += this.vz[j];
-
-                    // Cohesion
-                    cohX += this.px[j];
-                    cohZ += this.pz[j];
-                }
-
                 const invCount = 1 / neighborCount;
 
                 // Separation steering

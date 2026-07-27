@@ -162,6 +162,13 @@ export const MODE_CAPABILITIES = Object.freeze({
         uiVariant: 'cooperative',
         submitsToLeaderboard: false,
     }),
+    local: Object.freeze({
+        tracksPlayerScores: false,
+        usesCompetitiveGates: false,
+        uiVariant: 'cooperative',
+        submitsToLeaderboard: false,
+        autoCompletes: false,
+    }),
     // Counting Sheep (Cycle 59): single-player, cooperative-style UI, but
     // round-based and player-ended - the run spawns growing batches and never
     // auto-completes; the player banks the counted total. Both curves

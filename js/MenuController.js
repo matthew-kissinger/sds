@@ -212,7 +212,7 @@ export class MenuController {
         this.selectedMode = 'local';
         this.localConfig = config;
         this.playUIClick();
-        this.startGame();
+        return this.startGame();
     }
     
     // Dog selection methods
@@ -288,17 +288,11 @@ export class MenuController {
     async startGame() {
         if (!this.isActive) return;
         
-        if (this.audioManager) {
-            this.audioManager.fadeOutCurrentMusic(800);
-            setTimeout(() => {
-                this.audioManager.playGameplayMusic();
-            }, 900);
-        }
-        
         this.isActive = false;
         this.gameStarted = true;
-        
-        if (this.onGameStart) {
+
+        try {
+          if (this.onGameStart) {
             // Ensure we have room data for multiplayer mode
             let roomData = this.currentRoom;
             if (this.selectedMode === 'multiplayer' && !roomData) {
@@ -330,6 +324,11 @@ export class MenuController {
             }
 
             await this.onGameStart(this.selectedMode || 'solo', roomData, this.singlePlayerMode);
+          }
+        } catch (error) {
+            this.isActive = true;
+            this.gameStarted = false;
+            throw error;
         }
     }
     
