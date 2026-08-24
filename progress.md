@@ -36,9 +36,9 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
 - Remote Pages QA exposed a 43.98px transformed Settings target on phone
   portrait. The shared interaction token now carries a 1px safety margin.
 
-## Verification pending
+## Verification follow-up
 
-- Matt's owner playtest and exact-SHA production approval.
+- Physical-device and remaining launch-media receipts.
 
 ## Verification complete
 
@@ -54,7 +54,10 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
 - Isolated Worker deployment, Pages deployment, random-name registration,
   rename, and all three real staging boards passed remotely.
 
-## Release hold
+## Release record
 
-- Do not merge or deploy production until Matt completes the playtest and approves the exact candidate SHA.
 - Matt accepted the current audio on 2026-08-24. Do not regenerate or replace it.
+- Matt selected the Fox hybrid and requested the production cutover on
+  2026-08-24. Pull request 86 merged after both required GitHub lanes passed.
+- The Worker deployed first without a migration, then Pages deployed with an
+  exact live `release.json` receipt and analytics verification.
