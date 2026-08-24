@@ -1,283 +1,91 @@
-name: Deploy
+name: Deploy Pages
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
   workflow_dispatch:
     inputs:
-      capture_baseline:
-        description: 'Capture perf baseline (Linux runner) and commit. Run once to bootstrap perf-check.'
-        type: boolean
-        default: false
+      commit_sha:
+        description: Full 40-character commit SHA to deploy
+        required: true
+        type: string
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: pages-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  deployments: write
+
 jobs:
-  test:
-    name: Test
+  deploy-pages:
+    name: Deploy exact commit to Pages
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://sheepdogsim.com
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Verify exact source commit
+        id: source
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "commit_sha must be a full 40-character Git SHA." >&2
+            exit 1
+          fi
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "${actual_sha,,}" != "${REQUESTED_SHA,,}" ]]; then
+            echo "Checked out $actual_sha, expected $REQUESTED_SHA." >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$actual_sha" origin/main; then
+            echo "$actual_sha is not contained in origin/main." >&2
+            exit 1
+          fi
+          echo "sha=$actual_sha" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
+
       - run: npm ci
-      # P0-CI: lint + typecheck are required gates. They run inside this job so
-      # every downstream job (e2e, migrate, pages, worker) inherits them through
-      # its existing `needs: test` edge; a lint or typecheck failure fails this
-      # job and the deploy jobs (gated on needs.test.result == 'success') never run.
-      - run: npm run lint
-      - run: npm run typecheck
-      # P4-BUNDLE-GATE: build before test so the per-chunk bundle budgets in
-      # tests/refactor-baseline/baseline.spec.ts read real dist/ output. The
-      # spec self-skips when dist/assets is absent, so without this step the
-      # bundle gate never fires in CI.
+      - run: npm run lint --if-present
+      - run: npm run typecheck --if-present
       - run: npm run build
+        env:
+          SDS_RELEASE_SHA: ${{ steps.source.outputs.sha }}
+          SDS_RELEASE_REF: ${{ inputs.commit_sha }}
       - run: npm test --if-present
 
-  e2e:
-    # Cycle 9 Phase 3: smoke + WebGL probe on Chromium. Firefox/WebKit projects
-    # exist in playwright.config.ts for local cross-browser runs but are NOT
-    # exercised in CI: headless Linux GH runners don't ship a software WebGL
-    # backend for Firefox/WebKit, so a `THREE.WebGLRenderer` failure is
-    # guaranteed and not a real regression. Real cross-engine coverage runs
-    # nightly via macos-safari.yml (real Safari + Metal on a macos-latest
-    # runner). Run all three browsers locally with `npm run test:e2e`.
-    name: E2E (Chromium)
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm ci
-        working-directory: worker
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test --project=chromium --grep-invert='@local-only'
+      - name: Write and verify release identity
         env:
-          CI: 'true'
-      - if: always()
+          SDS_RELEASE_SHA: ${{ steps.source.outputs.sha }}
+          SDS_RELEASE_REF: ${{ inputs.commit_sha }}
+        run: |
+          node scripts/write-release-manifest.mjs
+          node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA" --require-v3-static
+
+      - name: Archive exact Pages artifact
         uses: actions/upload-artifact@v5
         with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
+          name: pages-${{ steps.source.outputs.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 90
 
-  # Apply pending D1 migrations to the remote DB BEFORE the worker/pages deploys,
-  # so code never ships ahead of its schema. This closes the Cycle 67 gap where
-  # 0009 had to be applied to remote by hand (the survival board 500'd until it
-  # was). P2-MIGRATE-STATE: applied migrations are tracked in the
-  # sds_migration_state table (worker/migrations/0010_migration_state.sql), which
-  # this deploy controls. scripts/d1-migrate-remote.mjs marks each migration
-  # 'failed' before applying and 'applied' after, so a half-failed apply is
-  # detected on the next deploy instead of silently skipped. If the state table
-  # does not exist yet (the deploy that ships 0010), the script falls back to the
-  # legacy git diff --diff-filter=A behavior for that one run. The built-in
-  # d1_migrations tracking table is historical/out-of-sync from earlier manual
-  # applies, so we still do NOT use `wrangler d1 migrations apply` (it would try
-  # to re-run 0007-0009).
-  migrate:
-    name: Migrate D1 (remote)
-    needs: test
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: worker/package-lock.json
-      - run: npm ci
-        working-directory: worker
-      - name: Apply pending D1 migrations to remote sds-db (state-tracked)
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
-        run: node scripts/d1-migrate-remote.mjs
-
-  pages:
-    name: Deploy Pages
-    needs: [test, migrate]
-    if: ${{ always() && needs.test.result == 'success' && needs.migrate.result != 'failure' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy Pages artifact
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=sds-frontend --branch=main --commit-hash=${{ github.sha }}
+          command: pages deploy dist --project-name=sds-frontend --branch=main --commit-hash=${{ steps.source.outputs.sha }}
 
-  worker:
-    name: Deploy Worker
-    needs: [test, migrate]
-    if: ${{ always() && needs.test.result == 'success' && needs.migrate.result != 'failure' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: worker/package-lock.json
-      - run: npm ci
-        working-directory: worker
-      - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          workingDirectory: worker
-          command: deploy
-
-  # Cycle 16 Phase 4+5: perf baseline + check. Both gated to workflow_dispatch
-  # initially because a baseline must be captured on a Linux runner (per
-  # cycle-16-plan.md — Linux software-WebGL through swiftshader is materially
-  # slower than the local dev workstation, so baseline numbers must be Linux
-  # numbers, not local numbers).
-  #
-  # Bootstrap workflow:
-  #   1. Trigger workflow_dispatch with `capture_baseline: true` ONCE — runs
-  #      perf-baseline-capture, commits tests/perf-baseline/baseline.json.
-  #   2. After that, every push runs perf-check against the committed
-  #      baseline. To flip from workflow_dispatch-only to push-gated, remove
-  #      the `if: github.event_name == 'workflow_dispatch'` line on perf-check
-  #      below.
-  #   3. perf-check fails the workflow if any config exceeds +5% of baseline
-  #      (`tools/perf-harness.mjs`'s built-in threshold).
-  perf-baseline-capture:
-    name: Perf baseline (capture on Linux runner)
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.capture_baseline == true }}
-    needs: test
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm ci
-        working-directory: worker
-      - run: cp worker/.dev.vars.example worker/.dev.vars
-      - run: npx playwright install --with-deps chromium
-      - name: Run D1 migrations (local, full set via scripts/d1-local-setup.mjs)
-        run: node scripts/d1-local-setup.mjs
-      - name: Start dev server (vite + wrangler) in background
-        run: |
-          npx vite --port 3000 > /tmp/vite.log 2>&1 &
-          (cd worker && npx wrangler dev) > /tmp/wrangler.log 2>&1 &
-          # Poll until vite is up (max 60s).
-          for i in $(seq 1 60); do
-            if curl -sf http://localhost:3000/ > /dev/null; then
-              echo "vite up after ${i}s"; break
-            fi
-            sleep 1
-          done
-      - run: npm run perf:baseline
-      - name: Commit baseline if changed
-        run: |
-          if [ -n "$(git status --porcelain tests/perf-baseline/baseline.json)" ]; then
-            git config user.name "perf-baseline-bot"
-            git config user.email "perf-baseline-bot@users.noreply.github.com"
-            git add tests/perf-baseline/baseline.json
-            git commit -m "perf(cycle-16): capture Linux baseline via deploy.yml workflow_dispatch (swiftshader software-WebGL; +5% threshold per tools/perf-harness.mjs)"
-            git push
-          else
-            echo "Baseline unchanged; nothing to commit."
-          fi
-      - if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: perf-baseline-output
-          path: tests/perf-baseline/
-
-  perf-check:
-    name: Perf check vs baseline
-    runs-on: ubuntu-latest
-    # Manual-only. The Linux runner's browser/graphics stack has become too
-    # noisy for a release gate: it can report multi-second WebGL frames while
-    # local installed-Chrome WebGPU/WebGL proofs stay inside budget. Keep this
-    # harness available for explicit baseline investigations, but do not block
-    # normal deploys on it.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
-    needs: test
-    steps:
-      - uses: actions/checkout@v5
-      - name: Skip when no baseline committed yet
-        id: gate
-        run: |
-          if [ ! -f tests/perf-baseline/baseline.json ]; then
-            echo "::warning::No perf baseline at tests/perf-baseline/baseline.json. Trigger workflow_dispatch with capture_baseline=true once to bootstrap."
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-      - if: steps.gate.outputs.skip != 'true'
-        uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-      - if: steps.gate.outputs.skip != 'true'
-        run: npm ci
-      - if: steps.gate.outputs.skip != 'true'
-        run: npm ci
-        working-directory: worker
-      - if: steps.gate.outputs.skip != 'true'
-        run: cp worker/.dev.vars.example worker/.dev.vars
-      - if: steps.gate.outputs.skip != 'true'
-        run: npx playwright install --with-deps chromium
-      - if: steps.gate.outputs.skip != 'true'
-        name: Run D1 migrations (local, full set via scripts/d1-local-setup.mjs)
-        run: node scripts/d1-local-setup.mjs
-      - if: steps.gate.outputs.skip != 'true'
-        name: Start dev server (vite + wrangler) in background
-        run: |
-          npx vite --port 3000 > /tmp/vite.log 2>&1 &
-          (cd worker && npx wrangler dev) > /tmp/wrangler.log 2>&1 &
-          for i in $(seq 1 60); do
-            if curl -sf http://localhost:3000/ > /dev/null; then
-              echo "vite up after ${i}s"; break
-            fi
-            sleep 1
-          done
-      - if: steps.gate.outputs.skip != 'true'
-        run: npm run perf:check
-      - if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: perf-last-run
-          path: tests/perf-baseline/last-run.json
-        continue-on-error: true
+      - name: Verify live release identity
+        run: node scripts/verify-release-manifest.mjs --url https://sheepdogsim.com/release.json --sha "${{ steps.source.outputs.sha }}" --retries 12
