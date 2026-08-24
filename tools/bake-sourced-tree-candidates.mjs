@@ -193,11 +193,14 @@ function adaptWood(source, variant) {
     const height = Math.max(0, Math.min(1, originalY / maxY));
     const atGround = Math.max(0, Math.min(1, 1 - originalY / 0.14));
     const upper = height * height * (3 - 2 * height);
-    const contract = 1 - atGround * 0.58;
+    // Preserve the Round source's natural bole and add only a restrained flare.
+    // Contracting this band made the foot thinner than the shaft above it,
+    // which reads as an upside-down trunk from the gameplay camera.
+    const groundFlare = 1 + atGround * 0.08;
     positions.push(
-      source.positions[index] * contract + variant.wood.bendX * upper,
+      source.positions[index] * groundFlare + variant.wood.bendX * upper,
       Math.max(0, originalY - atGround * 0.02),
-      source.positions[index + 2] * contract + variant.wood.bendZ * upper,
+      source.positions[index + 2] * groundFlare + variant.wood.bendZ * upper,
     );
   }
   return { positions, normals: faceNormals(positions), triangles: positions.length / 9 };
@@ -224,7 +227,7 @@ export function buildFoxHybrid(variantIndex = 1) {
       heightScale: variant.heightScale,
       lobeTransforms: variant.lobes,
       wood: variant.wood,
-      groundFlareContraction: 0.58,
+      groundFlareGain: 0.08,
     },
   };
 }

@@ -66,8 +66,8 @@ describe('committed treeline structure', () => {
       expect(treeIds.has(crown.treeId)).toBe(false);
       treeIds.add(crown.treeId);
     }
-    expect(treeline.canopies.length).toBeGreaterThanOrEqual(160);
-    expect(treeline.canopies.length).toBeLessThanOrEqual(210);
+    expect(treeline.canopies.length).toBeGreaterThanOrEqual(125);
+    expect(treeline.canopies.length).toBeLessThanOrEqual(150);
     expect(treeline.shrubs).toHaveLength(0);
   });
 
@@ -77,13 +77,13 @@ describe('committed treeline structure', () => {
     expect(receipt.treeCanopyInstancesMax).toBe(1);
     expect(receipt.treeSingleCanopyViolations).toBe(0);
     expect(receipt.treeRootedCrownCount).toBe(treeline.canopies.length);
-    expect(receipt.treeBeltCounts[0]).toBeGreaterThanOrEqual(80);
-    expect(receipt.treeBeltCounts[0]).toBeLessThanOrEqual(92);
-    expect(receipt.treeBeltCounts[1]).toBeGreaterThanOrEqual(56);
-    expect(receipt.treeBeltCounts[1]).toBeLessThanOrEqual(66);
-    expect(receipt.treeBeltCounts[2]).toBeGreaterThanOrEqual(58);
-    expect(receipt.treeBeltCounts[2]).toBeLessThanOrEqual(70);
-    for (const spacing of receipt.treeNearestNeighborMin) expect(spacing).toBeGreaterThanOrEqual(2.5);
+    expect(receipt.treeBeltCounts[0]).toBeGreaterThanOrEqual(52);
+    expect(receipt.treeBeltCounts[0]).toBeLessThanOrEqual(68);
+    expect(receipt.treeBeltCounts[1]).toBeGreaterThanOrEqual(32);
+    expect(receipt.treeBeltCounts[1]).toBeLessThanOrEqual(46);
+    expect(receipt.treeBeltCounts[2]).toBeGreaterThanOrEqual(32);
+    expect(receipt.treeBeltCounts[2]).toBeLessThanOrEqual(46);
+    for (const spacing of receipt.treeNearestNeighborMin) expect(spacing).toBeGreaterThanOrEqual(9);
     expect(receipt.treeNearNonAuthoredMaxGapDegrees).toBeLessThanOrEqual(30);
     expect(receipt.treeMaxGapDegrees[0]).toBeLessThanOrEqual(30);
     for (const gap of receipt.treeMaxGapDegrees.slice(1)) expect(gap).toBeLessThanOrEqual(50);

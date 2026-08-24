@@ -12,15 +12,12 @@
  * construction however much noise is thrown at the density, and evenly spaced
  * trees of similar height are a hedge - which is what came back.
  *
- * A stand is two or three trees packed around one anchor. Neighbouring stands
- * overlap into the larger three-to-six-tree copses the camera reads, without
- * concentrating the whole belt into a handful of oversized rosettes.
- * decided for the stand rather than for the tree:
+ * A stand is one tree with an occasional companion. Crown-aware clearance
+ * keeps their foliage from collapsing into one mass, while neighbouring stand
+ * anchors still create an irregular pastoral rhythm rather than a hedge.
  *
- *  - HEIGHT, WITH A GUARANTEED 1.9 SPREAD INSIDE IT. The stand draws its
- *    tallest tree from the belt's range; its first member IS that tree and its
- *    second is 1/1.9 of it, so the ratio is arithmetic
- *    rather than luck. The rest fall between.
+ *  - HEIGHT. A stand draws its primary tree from the belt's range; an optional
+ *    companion is deliberately smaller so the pair does not form one flat top.
  *  - DEPTH. Behind the farmhouse a stand is planted again 24 m further back,
  *    so the band there is two to three ranks deep instead of one.
  *
@@ -46,6 +43,7 @@ import {
   skyGap,
 } from './ringShape';
 import {
+  crownDimensions,
   emitTree,
   type CanopyPlacement,
   type ShrubPlacement,
@@ -141,29 +139,24 @@ const COMPACT_SHARE = 0.12;
 const SLENDERNESS = [0.098, 0.13] as const;
 
 /** Nothing shorter than this is planted as a tree. Below it a crown with a bole
- *  under it stops reading as a small tree and starts reading as a mushroom; the
- *  understory is what fills that height band. */
+ *  under it stops reading as a small tree and starts reading as a mushroom. */
 const MIN_HEIGHT = 5.4;
 
 /** Share of trees already turning, and how far. One value per TREE, so a mass
  *  can never turn while the mass beside it on the same tree stays green. */
 const TURNING_SHARE = 0.12;
 
-/** How many trees a stand holds, and how far its members sit from its centre.
- * The previous 16 m value was a radius despite its comment calling the whole
- * stand sixteen metres across. It produced 32 m sprays of isolated trees.
- * Members now sit in a 3-9 m annulus: close enough for crowns to interlock as a
- * grove, far enough that trunks never collapse into one post. */
-const THIRD_MEMBER_SHARE = [0.28, 0.24, 0.26] as const;
-const STAND_SPREAD_MIN = 3;
-const STAND_SPREAD_MAX = 5.5;
+/** Optional companion share and its initial distance from the stand anchor.
+ * Exact separation is resolved from the two authored crown footprints below. */
+const COMPANION_SHARE = [0.58, 0.44, 0.34] as const;
+const STAND_SPREAD_MIN = 11;
+const STAND_SPREAD_MAX = 17;
 /** Pull each pair of near-belt stand anchors toward one shared bearing. Two
  * seeded stands then read as one irregular four-to-six-tree copse, while the
  * distance between pairs preserves deliberate pasture windows. */
 const NEAR_PAIR_PULL = 0.42;
-/** Hard centre-to-centre floor for rooted leaders, including neighbouring
- * groves whose independent offsets happen to converge. */
-const MIN_TREE_SPACING = 2.6;
+/** Visible air left between conservative circular crown footprints. */
+const CROWN_GAP = 3.5;
 /**
  * The ratio between a stand's tallest and shortest tree. Not a target: the
  * second member is placed at exactly this fraction of the first, so the spread
@@ -247,17 +240,18 @@ interface Stand {
 interface TreeRoot {
   readonly x: number;
   readonly z: number;
+  readonly clearance: number;
 }
 
-/** Resolve the rare collision between independently authored groves. Member
- * offsets already start at 3 m; this pass is for neighbouring anchors and the
- * pad/floor corrections that can otherwise squeeze two leaders together. */
+/** Resolve collisions using the actual authored crown footprint, not just the
+ * trunk centres. This keeps a minimum visible gap even between broad variants. */
 function separateRoot(
   startX: number,
   startZ: number,
   stand: Stand,
   roots: readonly TreeRoot[],
   seed: number,
+  clearance: number,
 ): { x: number; z: number } | null {
   let x = startX;
   let z = startZ;
@@ -274,28 +268,31 @@ function separateRoot(
     }
     if (insidePad(x, z)) return null;
 
-    let nearest: TreeRoot | undefined;
-    let nearestDistance = Number.POSITIVE_INFINITY;
+    let blocking: TreeRoot | undefined;
+    let blockingDistance = Number.POSITIVE_INFINITY;
+    let blockingShortfall = 0;
     for (const root of roots) {
       const distance = Math.hypot(x - root.x, z - root.z);
-      if (distance < nearestDistance) {
-        nearest = root;
-        nearestDistance = distance;
+      const shortfall = clearance + root.clearance + CROWN_GAP - distance;
+      if (shortfall > blockingShortfall) {
+        blocking = root;
+        blockingDistance = distance;
+        blockingShortfall = shortfall;
       }
     }
-    if (nearest === undefined || nearestDistance >= MIN_TREE_SPACING) return { x, z };
+    if (blocking === undefined) return { x, z };
 
-    let dx = x - nearest.x;
-    let dz = z - nearest.z;
-    if (nearestDistance < 0.001) {
+    let dx = x - blocking.x;
+    let dz = z - blocking.z;
+    if (blockingDistance < 0.001) {
       const bearing = hashUnit(seed, stand.stream + 91) * TAU;
       dx = Math.sin(bearing);
       dz = Math.cos(bearing);
-      nearestDistance = 1;
+      blockingDistance = 1;
     }
-    const push = MIN_TREE_SPACING - nearestDistance + 0.02;
-    x += (dx / nearestDistance) * push;
-    z += (dz / nearestDistance) * push;
+    const push = blockingShortfall + 0.05;
+    x += (dx / blockingDistance) * push;
+    z += (dz / blockingDistance) * push;
   }
   return null;
 }
@@ -311,6 +308,22 @@ function plantStand(
 ): void {
   for (let k = 0; k < stand.members; k++) {
     const seed = stand.seed * 13 + k;
+    let share = STAND_RANGE + (1 - STAND_RANGE) * hashUnit(seed, stand.stream + 2);
+    if (k === 0) share = 1;
+    if (k === 1) share = STAND_RANGE;
+
+    const draw = hashUnit(seed, stand.stream + 3);
+    let kind = BROAD;
+    if (draw > 1 - COMPACT_SHARE) kind = COMPACT;
+    else if (draw < BALANCED_SHARE) kind = BALANCED;
+    else if (draw < BALANCED_SHARE + LEANING_SHARE) kind = LEANING;
+    const archetype = ARCHETYPES[kind]!;
+    const height = Math.max(MIN_HEIGHT, stand.top * share * archetype.height);
+    const span = archetype.width;
+    const width = height * (span[0] + (span[1] - span[0]) * hashUnit(seed, stand.stream + 4));
+    const dimensions = crownDimensions(height, width, archetype.family);
+    const clearance = Math.max(dimensions.width, dimensions.depth) * 0.5;
+
     // Golden-angle separation keeps members from landing on top of one
     // another, while a bounded hash jitter stops the stand becoming a rosette.
     const bearing =
@@ -329,28 +342,10 @@ function plantStand(
       z = (z + stand.z) * 0.5;
     }
     if (insidePad(x, z)) continue;
-    const root = separateRoot(x, z, stand, roots, seed);
+    const root = separateRoot(x, z, stand, roots, seed, clearance);
     if (root === null) continue;
     x = root.x;
     z = root.z;
-
-    // Member 0 is the stand's tallest and member 1 its shortest, so the 1.9
-    // spread is a property of the code rather than of the draw.
-    let share = STAND_RANGE + (1 - STAND_RANGE) * hashUnit(seed, stand.stream + 2);
-    if (k === 0) share = 1;
-    if (k === 1) share = STAND_RANGE;
-
-    // The archetype draw stays inside the chosen Fox Round + Spreading family.
-    const draw = hashUnit(seed, stand.stream + 3);
-    let kind = BROAD;
-    if (draw > 1 - COMPACT_SHARE) kind = COMPACT;
-    else if (draw < BALANCED_SHARE) kind = BALANCED;
-    else if (draw < BALANCED_SHARE + LEANING_SHARE) kind = LEANING;
-    const archetype = ARCHETYPES[kind]!;
-
-    const height = Math.max(MIN_HEIGHT, stand.top * share * archetype.height);
-    const span = archetype.width;
-    const width = height * (span[0] + (span[1] - span[0]) * hashUnit(seed, stand.stream + 4));
 
     const turning = hashUnit(seed, stand.stream + 13);
     const yawDraw = hashUnit(seed, stand.stream + 8);
@@ -377,7 +372,7 @@ function plantStand(
       canopies,
       trunks,
     );
-    roots.push({ x, z });
+    roots.push({ x, z, clearance });
   }
 }
 
@@ -433,7 +428,7 @@ function plantBelt(
     const draw = Math.pow(hashUnit(a, belt.stream + 5), 1.15);
     const top =
       (belt.heights[0] + (belt.heights[1] - belt.heights[0]) * draw) * wave * rank * emergent;
-    const members = 2 + (hashUnit(a, belt.stream + 6) < THIRD_MEMBER_SHARE[belt.id] ? 1 : 0);
+    const members = 1 + (hashUnit(a, belt.stream + 6) < COMPANION_SHARE[belt.id] ? 1 : 0);
 
     // Behind the farmhouse a minority of stands gets a second, smaller rank.
     // This preserves depth without concentrating most of the middle belt in
@@ -468,7 +463,7 @@ function plantBelt(
           // trunks and crowns visibly hover above the rendered field.
           lift: 0,
           top: rank === 0 ? top : top * 0.94,
-          members: rank === 0 ? members : Math.max(2, members - 1),
+          members: rank === 0 ? members : 1,
           floor: belt.inner - 2 + NORTH_PUSH_INNER * push,
           seed: a * 7 + rank,
           stream: belt.stream + 40,

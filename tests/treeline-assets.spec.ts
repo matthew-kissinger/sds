@@ -175,6 +175,17 @@ describe('sourced CC0 foliage chain', () => {
     expect(trunk.boundingBox!.max.y).toBeGreaterThan(0.5);
     expect(trunk.boundingBox!.max.y).toBeLessThanOrEqual(1);
 
+    const woodPositions = trunk.getAttribute('position');
+    const baseRadii: number[] = [];
+    const lowerShaftRadii: number[] = [];
+    for (let index = 0; index < woodPositions.count; index++) {
+      const radius = Math.hypot(woodPositions.getX(index), woodPositions.getZ(index));
+      const y = woodPositions.getY(index);
+      if (y < 0.02) baseRadii.push(radius);
+      else if (y < 0.08) lowerShaftRadii.push(radius);
+    }
+    expect(Math.max(...baseRadii)).toBeGreaterThan(Math.max(...lowerShaftRadii) * 1.05);
+
     crown.dispose();
     shrub.dispose();
     trunk.dispose();
@@ -187,7 +198,7 @@ describe('sourced CC0 foliage chain', () => {
     expect(placement.canopies.map((tree) => tree.family)).toEqual(
       placement.canopies.map((tree) => tree.family).sort((a, b) => a - b),
     );
-    expect(CANOPY_FAMILY_STARTS).toEqual([85, 107, 168]);
+    expect(CANOPY_FAMILY_STARTS).toEqual([57, 70, 111]);
     expect(CANOPY_FAMILY_STARTS.map((start) => placement.canopies[start]!.family)).toEqual([1, 2, 3]);
     expect(placement.canopies).toHaveLength(source.field.treeInstances);
     expect(placement.shrubs).toHaveLength(source.field.shrubInstances);
@@ -230,6 +241,7 @@ describe('sourced CC0 foliage chain', () => {
     expect(median(2)).toBeGreaterThan(1.7);
     expect(median(2)).toBeLessThan(2);
     expect(median(3)).toBeGreaterThan(2);
+
   });
 
   it('keeps every full tree envelope outside both fenced pastures', () => {
@@ -240,6 +252,21 @@ describe('sourced CC0 foliage chain', () => {
           crownOutsideFenceRect(crown, rect),
           `tree ${crown.treeId} belt ${crown.belt} overlaps ${JSON.stringify(rect)}`,
         ).toBe(true);
+      }
+    }
+  });
+
+  it('leaves visible air between every pair of crowns in the same belt', () => {
+    for (let left = 0; left < placement.canopies.length; left++) {
+      const a = placement.canopies[left]!;
+      for (let right = left + 1; right < placement.canopies.length; right++) {
+        const b = placement.canopies[right]!;
+        if (a.belt !== b.belt) continue;
+        const distance = Math.hypot(a.x - b.x, a.z - b.z);
+        const required = Math.max(a.width, a.depth) * 0.5
+          + Math.max(b.width, b.depth) * 0.5
+          + 2.45;
+        expect(distance, `crowns ${a.treeId}/${b.treeId} are crowded`).toBeGreaterThanOrEqual(required);
       }
     }
   });

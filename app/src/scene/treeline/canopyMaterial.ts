@@ -229,7 +229,7 @@ export interface CanopyMaterialInputs {
 /** The deterministic placement is sorted by family before serialization. The
  * vertex stage can therefore recover family ranges from the safe built-in
  * instance index without reading the backend-unsafe instance buffer. */
-export const CANOPY_FAMILY_STARTS = [85, 107, 168] as const;
+export const CANOPY_FAMILY_STARTS = [57, 70, 111] as const;
 
 /**
  * Two crossed, deterministic brush waves in roughly [-1, 1]. The crowns need

@@ -163,6 +163,36 @@ export interface StandingTree {
   readonly belt: number;
 }
 
+const CROWN_HEIGHT_SHARE = [0.58, 0.62, 0.6, 0.55] as const;
+const CROWN_WIDTH_GAIN = [1.22, 1.08, 1.14, 1.24] as const;
+const CROWN_MAX_WIDE = [2.15, 1.75, 1.9, 2.3] as const;
+const CROWN_MAX_TALL = [1.3, 1.35, 1.35, 1.25] as const;
+const CROWN_DEPTH_SHARE = [0.78, 0.84, 0.76, 0.7] as const;
+const CROWN_CENTRE_SHARE = [0.6, 0.61, 0.6, 0.58] as const;
+
+/** Exact authored crown dimensions shared by placement clearance and emission.
+ * Keeping this in one function prevents the stand planner from spacing trees
+ * using a smaller envelope than the renderer actually draws. */
+export function crownDimensions(
+  height: number,
+  width: number,
+  family: number,
+): { width: number; height: number; depth: number; centreShare: number } {
+  const rawHeight = height * (CROWN_HEIGHT_SHARE[family] ?? CROWN_HEIGHT_SHARE[0]);
+  const rawWidth = width * (CROWN_WIDTH_GAIN[family] ?? CROWN_WIDTH_GAIN[0]);
+  const aspect = fitCrown(
+    rawWidth,
+    rawHeight,
+    CROWN_MAX_WIDE[family] ?? CROWN_MAX_WIDE[0],
+    CROWN_MAX_TALL[family] ?? CROWN_MAX_TALL[0],
+  );
+  return {
+    ...aspect,
+    depth: aspect.width * (CROWN_DEPTH_SHARE[family] ?? CROWN_DEPTH_SHARE[0]),
+    centreShare: CROWN_CENTRE_SHARE[family] ?? CROWN_CENTRE_SHARE[0],
+  };
+}
+
 /**
  * Where the tip of a limb ends up, relative to its own foot, in world metres.
  *
@@ -355,16 +385,8 @@ export function emitTree(
 
   // One shared Fox lobe kit, four related Round + Spreading envelopes. None is
   // narrow enough to read as a columnar or conifer-like tree.
-  const rawCrownHeight = tree.height * ([0.58, 0.62, 0.6, 0.55][tree.family] ?? 0.58);
-  const rawCrownWidth = tree.width * ([1.22, 1.08, 1.14, 1.24][tree.family] ?? 1.22);
-  const crownAspect = fitCrown(
-    rawCrownWidth,
-    rawCrownHeight,
-    [2.15, 1.75, 1.9, 2.3][tree.family] ?? 2.15,
-    [1.3, 1.35, 1.35, 1.25][tree.family] ?? 1.3,
-  );
-  const crownDepth = crownAspect.width * ([0.78, 0.84, 0.76, 0.7][tree.family] ?? 0.78);
-  const centreY = tree.ground + tree.height * ([0.6, 0.61, 0.6, 0.58][tree.family] ?? 0.6);
+  const dimensions = crownDimensions(tree.height, tree.width, tree.family);
+  const centreY = tree.ground + tree.height * dimensions.centreShare;
   const downwind = tree.family === 3 ? tree.height * 0.11 : 0;
   const centre = new THREE.Vector3(
     leaderTip.x + Math.sin(tree.yaw) * downwind,
@@ -373,9 +395,9 @@ export function emitTree(
   );
   crown(
     centre,
-    crownAspect.width,
-    crownAspect.height,
-    crownDepth,
+    dimensions.width,
+    dimensions.height,
+    dimensions.depth,
     leaderSupport,
   );
 }

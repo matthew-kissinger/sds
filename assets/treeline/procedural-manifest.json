@@ -79,11 +79,11 @@
   "familyDeformation": "deterministic broad, balanced and compact instance morphology over three source-derived lobes, with base-pinned Round fork lean",
   "motion": "Herd TSL base-pinned travelling gust with restrained whole-crown follow-through",
   "field": {
-    "treeInstances": 209,
+    "treeInstances": 139,
     "shrubInstances": 0,
-    "woodInstances": 209,
+    "woodInstances": 139,
     "draws": 3,
-    "submittedTrianglesBeforeShadows": 142538,
+    "submittedTrianglesBeforeShadows": 94798,
     "textures": 0,
     "externalModels": 0,
     "sourceModels": 2
