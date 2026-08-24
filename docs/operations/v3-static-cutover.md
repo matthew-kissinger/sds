@@ -60,4 +60,12 @@ Repository environment protection and required status checks remain operator-own
 
 ## Backend boundary
 
-The existing Worker, Durable Objects, D1 database, migrations, secrets, and custom routes are untouched. A later solo leaderboard can use a separately reviewed endpoint without coupling Worker deployment or database migration to the v3 Pages workflow.
+The version 3 launch uses the existing identity and score REST routes for
+optional solo times. It needs one separately reviewed Worker deployment before
+the Pages cutover: the Worker-local score partition helper recognizes
+`field-v3` with exactly 25, 75 and 200 sheep. There is no D1 migration, Durable
+Object change, room change or shared version 2 scene-definition change.
+
+The Pages deployment remains static-only and never invokes Wrangler. Worker
+deployment, smoke proof and rollback are a separate operator action documented
+in `docs/operations/v3-solo-times.md`.

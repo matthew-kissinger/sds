@@ -8,8 +8,7 @@
 // and the leaderboard partition derive the ranked counts for a scene from its
 // soloLadder via these pure shared modules (no DOM / Three.js — safe in the
 // Worker isolate, same import the router already uses for scene validation).
-import { getSceneById } from '../../shared/scenes/index.js';
-import { getRankedCounts } from '../../shared/difficulty.js';
+import { rankedCountsForScoreScene, scoreSceneAllowsSoloCount } from './scorePartitions';
 import { log, errStr } from './log';
 // Cycle 59 (Counting Sheep): the counting leaderboard modes + ceiling. Shared
 // with the client so the board keys (counting-incremental / counting-exponential)
@@ -657,8 +656,7 @@ export function modeSheepCountOk(mode: GameMode, sheepCount: number, sceneId?: s
     return sheepCount >= DAILY_SHEEP_MIN && sheepCount <= DAILY_SHEEP_MAX;
   }
   if (isSoloMode(mode)) {
-    const scene = sceneId ? getSceneById(sceneId) : undefined;
-    return getRankedCounts(scene).includes(sheepCount);
+    return scoreSceneAllowsSoloCount(sceneId, sheepCount);
   }
   const allowed = ALLOWED_MODE_SHEEPCOUNT[mode as Exclude<GameMode, `daily-${string}`>];
   if (allowed === 'any') return true;
@@ -1264,10 +1262,9 @@ export async function getAllLeaderboards(
   nonSolo.forEach((m, i) => { out[m] = nonSoloResults[i]; });
 
   // One solo board per ranked count on the requested scene's ladder.
-  const scene = filters.sceneId && filters.sceneId !== 'any'
-    ? getSceneById(filters.sceneId)
-    : undefined;
-  const counts = getRankedCounts(scene);
+  const counts = rankedCountsForScoreScene(
+    filters.sceneId && filters.sceneId !== 'any' ? filters.sceneId : undefined,
+  );
   const soloResults = await Promise.all(
     counts.map(c => getLeaderboard(db, 'solo', limit, {
       sceneId: filters.sceneId,
