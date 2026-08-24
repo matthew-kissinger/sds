@@ -30,6 +30,7 @@ jobs:
         env:
           SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
           SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
+          SDS_WORKER_BASE: https://sds-v3-static-preview.invalid
       - run: npm test --if-present
       - name: Write preview release identity
         env:

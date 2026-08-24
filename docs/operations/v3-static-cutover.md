@@ -5,7 +5,7 @@ The v3 launch deploys one static Pages artifact. It does not deploy the SDS Work
 ## Automation contract
 
 - `Client CI` verifies the client on pushes and pull requests. It never deploys.
-- `Pages Preview` builds and deploys a same-repository pull request to a non-production Pages branch. It never installs or invokes Wrangler in `worker/`.
+- `Pages Preview` builds and deploys a same-repository pull request to a non-production Pages branch. It never installs or invokes Wrangler in `worker/`, and legacy SDS builds receive an RFC 2606 `.invalid` API base so a preview cannot call the production backend.
 - `Deploy Pages` is manual. It accepts only a full 40-character commit SHA already contained in `origin/main`, verifies the release is a bounded single-player 3.x build, archives the exact `dist/` artifact, deploys it to the existing `sds-frontend` Pages project, and verifies the live commit through `/release.json`.
 
 The production workflow deliberately refuses the v2 client. It becomes usable only after the imported client has a `3.x` package version and a root `release-capabilities.json` such as:
@@ -61,4 +61,3 @@ Repository environment protection and required status checks remain operator-own
 ## Backend boundary
 
 The existing Worker, Durable Objects, D1 database, migrations, secrets, and custom routes are untouched. A later solo leaderboard can use a separately reviewed endpoint without coupling Worker deployment or database migration to the v3 Pages workflow.
-
