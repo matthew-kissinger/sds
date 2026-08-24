@@ -166,6 +166,19 @@ try {
           throw new Error(`${spec.name}: leaderboard focus escaped before ${expected}`);
         }
       }
+      for (const size of [75, 200, 25]) {
+        const [response] = await Promise.all([
+          page.waitForResponse((candidate) => (
+            candidate.url().includes('/api/leaderboard?')
+            && candidate.url().includes(`sheepCount=${size}`)
+          )),
+          page.getByRole('dialog').getByRole('button', { name: String(size), exact: true }).click(),
+        ]);
+        if (!response.ok()) {
+          throw new Error(`${spec.name}: ${size}-sheep board returned ${response.status()}`);
+        }
+        await page.getByText(`Fastest runs with ${size} sheep.`).waitFor();
+      }
       await page.screenshot({ path: join(outDir, `${spec.name}-times.png`) });
       const times = await auditLayout(page);
       await page.keyboard.press('Escape');

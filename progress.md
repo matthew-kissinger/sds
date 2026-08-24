@@ -11,6 +11,8 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
 - Browser QA caught and fixed the first focus-restoration implementation before release.
 - Harsh accessibility review caught background focus escape. The title screen is
   now inert while Times is open and focus wraps across all four dialog controls.
+- Corrected the release note to distinguish identity-free board reads from the
+  app's automatic random running-name registration.
 
 ## Verification pending
 

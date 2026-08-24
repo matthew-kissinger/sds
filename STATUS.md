@@ -13,7 +13,8 @@ deployment claim.
 - Multiplayer and the 5,000-sheep player path are absent from the version 3
   client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
-  Viewing the 25, 75 or 200 sheep boards does not create a player identity.
+  No name entry is required: the service assigns a random running name unless
+  the player chooses Edit, and the board read path does not require identity.
 - Production has not been changed. Worker and Pages deployment each require
   owner approval of the same full release-candidate commit SHA.
 - Player-facing branding is `Sheepdog Sim`. The `3.0.0` number is retained only
@@ -38,8 +39,8 @@ deployment claim.
 - Root and Worker dependency audits report zero vulnerabilities.
 - Gitleaks 8.30.1 scanned 12.50 MB with no findings. Direct runtime and build
   dependencies report MIT, ISC, Apache-2.0 or dual MIT/Apache licensing.
-- The production build contains 232 modules. Initial JavaScript is 579,725
-  gzip bytes. Estimated first transfer is 5,760,428 bytes across 35 files,
+- The production build contains 232 modules. Initial JavaScript is 579,858
+  gzip bytes. Estimated first transfer is 5,760,563 bytes across 35 files,
   below the 8 MiB release limit.
 - The audio bake reproduced 17 files and 2,784,342 bytes exactly.
 - The deterministic simulation produced 23,563 identical bytes through the
