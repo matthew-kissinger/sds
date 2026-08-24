@@ -1,177 +1,136 @@
-# Sheep Dog Sim
+# Sheepdog Sim
 
-[![Play now](https://img.shields.io/badge/play-sheepdogsim.com-2563eb?style=for-the-badge)](https://sheepdogsim.com) [![AGPL-3.0 Code](https://img.shields.io/badge/code-AGPL--3.0-22c55e?style=for-the-badge)](LICENSE) [![CC BY-SA 4.0 Assets](https://img.shields.io/badge/assets-CC%20BY--SA%204.0-f97316?style=for-the-badge)](LICENSE-ASSETS) [![Star on GitHub](https://img.shields.io/github/stars/matthew-kissinger/sds?style=for-the-badge&logo=github&color=eab308)](https://github.com/matthew-kissinger/sds)
+Sheepdog Sim is a browser game about one dog, one flock and one field. Get
+behind the sheep, apply pressure carefully and guide every animal through the
+gate into the attached pen.
 
-[![Three.js 0.185](https://img.shields.io/badge/three.js-0.185-black)](https://threejs.org/) [![React 19](https://img.shields.io/badge/react-19-61DAFB)](https://react.dev/) [![Vite 7.3](https://img.shields.io/badge/vite-7.3-646CFF)](https://vite.dev/) [![Tailwind 4.1](https://img.shields.io/badge/tailwind-4.1-38BDF8)](https://tailwindcss.com/) [![Cloudflare Workers + D1](https://img.shields.io/badge/edge-Cloudflare%20Workers%20%2B%20D1-F38020)](https://developers.cloudflare.com/workers/) [![Vitest 4](https://img.shields.io/badge/vitest-4.1-6E9F18)](https://vitest.dev/)
+![Sheepdog Sim field and title](app/public/og/sheepdog-sim.png)
 
-**Sheep Dog Sim is a free browser herding game with three public scenes, solo challenges, 2-4 player online multiplayer, mobile controls, gamepad support, and flocks that scale up to 5,000 sheep.** Play at [sheepdogsim.com](https://sheepdogsim.com). No install, no signup, no ads.
+The version 3.0 release focuses on the complete single-player loop:
 
-Current code is AGPL-3.0-or-later. Current non-code assets are CC BY-SA 4.0. Hosted or modified versions must publish corresponding source and preserve attribution.
+- 25, 75 or 200 sheep;
+- move, sprint and bark;
+- Classic and Follow cameras;
+- keyboard, gamepad and touch controls;
+- local personal best times;
+- optional online solo times for each flock size;
+- a server-random running name that can be edited;
+- WebGPU rendering with automatic WebGL2 fallback;
+- no account, multiplayer or 5,000-sheep mode.
 
-## Current Captures
+Online identity and score requests are fail-soft. Play, completion and local
+personal bests continue when the score service is unavailable.
 
-| Home Field | Rolling Hills | Open Country | Newsheepdogland lab |
-|---|---|---|---|
-| ![Home Field pasture capture](assets/scenes/entrance/field.webp) | ![Rolling Hills island capture](assets/scenes/entrance/rolling-hills.webp) | ![Open Country portal island capture](assets/scenes/entrance/open-country.webp) | ![Newsheepdogland gated lab capture](assets/scenes/entrance/newsheepdogland.webp) |
+Play the current public release at [sheepdogsim.com](https://sheepdogsim.com).
+This repository is the current Sheepdog Sim 3 codebase. Production releases
+are built from an exact commit and expose that identity in `release.json`.
 
-## What You Can Play
+## Controls
 
-Sheep Dog Sim is built around pressure, flock shape, and terrain. Get behind the sheep, push gently, block breaks, and drive the flock toward the objective before it spills into water, trees, gates, or its own momentum.
+| Action | Keyboard | Gamepad | Touch |
+| --- | --- | --- | --- |
+| Move | W A S D or arrows | Left stick | Left joystick |
+| Sprint | Shift | Left trigger | Sprint button |
+| Bark | Space | Right shoulder | Bark button |
+| Change camera | C | Y / Triangle | Camera button |
+| Pause | Escape | Menu | Pause button |
 
-Scenes:
+Controls can be remapped in Settings. Reduced motion, quality, audio levels and
+a colorblind dog marker are also available there.
 
-- **Home Field** - flat fenced starter pasture with one gate.
-- **Rolling Hills** - 180 m golden-hour island with shoreline water and a fenced pasture with one gate.
-- **Open Country** - 380 m island with a multi-stage gather-and-portal objective.
-- **Newsheepdogland** - gated large-scene lab with a homestead pen and day/night pressure. It remains out of the public beta scene set while the larger loop is reconsidered.
+## Run locally
 
-Modes:
+Requirements:
 
-- **Just Play** - 30 sheep, no timer, no fail state.
-- **Solo Classic** - 200 sheep with leaderboard scoring.
-- **Solo Extreme** - 1,000 sheep.
-- **Solo Insane** - 3,000 sheep.
-- **Solo Chaos** - 5,000 sheep.
-- **Multiplayer** - 2-4 player real-time co-op, competitive, timed rooms, split-screen, and sandbox/editor flows.
-
-## Why This Repo Exists
-
-Most browser 3D games are either thin demos or closed-source ports. Sheep Dog Sim is a complete browser-first game whose source can be read end-to-end:
-
-- vanilla JavaScript client code with React 19 UI via `React.createElement`, no JSX;
-- Three.js 0.185 renderer paths with WebGL fallback and progressive WebGPU on supported hardware;
-- Vite 7 and Tailwind 4 for the web app;
-- Cloudflare Worker, Durable Objects, and D1 for multiplayer, rooms, scores, and identity;
-- deterministic `shared/` boid, movement, obstacle, objective, terrain, and scene modules imported byte-identically by the browser and Worker;
-- Vitest, Playwright, sim-baseline goldens, refactor-baseline characterization tests, and an ESLint boundary around `shared/`.
-
-Related R&D: [sds-gpu-boids](https://github.com/matthew-kissinger/sds-gpu-boids) — a standalone WebGPU compute-shader flock sandbox (experimental GPU boid logic, 100k+ agents) exploring the next generation of the herding simulation. An experimental build is live for testing at [matthew-kissinger.github.io/sds-gpu-boids](https://matthew-kissinger.github.io/sds-gpu-boids/).
-
-## Run Locally
-
-Requires Node 22+.
+- Node.js 22 or newer;
+- a current browser with WebGPU or WebGL2.
 
 ```bash
 git clone https://github.com/matthew-kissinger/sds.git
 cd sds
-npm install
-npm run dev:setup
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open the local URL printed by Vite.
 
 Useful commands:
 
 ```bash
-npm run dev:client
-npm run dev:worker
-npm run dev:lan
-
 npm test
 npm run lint
-npm run test:e2e
-npm run test:ios-water
 npm run build
-BUILD_TARGET=itchio npm run build
-npm run native:check
+npm run preview
+node tools/determinism-crosscheck.mjs
+npm run probe:release
 ```
-
-URL helpers:
-
-- `?scene=field`
-- `?scene=rolling-hills`
-- `?scene=open-country`
-- `?scene=newsheepdogland` - gated lab/deep-link testing only
-- `?renderer=webgpu`
-- `?renderer=webgl`
-- `?cinematic=1`
-- `?ui=off`
-- `?sun=0.20`
-
-## Controls
-
-| Input | Desktop | Mobile |
-|---|---|---|
-| Move | W A S D / arrows | Virtual joystick |
-| Sprint | Shift | Sprint button |
-| Bark | Space / gamepad RB | Bark button |
-| Camera | C | Camera chip |
-| Zoom | Mouse wheel | Slider |
-| Pause | Escape | Pause button |
-| Gamepad | Full analog support | Browser-dependent |
-
-Camera modes are Classic, Follow, and Free. Per-scene camera preference is stored locally.
 
 ## Architecture
 
+The application is split into four deliberate boundaries:
+
 ```text
-Client: Cloudflare Pages
-  React UI, Three.js renderers, input, audio, terrain, atmosphere, foliage, scenes
-  |
-  | imports byte-identical deterministic modules
-  v
-shared/
-  boids, movement, objectives, scene data, terrain heightfield, obstacle contracts
-  ^
-  | imports byte-identical deterministic modules
-  |
-Worker: Cloudflare Workers + Durable Objects + D1
-  RoomDO, LobbyDO, 60 Hz GameSim, MessagePack WebSocket frames, scores, identity
+sim/       deterministic fixed-step herding simulation
+app/       React, Three.js, input, audio and player interface
+assets/    runtime assets plus editable sources and bake manifests
+tools/     deterministic bakes, diagnostics and release verification
 ```
 
-The deterministic boundary matters. Never import DOM, `window`, Three.js, or `js/` modules into `shared/`. Multiplayer drift is caught by sim-baseline fixtures and Worker/client tests.
+The simulation imports no Three.js, React, DOM or network code. The renderer
+uses one TSL material path for WebGPU and WebGL2. Zustand is the shared state
+authority for the scene and player interface.
 
-This netcode approach - a deterministic shared simulation authoritative on Durable Objects - is the open-source sibling of the netcode that ships in [OBJEKT-62](https://objekt62.com), the author's closed-source game.
+The field is assembled from reproducible source:
 
-Full details: [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md), [docs/INTERFACE_FENCE.md](docs/INTERFACE_FENCE.md).
+- terrain, grass, treeline and scatter placement are deterministic bakes;
+- the treeline uses the CC0 Fox Trees Pack Round and Spreading sources, adapted
+  into a deterministic cel-shaded family with no runtime model loading;
+- sheep, dog, fences and farm structures are code-authored geometry;
+- material and atmosphere systems are TSL source;
+- every audio file is deterministic in-repo synthesis with a runnable recipe
+  and digest ledger;
+- authoring concepts are retained separately from runtime assets.
 
-## Deployment State
+Read [the version 3 architecture reset](docs/architecture/v3-reset.md) for what
+was retained from version 2, what was removed and why the codebase was rebuilt.
 
-- Canonical web game: [sheepdogsim.com](https://sheepdogsim.com)
-- Production backend: Cloudflare Worker `sds-worker` with D1 `sds-db`
-- PR preview backend: isolated Worker `sds-worker-preview` with D1 `sds-db-preview`
-- Itch target: deferred; `npm run build:itchio` remains available for future owner-approved distribution work
-- Native target: Electron Windows package path exists, but public Steam submission remains a long-term target pending beta demand, current package proof, signing/store decisions, metadata, screenshots/capsules, install/uninstall QA, and human approval
+## Release discipline
 
-The launch-readiness program (Cycles 106 to 110: docs and repo hygiene, SEO and site
-content, release-candidate proof, native and Steam readiness, itch and portals) closed in
-June 2026 and shipped as `v2.4.0`. Cycle 111 followed with core bark, onboarding,
-leaderboard motivation and completion UX.
+A production candidate must pass:
 
-The front-door program (Cycles 112 to 123) is closed: the entrance, the art that sells it,
-grounding and props, gate legibility, water, and scene lighting now ship as one coherent
-surface. See `docs/front-door-roadmap.md` for the shape and `docs/BACKLOG.md` for what each
-closed cycle delivered.
+- clean install, lint, typecheck, unit tests and deterministic fixtures;
+- a production build and static preview;
+- a built-artifact scan that permits only the score REST client and excludes
+  rooms, WebSockets, multiplayer, deferred scale and debug code;
+- complete 25, 75 and 200 sheep runs on both renderer backends;
+- desktop and mobile interaction, layout and audio checks;
+- asset source, license, secret and local-artifact checks;
+- exact commit identity in the deployed `release.json`;
+- a tested static rollback to the last version 2 Pages deployment.
 
-## Release State
-
-The current player-visible release line is `v2.6.3 beta`: the `v2.6.0` web beta posture plus the Counting Sheep, controller/camera, tutorial, and Play-start performance hotfixes. The public game now uses stable WebGL for fast starts while WebGPU remains an explicit developer diagnostic. The beta remains web-only with three public scenes, support/privacy surfaces, leaderboard-season planning, community/playtest scaffolding, and the continued Newsheepdogland lab gate.
-
-No store upload, Steam submission, paid platform action, or third-party portal publication is implied by this README. Those remain separate owner-approved actions.
+Public builds contain no multiplayer client, room flow, bundled Worker or
+5,000-sheep code. Solo-time boards use the existing score service through the
+isolated `field-v3` partition. Multiplayer remains a future product decision,
+not a dormant launch flag.
 
 ## Contributing
 
-Recommended reading order:
+Start with [CONTRIBUTING.md](CONTRIBUTING.md), then read
+[AGENTS.md](AGENTS.md) and the relevant document under [spec/](spec/). The spec
+is the product contract. When implementation and spec disagree, document the
+decision rather than adding a compatibility branch.
 
-1. [ARCHITECTURE.md](ARCHITECTURE.md)
-2. [DEVELOPMENT.md](DEVELOPMENT.md)
-3. [DECISIONS.md](DECISIONS.md)
-4. [docs/BACKLOG.md](docs/BACKLOG.md)
-5. [docs/INTERFACE_FENCE.md](docs/INTERFACE_FENCE.md)
-6. [docs/README.md](docs/README.md)
-
-Good contribution areas:
-
-- language packs under [js/locales/](js/locales/);
-- small HUD comfort fixes;
-- mobile device proof;
-- native packaging QA;
-- portal-specific distribution research;
-- mod/gallery experiments that preserve the AGPL and asset attribution requirements.
+Bug reports should include the browser, device, renderer backend, flock size,
+seed when known, reproduction steps and console output. Security issues should
+follow [SECURITY.md](SECURITY.md).
 
 ## License
 
-Source code: [AGPL-3.0-or-later](LICENSE).
-Current non-code assets: [CC BY-SA 4.0](LICENSE-ASSETS).
-Historical release terms: [LICENSING.md](LICENSING.md).
+Source code is licensed under
+[GNU AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0.html), copyright
+Matthew Kissinger.
+
+Runtime and authoring assets are covered by the asset ledger and
+`LICENSE-ASSETS`. Do not assume a code license applies to third-party or
+generated media. Hosted modified versions must provide corresponding source and
+retain the applicable notices.

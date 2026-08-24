@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <title>Sheepdog Sim - Browser Herding Game</title>
+    <meta name="description" content="Play Sheepdog Sim, a free browser herding game. Guide 25, 75 or 200 sheep through one field with keyboard, gamepad or touch controls." />
+    <meta name="author" content="Matthew Kissinger" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="theme-color" content="#405b3e" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:site_name" content="Sheepdog Sim" />
+    <meta property="og:title" content="Sheepdog Sim" />
+    <meta property="og:description" content="One dog, one flock and one field. Guide every sheep through the gate." />
+    <meta property="og:url" content="https://sheepdogsim.com/" />
+    <meta property="og:image" content="https://sheepdogsim.com/og/sheepdog-sim.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sheepdog Sim title over a golden grass field with a flock of sheep." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sheepdog Sim" />
+    <meta name="twitter:description" content="One dog, one flock and one field. Guide every sheep through the gate." />
+    <meta name="twitter:image" content="https://sheepdogsim.com/og/sheepdog-sim.png" />
+    <meta name="twitter:image:alt" content="Sheepdog Sim title over a golden grass field with a flock of sheep." />
+    <link rel="canonical" href="https://sheepdogsim.com/" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": ["VideoGame", "WebApplication"],
+        "name": "Sheepdog Sim",
+        "url": "https://sheepdogsim.com/",
+        "image": "https://sheepdogsim.com/og/sheepdog-sim.png",
+        "description": "Play a free browser herding game and guide 25, 75 or 200 sheep through one field.",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any modern desktop or mobile web browser",
+        "browserRequirements": "Requires JavaScript and WebGL2 or WebGPU",
+        "playMode": "SinglePlayer",
+        "gamePlatform": ["Web browser", "Desktop", "Mobile"],
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Matthew Kissinger",
+          "url": "https://github.com/matthew-kissinger"
+        },
+        "sameAs": "https://github.com/matthew-kissinger/sds",
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html"
+      }
+    </script>
+    <style>
+      /* Pre-React first paint. UiStyles owns the same paper tone after mount. */
+      html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #eadfca; }
+      canvas { display: block; touch-action: none; }
+      .static-shell { box-sizing: border-box; padding: 32px; color: #2c3828; font: 18px/1.5 system-ui, sans-serif; }
+      .static-shell h1 { margin: 0 0 8px; font: 700 42px/1.05 Georgia, serif; }
+      .static-shell a { color: inherit; }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <main class="static-shell">
+        <h1>Sheepdog Sim</h1>
+        <p>One dog, one flock and one field. Guide every sheep through the gate.</p>
+        <p><a href="/about">About</a> · <a href="/support">Controls and support</a></p>
+      </main>
+    </div>
+    <noscript>Sheepdog Sim requires JavaScript to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

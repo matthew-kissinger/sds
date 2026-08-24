@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Privacy information for Sheepdog Sim." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Sheepdog Sim" />
+    <meta property="og:title" content="Sheepdog Sim privacy" />
+    <meta property="og:description" content="What the game stores locally, what solo leaderboards send and how aggregate site analytics work." />
+    <meta property="og:url" content="https://sheepdogsim.com/privacy" />
+    <meta property="og:image" content="https://sheepdogsim.com/og/sheepdog-sim.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sheepdog Sim privacy" />
+    <meta name="twitter:description" content="What the game stores locally, what solo leaderboards send and how aggregate site analytics work." />
+    <meta name="twitter:image" content="https://sheepdogsim.com/og/sheepdog-sim.png" />
+    <meta name="twitter:image:alt" content="Sheepdog Sim title over a golden grass field with a flock of sheep." />
+    <link rel="canonical" href="https://sheepdogsim.com/privacy" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Sheepdog Sim Privacy</title>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">Privacy</p>
+      <h1>Play works without an account</h1>
+      <p class="lede">Sheepdog Sim has optional online solo times. The field, completion and local personal bests keep working when the score service is unavailable.</p>
+      <h2>Local data</h2>
+      <p>The game stores preferences, control bindings, personal best times and a server-issued score identity in browser local storage. The identity contains a random identifier, a device secret and the current running name. Clearing site data removes the browser copy but does not delete times already submitted to the public board.</p>
+      <h2>Online solo times</h2>
+      <p>The score service receives the server-issued identity, running name, completion time, flock size and current field partition. A friendly random name is assigned automatically and can be replaced with a name you choose. Names and leading completion times are public. The game does not send movement history, contact information or multiplayer data.</p>
+      <h2>Hosting</h2>
+      <p>The static site and score service use Cloudflare. Cloudflare and the network providers involved may process standard request information such as IP address, user agent, requested path and timing for security and delivery operations.</p>
+      <h2>Aggregate site analytics</h2>
+      <p>The public site may use Cloudflare Web Analytics to count page visits and measure page-load performance. Cloudflare states that this service does not collect or use visitors' personal data. The game does not send movement, control or play-session analytics. Its game-service requests are limited to identity, rename, score submission and solo-board reads.</p>
+      <h2>Source and questions</h2>
+      <p>The client source is public, including the storage and network boundaries. Questions can be raised in the <a href="https://github.com/matthew-kissinger/sds">source repository</a>.</p>
+      <nav><a href="/">Play</a><a href="/about">About</a><a href="/support">Support</a></nav>
+    </main>
+  </body>
+</html>

@@ -22,8 +22,9 @@ import {
   NotFoundError,
   type GameMode,
 } from './d1';
-// Cycle 35 Phase 4: scene-id validation at the API boundary.
-import { getSceneById } from '../../shared/scenes/index.js';
+// Score partitions include the v3 clean-room field without adding it to the
+// version 2 simulation scene registry.
+import { isKnownScoreScene } from './scorePartitions';
 // Cycle 86 Phase 2: /api/event prop caps + always-valid-JSON encoding. Kept
 // in their own module: the Workers runtime treats every export of THIS entry
 // module as a handler, and an exported const number fails startup.
@@ -737,7 +738,7 @@ export default {
         // mash-up never composed. Missing or unknown scene returns 400.
         const sceneId = url.searchParams.get('scene');
         if (!sceneId) return err('scene_required', 400, cors);
-        if (!getSceneById(sceneId)) return err('unknown_scene', 400, cors);
+        if (!isKnownScoreScene(sceneId)) return err('unknown_scene', 400, cors);
         const sheepCountRaw = url.searchParams.get('sheepCount');
         const sheepCount = sheepCountRaw ? Number(sheepCountRaw) : undefined;
         // Cycle 67 P7: survival co-op boards partition by party_size.
@@ -755,7 +756,7 @@ export default {
         const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 10));
         const sceneId = url.searchParams.get('scene');
         if (!sceneId) return err('scene_required', 400, cors);
-        if (!getSceneById(sceneId)) return err('unknown_scene', 400, cors);
+        if (!isKnownScoreScene(sceneId)) return err('unknown_scene', 400, cors);
         const sheepCountRaw = url.searchParams.get('sheepCount');
         const sheepCount = sheepCountRaw ? Number(sheepCountRaw) : undefined;
         const leaderboards = await getAllLeaderboards(env.DB, limit, {

@@ -1,70 +1,20 @@
-# P2-STAGING: per-PR preview deploys that can never touch production D1.
-#
-# - Pages: every PR gets a native Cloudflare Pages preview deployment
-#   (non-main --branch on the sds-frontend project => preview, not production).
-# - Worker: optionally deploys wrangler [env.preview] (sds-worker-preview) with
-#   its own D1 (sds-db-preview) and applies the full migration set to it.
-#   Gated on the repo Actions variable CF_PREVIEW_D1_ID; until the operator
-#   creates the preview database and sets the variable, the worker job is
-#   skipped with a notice and the Pages preview builds with multiplayer
-#   pointed at a non-resolvable sentinel host instead.
-#
-# Guard rails:
-# - This workflow never references the production D1 database id and never
-#   runs `d1 execute` against it. The only migration apply goes through
-#   scripts/d1-migrate-remote.mjs with D1_TARGET=preview, which hard-asserts
-#   the target database id is neither the production id nor the placeholder.
-# - The API base is a BUILD-TIME define (SDS_WORKER_BASE -> __SDS_WORKER_BASE__
-#   in vite.config.js / js/runtimeConfig.js). It must never be empty: an empty
-#   value falls back to the production worker URL in runtimeConfig.js. When no
-#   preview worker exists we pass https://sds-preview-mp-disabled.invalid
-#   (.invalid is RFC 2606 reserved and never resolves), so multiplayer and
-#   leaderboard calls fail fast instead of reaching production.
-# - Deploy jobs only run for same-repo PRs (fork PRs have no secrets anyway).
-
-name: Preview
+name: Pages Preview
 
 on:
   pull_request:
     branches: [main]
 
 concurrency:
-  group: preview-${{ github.event.pull_request.number }}
+  group: pages-preview-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  deployments: write
+
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      # P4-BUNDLE-GATE: build before test so the per-chunk bundle budgets in
-      # tests/refactor-baseline/baseline.spec.ts read real dist/ output. The
-      # spec self-skips when dist/assets is absent, so without this step the
-      # bundle gate never fires in CI.
-      - run: npm run build
-      - run: npm test --if-present
-
-  # Surfaces WHY there is no preview worker when CF_PREVIEW_D1_ID is unset.
-  preview-worker-notice:
-    name: Preview Worker (skipped)
-    needs: test
-    if: vars.CF_PREVIEW_D1_ID == ''
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo "::notice title=Preview worker skipped::Repo variable CF_PREVIEW_D1_ID is not set. Create the preview database (npx wrangler d1 create sds-db-preview), set CF_PREVIEW_D1_ID to its id, and set the env.preview JWT_SECRET (npx wrangler secret put JWT_SECRET --env preview). Until then, Pages previews build with multiplayer disabled."
-
   preview-worker:
-    name: Deploy preview Worker + migrate preview D1
-    needs: test
+    name: Deploy isolated score preview
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       vars.CF_PREVIEW_D1_ID != ''
@@ -76,44 +26,41 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: worker/package-lock.json
-      - run: npm ci
-        working-directory: worker
-      - name: Substitute preview D1 id (placeholder -> CF_PREVIEW_D1_ID)
+      - run: npm ci --prefix worker
+      - name: Bind the preview D1 database
+        env:
+          PREVIEW_D1_ID: ${{ vars.CF_PREVIEW_D1_ID }}
         run: |
           set -euo pipefail
-          sed -i "s/00000000-0000-0000-0000-000000000000/${{ vars.CF_PREVIEW_D1_ID }}/" worker/wrangler.toml
+          sed -i "s/00000000-0000-0000-0000-000000000000/$PREVIEW_D1_ID/" worker/wrangler.toml
           if grep -q "00000000-0000-0000-0000-000000000000" worker/wrangler.toml; then
-            echo "Placeholder substitution failed." >&2
+            echo "Preview D1 placeholder substitution failed." >&2
             exit 1
           fi
-      - name: Migrate PREVIEW D1 only (full bootstrap on fresh DB, state-tracked after)
+      - name: Migrate preview D1 only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           D1_TARGET: preview
         run: node scripts/d1-migrate-remote.mjs
-      - name: Deploy Worker (env.preview)
+      - name: Deploy preview Worker
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           workingDirectory: worker
           command: deploy --env preview
+      - name: Verify preview identity and solo times
+        run: |
+          node -e "fetch('https://sds-worker-preview.matt-m-kissinger.workers.dev/healthz').then(r=>{if(!r.ok)throw new Error('healthz '+r.status);return r.text()}).then(console.log)"
+          node -e "fetch('https://sds-worker-preview.matt-m-kissinger.workers.dev/api/leaderboard?mode=solo&scene=field-v3&sheepCount=25&limit=1').then(r=>{if(!r.ok)throw new Error('field-v3 '+r.status);return r.text()}).then(console.log)"
+          node -e "fetch('https://sds-worker-preview.matt-m-kissinger.workers.dev/api/register',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(r=>{if(!r.ok)throw new Error('register '+r.status);return r.text()}).then(console.log)"
 
   pages-preview:
-    name: Deploy Pages preview
-    needs: [test, preview-worker]
-    # Run even when preview-worker is skipped (no CF_PREVIEW_D1_ID yet), but
-    # never when it failed or when tests failed.
-    if: >-
-      always() &&
-      needs.test.result == 'success' &&
-      needs.preview-worker.result != 'failure' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+    name: Build and deploy Pages preview
+    needs: preview-worker
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -121,11 +68,25 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Build (API base = preview worker, or MP-disabled sentinel)
+      - run: npm ci --prefix worker
+      - run: npm run lint --if-present
+      - run: npm run typecheck --if-present
+      - run: npm run typecheck:worker
+      - run: npm run build
         env:
-          SDS_WORKER_BASE: ${{ needs.preview-worker.result == 'success' && 'https://sds-worker-preview.matt-m-kissinger.workers.dev' || 'https://sds-preview-mp-disabled.invalid' }}
-        run: npm run build
-      - name: Deploy to Cloudflare Pages (preview branch)
+          SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+          SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
+          VITE_SCORE_API_BASE: https://sds-worker-preview.matt-m-kissinger.workers.dev
+      - run: npm run check:discovery
+      - run: npm test --if-present
+      - name: Write preview release identity
+        env:
+          SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+          SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
+        run: |
+          node scripts/write-release-manifest.mjs
+          node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA"
+      - name: Deploy Pages preview
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}

@@ -1,0 +1,17 @@
+* text=auto eol=lf
+
+*.bin binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.ktx2 binary
+*.mp3 binary
+*.png binary
+*.wav binary
+*.webm binary
+*.webp binary
+*.woff2 binary
+
+# Preserve exact third-party editable source bytes for provenance hashes.
+assets/treeline/sources/*.obj -text
+assets/treeline/sources/*.mtl -text

@@ -1,20 +1,27 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "allowJs": true,
-    "checkJs": false,
-    "noEmit": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
     "isolatedModules": true,
-    "forceConsistentCasingInFileNames": true
+    "noEmit": true,
+    // assets/terrain/manifest.json is imported by app/src/world/heightfield.ts:
+    // it is small, so inlining it saves a round trip and gives the pads static
+    // types (spec/08 loading budget).
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "@sim/*": ["./sim/*"],
+      "@app/*": ["./app/src/*"]
+    }
   },
-  "include": ["js", "shared", "tests"],
-  "exclude": ["node_modules", "dist", "worker", "examples"]
+  "include": ["app/src", "sim", "tests", "tools"],
+  "exclude": ["tests/worker"]
 }

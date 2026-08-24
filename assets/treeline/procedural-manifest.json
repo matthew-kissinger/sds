@@ -1,0 +1,91 @@
+{
+  "version": 6,
+  "id": "sourced-fox-hybrid-family-v1",
+  "license": "AGPL-3.0-or-later",
+  "runtime": "baked-source-geometry-threejs-tsl",
+  "activeCandidate": "fox-hybrid-family",
+  "placement": "assets/treeline/manifest.json",
+  "sources": [
+    {
+      "id": "fox-broad-spreading",
+      "author": "mehrasaur",
+      "page": "https://opengameart.org/content/fox-trees-pack",
+      "archive": "https://opengameart.org/sites/default/files/tree_pack_v_0_1.zip",
+      "archiveSha256": "f18e963af10d3b3f05205eff0907f7b5a3c2c06b846f8c3c8c31e94652adac7f",
+      "archiveBytes": 3444385,
+      "license": "CC0-1.0",
+      "licenseSnapshot": "assets/treeline/sources/FOX-TREES-LICENSE.md",
+      "source": "assets/treeline/sources/fox-tree-spreading.obj",
+      "materialSource": "assets/treeline/sources/fox-tree-spreading.mtl",
+      "sha256": "e1fb728c393a53c55b226df6ab434f8891bf517790a24712514ea145e6564441",
+      "materialSha256": "ca81456e4fea21394c6dcfb8d6d8b1a6076c0b6611c5ccf9c5aca34c04f55e83",
+      "generated": "assets/treeline/fox-hybrid-family.json",
+      "foliageTriangles": 160,
+      "woodTriangles": 164,
+      "foliageTuck": 0.05
+    },
+    {
+      "id": "fox-natural-round",
+      "author": "mehrasaur",
+      "page": "https://opengameart.org/content/fox-trees-pack",
+      "archive": "https://opengameart.org/sites/default/files/tree_pack_v_0_1.zip",
+      "archiveSha256": "f18e963af10d3b3f05205eff0907f7b5a3c2c06b846f8c3c8c31e94652adac7f",
+      "archiveBytes": 3444385,
+      "license": "CC0-1.0",
+      "licenseSnapshot": "assets/treeline/sources/FOX-TREES-LICENSE.md",
+      "source": "assets/treeline/sources/fox-tree-round.obj",
+      "materialSource": "assets/treeline/sources/fox-tree-round.mtl",
+      "sha256": "0185db4da9db2752de368af457044079e2185761bd687e02a177a3a7df20f81d",
+      "materialSha256": "dc8d30fc2d4920bf52d52122ffc9b66592cc7fbb4be4030f55ca9f338db3987d",
+      "generated": "assets/treeline/fox-hybrid-family.json",
+      "foliageTriangles": 160,
+      "woodTriangles": 202,
+      "foliageTuck": 0.075
+    }
+  ],
+  "recipe": {
+    "assembly": "app/src/scene/Treeline.tsx",
+    "authoring": "tools/bake-sourced-tree-candidates.mjs",
+    "contactSheet": "tools/source-tree-contact-sheet.mjs",
+    "geometry": [
+      "app/src/scene/treeline/crownShape.ts",
+      "app/src/scene/treeline/shrubShape.ts",
+      "app/src/scene/treeline/shadowPools.ts"
+    ],
+    "materials": [
+      "app/src/scene/treeline/canopyMaterial.ts",
+      "app/src/scene/treeline/shrubMaterial.ts",
+      "app/src/scene/treeline/trunkMaterial.ts",
+      "app/src/scene/treeline/foliage.ts"
+    ]
+  },
+  "families": {
+    "trees": [
+      { "id": 0, "name": "fox-broad" },
+      { "id": 1, "name": "fox-compact" },
+      { "id": 2, "name": "fox-balanced" },
+      { "id": 3, "name": "fox-leaning" }
+    ],
+    "shrubs": [
+      { "id": 0, "name": "hawthorn" },
+      { "id": 1, "name": "blackthorn" }
+    ]
+  },
+  "geometry": {
+    "crownTriangles": 480,
+    "shrubTriangles": 320,
+    "trunkTriangles": 202
+  },
+  "familyDeformation": "deterministic broad, balanced and compact instance morphology over three source-derived lobes, with base-pinned Round fork lean",
+  "motion": "Herd TSL base-pinned travelling gust with restrained whole-crown follow-through",
+  "field": {
+    "treeInstances": 139,
+    "shrubInstances": 0,
+    "woodInstances": 139,
+    "draws": 3,
+    "submittedTrianglesBeforeShadows": 94798,
+    "textures": 0,
+    "externalModels": 0,
+    "sourceModels": 2
+  }
+}

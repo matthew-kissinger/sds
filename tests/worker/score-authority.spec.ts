@@ -35,9 +35,6 @@ import {
   type PlayerRow,
 } from '../../worker/src/d1.ts';
 import { signJwt } from '../../worker/src/jwt.ts';
-// Tests may import from js/ — only worker SOURCE is fenced from js/, not the
-// test tree. We pin the worker's duplicated daily formula against the client's.
-import { dailySeedFor, dailyKey } from '../../js/utils/dailySeed.js';
 
 // ---- fake D1 ----------------------------------------------------------------
 
@@ -308,22 +305,23 @@ describe('P-SEC-5: validateDailySubmission', () => {
   });
 });
 
-describe('P-SEC-5: daily formula matches the client dailySeed.js (no drift)', () => {
-  it('dailyFnv1a matches js/utils/dailySeed.js fnv1a indirectly via sheep count', () => {
-    // dailySheepCountForDate reproduces dailySeedFor(date).sheepCount exactly.
-    const dates = [
-      Date.UTC(2026, 0, 1), Date.UTC(2026, 4, 8), Date.UTC(2026, 4, 15),
-      Date.UTC(2026, 6, 4), Date.UTC(2026, 11, 31), Date.UTC(2027, 2, 17),
+describe('P-SEC-5: retired v2 daily formula remains pinned', () => {
+  it('matches the immutable v2.6.4 sheep-count vectors', () => {
+    const vectors: Array<[string, number]> = [
+      ['2026-01-01', 156],
+      ['2026-05-08', 163],
+      ['2026-05-15', 157],
+      ['2026-07-04', 68],
+      ['2026-12-31', 133],
+      ['2027-03-17', 55],
     ];
-    for (const ms of dates) {
-      const key = dailyKey(new Date(ms));
-      expect(dailySheepCountForDate(key)).toBe(dailySeedFor(new Date(ms)).sheepCount);
+    for (const [key, expected] of vectors) {
+      expect(dailySheepCountForDate(key)).toBe(expected);
     }
   });
 
-  it('utcDateKey matches the client dailyKey', () => {
-    const ms = Date.UTC(2026, 4, 15, 23, 30, 0);
-    expect(utcDateKey(ms)).toBe(dailyKey(new Date(ms)));
+  it('formats the server UTC date key without a removed client dependency', () => {
+    expect(utcDateKey(Date.UTC(2026, 4, 15, 23, 30, 0))).toBe('2026-05-15');
   });
 
   it('dailyFnv1a is a stable 32-bit hash', () => {

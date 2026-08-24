@@ -1,0 +1,6 @@
+/about.html /about 301
+/support.html /support 301
+/privacy.html /privacy 301
+/assets/images/seo/sheepdogsim2.png /og/sheepdog-sim.png 301
+/assets/scenes/social/field.webp /og/sheepdog-sim.png 301
+/scenes/* / 301

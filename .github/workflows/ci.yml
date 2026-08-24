@@ -1,0 +1,49 @@
+name: Client CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: client-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify-client:
+    name: Verify static client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix worker
+      - run: npm run lint --if-present
+      - run: npm run typecheck --if-present
+      - run: npm run typecheck:worker
+      - run: npm run build
+        env:
+          SDS_RELEASE_SHA: ${{ github.sha }}
+          SDS_RELEASE_REF: ${{ github.ref }}
+      - run: npm run check:discovery
+      - run: npm test --if-present
+      - name: Verify packaged release identity
+        env:
+          SDS_RELEASE_SHA: ${{ github.sha }}
+          SDS_RELEASE_REF: ${{ github.ref }}
+        run: |
+          node scripts/write-release-manifest.mjs
+          node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: pages-candidate-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14

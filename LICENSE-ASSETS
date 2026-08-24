@@ -1,30 +1,20 @@
-# Asset License
+Sheepdog Sim asset policy
 
-Copyright (c) 2026 Matthew Kissinger
+Source code is licensed separately under GNU AGPL-3.0-or-later.
 
-All non-code assets in this repository are licensed under the Creative Commons
-Attribution-ShareAlike 4.0 International license (CC BY-SA 4.0), including:
+Runtime and authoring assets in this repository may be used, modified and
+redistributed only under the license recorded in the nearest asset ledger. An
+asset without a recorded redistributable license must not enter a public release
+or deployment.
 
-- Everything under `assets/`
-- 3D models and scene assets such as `.glb` and `.blend`
-- Images and textures such as `.png`, `.webp`, `.jpg`, `.jpeg`, and `.svg`
-- Audio files such as `.mp3`, `.ogg`, and `.wav`
-- Baked asset data such as `.bin`
+Project-authored procedural geometry, deterministic bake outputs and original
+authoring sources are distributed with the corresponding source code unless a
+nearby ledger states otherwise.
 
-To view a copy of this license, visit:
+Generated media must record the provider, generation date, prompt or recipe,
+processing steps and file digest. Generated media is distributed only when the
+account and provider terms permit that use.
 
-https://creativecommons.org/licenses/by-sa/4.0/
-
-Plain-language summary:
-
-- You may share and adapt the assets, including for commercial purposes.
-- You must give appropriate credit to Matthew Kissinger and Sheep Dog Simulator.
-- If you remix, transform, or build upon the assets, you must distribute your
-  contributions under the same CC BY-SA 4.0 license.
-- You may not apply legal terms or technological measures that restrict others
-  from doing anything the license permits.
-
-This summary is not a substitute for the license text. If there is any conflict
-between this summary and the Creative Commons license, the license controls.
-
-For source code licensing, see `LICENSE` and `LICENSING.md`.
+No visual or audio asset from Sheepdog Sim version 2 is automatically licensed
+for the version 3 runtime. Third-party assets remain under their own terms and
+are never relicensed merely by inclusion in this repository.
