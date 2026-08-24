@@ -19,24 +19,29 @@ score submission and aggregate solo reads use the existing routes and schema.
 
 ## Required deployment order
 
-1. Merge and deploy the reviewed Worker-only commit.
-2. Confirm `GET /healthz` still reports the current Worker.
-3. Register a temporary identity through `POST /api/register` and retain the
+1. Merge the reviewed Worker-only commit to `main`.
+2. Run the manual `Deploy Worker` workflow with that commit's full 40-character
+   SHA. The workflow refuses commits outside `main`, runs the focused partition
+   suite and Worker typecheck, deploys without applying migrations, and verifies
+   the public health and `field-v3` read paths.
+3. Confirm `GET /healthz` still reports the current Worker.
+4. Register a temporary identity through `POST /api/register` and retain the
    returned token and device secret only for the smoke.
-4. Confirm `GET /api/leaderboard?mode=solo&scene=field-v3&sheepCount=25&limit=1`
+5. Confirm `GET /api/leaderboard?mode=solo&scene=field-v3&sheepCount=25&limit=1`
    returns 200.
-5. Confirm an authenticated plausible `soloClassic` score for `field-v3` and 25
+6. Confirm an authenticated plausible `soloClassic` score for `field-v3` and 25
    is accepted, then confirm the same request with 50 sheep is rejected.
-6. Confirm a version 2 `field` leaderboard still returns the same partition.
-7. Only then deploy the version 3 Pages client.
+7. Confirm a version 2 `field` leaderboard still returns the same partition.
+8. Only then deploy the version 3 Pages client.
 
 The smoke identity and score are public data. Use an explicit operational name
 and record the row so it can be excluded or removed deliberately if desired.
 
 ## Rollback
 
-Rollback the Worker to its immediately previous Cloudflare deployment. No D1
-rollback is required because the change creates no schema or data migration.
+Rollback the Worker to its immediately previous Cloudflare deployment through
+the Cloudflare dashboard or `wrangler rollback`. No D1 rollback is required
+because the change creates no schema or data migration.
 The version 3 client treats resulting `unknown_scene` errors as an unavailable
 online board, so Play, completion and local personal bests continue.
 

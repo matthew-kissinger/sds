@@ -10,7 +10,11 @@ Keep this receipt until v3 has completed its rollback observation window.
 - Immutable Pages deployment: `https://7cea2cd2.sds-frontend.pages.dev`
 - GitHub release: `https://github.com/matthew-kissinger/sds/releases/tag/v2.6.4`
 
-The v3 static cutover does not change the Worker or D1. A Pages rollback therefore restores the v2 client against the backend it shipped with, without a Worker rollback or reverse migration.
+The Pages cutover does not change the Worker or D1. The separately deployed
+`field-v3` score partition is backward-compatible with all version 2 routes and
+adds no migration. A Pages rollback therefore restores the version 2 client
+against a compatible backend without requiring a Worker rollback or reverse
+migration.
 
 ## Rollback procedure
 
