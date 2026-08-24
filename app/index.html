@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <title>Sheepdog Sim 3 - Browser Herding Game</title>
+    <meta name="description" content="Guide 25, 75 or 200 sheep through the gate in a focused browser herding game." />
+    <meta name="theme-color" content="#405b3e" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sheepdog Sim 3" />
+    <meta property="og:description" content="One dog, one flock and one field. Guide every sheep through the gate." />
+    <meta property="og:url" content="https://sheepdogsim.com/" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="canonical" href="https://sheepdogsim.com/" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      /* Pre-React first paint. UiStyles owns the same paper tone after mount. */
+      html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #eadfca; }
+      canvas { display: block; touch-action: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Sheepdog Sim 3 requires JavaScript to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

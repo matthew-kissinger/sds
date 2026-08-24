@@ -1,0 +1,55 @@
+{
+  "version": 3,
+  "id": "original-procedural-v3",
+  "license": "AGPL-3.0-or-later",
+  "runtime": "procedural-threejs-tsl",
+  "placement": "assets/treeline/manifest.json",
+  "concept": {
+    "path": "assets/concepts/v3-original-foliage-reference.png",
+    "provenance": "assets/concepts/README.md",
+    "runtime": false
+  },
+  "recipe": {
+    "assembly": "app/src/scene/Treeline.tsx",
+    "geometry": [
+      "app/src/scene/treeline/crownShape.ts",
+      "app/src/scene/treeline/shrubShape.ts",
+      "app/src/scene/treeline/trunkShape.ts",
+      "app/src/scene/treeline/shadowPools.ts"
+    ],
+    "materials": [
+      "app/src/scene/treeline/canopyMaterial.ts",
+      "app/src/scene/treeline/shrubMaterial.ts",
+      "app/src/scene/treeline/trunkMaterial.ts",
+      "app/src/scene/treeline/foliage.ts"
+    ]
+  },
+  "families": {
+    "trees": [
+      { "id": 0, "name": "broad-rooted-oak" },
+      { "id": 1, "name": "rounded-elm" },
+      { "id": 2, "name": "airy-ash" },
+      { "id": 3, "name": "field-oak" }
+    ],
+    "shrubs": [
+      { "id": 0, "name": "hawthorn" },
+      { "id": 1, "name": "blackthorn" }
+    ]
+  },
+  "geometry": {
+    "crownTriangles": 504,
+    "shrubTriangles": 320,
+    "trunkTriangles": 154
+  },
+  "familyDeformation": "family-authored deterministic instance width, height and depth plus safe instance-index lobe spacing over one shared three-lobe crown geometry",
+  "motion": "base-anchored travelling gust plus small phase-lagged outer-lobe follow-through readable at 650 milliseconds",
+  "field": {
+    "treeInstances": 209,
+    "shrubInstances": 153,
+    "woodInstances": 791,
+    "draws": 4,
+    "submittedTrianglesBeforeShadows": 276110,
+    "textures": 0,
+    "externalModels": 0
+  }
+}

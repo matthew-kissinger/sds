@@ -1,199 +1,27 @@
-# Node.js dependencies
-server/node_modules/
-server/package-lock.json
-
-# Server build artifacts  
-server/.fly/
-server/Dockerfile
-server/.dockerignore
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-log/
-browserstack-artifacts/
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
 node_modules/
-
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
-.env
-.env.local
-.env.*.local
-
-# Wrangler local-dev secrets (prod secrets live in `wrangler secret put`)
+dist/
+.wrangler/
+.env*
+!.env.example
 .dev.vars
 worker/.dev.vars
-
-# Wrangler local cache + state (workerd, D1 sqlite shadow, KV, etc.)
-.wrangler/
 worker/.wrangler/
-
-# SQLite database files (live data - never commit)
+*.local
+.DS_Store
+coverage/
+*.log
 *.db
 *.db-shm
 *.db-wal
-
-# VS Code
-.vscode/
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Temporary files
-tmp/
-*.tmp
-*.temp
-
-# Internal launch planning notes
-docs/launch/*-gtm-plan.md
-docs/launch/community-playtest-plan.md
-# Claude Code: shared agent infrastructure (commands, hooks, rules, skills, settings.json) commits with the repo. Only personal/local state stays out.
-.claude/settings.local.json
-.claude/scheduled_tasks.lock
-.claude/worktrees/
-.claude/projects/
-
-# Codex local state
-.codex/
-
-# Playwright MCP artifacts
+tools/.crosscheck-entry.ts
 .playwright-mcp/
-
-# Playwright test artifacts
+.playwright-cli/
+.codex/
+tsconfig.tsbuildinfo
+captures/
+output/
 test-results/
 playwright-report/
-blob-report/
-playwright/.cache/
-
-# Cinematic capture intermediates (regenerable via `npm run cinema`)
-tools/cinematic/output/
-# Playtest screenshot captures (regenerable via `node tools/probe.mjs` /
-# `node tools/playtest-screenshots.mjs`)
-tools/playtest/
-# Marketing video output (too large for git; ship via CDN if needed)
-assets/marketing/videos/
-assets/marketing/content/*/generated/
-examples/capture-spike/repos/
-
-# Build output
-dist/
-dist-react/
-
-# itch.io build artifacts
-dist-itchio/
-sheep-dog-sim-itchio.zip
-
-# Playtest screenshots (ephemeral)
-cycle2-*.png
-phase-b-*.png
-phase2-*.png
-phase3-*.png
-prod-*.png
-verify-*.png
-verify[0-9]*-*.png
-
-# Loose root-level media is always scratch (probe screenshots, captures).
-# Root-anchored on purpose: legit images live in assets/, public/, docs/,
-# tools/validation/golden/, sandbox/, native/ and are unaffected.
-/*.png
-/*.jpg
-/*.jpeg
-/*.gif
-/*.webp
-/*.mp4
-
-# Playwright CLI artifacts
-.playwright-cli/
-
-# GLB compression backups (regenerable from git history if rolled back)
-assets/_originals/
-TODO.local.txt
-
-# Cycle 15 Phase 1: AI asset generation staging (large GLBs, intermediates).
-# Picks file IS committed; staging is regenerable via `npm run gen:meshy`.
-tools/asset-gallery/staging/
-tests/perf-baseline/last-run.json
-
-# Cycle validation artifacts (screenshots, runtime JSON, perf traces).
-# These are per-run proof — regenerable, scene/device-specific, and not
-# collaboratively edited. Keep them out of git to stop pack growth.
-cycle*-validation/
-
-# Cycle 105 keeps small markdown decision/audit summaries tracked; bulky proof
-# artifacts in the same validation directory remain ignored.
-!cycle105-validation/
-cycle105-validation/*
-!cycle105-validation/r185-release-audit.md
-!cycle105-validation/three-r185-example-notes.md
-!cycle105-validation/fence-kiln-spec.md
-!cycle105-validation/fence-candidate-report.md
-!cycle105-validation/tree-source-impostor-report.md
-!cycle105-validation/grass-ground-redesign-brief.md
-!cycle105-validation/foliage-fastpan-lod-report.md
-!cycle105-validation/farmhouse-ground-batch-spec.md
-!cycle105-validation/homestead-playfield-pack-report.md
-
-# Cycle 112 hero measurements are the source of truth for the per-world
-# objectPosition values shipped in js/components/entrance/worlds.ts, so
-# tests/ui/heroCrop.spec.ts needs them at hand. 4KB of derived numbers; the
-# PNGs beside them stay ignored.
-!cycle118-validation/
-cycle118-validation/*
-!cycle118-validation/WATER_BEFORE.md
-!cycle118-validation/water-before/
-cycle118-validation/water-before/*
-!cycle118-validation/water-before/water-before-report.json
-!cycle116-validation/
-cycle116-validation/*
-!cycle116-validation/PROBE_FINDINGS.md
-!cycle112-validation/
-cycle112-validation/*
-!cycle112-validation/heroes/
-cycle112-validation/heroes/*
-!cycle112-validation/heroes/measurements.json
-
-# Local upstream research clone. Keep source notes, not the cloned repo.
-/examples/three-r185/
-/examples/stylized-scene/
-
-# Hero / media re-capture intermediates (contact sheets, frame PNGs, mp4).
-# Regenerable from tools/newsheepdogland-hero-final.mjs; only the encoded
-# assets/scenes/entrance/*.webp ship.
-hero-recapture/
-
-# Trailer capture output (frames, clips, assembled mp4). Regenerable from
-# tools/trailer/drone-ascent.mjs + assemble.mjs.
-tools/trailer/output/
+*.webm
+.tmp/
+tmp/

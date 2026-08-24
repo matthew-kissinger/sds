@@ -1,0 +1,373 @@
+{
+  "version": 5,
+  "origin": "synthesized-in-repo",
+  "provider": null,
+  "generatedAt": "2026-08-24",
+  "license": "AGPL-3.0-or-later",
+  "recipe": "tools/bake-audio.mjs",
+  "recipeVersion": 1,
+  "outputFormat": "wav_pcm_s16le_22050_mono",
+  "sampleRateHz": 22050,
+  "channels": 1,
+  "bitDepth": 16,
+  "totalBytes": 2784342,
+  "assets": [
+    {
+      "id": "birds-loop",
+      "file": "ambience/birds-loop.wav",
+      "bus": "ambient",
+      "loop": true,
+      "durationSeconds": 12,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 529244,
+      "sha256": "40340fd024f83e3ac39e59e3dd9dd7f8ed161c8feebbc835436c9b62262dbeb6",
+      "peakDbfs": -10.317,
+      "rmsDbfs": -28.247,
+      "loopSeamDelta": 0,
+      "recipe": {
+        "version": 1,
+        "seed": "0xb17d0001",
+        "targetPeakDbfs": -10,
+        "synthesis": "Sparse original two-note meadow chirps over a near-silent airy bed"
+      }
+    },
+    {
+      "id": "leaves-loop",
+      "file": "ambience/leaves-loop.wav",
+      "bus": "ambient",
+      "loop": true,
+      "durationSeconds": 11,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 485144,
+      "sha256": "9c367211b413e52e90b3f1e3485dd8abc5d4afca5c4a9081334994d858b61624",
+      "peakDbfs": -9.855,
+      "rmsDbfs": -19.845,
+      "loopSeamDelta": 0,
+      "recipe": {
+        "version": 1,
+        "seed": "0x1ea50002",
+        "targetPeakDbfs": -9.5,
+        "synthesis": "Band-limited seeded noise shaped into four overlapping soft leaf swells"
+      }
+    },
+    {
+      "id": "crowd-loop",
+      "file": "flock/crowd-loop.wav",
+      "bus": "flock",
+      "loop": true,
+      "durationSeconds": 10,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 441044,
+      "sha256": "8e05b0a53b2445b188197e79a85b87707df9730d2bcbf79d8e0aa6e5bbc8df78",
+      "peakDbfs": -10.783,
+      "rmsDbfs": -26.88,
+      "loopSeamDelta": 0,
+      "recipe": {
+        "version": 1,
+        "seed": "0xc20d0003",
+        "targetPeakDbfs": -10.5,
+        "synthesis": "Five distant low-level synthesized sheep formant calls with a soft flock murmur"
+      }
+    },
+    {
+      "id": "farmhouse-chime-loop",
+      "file": "world/farmhouse-chime-loop.wav",
+      "bus": "world",
+      "loop": true,
+      "durationSeconds": 11.5,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 507194,
+      "sha256": "3adc35a2b8883832a143eb4bcbb0572cc85a5759ad6756b556bdfab6ca8cbef0",
+      "peakDbfs": -8.943,
+      "rmsDbfs": -29.728,
+      "loopSeamDelta": 0,
+      "recipe": {
+        "version": 1,
+        "seed": "0xfa2c0004",
+        "targetPeakDbfs": -8.5,
+        "synthesis": "Three sparse original porch-chime clusters from inharmonic wooden and brass modes"
+      }
+    },
+    {
+      "id": "pant-loop",
+      "file": "dog/pant-loop.wav",
+      "bus": "dog",
+      "loop": true,
+      "durationSeconds": 6,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 264644,
+      "sha256": "04aab40eb7dc7761d9fc45d6619b6fc49b46d3a6821441690ca4cf9968d7dbb5",
+      "peakDbfs": -9.397,
+      "rmsDbfs": -22.617,
+      "loopSeamDelta": 0,
+      "recipe": {
+        "version": 1,
+        "seed": "0x0a170005",
+        "targetPeakDbfs": -9,
+        "synthesis": "Eight alternating seeded breath-noise pulses with low chest resonance"
+      }
+    },
+    {
+      "id": "baa-01",
+      "file": "flock/baa-01.wav",
+      "bus": "flock",
+      "loop": false,
+      "durationSeconds": 1.36,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 60020,
+      "sha256": "ac4ea3b24add5d59a93fe97a3b47d2d2c164be8d8acd1821d4cd3ac8ea35a9a8",
+      "peakDbfs": -6.355,
+      "rmsDbfs": -15.727,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xbaa10001",
+        "targetPeakDbfs": -5.5,
+        "synthesis": "Original harmonic-formant sheep call with seeded aspiration and individual pitch contour"
+      }
+    },
+    {
+      "id": "baa-02",
+      "file": "flock/baa-02.wav",
+      "bus": "flock",
+      "loop": false,
+      "durationSeconds": 1.52,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 67076,
+      "sha256": "ed67fd851bbdbdfe6c1115758789e3c74c6ac1eb7c30fe1f324668dcb8ba87de",
+      "peakDbfs": -6.355,
+      "rmsDbfs": -16.181,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xbaa20002",
+        "targetPeakDbfs": -5.5,
+        "synthesis": "Original harmonic-formant sheep call with seeded aspiration and individual pitch contour"
+      }
+    },
+    {
+      "id": "baa-03",
+      "file": "flock/baa-03.wav",
+      "bus": "flock",
+      "loop": false,
+      "durationSeconds": 1.18,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 52082,
+      "sha256": "017669f961359064e5bdd2097f6dddd191c2dc1ebdd0fd88905bda6c2a9ece7c",
+      "peakDbfs": -6.767,
+      "rmsDbfs": -17.729,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xbaa30003",
+        "targetPeakDbfs": -6,
+        "synthesis": "Original harmonic-formant sheep call with seeded aspiration and individual pitch contour"
+      }
+    },
+    {
+      "id": "bellwether",
+      "file": "flock/bellwether.wav",
+      "bus": "flock",
+      "loop": false,
+      "durationSeconds": 1.4500226757369614,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 63990,
+      "sha256": "79da3b3cf1412c9dfdb8bdcb8c1b83ece410ecfcbc0386d4171e40f6c354a064",
+      "peakDbfs": -6.767,
+      "rmsDbfs": -26.147,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xbe110007",
+        "targetPeakDbfs": -6,
+        "synthesis": "Original small worn-bell modal synthesis with six decaying partials"
+      }
+    },
+    {
+      "id": "bark-01",
+      "file": "dog/bark-01.wav",
+      "bus": "dog",
+      "loop": false,
+      "durationSeconds": 0.78,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 34442,
+      "sha256": "fc5037795eb9c7f161009c13b5d613e1eba0266d75971f640edaffc0756288ca",
+      "peakDbfs": -4.804,
+      "rmsDbfs": -21.93,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xb4010001",
+        "targetPeakDbfs": -3.5,
+        "synthesis": "Original single stylized collie cue from descending glottal harmonics and filtered breath burst"
+      }
+    },
+    {
+      "id": "bark-02",
+      "file": "dog/bark-02.wav",
+      "bus": "dog",
+      "loop": false,
+      "durationSeconds": 0.82,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 36206,
+      "sha256": "aebbaf1c9fdb7ead26d618e504145b27ecd7b3eae2cb23dd9b2e7e4d7f9c9f7f",
+      "peakDbfs": -4.804,
+      "rmsDbfs": -22.037,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xb4020002",
+        "targetPeakDbfs": -3.5,
+        "synthesis": "Original single stylized collie cue from descending glottal harmonics and filtered breath burst"
+      }
+    },
+    {
+      "id": "bark-03",
+      "file": "dog/bark-03.wav",
+      "bus": "dog",
+      "loop": false,
+      "durationSeconds": 0.7,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 30914,
+      "sha256": "2415ff3f5e84d47bb227839b5bc0e3882c2371e146666f8c791d035365cf1b7f",
+      "peakDbfs": -5.175,
+      "rmsDbfs": -22.781,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xb4030003",
+        "targetPeakDbfs": -4,
+        "synthesis": "Original single stylized collie cue from descending glottal harmonics and filtered breath burst"
+      }
+    },
+    {
+      "id": "footfall-01",
+      "file": "dog/footfall-01.wav",
+      "bus": "dog",
+      "loop": false,
+      "durationSeconds": 0.34,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 15038,
+      "sha256": "53535315fcd99a5bf7ba5b33d5e693c1fb2e23f25bf1c5bbf19f41b63949d4be",
+      "peakDbfs": -5.951,
+      "rmsDbfs": -24.946,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xf0010001",
+        "targetPeakDbfs": -5,
+        "synthesis": "Original muted grass paw impact from a low body mode and short filtered grass brush"
+      }
+    },
+    {
+      "id": "footfall-02",
+      "file": "dog/footfall-02.wav",
+      "bus": "dog",
+      "loop": false,
+      "durationSeconds": 0.36,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 15920,
+      "sha256": "2d8562d66b77f0d48b368ff930ea1773df9c3a1c846e91b7769953567f9f1a67",
+      "peakDbfs": -5.951,
+      "rmsDbfs": -24.604,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xf0020002",
+        "targetPeakDbfs": -5,
+        "synthesis": "Original muted grass paw impact from a low body mode and short filtered grass brush"
+      }
+    },
+    {
+      "id": "huff",
+      "file": "dog/huff.wav",
+      "bus": "dog",
+      "loop": false,
+      "durationSeconds": 1.08,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 47672,
+      "sha256": "f2bc469305dad6c4fd660200bc6971726b16f503413079b4c70fdf46e945777c",
+      "peakDbfs": -7.188,
+      "rmsDbfs": -19.019,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0x4aff0001",
+        "targetPeakDbfs": -6.5,
+        "synthesis": "Original single soft settling exhale from filtered seeded breath and chest modes"
+      }
+    },
+    {
+      "id": "gate-creak",
+      "file": "world/gate-creak.wav",
+      "bus": "world",
+      "loop": false,
+      "durationSeconds": 2.2500226757369615,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 99270,
+      "sha256": "4c8a518d04a44f82ca71b6150742f84d2e9c9672f0d834eb6ea2d539689965bf",
+      "peakDbfs": -6.355,
+      "rmsDbfs": -20.123,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0x6a7e0001",
+        "targetPeakDbfs": -5.5,
+        "synthesis": "Original weathered-hinge friction from seeded band noise, stick-slip pulses and bending wood modes"
+      }
+    },
+    {
+      "id": "fence-knock",
+      "file": "world/fence-knock.wav",
+      "bus": "world",
+      "loop": false,
+      "durationSeconds": 0.78,
+      "sampleRateHz": 22050,
+      "channels": 1,
+      "bitDepth": 16,
+      "byteSize": 34442,
+      "sha256": "ee78cbc6887599ddb76c29b9ce01cce2d35914431d9bdaf72a1d51e209cc5f94",
+      "peakDbfs": -5.558,
+      "rmsDbfs": -22.651,
+      "loopSeamDelta": null,
+      "recipe": {
+        "version": 1,
+        "seed": "0xfece0001",
+        "targetPeakDbfs": -4.5,
+        "synthesis": "Original muted timber knock plus a short seeded wool-and-grass scrape"
+      }
+    }
+  ]
+}

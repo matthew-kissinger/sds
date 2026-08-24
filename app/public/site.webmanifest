@@ -1,0 +1,17 @@
+{
+  "name": "Sheepdog Sim 3",
+  "short_name": "Sheepdog Sim",
+  "description": "Guide every sheep through the gate.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eadfca",
+  "theme_color": "#405b3e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

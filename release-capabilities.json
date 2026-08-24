@@ -1,0 +1,6 @@
+{
+  "singlePlayer": true,
+  "multiplayer": false,
+  "leaderboards": "solo-times",
+  "maxSheep": 200
+}

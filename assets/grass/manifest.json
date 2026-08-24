@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "recipe": "tools/bake-grass.mjs",
+  "seed": 20260821,
+  "format": "tuft12",
+  "stride": 12,
+  "terrainSeed": 20260821,
+  "encoding": {
+    "xzRange": 200,
+    "yRange": 8,
+    "heightMin": 0.62,
+    "heightMax": 1.5
+  },
+  "footprint": {
+    "fieldHalf": 106,
+    "surroundOuter": 190,
+    "treelineInner": 114,
+    "treelineOuter": 140
+  },
+  "groups": [
+    {
+      "id": "field",
+      "offset": 0,
+      "count": 64946
+    },
+    {
+      "id": "surround",
+      "offset": 64946,
+      "count": 13350
+    }
+  ]
+}

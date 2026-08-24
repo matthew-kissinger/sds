@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "recipe": "tools/bake-terrain.mjs",
+  "seed": 20260821,
+  "format": "r32f",
+  "width": 161,
+  "height": 161,
+  "worldSize": 400,
+  "spacing": 2.5,
+  "amplitude": 2.4,
+  "relief": 4.67,
+  "maxGradient": 0.1362,
+  "noise": {
+    "octaves": 4,
+    "baseWavelength": 260,
+    "lacunarity": 2,
+    "gain": 0.42,
+    "warpStrength": 16,
+    "warpWavelength": 190,
+    "edgeFadeStart": 150,
+    "edgeFadeEnd": 200
+  },
+  "pads": [
+    {
+      "id": "pen-and-gate",
+      "minX": -35,
+      "maxX": 35,
+      "minZ": 90,
+      "maxZ": 135,
+      "rim": 16,
+      "level": -0.616
+    },
+    {
+      "id": "farmhouse",
+      "minX": 40,
+      "maxX": 77.5,
+      "minZ": 102.5,
+      "maxZ": 140,
+      "rim": 16,
+      "level": -0.616
+    },
+    {
+      "id": "barn",
+      "minX": -2.5,
+      "maxX": 27.5,
+      "minZ": 135,
+      "maxZ": 155,
+      "rim": 14,
+      "level": -0.616
+    }
+  ]
+}

@@ -24,8 +24,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm ci --prefix worker
       - run: npm run lint --if-present
       - run: npm run typecheck --if-present
+      - run: npm run typecheck:worker
       - run: npm run build
         env:
           SDS_RELEASE_SHA: ${{ github.sha }}

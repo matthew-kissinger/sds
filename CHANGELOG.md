@@ -4,6 +4,39 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.0.0] - Unreleased
+
+### Added
+
+- A clean-room TypeScript client focused on one field, one dog and one herding
+  goal, with 25, 75 and 200 sheep configurations.
+- WebGPU-first rendering with forced WebGL2 fallback through the same Three.js
+  TSL material implementations.
+- Keyboard, gamepad and touch input, Classic and Follow cameras, remapping,
+  reduced motion and quality controls.
+- Local personal bests plus optional fail-soft solo-time boards under a
+  server-random or player-edited name.
+- Procedural, reproducible sheep, dog, fences, farm structures, foliage,
+  terrain, grass, atmosphere and original synthesized audio.
+- Public architecture, contribution, security, asset-license and launch
+  documentation under AGPL-3.0-or-later.
+
+### Changed
+
+- The version 3 score client is isolated to the `field-v3` partition and exact
+  flock sizes 25, 75 and 200. It does not import the version 2 network client.
+- Release workflows build and verify an exact commit, keep preview scores away
+  from production, and retain an explicit version 2 rollback branch and tag.
+
+### Removed
+
+- The version 2 client, including multiplayer UI, room flows, scene and mode
+  rosters, compatibility layers, browser-global bridges, duplicated renderer
+  materials and the public 5,000-sheep path.
+
+The complete version 2 source remains available from `v2.6.4` and
+`release/2.x`.
+
 ## [2.6.4] - 2026-07-26
 
 ### Fixed

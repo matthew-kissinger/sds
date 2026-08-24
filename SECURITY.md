@@ -1,28 +1,29 @@
-# Security
+# Security policy
 
-## Scope
+## Supported version
 
-Sheep Dog Simulator is a browser game with a Cloudflare Workers backend for multiplayer rooms and leaderboards. Reports welcome for:
+Security fixes target the current public release of Sheepdog Sim.
 
-- Server-side vulnerabilities in `worker/src/` (auth bypass, injection, race conditions, DO state corruption).
-- Client-side vulnerabilities that affect other users (stored XSS via share URLs / player names, CSRF against the API).
-- Leaderboard manipulation that isn't already gated by the score-bounds check.
+## Reporting a vulnerability
 
-Out of scope:
+Do not open a public issue for a vulnerability that could expose user data,
+credentials, deployment access or a reproducible abuse path. Use GitHub's
+private vulnerability reporting for the `matthew-kissinger/sds` repository.
 
-- Self-inflicted XSS that only affects the reporter's own browser.
-- Volumetric DoS against the public Worker (Cloudflare already rate-limits).
-- Best-practice nits (missing headers, absent SPF/DMARC on the domain — send these as a regular issue).
+Include:
 
-## Reporting
+- the affected version or commit;
+- reproduction steps;
+- expected and actual behavior;
+- browser, Worker or deployment surface involved;
+- impact and any known workaround.
 
-Use the private contact route listed on [Matthew Kissinger's GitHub profile](https://github.com/matthew-kissinger) with a write-up, a PoC if you have one, and the worker version (`sds-worker` current version is visible in `wrangler deployments list`). Please don't open a public issue for anything that could put other players at risk.
+Version 3.0 does not require an account. It stores game preferences, personal
+bests and a server-issued score identity in the browser. The optional solo-times
+client can register or rename that identity, submit completion seconds and read
+the public `field-v3` boards. It contains no multiplayer, room or WebSocket path.
 
-I aim to acknowledge within a few days. The project is a side project and I can't guarantee an SLA, but I will credit reporters in the release notes (or on request, keep the disclosure private).
-
-## Response pattern
-
-- Triage: reproduce, scope impact, decide severity.
-- Fix on a private branch; deploy worker / Pages.
-- Public commit + advisory once the fix is live.
-- Credit reporter unless they request anonymity.
+Reports involving identity impersonation, leaked device secrets, score-service
+authorization, name handling or leaderboard abuse belong in private
+vulnerability reporting. The score identity secret must never be logged,
+included in URLs or committed to source.

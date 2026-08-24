@@ -1,45 +1,71 @@
-# Contributing
+# Contributing to Sheepdog Sim
 
-Thanks for considering a contribution. Sheep Dog Sim is free to play and source-readable. Contributions are accepted under AGPL-3.0-or-later for code and CC BY-SA 4.0 for assets, so issues and PRs of any size are welcome.
+Thank you for helping improve the field.
 
-## Getting set up
+## Before changing code
+
+1. Read `AGENTS.md`.
+2. Read `spec/00-vision.md`.
+3. Read the specification document for the system you will change.
+4. Check `STATUS.md` for known gaps and recorded product decisions.
+
+The specification is the contract. If the implementation and specification
+disagree, describe the discrepancy in the change rather than silently choosing
+one side.
+
+## Development setup
+
+Use Node.js 22 or newer.
 
 ```bash
-git clone https://github.com/matthew-kissinger/sds.git
-cd sds
-npm install
-npm run dev               # Vite on :3000 — single-player works with no backend
+npm ci
+npm run dev
 ```
 
-For multiplayer testing add a second terminal:
+Before opening a change:
 
 ```bash
-cd worker && npx wrangler dev    # Local Cloudflare Worker on :8787
+npm run lint
+npm test
+npm run build
+node tools/determinism-crosscheck.mjs
+npm run probe:release
 ```
 
-Full dev workflow, mobile testing, and troubleshooting are in [DEVELOPMENT.md](DEVELOPMENT.md). Architecture tour is in [ARCHITECTURE.md](ARCHITECTURE.md). The rationale behind non-obvious choices is in [DECISIONS.md](DECISIONS.md).
+Do not regenerate deterministic fixtures merely to make a test pass. A fixture
+diff records a simulation decision and must be reviewed as one.
 
-## Good first PRs
+## Project boundaries
 
-The [README good-first-issues section](README.md#good-first-issues--concrete-things-a-pr-could-fix) is the curated list. Beyond that:
+- `sim/` must remain independent from Three.js, React, DOM and network code.
+- Flock size is configuration, not a game mode.
+- Materials use TSL through one renderer path.
+- Player interface state flows through the store, not browser globals or custom
+  event bridges.
+- Do not add compatibility aliases or dormant feature flags.
+- Every runtime asset needs an editable source or reproducible recipe and a
+  documented license.
+- Validation tools drive the normal application path and do not add production
+  player controls.
 
-- Any of the content expansion items in the [roadmap](README.md#roadmap--where-help-would-move-the-game) — new scenes, new modes, weather, predators.
-- Small documentation fixes where current public copy has drifted from source or validation truth.
-- Any open [issue](https://github.com/matthew-kissinger/sds/issues) labeled `good-first-issue`.
+## Changes and reviews
 
-## Ground rules
+Keep commits focused and use conventional commit subjects such as `fix:`,
+`feat:`, `test:` or `docs:`. Include:
 
-- **Keep the happy path working.** Run `npm run dev` and play through at least one solo round before opening a PR. For multiplayer changes, open two browsers and verify the two-client flow.
-- **Test what you ship.** `npm test` runs Vitest; `npm run test:integration` runs the two-client WebSocket harness. Add coverage where it's missing; don't break existing tests.
-- **Keep PRs narrow.** One logical change per PR; don't bundle refactors into feature work. Match the existing style in `js/` (2-space indent, no semicolons optional — just match the file).
-- **Update docs from the code, not the plan.** If your change alters architecture, the README / ARCHITECTURE / relevant cycle doc comes with the code change, not in a follow-up.
-- **No emojis in code, commits, or docs** unless a file already uses them.
-- **i18n:** English copy lives in `js/i18n/en.json` and is the source of truth; translations under `js/i18n/<lang>.json` should stay in sync. Contributions for new languages are very welcome.
+- the player-visible behavior;
+- tests and commands run;
+- desktop and mobile evidence when presentation changed;
+- renderer and performance evidence when visual cost changed;
+- asset provenance when media or models changed;
+- remaining risks or deliberate specification exceptions.
 
-## Mods / forks
+Do not commit build output, local captures, environment files, credentials,
+browser profiles or generated diagnostic archives.
 
-Shipping a mod or fork of the game? Open an issue and I'll link it from the README. Modified or hosted versions must publish corresponding source under AGPL-3.0 and preserve the attribution/source notices in reasonably visible locations. The sandbox format uses lz-string-encoded URL hashes, so a custom layout ships as a shareable link today; biome-level mods are a planned seam in the roadmap.
+## Licensing
 
-## Security
-
-See [SECURITY.md](SECURITY.md) for responsible-disclosure contact.
+Contributions to source code are provided under AGPL-3.0-or-later. Only submit
+assets you own or are allowed to redistribute under the documented asset policy.
+Record the source, authoring method, license, processing recipe and digest for
+new runtime media.
