@@ -13,6 +13,8 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
   now inert while Times is open and focus wraps across all four dialog controls.
 - Corrected the release note to distinguish identity-free board reads from the
   app's automatic random running-name registration.
+- Remote Pages QA exposed a 43.98px transformed Settings target on phone
+  portrait. The shared interaction token now carries a 1px safety margin.
 
 ## Verification pending
 
@@ -32,3 +34,4 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
 ## Release hold
 
 - Do not merge or deploy production until Matt completes the playtest and approves the exact candidate SHA.
+- Matt accepted the current audio on 2026-08-24. Do not regenerate or replace it.

@@ -57,7 +57,9 @@ export const UI_TOKENS = {
     ease: 'cubic-bezier(0.22, 0.72, 0.24, 1)',
   },
   target: {
-    minimum: '44px',
+    // One-pixel safety margin keeps transformed/mobile subpixels above the
+    // 44 CSS-pixel interaction minimum in delivered Pages builds.
+    minimum: '45px',
   },
 } as const;
 

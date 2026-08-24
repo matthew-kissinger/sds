@@ -40,9 +40,11 @@ deployment claim.
 - Gitleaks 8.30.1 scanned 12.50 MB with no findings. Direct runtime and build
   dependencies report MIT, ISC, Apache-2.0 or dual MIT/Apache licensing.
 - The production build contains 232 modules. Initial JavaScript is 579,858
-  gzip bytes. Estimated first transfer is 5,760,563 bytes across 35 files,
+  gzip bytes. Estimated first transfer is 5,760,560 bytes across 35 files,
   below the 8 MiB release limit.
 - The audio bake reproduced 17 files and 2,784,342 bytes exactly.
+- Owner accepted the current audio on 2026-08-24. Keep the procedural runtime
+  set unchanged; the reduced foreground-audio fallback is not needed.
 - The deterministic simulation produced 23,563 identical bytes through the
   independent esbuild and Vite bundles.
 - Actual WebGPU and forced WebGL2 running-game captures passed at 1,600 by
@@ -72,9 +74,6 @@ deployment claim.
 - Complete a physical iOS or Android playtest. Browser touch emulation already
   covers portrait and landscape layout, joystick, bark, camera and pause.
 - Capture the remaining final launch screenshot set from the accepted commit.
-- Owner audio listen: laptop speakers, headphones and one complete 25-sheep
-  run. If bark or sheep calls read as conspicuously synthetic, ship the reduced
-  foreground-audio fallback rather than restoring provider media.
 - Foliage reached its five-iteration review limit without a visual acceptance.
   The final technical pass was stable, but the hero crown still reads flatter
   than the grass, the east-fence hedge is not legible in captures, and sway is
@@ -87,5 +86,3 @@ deployment claim.
 
 - Whether the owner accepts the current foliage as a version 3.0 launch risk or
   defers the launch for a separate art-direction pass.
-- Whether the original synthesized foreground animal calls pass the owner
-  listening gate or use the documented reduced fallback.
