@@ -11,3 +11,7 @@
 *.webm binary
 *.webp binary
 *.woff2 binary
+
+# Preserve exact third-party editable source bytes for provenance hashes.
+assets/treeline/sources/*.obj -text
+assets/treeline/sources/*.mtl -text

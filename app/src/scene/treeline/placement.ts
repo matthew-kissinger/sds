@@ -356,10 +356,8 @@ export function emitTree(
       treeId,
     );
 
-  // One canopy instance per rooted tree. Its compact shells share one geometry,
-  // one material and one draw, with overlap deep enough to read as a crown
-  // rather than detached topiary balloons. These forks show believable wood
-  // entering the mass, and every terminal is buried well inside it.
+  // Sparse buried branch anchors support placement diagnostics. Sourced
+  // candidates render their own complete wood silhouette at runtime.
   if (tree.family === 1) {
     branch(0.34, -0.52, 0.3, 0.09, 0.076);
     branch(0.35, 0.64, 0.28, 0.08, 0.068);

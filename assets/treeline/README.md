@@ -1,40 +1,28 @@
 # Treeline assets and placement
 
-The shipped treeline is original procedural work licensed with the code under
-AGPL-3.0-or-later. No foliage model or texture is fetched at runtime.
+This candidate lane adapts two complete tree silhouettes from mehrasaur's
+CC0 Fox Trees Pack. It preserves each source's wood and foliage proportions,
+then replaces every source material with Herd's shared TSL canopy and wood
+materials. No source texture, runtime model loader or generator ships.
 
-`procedural-manifest.json` is the source ledger. It names the geometry,
-material, assembly, placement and concept-reference files that reproduce the
-runtime field. The geometry recipes build one interlocking-lobe crown, one low hedgerow
-form, rooted wood and pooled ground shadows. The placement recipe gives those
-shared forms four tree proportions and two shrub colour families:
+`procedural-manifest.json` is the exact source ledger. The committed OBJ and
+MTL pairs remain editable and their SHA-256 hashes, first-party page, archive,
+license snapshot, generated JSON and deterministic recipe are recorded there.
 
-- broad rooted oak
-- rounded elm
-- airy ash
-- field oak
-- hawthorn
-- blackthorn
-
-The concept under `assets/concepts/v3-original-foliage-reference.png` guided the
-family language. It is an authoring reference only and is never imported by the
-game. Its provider, prompt and purpose are recorded in
-`assets/concepts/README.md`.
-
-## Reproducing the field
-
-The committed placement manifest is produced deterministically:
+## Reproducing the candidates
 
 ```powershell
+node tools/bake-sourced-tree-candidates.mjs
 npm run bake:placement
 ```
 
-The runtime geometry needs no binary bake. It is constructed directly from the
-committed TypeScript recipes listed in `procedural-manifest.json`. Tests verify
-the mesh bounds, normals, triangle counts, family coverage, deterministic
-placement and four-draw field budget.
+The bake separates source foliage and wood groups, normalizes the complete
+tree in one shared frame and applies only a small downward foliage tuck to bury
+the central branch junction. Runtime variation is deterministic whole-tree
+yaw and proportional scaling from the committed placement manifest.
 
-The current field contains 209 crowns, 153 shrubs and 791 rooted wood
-instances. Before pooled shadows it submits 311,222 triangles in three
-instanced draws. Shadows add the fourth treeline draw. The foliage uses no
-textures and no external models.
+The active Spreading candidate contains 160 foliage and 164 wood triangles. The
+field contains 209 full-tree instances and 153 shrubs, submitting 116,676
+triangles before pooled shadows in three instanced draws. Shadows add the
+fourth treeline draw. The active candidate uses zero textures and zero runtime
+model loads.

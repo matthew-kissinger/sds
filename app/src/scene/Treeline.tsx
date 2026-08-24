@@ -17,14 +17,19 @@ import { useHeightfield } from '@app/world/heightfield';
 import { useGameStore } from '@app/state/store';
 import { debugFlags } from './glFactory';
 import { CANOPY_ATTRIBUTE_SIZE, makeCanopyMaterial } from './treeline/canopyMaterial';
-import { buildCrownGeometry } from './treeline/crownShape';
+import {
+  ACTIVE_SOURCED_CROWN,
+  buildCrownGeometry,
+  buildSourcedWoodGeometry,
+  sourcedCrownReceipt,
+} from './treeline/crownShape';
 import { measureTreeline } from './treeline/diagnostics';
 import { useTreelineManifest } from './treeline/manifest';
 import { buildTreeShadows } from './treeline/shadowPools';
 import { SHRUB_ATTRIBUTE_SIZE, makeShrubMaterial } from './treeline/shrubMaterial';
 import { buildShrubGeometry } from './treeline/shrubShape';
 import { TRUNK_ATTRIBUTE_SIZE, makeTrunkMaterial } from './treeline/trunkMaterial';
-import { buildTrunkGeometry } from './treeline/trunkShape';
+import { TRUNK_SINK } from './treeline/placement';
 
 const REPORT_TREELINE = import.meta.env.DEV && typeof window !== 'undefined'
   && (debugFlags().has('readout') || debugFlags().has('driver'));
@@ -72,13 +77,23 @@ export function Treeline() {
     const { canopies, shrubs, trunks } = placement;
     const canopyAttribute = new Float32Array(canopies.length * CANOPY_ATTRIBUTE_SIZE);
     const shrubAttribute = new Float32Array(shrubs.length * SHRUB_ATTRIBUTE_SIZE);
-    const trunkAttribute = new Float32Array(trunks.length * TRUNK_ATTRIBUTE_SIZE);
+    const trunkAttribute = new Float32Array(canopies.length * TRUNK_ATTRIBUTE_SIZE);
 
     const crownGeometry = buildCrownGeometry();
     const shrubGeometry = buildShrubGeometry();
-    const trunkGeometry = buildTrunkGeometry();
+    const trunkGeometry = buildSourcedWoodGeometry();
+    const placeWholeTree = (
+      tree: (typeof canopies)[number],
+      dummy: THREE.Object3D,
+    ): void => {
+      const leader = trunks[tree.treeId]!;
+      const ground = leader.y + TRUNK_SINK;
+      dummy.position.set(leader.x, ground, leader.z);
+      dummy.rotation.set(0, tree.yaw, 0);
+      dummy.scale.set(tree.width, tree.y + tree.height - ground, tree.depth);
+    };
     const canopyMesh = buildMesh(
-      'original-broadleaf-crowns',
+      'sourced-broadleaf-crowns',
       canopies,
       crownGeometry,
       makeCanopyMaterial({
@@ -88,9 +103,7 @@ export function Treeline() {
         ),
       }),
       (tree, dummy, index) => {
-        dummy.position.set(tree.x, tree.y, tree.z);
-        dummy.rotation.set(tree.tiltX, tree.yaw, tree.tiltZ);
-        dummy.scale.set(tree.width, tree.height, tree.depth);
+        placeWholeTree(tree, dummy);
         const offset = index * CANOPY_ATTRIBUTE_SIZE;
         canopyAttribute[offset] = tree.tint;
         canopyAttribute[offset + 1] = tree.turn;
@@ -117,8 +130,8 @@ export function Treeline() {
       },
     );
     const trunkMesh = buildMesh(
-      'original-rooted-wood',
-      trunks,
+      'sourced-rooted-wood',
+      canopies,
       trunkGeometry,
       makeTrunkMaterial({
         instances: new THREE.InstancedBufferAttribute(
@@ -126,13 +139,11 @@ export function Treeline() {
           TRUNK_ATTRIBUTE_SIZE,
         ),
       }),
-      (bole, dummy, index) => {
-        dummy.position.set(bole.x, bole.y, bole.z);
-        dummy.rotation.set(bole.tiltX, bole.yaw, bole.tiltZ);
-        dummy.scale.set(bole.diameter, bole.length, bole.diameter);
+      (tree, dummy, index) => {
+        placeWholeTree(tree, dummy);
         const offset = index * TRUNK_ATTRIBUTE_SIZE;
-        trunkAttribute[offset] = bole.tint;
-        trunkAttribute[offset + 1] = bole.shade;
+        trunkAttribute[offset] = tree.tint;
+        trunkAttribute[offset + 1] = 0;
       },
     );
     const shadows = buildTreeShadows(canopies, trunks, field);
@@ -150,17 +161,18 @@ export function Treeline() {
       instanced: [canopyMesh, shrubMesh, trunkMesh] as const,
       shadows,
       receipt: {
-        source: 'original-procedural-v3',
+        source: ACTIVE_SOURCED_CROWN,
+        sourceAsset: sourcedCrownReceipt(),
         treeInstances: canopies.length,
         shrubInstances: shrubs.length,
-        woodInstances: trunks.length,
+        woodInstances: canopies.length,
         treeFamilyCounts: familyCounts,
         shrubFamilyCounts: [Math.ceil(shrubs.length / 2), Math.floor(shrubs.length / 2)],
         draws: PROCEDURAL_TREELINE_DRAWS,
         sourceTriangles: crownTriangles + shrubTriangles + trunkTriangles,
         submittedTriangles: crownTriangles * canopies.length
           + shrubTriangles * shrubs.length
-          + trunkTriangles * trunks.length,
+          + trunkTriangles * canopies.length,
         textures: 0,
         opaque: true,
         externalModels: 0,

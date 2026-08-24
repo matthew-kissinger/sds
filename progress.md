@@ -1,6 +1,23 @@
 Original prompt: Make the solo-times leaderboard accessible before play, with optional player names, while keeping production unchanged until owner playtest approval.
 
-## Completed
+## 2026-08-24 sourced full-tree candidate lane
+
+- Owner review rejected the EZ-Tree, Kenney and FabinhoSC constructions. They
+  are excluded from this candidate and no rejected source or runtime reference
+  remains.
+- Two complete CC0 silhouettes from mehrasaur's Fox Trees Pack are preserved:
+  broad `tree-spreading.obj` and natural `tree-round.obj`. Their original wood
+  and foliage are baked in one normalized frame, with only a 5% or 7.5%
+  downward foliage tuck to bury the branch junction.
+- Runtime uses Herd TSL canopy and wood materials, deterministic whole-tree
+  proportional variation, three instanced geometry draws plus one pooled
+  shadow draw, zero textures and zero runtime model loads.
+- Final active Spreading field: 209 trees, 153 shrubs, 116,676 submitted
+  triangles before shadows, zero unsupported crowns, zero exposed diagnostic
+  terminals and zero vertical drift. WebGPU, WebGL2, Follow, Classic and phone
+  captures completed without page, request or model-load errors.
+
+## 2026-08-22 corrective playtest pass
 
 - Added a title-screen `Times` entry point and a responsive leaderboard panel.
 - Added 25, 75, and 200 sheep board tabs.
