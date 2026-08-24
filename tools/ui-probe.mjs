@@ -147,6 +147,25 @@ try {
 
       await page.getByRole('button', { name: 'Times', exact: true }).click();
       await page.getByRole('heading', { name: 'Solo times' }).waitFor();
+      const activeLabel = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')
+        || document.activeElement?.textContent?.trim());
+      if (await activeLabel() !== 'Close solo times') {
+        throw new Error(`${spec.name}: leaderboard did not focus its Close control`);
+      }
+      await page.keyboard.press('Shift+Tab');
+      if (await activeLabel() !== '200') {
+        throw new Error(`${spec.name}: reverse Tab did not wrap to the 200-sheep board`);
+      }
+      await page.keyboard.press('Tab');
+      if (await activeLabel() !== 'Close solo times') {
+        throw new Error(`${spec.name}: forward Tab did not wrap to Close`);
+      }
+      for (const expected of ['25', '75', '200', 'Close solo times']) {
+        await page.keyboard.press('Tab');
+        if (await activeLabel() !== expected) {
+          throw new Error(`${spec.name}: leaderboard focus escaped before ${expected}`);
+        }
+      }
       await page.screenshot({ path: join(outDir, `${spec.name}-times.png`) });
       const times = await auditLayout(page);
       await page.keyboard.press('Escape');

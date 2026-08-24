@@ -9,6 +9,8 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
 - Configured the pull-request preview to use an isolated preview Worker and D1 database.
 - Added Escape-to-close and keyboard-focus restoration for the times dialog.
 - Browser QA caught and fixed the first focus-restoration implementation before release.
+- Harsh accessibility review caught background focus escape. The title screen is
+  now inert while Times is open and focus wraps across all four dialog controls.
 
 ## Verification pending
 

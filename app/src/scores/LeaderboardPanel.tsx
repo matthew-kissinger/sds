@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FLOCK_SIZES, type FlockSize } from '@app/state/store';
 import { formatRunTime } from '@app/ui/time';
 import { scoresController } from './controller';
@@ -15,6 +15,7 @@ export function LeaderboardPanel({
   readonly onClose: () => void;
 }) {
   const [flockSize, setFlockSize] = useState(initialFlockSize);
+  const panel = useRef<HTMLElement | null>(null);
   const status = useScoreStore((state) => state.boardStatus);
   const entries = useScoreStore((state) => state.boardEntries);
   const message = useScoreStore((state) => state.boardMessage);
@@ -26,6 +27,19 @@ export function LeaderboardPanel({
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
+      if (event.key !== 'Tab') return;
+      const controls = panel.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
+      if (!controls || controls.length === 0) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => {
@@ -35,7 +49,7 @@ export function LeaderboardPanel({
 
   return (
     <div className="herd-modal" role="dialog" aria-modal="true" aria-labelledby="times-title">
-      <section className="herd-panel herd-board-panel">
+      <section ref={panel} className="herd-panel herd-board-panel">
         <header className="herd-panel__header">
           <div>
             <p className="herd-panel__kicker">Fastest complete runs</p>

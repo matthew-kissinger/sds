@@ -55,7 +55,7 @@ export function Boot() {
       aria-busy={!sceneReady}
     >
       <div className="herd-boot__wash" aria-hidden="true" />
-      <main className="herd-title-card">
+      <main className="herd-title-card" inert={showTimes ? true : undefined}>
         <div className="herd-title-lockup">
           <h1 className="herd-title">Sheepdog Sim</h1>
           <p className="herd-kicker">every sheep through the gate</p>
