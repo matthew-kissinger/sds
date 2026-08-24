@@ -64,6 +64,7 @@ jobs:
         env:
           SDS_RELEASE_SHA: ${{ steps.source.outputs.sha }}
           SDS_RELEASE_REF: ${{ inputs.commit_sha }}
+      - run: npm run check:discovery
       - run: npm test --if-present
 
       - name: Write and verify release identity
@@ -91,3 +92,6 @@ jobs:
 
       - name: Verify live release identity
         run: node scripts/verify-release-manifest.mjs --url https://sheepdogsim.com/release.json --sha "${{ steps.source.outputs.sha }}" --retries 12
+
+      - name: Verify live discovery and analytics
+        run: node scripts/verify-public-discovery.mjs --url https://sheepdogsim.com --require-analytics --retries 12

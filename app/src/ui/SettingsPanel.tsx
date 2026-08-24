@@ -123,13 +123,13 @@ export function SettingsPanel() {
             </div>
           </div>
           <footer className="herd-legal">
-            <span>Sheepdog Sim 3 is free software under AGPL-3.0-or-later.</span>
+            <span>Sheepdog Sim is free software under AGPL-3.0-or-later.</span>
             <span>
               <a href="https://github.com/matthew-kissinger/sds" target="_blank" rel="noreferrer">
                 Source code
               </a>
               {' · '}
-              <a href="/privacy/">Privacy</a>
+              <a href="/privacy">Privacy</a>
             </span>
           </footer>
         </div>

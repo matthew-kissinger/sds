@@ -33,6 +33,7 @@ jobs:
           SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
           SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
           VITE_SCORE_API_BASE: https://sds-v3-static-preview.invalid
+      - run: npm run check:discovery
       - run: npm test --if-present
       - name: Write preview release identity
         env:

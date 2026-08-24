@@ -12,10 +12,16 @@
   },
   "keywords": [
     "threejs",
+    "typescript",
     "webgpu",
-    "webgl",
+    "webgl2",
+    "sheepdog",
+    "sheepdog-sim",
     "herding",
+    "herding-game",
     "browser-game",
+    "web-game",
+    "single-player",
     "simulation"
   ],
   "engines": {
@@ -32,6 +38,8 @@
     "typecheck:worker": "npm run typecheck --prefix worker",
     "probe:release": "node tools/release-hardening-probe.mjs",
     "probe:playtest": "node tools/playtest-profile.mjs",
+    "capture:launch": "node tools/launch-media-capture.mjs",
+    "check:discovery": "node scripts/verify-public-discovery.mjs",
     "lint": "eslint .",
     "bake:terrain": "node tools/bake-terrain.mjs",
     "bake:grass": "node tools/bake-grass.mjs",

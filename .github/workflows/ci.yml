@@ -32,6 +32,7 @@ jobs:
         env:
           SDS_RELEASE_SHA: ${{ github.sha }}
           SDS_RELEASE_REF: ${{ github.ref }}
+      - run: npm run check:discovery
       - run: npm test --if-present
       - name: Verify packaged release identity
         env:

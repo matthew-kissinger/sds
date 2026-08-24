@@ -11,13 +11,11 @@ import { join } from 'node:path';
 import {
   SEED,
   launchBrowser,
-  pressPlay,
   removeDir,
   repo,
   scratchDir,
   startServer,
   stopServer,
-  waitForLive,
 } from './probe-lib.mjs';
 
 const argv = process.argv.slice(2);
@@ -71,6 +69,19 @@ async function auditLayout(page) {
   });
 }
 
+async function waitForReady(page) {
+  await page.waitForSelector('canvas', { timeout: 60_000 });
+  await page.waitForSelector('.herd-app[data-ready="true"]', { timeout: 90_000 });
+}
+
+async function startPlay(page, flockSize) {
+  await waitForReady(page);
+  await page.locator('.herd-size').filter({ hasText: String(flockSize) }).click();
+  await page.locator('.herd-title-actions > .herd-button--primary').click();
+  await page.waitForSelector('.herd-app[data-phase="playing"]', { timeout: 30_000 });
+  await page.waitForTimeout(250);
+}
+
 let server = null;
 let browser = null;
 let profile = null;
@@ -97,11 +108,11 @@ try {
       if (message.type() === 'error') errors.push(`console: ${message.text()}`);
     });
     try {
-      await page.goto(`${base}/?seed=${SEED}&debug=readout`, {
+      await page.goto(`${base}/?seed=${SEED}`, {
         waitUntil: 'load',
         timeout: 60_000,
       });
-      await waitForLive(page);
+      await waitForReady(page);
       await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
       await page.screenshot({ path: join(outDir, `${spec.name}-title.png`) });
       const title = await auditLayout(page);
@@ -112,9 +123,15 @@ try {
       const settings = await auditLayout(page);
       await page.getByRole('button', { name: 'Close settings' }).click();
 
-      await pressPlay(page, { flockSize: 25 });
+      await startPlay(page, 25);
+      if (spec.mobile) {
+        await page.mouse.move(Math.round(spec.width * 0.25), Math.round(spec.height * 0.76));
+        await page.mouse.down();
+        await page.mouse.move(Math.round(spec.width * 0.34), Math.round(spec.height * 0.68), { steps: 4 });
+      }
       await page.screenshot({ path: join(outDir, `${spec.name}-hud.png`) });
       const hud = await auditLayout(page);
+      if (spec.mobile) await page.mouse.up();
 
       await page.getByRole('button', { name: 'Pause' }).click();
       await page.getByRole('heading', { name: 'Paused' }).waitFor();
@@ -146,8 +163,8 @@ try {
   const reduced = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await reduced.newPage();
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto(`${base}/?seed=${SEED}&debug=readout`, { waitUntil: 'load' });
-  await waitForLive(page);
+  await page.goto(`${base}/?seed=${SEED}`, { waitUntil: 'load' });
+  await waitForReady(page);
   const attr = await page.locator('.herd-app').getAttribute('data-reduced-motion');
   receipts.push({ case: 'os-reduced-motion', active: attr === 'true' });
   if (attr !== 'true') failed = true;

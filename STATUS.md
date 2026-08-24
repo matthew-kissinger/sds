@@ -14,6 +14,8 @@ deployment claim.
   client. Solo-time boards use only the isolated `field-v3` partition.
 - Production has not been changed. Worker and Pages deployment each require
   owner approval of the same full release-candidate commit SHA.
+- Player-facing branding is `Sheepdog Sim`. The `3.0.0` number is retained only
+  in package, migration and release records.
 
 ## Passed evidence before public import
 
@@ -27,17 +29,43 @@ deployment claim.
   stationary annulus or snapping wake trail after the distance-sampled wake
   fix. The integrated game still needs the same running-build probe.
 
+## Clean SDS candidate evidence
+
+- Lint passed. Client and Worker TypeScript checks passed.
+- 77 test files and 608 tests passed.
+- Root and Worker dependency audits report zero vulnerabilities.
+- Gitleaks 8.30.1 scanned 12.50 MB with no findings. Direct runtime and build
+  dependencies report MIT, ISC, Apache-2.0 or dual MIT/Apache licensing.
+- The production build contains 231 modules. Initial JavaScript is 579,105
+  gzip bytes. Estimated first transfer is 5,761,223 bytes across 35 files,
+  below the 8 MiB release limit.
+- The audio bake reproduced 17 files and 2,784,342 bytes exactly.
+- The deterministic simulation produced 23,563 identical bytes through the
+  independent esbuild and Vite bundles.
+- Actual WebGPU and forced WebGL2 running-game captures passed at 1,600 by
+  1,000 with four foliage draws and no runtime errors.
+- Desktop, tablet, phone portrait, phone landscape and reduced-motion UI probes
+  passed with no clipped content or controls below 44 CSS pixels. This is
+  Chromium touch emulation, not a physical-device receipt.
+- The 1,200 by 630 site card and 1,280 by 640 GitHub social preview were
+  regenerated from the production bundle on actual WebGPU without score writes.
+  The GitHub JPEG is 325,603 bytes.
+- Canonical pages, JSON-LD, Open Graph, Twitter cards, robots, sitemap, legacy
+  redirects and social-image dimensions pass the discovery gate. Production
+  verification also requires the existing Cloudflare Web Analytics beacon.
+- A local owner playtest is active at `http://127.0.0.1:5316`. Production stays
+  unchanged until the owner accepts the exact candidate.
+
 ## Open release gates
 
-- Run all tests, lint, client and Worker typechecks, build, release probe,
-  license scan, secret scan and dependency audits from a clean checkout of the
-  public candidate.
-- Capture one genuine WebGPU receipt and one forced WebGL2 receipt from the
-  integrated game. A WebGPU test that falls back is not a WebGPU receipt.
+- Finish the integrated running-game grass motion critic. The separate
+  Three.js Field Grass package is WOWED and clean at `b23d2dc`, but that does
+  not replace an integrated-game motion receipt.
 - Complete the desktop, mobile, offline-score and service-worker transition
   matrix in `docs/launch/v3-launch-pack.md`.
-- Create and verify the 1200 by 630 Open Graph image from the accepted game
-  build, then capture the final launch screenshot set from that same commit.
+- Complete a physical iOS or Android playtest. Browser touch emulation already
+  covers portrait and landscape layout, joystick, bark, camera and pause.
+- Capture the remaining final launch screenshot set from the accepted commit.
 - Owner audio listen: laptop speakers, headphones and one complete 25-sheep
   run. If bark or sheep calls read as conspicuously synthetic, ship the reduced
   foreground-audio fallback rather than restoring provider media.
@@ -45,6 +73,9 @@ deployment claim.
   The final technical pass was stable, but the hero crown still reads flatter
   than the grass, the east-fence hedge is not legible in captures, and sway is
   difficult to read. This is an explicit screenshot-quality launch risk.
+- After production approval, update the stale GitHub description/topics,
+  redirect `www.sheepdogsim.com` and `sds-frontend.pages.dev` to the apex, and
+  submit the sitemap in Google Search Console and Bing Webmaster Tools.
 
 ## Open questions
 

@@ -24,10 +24,9 @@ describe('3.0 launch client boundary', () => {
       'app/src/ui/DebugReadout.tsx',
       'app/src/game/ScriptedDog.tsx',
       'app/src/game/tickDriver.ts',
-      'worker/package.json',
     ]) expect(existsSync(`${repo}${path}`)).toBe(false);
     expect(source('app/src/App.tsx')).not.toMatch(
-      /Multiplayer|RemoteDogs|ScriptedDog|DebugReadout|app\/src\/net|\.\/net\//,
+      /Multiplayer|RemoteDogs|ScriptedDog|DebugReadout|app\/src\/net|\.\/net\/|worker\/|shared\//,
     );
     expect(source('app/src/scene/FieldScene.tsx')).not.toMatch(/GpuFlock|sim-gpu/);
     expect(source('app/src/game/useGameLoop.ts')).not.toMatch(/tickDriver|multiplayer|debug=driver/);

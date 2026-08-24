@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { barkPressed } from './actions';
+import { barkPressed, toggleCameraMode } from './actions';
 import {
   beginTouchStick,
   endTouchStick,
@@ -137,6 +137,15 @@ export function TouchControls() {
         onPointerDown={barkPressed}
       >
         Bark
+      </button>
+      <button
+        type="button"
+        className="herd-camera-button"
+        data-testid="camera-button"
+        aria-label="Change camera"
+        onPointerDown={toggleCameraMode}
+      >
+        Camera
       </button>
     </>
   );

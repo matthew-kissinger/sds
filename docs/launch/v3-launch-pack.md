@@ -1,4 +1,4 @@
-# Sheepdog Sim 3 launch pack
+# Sheepdog Sim launch pack
 
 This packet is the owner-facing launch sequence for version 3.0. It does not
 replace automated release checks. A release is ready only when every required
@@ -6,7 +6,7 @@ receipt below points at the exact candidate commit.
 
 ## Release promise
 
-Sheepdog Sim 3 is one calm field, one dog and one goal: guide every sheep
+Sheepdog Sim is one calm field, one dog and one goal: guide every sheep
 through the gate. The first release includes solo runs for 25, 75 and 200 sheep,
 optional player names, global best-time boards, local personal bests, desktop
 and touch controls, WebGPU with WebGL2 fallback, and offline play when the score
@@ -41,17 +41,20 @@ seed, viewport, device scale factor, renderer and capture command beside them.
 
 ## Open Graph card
 
-Create `app/public/og/sheepdog-sim-3.png` at 1200 by 630 from the accepted title
+Create `app/public/og/sheepdog-sim.png` at 1200 by 630 from the accepted title
 or gate-approach frame. Keep the dog, flock and open gate in the centre-safe
 area. Use only this copy:
 
-> Sheepdog Sim 3
+> Sheepdog Sim
 >
 > Every sheep through the gate
 
 The source must be a committed SVG or HTML composition plus the real game
 capture. The exported image is a build artifact with a reproducible command.
 Verify it at 600 by 315 and as a small link preview before release.
+
+Create `docs/launch/media/sheepdog-sim-github.jpg` at 1280 by 640 from the same
+release build. Keep it below 1 MB for the GitHub repository social preview.
 
 ## Owner video shot order
 
@@ -66,7 +69,7 @@ speed ramps that disguise the real interaction.
 6. Show several sheep crossing into the attached pasture.
 7. Cut to the final sheep and completion pull-back.
 8. Hold long enough to read the time, name and leaderboard placement.
-9. End on `Sheepdog Sim 3` and `sheepdogsim.com`.
+9. End on `Sheepdog Sim` and `sheepdogsim.com`.
 
 Use game audio for the primary cut. A captioned silent version is required for
 autoplay feeds. Do not use unlicensed music.
@@ -75,7 +78,7 @@ autoplay feeds. Do not use unlicensed music.
 
 ### Primary post
 
-Sheepdog Sim 3 is a clean-room rebuild of my browser herding game.
+Sheepdog Sim is a clean-room rebuild of my browser herding game.
 
 One dog. One field. 25, 75 or 200 sheep. Guide every sheep through the gate,
 then compare your time on the solo leaderboard.
@@ -97,7 +100,7 @@ https://github.com/matthew-kissinger/sds
 
 ### Short post
 
-Sheepdog Sim 3 is live. Herd 25, 75 or 200 sheep through one very open gate.
+Sheepdog Sim is live. Herd 25, 75 or 200 sheep through one very open gate.
 Names are optional. Solo times are ranked. The source is open.
 
 https://sheepdogsim.com

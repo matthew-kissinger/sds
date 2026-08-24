@@ -1,8 +1,10 @@
-# Sheepdog Sim 3
+# Sheepdog Sim
 
-Sheepdog Sim 3 is a browser game about one dog, one flock and one field. Get
+Sheepdog Sim is a browser game about one dog, one flock and one field. Get
 behind the sheep, apply pressure carefully and guide every animal through the
 gate into the attached pen.
+
+![Sheepdog Sim field and title](app/public/og/sheepdog-sim.png)
 
 The version 3.0 release focuses on the complete single-player loop:
 

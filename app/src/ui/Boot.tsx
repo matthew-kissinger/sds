@@ -48,7 +48,7 @@ export function Boot() {
     >
       <div className="herd-boot__wash" aria-hidden="true" />
       <main className="herd-title-card">
-        <div>
+        <div className="herd-title-lockup">
           <h1 className="herd-title">Sheepdog Sim</h1>
           <p className="herd-kicker">every sheep through the gate</p>
         </div>
