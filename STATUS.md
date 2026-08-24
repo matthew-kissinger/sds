@@ -1,9 +1,8 @@
 # Sheepdog Sim 3 release status
 
-Updated 2026-08-24. This file records candidate evidence, not a production
-deployment claim.
+Updated 2026-08-24 after the version 3 production cutover.
 
-## Candidate state
+## Production state
 
 - Version 3 client source, deterministic simulation, procedural assets, tests
   and public documentation have been curated into the SDS release branch.
@@ -15,8 +14,11 @@ deployment claim.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Production has not been changed. Worker and Pages deployment each require
-  owner approval of the same full release-candidate commit SHA.
+- Version 3 is live at `https://sheepdogsim.com`. `release.json` is the
+  authority for the exact deployed source commit and artifact digest.
+- The production Worker was deployed first without a D1 migration. Health and
+  all three `field-v3` leaderboard read paths returned HTTP 200 before Pages
+  was cut over.
 - Player-facing branding is `Sheepdog Sim`. The `3.0.0` number is retained only
   in package, migration and release records.
 - The owner selected the CC0 Fox Trees Pack Round and Spreading hybrid for the
@@ -73,22 +75,21 @@ deployment claim.
 - Canonical pages, JSON-LD, Open Graph, Twitter cards, robots, sitemap, legacy
   redirects and social-image dimensions pass the discovery gate. Production
   verification also requires the existing Cloudflare Web Analytics beacon.
-- Owner playtests are available locally at `http://127.0.0.1:5316` and through
-  the isolated PR preview. Production stays unchanged until the owner accepts
-  the exact candidate.
+- Pull request 86 passed Client CI, the isolated score-service preview and the
+  Pages preview before merge. The owner then requested the production cutover.
 
-## Open release gates
+## Post-release follow-up evidence
 
 - Complete the desktop, mobile, offline-score and service-worker transition
   matrix in `docs/launch/v3-launch-pack.md`.
 - Complete a physical iOS or Android playtest. Browser touch emulation already
   covers portrait and landscape layout, joystick, bark, camera and pause.
 - Capture the remaining final launch screenshot set from the accepted commit.
-- After production approval, update the stale GitHub description/topics,
+- Update the stale GitHub description/topics,
   redirect `www.sheepdogsim.com` and `sds-frontend.pages.dev` to the apex, and
   submit the sitemap in Google Search Console and Bing Webmaster Tools.
 
 ## Open questions
 
-- None for the approved treeline. Physical-device and final launch-media
-  receipts remain release follow-up evidence.
+- None for the production cutover. Physical-device and final launch-media
+  receipts remain follow-up evidence.
