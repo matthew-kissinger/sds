@@ -53,8 +53,11 @@ deployment claim.
   passed with no clipped content or controls below 44 CSS pixels. This is
   Chromium touch emulation, not a physical-device receipt.
 - The title-screen times dialog passed those same layouts with keyboard focus,
-  Escape-to-close and focus restoration. Its preview data is mocked so browser
-  probes cannot create identities or write public scores.
+  Escape-to-close and focus restoration. The local probe data is mocked so
+  repeated layout checks cannot create identities or write public scores.
+- The isolated Pages and Worker preview passed a real mobile interaction: a
+  random running name was assigned, renamed to `Preview Shepherd`, and the 25,
+  75 and 200 boards each returned HTTP 200. No staging scores were submitted.
 - The integrated grass motion critic passed native WebGPU and forced WebGL2 at
   automatic Low and player-forced High settings. It could not reproduce the
   rhythmic annulus, wake snapping or diagonal dark lane.
@@ -64,8 +67,9 @@ deployment claim.
 - Canonical pages, JSON-LD, Open Graph, Twitter cards, robots, sitemap, legacy
   redirects and social-image dimensions pass the discovery gate. Production
   verification also requires the existing Cloudflare Web Analytics beacon.
-- A local owner playtest is active at `http://127.0.0.1:5316`. Production stays
-  unchanged until the owner accepts the exact candidate.
+- Owner playtests are available locally at `http://127.0.0.1:5316` and through
+  the isolated PR preview. Production stays unchanged until the owner accepts
+  the exact candidate.
 
 ## Open release gates
 

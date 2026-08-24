@@ -18,8 +18,7 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
 
 ## Verification pending
 
-- Push the candidate and verify the isolated Worker plus Pages preview end to end.
-- Inspect the final remote leaderboard screenshots on desktop and mobile.
+- Matt's owner playtest and exact-SHA production approval.
 
 ## Verification complete
 
@@ -30,6 +29,8 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
   and reduced-motion cases with no errors, overflow, or undersized controls.
 - The required web-game browser client opened the Times dialog successfully.
 - Desktop and phone leaderboard screenshots were visually inspected.
+- Isolated Worker deployment, Pages deployment, random-name registration,
+  rename, and all three real staging boards passed remotely.
 
 ## Release hold
 
