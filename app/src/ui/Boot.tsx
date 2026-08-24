@@ -9,6 +9,7 @@ import {
 } from '@app/state/store';
 import { useReducedMotion } from './useReducedMotion';
 import { PlayerIdentity } from '@app/scores/PlayerIdentity';
+import { LeaderboardPanel } from '@app/scores/LeaderboardPanel';
 
 export function Boot() {
   const startGame = useGameStore((state) => state.startGame);
@@ -18,8 +19,15 @@ export function Boot() {
   const defaultFlockSize = useGameStore((state) => state.flockSize);
   const [flockSize, setFlockSize] = useState<FlockSize>(defaultFlockSize);
   const [leaving, setLeaving] = useState(false);
+  const [showTimes, setShowTimes] = useState(false);
   const timeout = useRef<number | null>(null);
+  const timesButton = useRef<HTMLButtonElement | null>(null);
   const reducedMotion = useReducedMotion();
+
+  const closeTimes = () => {
+    setShowTimes(false);
+    window.requestAnimationFrame(() => timesButton.current?.focus());
+  };
 
   useEffect(() => () => {
     if (timeout.current !== null) window.clearTimeout(timeout.current);
@@ -82,8 +90,19 @@ export function Boot() {
           >
             Settings
           </button>
+          <button
+            ref={timesButton}
+            type="button"
+            className="herd-button herd-button--quiet"
+            onClick={() => setShowTimes(true)}
+          >
+            Times
+          </button>
         </div>
       </main>
+      {showTimes ? (
+        <LeaderboardPanel initialFlockSize={flockSize} onClose={closeTimes} />
+      ) : null}
     </div>
   );
 }

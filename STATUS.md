@@ -12,6 +12,8 @@ deployment claim.
   `https://7cea2cd2.sds-frontend.pages.dev`.
 - Multiplayer and the 5,000-sheep player path are absent from the version 3
   client. Solo-time boards use only the isolated `field-v3` partition.
+- Solo times are reachable from the title screen and after a completed run.
+  Viewing the 25, 75 or 200 sheep boards does not create a player identity.
 - Production has not been changed. Worker and Pages deployment each require
   owner approval of the same full release-candidate commit SHA.
 - Player-facing branding is `Sheepdog Sim`. The `3.0.0` number is retained only
@@ -32,12 +34,12 @@ deployment claim.
 ## Clean SDS candidate evidence
 
 - Lint passed. Client and Worker TypeScript checks passed.
-- 77 test files and 608 tests passed.
+- 77 test files and 610 tests passed.
 - Root and Worker dependency audits report zero vulnerabilities.
 - Gitleaks 8.30.1 scanned 12.50 MB with no findings. Direct runtime and build
   dependencies report MIT, ISC, Apache-2.0 or dual MIT/Apache licensing.
-- The production build contains 231 modules. Initial JavaScript is 579,105
-  gzip bytes. Estimated first transfer is 5,761,223 bytes across 35 files,
+- The production build contains 232 modules. Initial JavaScript is 579,725
+  gzip bytes. Estimated first transfer is 5,760,428 bytes across 35 files,
   below the 8 MiB release limit.
 - The audio bake reproduced 17 files and 2,784,342 bytes exactly.
 - The deterministic simulation produced 23,563 identical bytes through the
@@ -47,9 +49,15 @@ deployment claim.
 - Desktop, tablet, phone portrait, phone landscape and reduced-motion UI probes
   passed with no clipped content or controls below 44 CSS pixels. This is
   Chromium touch emulation, not a physical-device receipt.
+- The title-screen times dialog passed those same layouts with keyboard focus,
+  Escape-to-close and focus restoration. Its preview data is mocked so browser
+  probes cannot create identities or write public scores.
+- The integrated grass motion critic passed native WebGPU and forced WebGL2 at
+  automatic Low and player-forced High settings. It could not reproduce the
+  rhythmic annulus, wake snapping or diagonal dark lane.
 - The 1,200 by 630 site card and 1,280 by 640 GitHub social preview were
   regenerated from the production bundle on actual WebGPU without score writes.
-  The GitHub JPEG is 325,603 bytes.
+  The GitHub JPEG is 273,355 bytes.
 - Canonical pages, JSON-LD, Open Graph, Twitter cards, robots, sitemap, legacy
   redirects and social-image dimensions pass the discovery gate. Production
   verification also requires the existing Cloudflare Web Analytics beacon.
@@ -58,9 +66,6 @@ deployment claim.
 
 ## Open release gates
 
-- Finish the integrated running-game grass motion critic. The separate
-  Three.js Field Grass package is WOWED and clean at `b23d2dc`, but that does
-  not replace an integrated-game motion receipt.
 - Complete the desktop, mobile, offline-score and service-worker transition
   matrix in `docs/launch/v3-launch-pack.md`.
 - Complete a physical iOS or Android playtest. Browser touch emulation already

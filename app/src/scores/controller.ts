@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import { useGameStore } from '@app/state/store';
+import { useGameStore, type FlockSize } from '@app/state/store';
 import { createScoreApi, ScoreApiError, type ScoreApi } from './api';
 import { scoreApiBase } from './config';
 import { browserIdentityStorage, type IdentityStorage } from './storage';
@@ -12,6 +12,7 @@ export interface ScoresController {
   start(): () => void;
   ensureIdentity(): Promise<ScoreIdentity | null>;
   rename(displayName: string): Promise<boolean>;
+  loadBoard(flockSize: FlockSize): Promise<void>;
   submit(run: CompletedRun): Promise<void>;
 }
 
@@ -22,6 +23,7 @@ export function createScoresController(
   let token: string | null = null;
   let identityPromise: Promise<ScoreIdentity | null> | null = null;
   let lastRunKey = '';
+  let boardRequest = 0;
 
   const register = async (fresh = false): Promise<ScoreIdentity> => {
     const stored = fresh ? null : storage.load();
@@ -167,6 +169,34 @@ export function createScoresController(
           : 'Name change is unavailable. Play still works.';
         useScoreStore.getState().patch({ renaming: false, renameMessage: message });
         return false;
+      }
+    },
+
+    async loadBoard(flockSize) {
+      const request = ++boardRequest;
+      useScoreStore.getState().patch({
+        boardStatus: 'loading',
+        boardFlockSize: flockSize,
+        boardEntries: [],
+        boardMessage: `Loading ${flockSize}-sheep times.`,
+      });
+      try {
+        const entries = await api.leaderboard(flockSize);
+        if (request !== boardRequest) return;
+        useScoreStore.getState().patch({
+          boardStatus: 'ready',
+          boardFlockSize: flockSize,
+          boardEntries: entries,
+          boardMessage: entries.length === 0 ? 'No times yet. Yours could be first.' : '',
+        });
+      } catch {
+        if (request !== boardRequest) return;
+        useScoreStore.getState().patch({
+          boardStatus: 'offline',
+          boardFlockSize: flockSize,
+          boardEntries: [],
+          boardMessage: 'Online times are unavailable. Play still works.',
+        });
       }
     },
 

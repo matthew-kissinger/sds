@@ -7,6 +7,7 @@ import type { LeaderboardEntry, ScoreIdentity } from './types';
 
 export type IdentityStatus = 'idle' | 'connecting' | 'ready' | 'offline';
 export type SubmissionStatus = 'idle' | 'submitting' | 'ready' | 'offline';
+export type BoardStatus = 'idle' | 'loading' | 'ready' | 'offline';
 
 export interface ScoreStore {
   readonly identityStatus: IdentityStatus;
@@ -19,6 +20,10 @@ export interface ScoreStore {
   readonly entries: readonly LeaderboardEntry[];
   readonly rank: number | null;
   readonly submissionMessage: string;
+  readonly boardStatus: BoardStatus;
+  readonly boardFlockSize: FlockSize;
+  readonly boardEntries: readonly LeaderboardEntry[];
+  readonly boardMessage: string;
   patch(patch: Partial<Omit<ScoreStore, 'patch'>>): void;
 }
 const INITIAL = {
@@ -32,6 +37,10 @@ const INITIAL = {
   entries: [] as readonly LeaderboardEntry[],
   rank: null,
   submissionMessage: '',
+  boardStatus: 'idle' as const,
+  boardFlockSize: 25 as FlockSize,
+  boardEntries: [] as readonly LeaderboardEntry[],
+  boardMessage: '',
 };
 
 export const useScoreStore = create<ScoreStore>()((set) => ({

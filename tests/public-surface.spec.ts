@@ -62,6 +62,16 @@ describe('public version 3 surface', () => {
     expect(controls).toContain('SPRINT_DEFLECTION');
   });
 
+  it('makes solo times reachable before a run', () => {
+    const boot = read('app/src/ui/Boot.tsx');
+    const board = read('app/src/scores/LeaderboardPanel.tsx');
+    expect(boot).toContain('setShowTimes(true)');
+    expect(boot).toContain('Times');
+    expect(board).toContain('Solo times');
+    expect(board).toContain('FLOCK_SIZES.map');
+    expect(board).toContain('scoresController.loadBoard');
+  });
+
   it('redirects retired version 2 scene pages and publishes the source routes', () => {
     const redirects = read('app/public/_redirects');
     const sitemap = read('app/public/sitemap.xml');

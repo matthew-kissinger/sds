@@ -33,6 +33,33 @@ const base = urlFlag ? urlFlag.replace(/\/$/, '') : `http://localhost:${port}`;
 const label = flag('label', 'phase4-ui');
 if (!/^[a-z0-9][a-z0-9._-]*$/i.test(label)) throw new Error(`bad --label ${label}`);
 const outDir = join(repo, 'captures', 'ui', label);
+const SCORE_ORIGIN = 'https://sds-worker.matt-m-kissinger.workers.dev';
+
+async function mockScores(page) {
+  await page.route(`${SCORE_ORIGIN}/api/register`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      token: 'ui-probe-token',
+      authSecret: 'ui-probe-secret',
+      playerProfile: {
+        persistentId: 'ui-probe-player',
+        displayName: 'Meadow Scout',
+        fullName: 'Meadow Scout#0001',
+      },
+    }),
+  }));
+  await page.route(`${SCORE_ORIGIN}/api/leaderboard?*`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      entries: [
+        { rank: 1, persistent_id: 'swift', displayName: 'Swift Shepherd', fullName: 'Swift Shepherd#0001', score: 64.25 },
+        { rank: 2, persistent_id: 'calm', displayName: 'Calm Keeper', fullName: 'Calm Keeper#0001', score: 71.8 },
+      ],
+    }),
+  }));
+}
 
 const CASES = [
   { name: 'desktop', width: 1440, height: 900, scale: 1 },
@@ -108,6 +135,7 @@ try {
       if (message.type() === 'error') errors.push(`console: ${message.text()}`);
     });
     try {
+      await mockScores(page);
       await page.goto(`${base}/?seed=${SEED}`, {
         waitUntil: 'load',
         timeout: 60_000,
@@ -116,6 +144,18 @@ try {
       await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
       await page.screenshot({ path: join(outDir, `${spec.name}-title.png`) });
       const title = await auditLayout(page);
+
+      await page.getByRole('button', { name: 'Times', exact: true }).click();
+      await page.getByRole('heading', { name: 'Solo times' }).waitFor();
+      await page.screenshot({ path: join(outDir, `${spec.name}-times.png`) });
+      const times = await auditLayout(page);
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Times', exact: true }).waitFor();
+      if (await page.getByRole('button', { name: 'Times', exact: true }).evaluate(
+        (element) => element !== document.activeElement,
+      )) {
+        throw new Error(`${spec.name}: Times focus was not restored after closing the leaderboard`);
+      }
 
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
       await page.getByRole('heading', { name: 'Settings' }).waitFor();
@@ -140,7 +180,7 @@ try {
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: 'Pause' }).waitFor();
 
-      const layouts = { title, settings, hud, pause };
+      const layouts = { title, times, settings, hud, pause };
       const bad = Object.entries(layouts).flatMap(([state, result]) => [
         ...(result.horizontalOverflow > 1
           ? [`${state}: horizontal overflow ${result.horizontalOverflow}px`]
@@ -162,6 +202,7 @@ try {
 
   const reduced = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await reduced.newPage();
+  await mockScores(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(`${base}/?seed=${SEED}`, { waitUntil: 'load' });
   await waitForReady(page);

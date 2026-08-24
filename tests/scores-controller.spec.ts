@@ -140,4 +140,28 @@ describe('scores controller', () => {
       submissionMessage: 'Your local time is safe. The online board is unavailable.',
     });
   });
+
+  it('loads a public board without requiring a player identity', async () => {
+    let registered = false;
+    const api: ScoreApi = {
+      async register() { registered = true; return freshReceipt; },
+      async rename() { return freshReceipt.playerProfile; },
+      async submit() {},
+      async leaderboard(flockSize) {
+        expect(flockSize).toBe(75);
+        return [{
+          rank: 1, persistentId: 'pid-fast', displayName: 'SwiftShepherd',
+          fullName: 'SwiftShepherd#0001', scoreSeconds: 64.25,
+        }];
+      },
+    };
+
+    await createScoresController(api, memoryStorage()).loadBoard(75);
+
+    expect(registered).toBe(false);
+    expect(useScoreStore.getState()).toMatchObject({
+      boardStatus: 'ready', boardFlockSize: 75,
+      boardEntries: [{ displayName: 'SwiftShepherd', scoreSeconds: 64.25 }],
+    });
+  });
 });

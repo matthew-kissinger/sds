@@ -70,6 +70,13 @@ canvas { display: block; touch-action: none; }
 .herd-online-times p { margin: 0 0 var(--herd-s3); }
 .herd-online-times ol { width: 100%; display: grid; gap: var(--herd-s1); margin: 0; padding: var(--herd-s3) 0 0; border-top: 1px solid var(--herd-line); list-style: none; }
 .herd-online-times li { display: flex; justify-content: space-between; gap: var(--herd-s4); font-variant-numeric: tabular-nums; text-align: left; }
+.herd-board-panel { width: min(92vw, 520px); }
+.herd-board-tabs { display: flex; justify-content: center; gap: var(--herd-s3); margin-bottom: var(--herd-s4); }
+.herd-board-caption { margin: 0 0 var(--herd-s4); color: var(--herd-ink-soft); text-align: center; }
+.herd-board-message { min-height: 120px; display: grid; place-items: center; margin: 0; color: var(--herd-ink-soft); text-align: center; }
+.herd-board-list { display: grid; gap: var(--herd-s2); margin: 0; padding: var(--herd-s4) 0 0; border-top: 1px solid var(--herd-line); list-style: none; }
+.herd-board-list li { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); font-variant-numeric: tabular-nums; }
+.herd-board-rank { color: var(--herd-ink-soft); }
 .herd-panel-actions { display: flex; flex-direction: column; align-items: stretch; gap: var(--herd-s3); margin-top: var(--herd-s5); }
 .herd-settings-list { display: grid; gap: var(--herd-s5); }
 .herd-setting { display: grid; gap: var(--herd-s2); }
