@@ -80,7 +80,7 @@ const DENSITY = 0.62;
 /** How much of its density a pool keeps out at the belts. The near belt alone
  *  lays several hundred overlapping pools inside forty metres of ring, and a
  *  multiply compounds, so at full strength the wood's own feet went to mud. The
- *  hero oak stands at 85 m and keeps all of it; the belts start losing density
+ *  boundary oak keeps all of it; the belts start losing density
  *  at `FADE_NEAR` and are down to `DEEP_KEEP` by `FADE_FAR`. */
 const FADE_NEAR = 100;
 const FADE_FAR = 150;

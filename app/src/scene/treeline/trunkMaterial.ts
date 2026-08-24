@@ -4,7 +4,7 @@
  * The bole material: boles on the front rank of the near ring, and the hero
  * oak's trunk and boughs.
  *
- * THE VERTEX STAGE DOES NOTHING, AND THAT IS THE HARD-WON PART.
+ * THE VERTEX STAGE READS ONLY instanceIndex, AND THAT IS THE HARD-WON PART.
  *
  * The taper and the bow that answer the critique's "parallel-edged mitred
  * plank" are real, but they are baked into the geometry (trunkShape.ts) rather
@@ -20,7 +20,9 @@
  * the pack into two buffers, one per stage, changed nothing. Only removing the
  * vertex-stage read entirely cleared it.
  *
- * So: THIS MATERIAL'S VERTEX STAGE READS NO INSTANCED ATTRIBUTE. It is the
+ * So: THIS MATERIAL'S VERTEX STAGE READS NO INSTANCED BUFFER ATTRIBUTE. A
+ * restrained base-pinned fork lean comes from the safe built-in instanceIndex.
+ * It is the
  * second instance of the same hazard in this folder - canopyMaterial.ts records
  * mx_noise_float coming back as per-vertex garbage in the vertex stage of a
  * material that also calls it in the fragment stage - and two of them make a
@@ -50,6 +52,8 @@ import {
   color,
   float,
   fract,
+  hash,
+  instanceIndex,
   instancedBufferAttribute,
   mix,
   positionLocal,
@@ -166,6 +170,16 @@ export function makeTrunkMaterial(inputs: TrunkMaterialInputs): THREE.MeshBasicN
   const instance: TSLNode = instancedBufferAttribute(inputs.instances, 'vec2');
   const tintSeed = instance.x;
   const shade = mix(float(1), float(BOUGH_SHADE), instance.y);
+
+  // The exact Round source fork is retained. A few centimetres of deterministic
+  // top lean distinguish family members while the sunk flare stays fixed.
+  const forkLean = hash(instanceIndex).sub(float(0.5)).mul(float(0.045));
+  const bend = smoothstep(float(0.12), float(0.56), positionLocal.y);
+  material.positionNode = positionLocal.add(vec3(
+    forkLean.mul(bend.mul(bend)),
+    float(0),
+    forkLean.mul(float(0.3)).mul(bend.mul(bend)),
+  ));
 
   // --- colour ---------------------------------------------------------------
 

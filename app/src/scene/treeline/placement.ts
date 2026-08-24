@@ -4,9 +4,8 @@
  * What a planted tree is, as data, and the one routine that turns a standing
  * tree into instances.
  *
- * A tree is emitted as one rooted leader, two exposed root runs, authored
- * boughs, and exactly one shared-geometry canopy. There is no trunkless path for a
- * tree. Low scrub is a separate asset authored in understory.ts.
+ * A tree is emitted as one sunk rooted leader, authored buried boughs, and
+ * exactly one shared-geometry canopy. There is no trunkless path for a tree.
  */
 
 import * as THREE from 'three/webgpu';
@@ -104,7 +103,7 @@ export interface TreelinePlacement {
  * footprint spans a few centimetres of it, so a bole seated exactly on the
  * sampled height opens a sliver of daylight on the downhill side.
  */
-export const TRUNK_SINK = 0.35;
+export const TRUNK_SINK = 0.55;
 
 /**
  * Small belt trees still need a bole that survives haze and a gameplay camera.
@@ -317,24 +316,6 @@ export function emitTree(
   const leaderRun = limbTip(leader);
   const leaderTip = leaderBase.clone().add(leaderRun);
 
-  // Two exposed root runs make the contact read from the low Follow camera.
-  // Beyond the readable front rank the leader's baked flare and contact pool
-  // carry the same job, avoiding hundreds of sub-pixel instances in the bake.
-  if (Math.max(Math.abs(tree.x), Math.abs(tree.z)) <= 156) {
-    for (const offset of [-0.8, 1.55]) {
-      limb(
-        new THREE.Vector3(tree.x, tree.ground - 0.22, tree.z),
-        leader.diameter * 0.5,
-        Math.max(1.25, leader.diameter * 1.5),
-        tree.yaw + offset,
-        1.28,
-        0,
-        0,
-        treeId,
-      );
-    }
-  }
-
   const branch = (
     from: number,
     bearingOffset: number,
@@ -372,19 +353,18 @@ export function emitTree(
     branch(0.3, 1.18, 0.29, 0.27, 0.086);
   }
 
-  // One shared lobe kit, four unmistakable world-space envelopes. Oak owns a
-  // low umbrella, elm a narrow vase, ash a shallow plane whose separated upper
-  // shells read as clumps, and field oak the broadest wind-shaped shoulder.
-  const rawCrownHeight = tree.height * ([0.55, 0.84, 0.78, 0.52][tree.family] ?? 0.55);
-  const rawCrownWidth = tree.width * ([1.28, 0.7, 1.08, 1.2][tree.family] ?? 1.28);
+  // One shared Fox lobe kit, four related Round + Spreading envelopes. None is
+  // narrow enough to read as a columnar or conifer-like tree.
+  const rawCrownHeight = tree.height * ([0.58, 0.62, 0.6, 0.55][tree.family] ?? 0.58);
+  const rawCrownWidth = tree.width * ([1.22, 1.08, 1.14, 1.24][tree.family] ?? 1.22);
   const crownAspect = fitCrown(
     rawCrownWidth,
     rawCrownHeight,
-    [2.25, 1.15, 1.55, 2.3][tree.family] ?? 2.25,
-    [1.25, 2.1, 1.45, 1.2][tree.family] ?? 1.25,
+    [2.15, 1.75, 1.9, 2.3][tree.family] ?? 2.15,
+    [1.3, 1.35, 1.35, 1.25][tree.family] ?? 1.3,
   );
-  const crownDepth = crownAspect.width * ([0.88, 0.68, 0.44, 0.62][tree.family] ?? 0.88);
-  const centreY = tree.ground + tree.height * ([0.58, 0.69, 0.62, 0.56][tree.family] ?? 0.58);
+  const crownDepth = crownAspect.width * ([0.78, 0.84, 0.76, 0.7][tree.family] ?? 0.78);
+  const centreY = tree.ground + tree.height * ([0.6, 0.61, 0.6, 0.58][tree.family] ?? 0.6);
   const downwind = tree.family === 3 ? tree.height * 0.11 : 0;
   const centre = new THREE.Vector3(
     leaderTip.x + Math.sin(tree.yaw) * downwind,

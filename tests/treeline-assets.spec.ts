@@ -23,6 +23,11 @@ import type { TreelineManifest } from '@app/scene/treeline/manifest';
 import { makeShrubMaterial, SHRUB_ATTRIBUTE_SIZE } from '@app/scene/treeline/shrubMaterial';
 import { buildShrubGeometry } from '@app/scene/treeline/shrubShape';
 import { makeTrunkMaterial, TRUNK_ATTRIBUTE_SIZE } from '@app/scene/treeline/trunkMaterial';
+import {
+  crownOutsideFenceRect,
+  TREE_FENCED_RECTS,
+  TREE_FENCE_SAFETY_MARGIN,
+} from '@app/scene/treeline/treePlacement';
 
 interface ProceduralFoliageManifest {
   readonly version: number;
@@ -110,8 +115,8 @@ function expectValidGeometry(geometry: THREE.BufferGeometry): void {
 
 describe('sourced CC0 foliage chain', () => {
   it('pins the complete AGPL and CC0 authoring chain in the repository', () => {
-    expect(source.version).toBe(5);
-    expect(source.id).toBe('sourced-fox-tree-candidates-v1');
+    expect(source.version).toBe(6);
+    expect(source.id).toBe('sourced-fox-hybrid-family-v1');
     expect(source.license).toBe('AGPL-3.0-or-later');
     expect(source.runtime).toBe('baked-source-geometry-threejs-tsl');
     expect(source.activeCandidate).toBe(ACTIVE_SOURCED_CROWN);
@@ -135,10 +140,10 @@ describe('sourced CC0 foliage chain', () => {
       ...source.recipe.materials,
     ]) expect(existsSync(join(repo, ...path.split('/')))).toBe(true);
     expect(source.families.trees.map((family) => family.name)).toEqual([
-      'broad-rooted-oak',
-      'rounded-elm',
-      'airy-ash',
-      'field-oak',
+      'fox-broad',
+      'fox-compact',
+      'fox-balanced',
+      'fox-leaning',
     ]);
     expect(source.families.shrubs.map((family) => family.name)).toEqual([
       'hawthorn',
@@ -159,7 +164,7 @@ describe('sourced CC0 foliage chain', () => {
     expect(crownParts).toBeDefined();
     expect(new Set(Array.from({ length: crownParts.count }, (_, index) => (
       crownParts.getX(index)
-    )))).toEqual(new Set([0]));
+    )))).toEqual(new Set([0, 1, 2]));
     expect(crown.boundingBox!.min.y).toBeGreaterThan(0.2);
     expect(crown.boundingBox!.min.y).toBeLessThan(0.6);
     expect(shrub.boundingBox!.min.y).toBeCloseTo(0, 5);
@@ -175,7 +180,7 @@ describe('sourced CC0 foliage chain', () => {
     trunk.dispose();
   });
 
-  it('covers every authored family and preserves the four-draw field budget', () => {
+  it('covers every authored family with no tree-base shrubs', () => {
     expect(new Set(placement.canopies.map((tree) => tree.family))).toEqual(
       new Set(source.families.trees.map((family) => family.id)),
     );
@@ -187,7 +192,7 @@ describe('sourced CC0 foliage chain', () => {
     expect(placement.canopies).toHaveLength(source.field.treeInstances);
     expect(placement.shrubs).toHaveLength(source.field.shrubInstances);
     expect(placement.canopies).toHaveLength(source.field.woodInstances);
-    expect(source.field.draws).toBe(4);
+    expect(source.field.draws).toBe(3);
     expect(source.field.textures).toBe(0);
     expect(source.field.externalModels).toBe(0);
     expect(source.field.sourceModels).toBe(2);
@@ -200,12 +205,11 @@ describe('sourced CC0 foliage chain', () => {
 
     const hero = placement.canopies.find((tree) => tree.belt === 3);
     expect(hero).toBeDefined();
-    expect(hero!.x).toBeCloseTo(1.4, 1);
-    expect(hero!.z).toBeCloseTo(27.2, 1);
-    expect(hero!.width).toBeCloseTo(14.3, 3);
-    expect(hero!.height).toBeCloseTo(7.75, 3);
-    expect(placement.shrubs.filter((shrub) => shrub.belt === 3)).toHaveLength(3);
-    expect(placement.shrubs.filter((shrub) => shrub.tint < 0)).toHaveLength(3);
+    expect(hero!.x).toBeCloseTo(66.4, 1);
+    expect(hero!.z).toBeCloseTo(111.2, 1);
+    expect(hero!.width).toBeCloseTo(12.8, 3);
+    expect(hero!.height).toBeCloseTo(8, 3);
+    expect(placement.shrubs).toHaveLength(0);
     expect(placement.trunks.filter((trunk) => (
       trunk.treeId === hero!.treeId && trunk.terminal === 0
     )).length).toBeGreaterThanOrEqual(2);
@@ -220,18 +224,33 @@ describe('sourced CC0 foliage chain', () => {
       const values = ratios.get(family)!.sort((a, b) => a - b);
       return values[Math.floor(values.length / 2)]!;
     };
-    expect(median(0)).toBeGreaterThan(1.8);
-    expect(median(1)).toBeLessThan(0.7);
-    expect(median(2)).toBeGreaterThan(1);
-    expect(median(2)).toBeLessThan(1.55);
+    expect(median(0)).toBeGreaterThan(1.9);
+    expect(median(1)).toBeGreaterThan(1.4);
+    expect(median(1)).toBeLessThan(1.8);
+    expect(median(2)).toBeGreaterThan(1.7);
+    expect(median(2)).toBeLessThan(2);
     expect(median(3)).toBeGreaterThan(2);
   });
 
-  it('matches the active source receipt and preserves both authored silhouettes', () => {
+  it('keeps every full tree envelope outside both fenced pastures', () => {
+    expect(TREE_FENCE_SAFETY_MARGIN).toBeGreaterThanOrEqual(1.5);
+    for (const crown of placement.canopies) {
+      for (const rect of TREE_FENCED_RECTS) {
+        expect(
+          crownOutsideFenceRect(crown, rect),
+          `tree ${crown.treeId} belt ${crown.belt} overlaps ${JSON.stringify(rect)}`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('matches the active source receipt and preserves the authored hybrid family', () => {
     const receipt = sourcedCrownReceipt();
     expect(receipt.id).toBe(source.activeCandidate);
     expect(receipt.foliageTriangles).toBe(source.geometry.crownTriangles);
     expect(receipt.woodTriangles).toBe(source.geometry.trunkTriangles);
+    expect(receipt.foliageSource).toBe(source.sources[0]!.source);
+    expect(receipt.woodSource).toBe(source.sources[1]!.source);
     for (const candidate of source.sources) {
       expect(candidate.foliageTriangles).toBeGreaterThan(0);
       expect(candidate.woodTriangles).toBeGreaterThan(0);

@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * The original procedural treeline: three broadleaf families, the field oak,
- * two hedgerow colour families and their rooted wood.
+ * The sourced Fox Round + Spreading treeline and its rooted wood.
  *
  * Geometry is authored in the adjacent TypeScript recipes. The committed
  * placement manifest supplies deterministic transforms, so runtime performs no
  * scattering, asset fetches or opaque-model decoding. One shared geometry and
- * material per role keeps the complete horizon to four draws: crowns, shrubs,
- * wood and pooled ground shadows.
+ * material per role keeps the complete horizon to three draws: crowns, wood
+ * and pooled ground shadows.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -26,14 +25,15 @@ import {
 import { measureTreeline } from './treeline/diagnostics';
 import { useTreelineManifest } from './treeline/manifest';
 import { buildTreeShadows } from './treeline/shadowPools';
-import { SHRUB_ATTRIBUTE_SIZE, makeShrubMaterial } from './treeline/shrubMaterial';
-import { buildShrubGeometry } from './treeline/shrubShape';
 import { TRUNK_ATTRIBUTE_SIZE, makeTrunkMaterial } from './treeline/trunkMaterial';
 import { TRUNK_SINK } from './treeline/placement';
 
 const REPORT_TREELINE = import.meta.env.DEV && typeof window !== 'undefined'
   && (debugFlags().has('readout') || debugFlags().has('driver'));
-const PROCEDURAL_TREELINE_DRAWS = 4;
+const PROCEDURAL_TREELINE_DRAWS = 3;
+/** Sink the complete sourced shell just enough that the Round bole enters the
+ * grass instead of perching on the sampled terrain plane. */
+const SOURCE_TREE_SINK = 0.28;
 
 function triangleCount(geometry: THREE.BufferGeometry): number {
   const positions = geometry.getAttribute('position');
@@ -76,11 +76,9 @@ export function Treeline() {
   const scene = useMemo(() => {
     const { canopies, shrubs, trunks } = placement;
     const canopyAttribute = new Float32Array(canopies.length * CANOPY_ATTRIBUTE_SIZE);
-    const shrubAttribute = new Float32Array(shrubs.length * SHRUB_ATTRIBUTE_SIZE);
     const trunkAttribute = new Float32Array(canopies.length * TRUNK_ATTRIBUTE_SIZE);
 
     const crownGeometry = buildCrownGeometry();
-    const shrubGeometry = buildShrubGeometry();
     const trunkGeometry = buildSourcedWoodGeometry();
     const placeWholeTree = (
       tree: (typeof canopies)[number],
@@ -88,7 +86,7 @@ export function Treeline() {
     ): void => {
       const leader = trunks[tree.treeId]!;
       const ground = leader.y + TRUNK_SINK;
-      dummy.position.set(leader.x, ground, leader.z);
+      dummy.position.set(leader.x, ground - SOURCE_TREE_SINK, leader.z);
       dummy.rotation.set(0, tree.yaw, 0);
       dummy.scale.set(tree.width, tree.y + tree.height - ground, tree.depth);
     };
@@ -108,25 +106,6 @@ export function Treeline() {
         canopyAttribute[offset] = tree.tint;
         canopyAttribute[offset + 1] = tree.turn;
         canopyAttribute[offset + 2] = tree.family;
-      },
-    );
-    const shrubMesh = buildMesh(
-      'original-hedgerow-shrubs',
-      shrubs,
-      shrubGeometry,
-      makeShrubMaterial({
-        instances: new THREE.InstancedBufferAttribute(
-          shrubAttribute,
-          SHRUB_ATTRIBUTE_SIZE,
-        ),
-      }),
-      (shrub, dummy, index) => {
-        dummy.position.set(shrub.x, shrub.y, shrub.z);
-        dummy.rotation.set(0, shrub.yaw, 0);
-        dummy.scale.set(shrub.width, shrub.height, shrub.depth);
-        const offset = index * SHRUB_ATTRIBUTE_SIZE;
-        shrubAttribute[offset] = shrub.tint;
-        shrubAttribute[offset + 1] = index % 2;
       },
     );
     const trunkMesh = buildMesh(
@@ -150,15 +129,14 @@ export function Treeline() {
     shadows.name = 'original-treeline-shadows';
 
     const crownTriangles = triangleCount(crownGeometry);
-    const shrubTriangles = triangleCount(shrubGeometry);
     const trunkTriangles = triangleCount(trunkGeometry);
     const familyCounts = [0, 1, 2, 3].map(
       (family) => canopies.filter((tree) => tree.family === family).length,
     );
 
     return {
-      objects: [canopyMesh, shrubMesh, trunkMesh, shadows] as const,
-      instanced: [canopyMesh, shrubMesh, trunkMesh] as const,
+      objects: [canopyMesh, trunkMesh, shadows] as const,
+      instanced: [canopyMesh, trunkMesh] as const,
       shadows,
       receipt: {
         source: ACTIVE_SOURCED_CROWN,
@@ -169,9 +147,8 @@ export function Treeline() {
         treeFamilyCounts: familyCounts,
         shrubFamilyCounts: [Math.ceil(shrubs.length / 2), Math.floor(shrubs.length / 2)],
         draws: PROCEDURAL_TREELINE_DRAWS,
-        sourceTriangles: crownTriangles + shrubTriangles + trunkTriangles,
+        sourceTriangles: crownTriangles + trunkTriangles,
         submittedTriangles: crownTriangles * canopies.length
-          + shrubTriangles * shrubs.length
           + trunkTriangles * canopies.length,
         textures: 0,
         opaque: true,

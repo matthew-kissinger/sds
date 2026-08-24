@@ -30,10 +30,10 @@
  */
 
 import type { Heightfield } from '@app/world/heightfield';
+import { HOME_FIELD } from '@sim/field';
 import { BELTS, NEAR_LIMIT, type BeltSpec } from './belts';
 import { WIND_X, WIND_Z } from './foliage';
 import { plantHeroOak } from './heroOak';
-import { plantUnderstory } from './understory';
 import {
   TAU,
   bearingWeight,
@@ -55,6 +55,42 @@ import {
 
 export type { CanopyPlacement, ShrubPlacement, TrunkPlacement, TreelinePlacement };
 
+/** Clear timber from both visible fenced rectangles by more than a trunk
+ * radius. The oriented crown box is conservative for the rounded source shell. */
+export const TREE_FENCE_SAFETY_MARGIN = 1.5;
+export const TREE_FENCED_RECTS = [
+  HOME_FIELD.bounds,
+  { ...HOME_FIELD.pen, minZ: HOME_FIELD.bounds.maxZ },
+] as const;
+
+export function crownOutsideFenceRect(
+  crown: Pick<CanopyPlacement, 'x' | 'z' | 'width' | 'depth' | 'yaw'>,
+  rect: { readonly minX: number; readonly maxX: number; readonly minZ: number; readonly maxZ: number },
+  margin: number = TREE_FENCE_SAFETY_MARGIN,
+): boolean {
+  const cosine = Math.abs(Math.cos(crown.yaw));
+  const sine = Math.abs(Math.sin(crown.yaw));
+  const halfX = cosine * crown.width * 0.5 + sine * crown.depth * 0.5;
+  const halfZ = sine * crown.width * 0.5 + cosine * crown.depth * 0.5;
+  return crown.x + halfX + margin <= rect.minX
+    || crown.x - halfX - margin >= rect.maxX
+    || crown.z + halfZ + margin <= rect.minZ
+    || crown.z - halfZ - margin >= rect.maxZ;
+}
+
+function assertTreesOutsideFences(canopies: readonly CanopyPlacement[]): void {
+  for (const crown of canopies) {
+    for (const rect of TREE_FENCED_RECTS) {
+      if (!crownOutsideFenceRect(crown, rect)) {
+        throw new Error(
+          `tree ${crown.treeId} belt ${crown.belt} overlaps fenced pasture: `
+          + `${JSON.stringify({ x: crown.x, z: crown.z, width: crown.width, depth: crown.depth })}`,
+        );
+      }
+    }
+  }
+}
+
 /**
  * How far due north the near belt opens up, metres, to clear the pen and the
  * farmhouse. The pen pad ends at z = 135 with a 6 m keep-out, so 141 m is the
@@ -64,16 +100,16 @@ const NORTH_PUSH_INNER = 28;
 const NORTH_PUSH_OUTER = 40;
 
 /**
- * FOUR TREE FAMILIES, which is this pass's answer to "break the belt's egg
- * language".
+ * FOUR FOX-HYBRID PROFILES. They keep the selected Round + Spreading language
+ * while preventing the belt from becoming a row of scaled copies.
  *
  * The pass before varied only the proportions of one ellipsoid. These entries
  * select authored single-surface proportions and limb architecture:
  *
- *   broad     as wide as it is tall, the timber the wood is mostly made of
- *   spire     two fifths as wide, and taller than the stand's own draw
- *   orchard   a low fork under a compact round cluster
- *   windswept an asymmetric crown travelling downwind from a rooted bole
+ *   broad     the dominant spreading profile
+ *   compact   the Round parent's higher, contained profile without a spire
+ *   balanced  the midpoint between the two sources
+ *   leaning   a low asymmetric spreading profile
  */
 interface Archetype {
   /** Crown width as a fraction of tree height. */
@@ -85,22 +121,21 @@ interface Archetype {
 }
 
 const BROAD = 0;
-const SPIRE = 1;
-const ORCHARD = 2;
-const WINDSWEPT = 3;
+const COMPACT = 1;
+const BALANCED = 2;
+const LEANING = 3;
 
 const ARCHETYPES: readonly Archetype[] = [
-  { width: [0.8, 0.98], height: 1, family: 0 },
-  { width: [0.36, 0.395], height: 1.08, family: 1 },
-  { width: [0.88, 1.08], height: 0.72, family: 2 },
-  { width: [0.92, 1.15], height: 0.84, family: 3 },
+  { width: [0.92, 1.12], height: 1, family: 0 },
+  { width: [0.84, 1.02], height: 0.9, family: 1 },
+  { width: [0.9, 1.08], height: 0.96, family: 2 },
+  { width: [1.02, 1.22], height: 0.88, family: 3 },
 ];
 
-/** Share of a stand's members drawn from the lower silhouette families and
- * columnar trees. */
-const ORCHARD_SHARE = 0.25;
-const WINDSWEPT_SHARE = 0.22;
-const SPIRE_SHARE = 0.12;
+/** Share of a stand's members drawn from the three secondary hybrid profiles. */
+const BALANCED_SHARE = 0.25;
+const LEANING_SHARE = 0.22;
+const COMPACT_SHARE = 0.12;
 
 /** Bole diameter as a fraction of tree height. */
 const SLENDERNESS = [0.098, 0.13] as const;
@@ -305,13 +340,12 @@ function plantStand(
     if (k === 0) share = 1;
     if (k === 1) share = STAND_RANGE;
 
-    // The archetype draw mixes broad timber, narrow spires and the low spreading
-    // trees that fill the wood's foot.
+    // The archetype draw stays inside the chosen Fox Round + Spreading family.
     const draw = hashUnit(seed, stand.stream + 3);
     let kind = BROAD;
-    if (draw > 1 - SPIRE_SHARE) kind = SPIRE;
-    else if (draw < ORCHARD_SHARE) kind = ORCHARD;
-    else if (draw < ORCHARD_SHARE + WINDSWEPT_SHARE) kind = WINDSWEPT;
+    if (draw > 1 - COMPACT_SHARE) kind = COMPACT;
+    else if (draw < BALANCED_SHARE) kind = BALANCED;
+    else if (draw < BALANCED_SHARE + LEANING_SHARE) kind = LEANING;
     const archetype = ARCHETYPES[kind]!;
 
     const height = Math.max(MIN_HEIGHT, stand.top * share * archetype.height);
@@ -320,7 +354,7 @@ function plantStand(
 
     const turning = hashUnit(seed, stand.stream + 13);
     const yawDraw = hashUnit(seed, stand.stream + 8);
-    const yaw = archetype.family === WINDSWEPT
+    const yaw = archetype.family === LEANING
       ? WIND_BEARING + (yawDraw - 0.5) * 0.24
       : yawDraw * TAU;
     emitTree(
@@ -453,8 +487,8 @@ export function placeTreeline(field: Heightfield): TreelinePlacement {
   const shrubs: ShrubPlacement[] = [];
   const trunks: TrunkPlacement[] = [];
   for (const belt of BELTS) plantBelt(belt, field, canopies, trunks);
-  plantHeroOak(field, canopies, trunks, shrubs);
-  plantUnderstory(field, canopies, trunks, shrubs);
+  plantHeroOak(field, canopies, trunks);
+  assertTreesOutsideFences(canopies);
   // Keep the exact authored population but group the one shared crown draw by
   // family. The vertex shader then derives its family range from instanceIndex
   // without the backend-unsafe vertex read of an instanced buffer attribute.

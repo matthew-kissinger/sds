@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-/** Authored dimensions retained by the placement bake for the one in-field tree. */
+/** Authored dimensions retained by the placement bake for the boundary tree. */
 
-import { ACTIVE_SOURCED_CROWN } from './crownShape';
-
-/** The frozen production route frames this root in a rule-of-thirds region in
- * Classic, Follow and the narrow phone crop. Keeping it down-field of the old position
- * puts crown, forks and roots in one frame instead of leaving only the bole. */
-export const HERO = { x: 0, z: 28 } as const;
+/** The outside-fence hero remains a useful vista anchor in Classic, Follow and
+ * the narrow phone crop while its full crown envelope clears both pastures. */
+export const HERO = { x: 65, z: 112 } as const;
 
 export const BOLE = {
   diameter: 3,
@@ -17,8 +14,8 @@ export const BOLE = {
   tiltZ: -0.03,
 } as const;
 
-/** Three exposed root runs around the hero bole. They use the shared tapered,
- * flared wood geometry and remain part of the existing wood draw. */
+/** The sourced Round bole supplies its own integrated flare, so no separate
+ * root runs are emitted. */
 export const ROOTS: readonly {
   readonly yaw: number;
   readonly length: number;
@@ -67,9 +64,7 @@ export const JOINT_LAP = 1;
 
 /** One dominant field-tree envelope. The active sourced geometry supplies the
  * actual trunk-to-crown relationship and silhouette. */
-const ACTIVE_ENVELOPE = ACTIVE_SOURCED_CROWN === 'fox-broad-spreading'
-  ? { dy: 7.35, width: 14.3, height: 7.75, depth: 10.5 }
-  : { dy: 7.3, width: 10, height: 8.45, depth: 9.4 };
+const ACTIVE_ENVELOPE = { dy: 7.3, width: 12.8, height: 8, depth: 10.1 } as const;
 
 export const HEART = {
   dx: 1.4,
@@ -78,10 +73,3 @@ export const HEART = {
   yaw: 0.7,
   tint: 0.46,
 } as const;
-
-/** One distinct ground-cover asset at the bole contact. */
-export const HERO_SHRUBS = [
-  { dx: 0.3, dz: -0.2, width: 3.4, depth: 2.2, height: 0.58, yaw: 0.35, tint: 0.12 },
-  { dx: -1.1, dz: 0.45, width: 3, depth: 1.9, height: 0.52, yaw: 1.7, tint: 0.2 },
-  { dx: 1.1, dz: 0.8, width: 2.7, depth: 1.7, height: 0.48, yaw: -0.8, tint: 0.08 },
-] as const;

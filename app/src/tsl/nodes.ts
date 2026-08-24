@@ -45,6 +45,7 @@ export const If: (...a: unknown[]) => TSLNode = t.If;
 export const Loop: (...a: unknown[]) => TSLNode = t.Loop;
 export const instancedBufferAttribute: (...a: unknown[]) => TSLNode = t.instancedBufferAttribute;
 export const instancedArray: (...a: unknown[]) => TSLNode = t.instancedArray;
+export const attribute: (...a: unknown[]) => TSLNode = t.attribute;
 export const texture: (...a: unknown[]) => TSLNode = t.texture;
 export const materialReference: (...a: unknown[]) => TSLNode = t.materialReference;
 export const mx_noise_float: (...a: unknown[]) => TSLNode = t.mx_noise_float;

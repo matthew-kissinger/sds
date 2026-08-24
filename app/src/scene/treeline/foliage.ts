@@ -77,19 +77,19 @@ import {
  *
  * Two things move together to fix it: these three colours come up, and the
  * aerial mix below now reaches the near belt at all. The dark note the
- * composition still needs comes from the hero oak, which stands at forty metres
+ * composition still needs comes from the boundary oak, which stands near enough
  * with almost no haze on it and is the one green in the frame that is allowed to
  * go deep.
  */
 /** Crown in shadow. Cool of the body, saturated, still green. */
 export const FOLIAGE_SHADOW = '#47745a';
 /** The body of the crown, and the value the whole treeline is judged on. */
-export const FOLIAGE_BODY = '#718548';
+export const FOLIAGE_BODY = '#63804f';
 /** Crown in full key: the grass hue at nine tenths its value. Warmed onto the
  *  golden key: hue 68 sits between the grass at 73 and the sun's own gold, so
  *  the lit band belongs to the same light as the field rather than reading as a
  *  cooler asset dropped behind it. */
-export const FOLIAGE_LIT = '#bda64f';
+export const FOLIAGE_LIT = '#91a05a';
 /** The one tree in eight already turning. Restraint, not autumn: an 8 degree
  *  hue shift inside the same family at the same value, so a turning crown can
  *  never be the outlier blob a critic points at. */
@@ -155,7 +155,7 @@ export const AERIAL_HAZE = '#e6c49c';
  *
  * What the new run puts on screen, with AERIAL_MAX at 0.40:
  *
- *   hero oak      40 m    0.02 haze   pigment almost untouched, the dark note
+ *   boundary oak  120 m   restrained haze, still the dark note
  *   near belt    111 m    0.25 haze   body band lands level with the grass
  *   middle belt  200 m    0.40 haze   plus 0.11 of scene fog on top
  *   far belt     246 m    0.40 haze   plus 0.24 of scene fog on top

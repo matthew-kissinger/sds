@@ -23,6 +23,7 @@ const flag = (name, fallback = '') => {
 const base = flag('url').replace(/\/$/, '');
 const label = flag('label', 'original-procedural-foliage');
 const onlyScenario = flag('scenario');
+const boundaryHero = argv.includes('--boundary-hero');
 if (!base) throw new Error('--url=<production-preview-url> is required');
 if (!/^[a-z0-9][a-z0-9._-]*$/i.test(label)) throw new Error('invalid label');
 
@@ -40,9 +41,18 @@ const scenarios = [
   { name: 'classic', camera: 'classic', width: 1600, height: 1000, dpr: 1, debug: '', route: [{ keys: ['KeyA'], moveMs: 750 }, { keys: ['KeyW'], moveMs: 2_500 }] },
   { name: 'classic-webgl2', camera: 'classic', width: 1600, height: 1000, dpr: 1, debug: 'webgl', route: [{ keys: ['KeyA'], moveMs: 750 }, { keys: ['KeyW'], moveMs: 2_500 }] },
 ];
-const selectedScenarios = onlyScenario
-  ? scenarios.filter((scenario) => scenario.name === onlyScenario)
+const boundaryRoute = [
+  { keys: ['KeyD', 'KeyW'], moveMs: 8_000 },
+  { keys: ['KeyW'], moveMs: 8_000 },
+  { keys: ['KeyA'], moveMs: 1_500 },
+  { keys: ['KeyW'], moveMs: 1_000 },
+];
+const routedScenarios = boundaryHero
+  ? scenarios.map((scenario) => ({ ...scenario, route: boundaryRoute }))
   : scenarios;
+const selectedScenarios = onlyScenario
+  ? routedScenarios.filter((scenario) => scenario.name === onlyScenario)
+  : routedScenarios;
 if (onlyScenario && selectedScenarios.length === 0) {
   throw new Error(`unknown scenario: ${onlyScenario}`);
 }

@@ -55,6 +55,7 @@ import * as THREE from 'three/webgpu';
 import { PALETTE } from '@app/tsl/palette';
 import {
   abs,
+  attribute,
   color,
   float,
   hash,
@@ -115,7 +116,7 @@ const FLUTTER_LEAN = 0.01;
  * ramp is not what the eye reads.
  */
 const MASS_SCALE = 4.6;
-const MASS_DEPTH = 0.01;
+const MASS_DEPTH = 0.006;
 
 /** Contact shade at the very foot of a crown, and the local height over which
  *  it lifts. Gentler than the last pass's 0.58: the foot of the mass should go
@@ -142,7 +143,7 @@ const CONTACT_HEIGHT = 0.24;
  * field.
  */
 const SKY_LIFT = 0.055;
-const SKY_BOUNCE = 0.045;
+const SKY_BOUNCE = 0.035;
 const BOUNCE_EDGE = [0.15, 0.9] as const;
 const BOUNCE_WARMTH = 0.7;
 
@@ -151,7 +152,7 @@ const BOUNCE_WARMTH = 0.7;
  *  light: it lands on the last handspan of leaf that sees sun, which at a low
  *  golden key is the top and the west shoulder of every crown, and it is what
  *  ties the wood to the same light as the grass and the peach sky. */
-const CROWN_GOLD = 0.065;
+const CROWN_GOLD = 0.025;
 const GOLD_EDGE = 0.88;
 
 /**
@@ -179,7 +180,7 @@ const GOLD_EDGE = 0.88;
  * which is exactly what a far wood should be.
  */
 const MASSING_SCALE = 0.09;
-const MASSING_DEPTH = 0.015;
+const MASSING_DEPTH = 0.008;
 
 /**
  * DAPPLED FOLIAGE, added to nDotL before the bands.
@@ -202,7 +203,7 @@ const MASSING_DEPTH = 0.015;
  * geometry alone, which is all that resolves out there anyway.
  */
 const DAPPLE_SCALE = 1.35;
-const DAPPLE_DEPTH = 0.006;
+const DAPPLE_DEPTH = 0.004;
 
 /**
  * Per-mass brightness spread. Plus or minus two and a half percent, which is a
@@ -269,28 +270,49 @@ export function makeCanopyMaterial(inputs: CanopyMaterialInputs): THREE.MeshBasi
   const afterOak = step(float(CANOPY_FAMILY_STARTS[0]), floatIndex);
   const afterElm = step(float(CANOPY_FAMILY_STARTS[1]), floatIndex);
   const afterAsh = step(float(CANOPY_FAMILY_STARTS[2]), floatIndex);
-  const oak = float(1).sub(afterOak);
-  const elm = afterOak.mul(float(1).sub(afterElm));
-  const ash = afterElm.mul(float(1).sub(afterAsh));
-  const fieldOak = afterAsh;
+  const broad = float(1).sub(afterOak);
+  const compact = afterOak.mul(float(1).sub(afterElm));
+  const balanced = afterElm.mul(float(1).sub(afterAsh));
+  const leaning = afterAsh;
+  const crownPart = attribute('crownPart');
+  const leftLobe = float(1).sub(step(float(0.5), crownPart));
+  const centreLobe = step(float(0.5), crownPart)
+    .mul(float(1).sub(step(float(1.5), crownPart)));
+  const rightLobe = step(float(1.5), crownPart);
   const right = smoothstep(float(0.03), float(0.34), positionLocal.x);
   const left = smoothstep(float(0.03), float(0.34), positionLocal.x.mul(float(-1)));
   const signedOuter = right.sub(left);
   const side = right.add(left);
   const upper = smoothstep(float(0.42), float(0.9), positionLocal.y);
   const familyX = signedOuter.mul(
-    oak.mul(float(0.025))
-      .add(elm.mul(float(-0.035)))
-      .add(ash.mul(upper).mul(float(0.07)))
-      .add(fieldOak.mul(float(0.018))),
-  ).add(right.mul(fieldOak).mul(float(0.035)));
+    broad.mul(float(0.025))
+      .add(compact.mul(float(-0.005)))
+      .add(balanced.mul(upper).mul(float(0.025)))
+      .add(leaning.mul(float(0.018))),
+  ).add(right.mul(leaning).mul(float(0.035)));
   const familyY = upper.mul(
-    oak.mul(side).mul(float(-0.012))
-      .add(elm.mul(float(0.025)))
-      .add(ash.mul(side).mul(float(0.035)))
-      .add(fieldOak.mul(right).mul(float(-0.012))),
+    broad.mul(side).mul(float(-0.012))
+      .add(compact.mul(float(0.01)))
+      .add(balanced.mul(side).mul(float(0.015)))
+      .add(leaning.mul(right).mul(float(-0.012))),
   );
-  const familyPosition = positionLocal.add(vec3(familyX, familyY, float(0)));
+  // Three source-derived lobes remain connected while the baked family order
+  // selects broad, compact and balanced morphology without runtime generation.
+  const lobeX = rightLobe.sub(leftLobe).mul(
+    broad.mul(float(0.03))
+      .add(compact.mul(float(-0.012)))
+      .add(balanced.mul(float(0.012))),
+  );
+  const lobeY = centreLobe.mul(
+    broad.mul(float(-0.012))
+      .add(compact.mul(float(0.02)))
+      .add(balanced.mul(float(0.012))),
+  ).add(leftLobe.mul(compact).mul(float(0.008)));
+  const familyPosition = positionLocal.add(vec3(
+    familyX.add(lobeX),
+    familyY.add(lobeY),
+    float(0),
+  ));
   const outerLobe = smoothstep(
     float(0.08),
     float(0.38),

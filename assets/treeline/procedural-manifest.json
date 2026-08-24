@@ -1,9 +1,9 @@
 {
-  "version": 5,
-  "id": "sourced-fox-tree-candidates-v1",
+  "version": 6,
+  "id": "sourced-fox-hybrid-family-v1",
   "license": "AGPL-3.0-or-later",
   "runtime": "baked-source-geometry-threejs-tsl",
-  "activeCandidate": "fox-broad-spreading",
+  "activeCandidate": "fox-hybrid-family",
   "placement": "assets/treeline/manifest.json",
   "sources": [
     {
@@ -19,7 +19,7 @@
       "materialSource": "assets/treeline/sources/fox-tree-spreading.mtl",
       "sha256": "e1fb728c393a53c55b226df6ab434f8891bf517790a24712514ea145e6564441",
       "materialSha256": "ca81456e4fea21394c6dcfb8d6d8b1a6076c0b6611c5ccf9c5aca34c04f55e83",
-      "generated": "assets/treeline/fox-broad-spreading.json",
+      "generated": "assets/treeline/fox-hybrid-family.json",
       "foliageTriangles": 160,
       "woodTriangles": 164,
       "foliageTuck": 0.05
@@ -37,7 +37,7 @@
       "materialSource": "assets/treeline/sources/fox-tree-round.mtl",
       "sha256": "0185db4da9db2752de368af457044079e2185761bd687e02a177a3a7df20f81d",
       "materialSha256": "dc8d30fc2d4920bf52d52122ffc9b66592cc7fbb4be4030f55ca9f338db3987d",
-      "generated": "assets/treeline/fox-natural-round.json",
+      "generated": "assets/treeline/fox-hybrid-family.json",
       "foliageTriangles": 160,
       "woodTriangles": 202,
       "foliageTuck": 0.075
@@ -61,10 +61,10 @@
   },
   "families": {
     "trees": [
-      { "id": 0, "name": "broad-rooted-oak" },
-      { "id": 1, "name": "rounded-elm" },
-      { "id": 2, "name": "airy-ash" },
-      { "id": 3, "name": "field-oak" }
+      { "id": 0, "name": "fox-broad" },
+      { "id": 1, "name": "fox-compact" },
+      { "id": 2, "name": "fox-balanced" },
+      { "id": 3, "name": "fox-leaning" }
     ],
     "shrubs": [
       { "id": 0, "name": "hawthorn" },
@@ -72,18 +72,18 @@
     ]
   },
   "geometry": {
-    "crownTriangles": 160,
+    "crownTriangles": 480,
     "shrubTriangles": 320,
-    "trunkTriangles": 164
+    "trunkTriangles": 202
   },
-  "familyDeformation": "deterministic seeded whole-tree yaw and proportional width, height and depth variation over one complete source silhouette",
+  "familyDeformation": "deterministic broad, balanced and compact instance morphology over three source-derived lobes, with base-pinned Round fork lean",
   "motion": "Herd TSL base-pinned travelling gust with restrained whole-crown follow-through",
   "field": {
     "treeInstances": 209,
-    "shrubInstances": 153,
+    "shrubInstances": 0,
     "woodInstances": 209,
-    "draws": 4,
-    "submittedTrianglesBeforeShadows": 116676,
+    "draws": 3,
+    "submittedTrianglesBeforeShadows": 142538,
     "textures": 0,
     "externalModels": 0,
     "sourceModels": 2

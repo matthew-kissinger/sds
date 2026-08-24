@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * The in-field hero oak: one leader, nine joined bough segments, one connected
- * umbrella canopy and one separate low bramble collar. Every terminal piece of
+ * The boundary hero oak: one leader, nine joined bough segments, one connected
+ * umbrella canopy with a quiet sunk flare. Every terminal piece of
  * wood ends deep inside the single crown surface; there are no foliage
  * satellites and therefore no seams that can read as floating leaf balloons.
  */
@@ -15,7 +15,6 @@ import {
   limbRotation,
   limbTip,
   type CanopyPlacement,
-  type ShrubPlacement,
   type TrunkPlacement,
 } from './placement';
 import {
@@ -23,7 +22,6 @@ import {
   BOUGHS,
   HEART,
   HERO,
-  HERO_SHRUBS,
   JOINT_LAP,
   OUTER_GIRTH,
   ROOTS,
@@ -77,7 +75,6 @@ export function plantHeroOak(
   field: Heightfield,
   canopies: CanopyPlacement[],
   trunks: TrunkPlacement[],
-  shrubs: ShrubPlacement[],
 ): void {
   const ground = field.groundY(HERO.x, HERO.z);
   const treeId = trunks.length;
@@ -139,22 +136,4 @@ export function plantHeroOak(
     belt: 3,
     collisionRadius: 0,
   });
-
-  for (const authored of HERO_SHRUBS) {
-    const shrubX = HERO.x + authored.dx;
-    const shrubZ = HERO.z + authored.dz;
-    shrubs.push({
-      x: shrubX,
-      y: field.groundY(shrubX, shrubZ) - 0.17,
-      z: shrubZ,
-      width: authored.width,
-      height: authored.height + 0.17,
-      depth: authored.depth,
-      yaw: authored.yaw,
-      tint: authored.tint,
-      treeId,
-      belt: 3,
-      collisionRadius: 0,
-    });
-  }
 }

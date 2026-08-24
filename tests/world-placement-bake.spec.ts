@@ -56,7 +56,7 @@ describe('world placement bake', () => {
 });
 
 describe('committed treeline structure', () => {
-  it('stores exactly one rooted tree placement and separate rooted shrubs', () => {
+  it('stores exactly one rooted tree placement with no tree-base shrubs', () => {
     const treeIds = new Set<number>();
     for (const crown of treeline.canopies) {
       expect(crown.support).toBe(crown.treeId);
@@ -68,15 +68,10 @@ describe('committed treeline structure', () => {
     }
     expect(treeline.canopies.length).toBeGreaterThanOrEqual(160);
     expect(treeline.canopies.length).toBeLessThanOrEqual(210);
-    expect(treeline.shrubs.length).toBeGreaterThanOrEqual(80);
-    expect(treeline.shrubs.length).toBeLessThanOrEqual(180);
-    for (const shrub of treeline.shrubs) {
-      expect(treeIds.has(shrub.treeId)).toBe(true);
-      expect(shrub.belt).toBe(treeline.canopies.find((crown) => crown.treeId === shrub.treeId)!.belt);
-    }
+    expect(treeline.shrubs).toHaveLength(0);
   });
 
-  it('measures grounded roots, ring coverage and rooted shrub groups', () => {
+  it('measures sunk trunks and ring coverage without root clutter', () => {
     const receipt = measureTreeline(treeline, terrain);
     expect(receipt.treeGroundErrorMax).toBeLessThanOrEqual(0.05);
     expect(receipt.treeCanopyInstancesMax).toBe(1);
@@ -97,16 +92,16 @@ describe('committed treeline structure', () => {
     expect(receipt.treeCompositeSecondGapDegrees).toBeLessThanOrEqual(18);
     for (const share of receipt.treeQuadrantMinShare) expect(share).toBeGreaterThanOrEqual(0.16);
     for (const share of receipt.treeQuadrantMaxShare) expect(share).toBeLessThanOrEqual(0.4);
-    expect(receipt.treeShrubRootGapMax).toBeLessThanOrEqual(6);
+    expect(receipt.treeShrubRootGapMax).toBe(0);
     expect(receipt.treeShrubDetached).toBe(0);
-    expect(receipt.treeShrubBurialMin).toBeGreaterThanOrEqual(0.2);
-    expect(receipt.treeShrubBurialMax).toBeLessThanOrEqual(0.35);
-    expect(receipt.treeShrubHeightShareMax).toBeLessThanOrEqual(0.25);
-    expect(receipt.treeShrubGroupMin).toBeGreaterThanOrEqual(2);
-    expect(receipt.treeShrubGroupMax).toBeLessThanOrEqual(4);
+    expect(receipt.treeShrubBurialMin).toBe(0);
+    expect(receipt.treeShrubBurialMax).toBe(0);
+    expect(receipt.treeShrubHeightShareMax).toBe(0);
+    expect(receipt.treeShrubGroupMin).toBe(0);
+    expect(receipt.treeShrubGroupMax).toBe(0);
   });
 
-  it('rejects lifted roots, duplicate tree placements and detached shrubs', () => {
+  it('rejects lifted trunks and duplicate tree placements', () => {
     const leaderIndex = treeline.trunks.findIndex((trunk, index) => trunk.shade === 0 && trunk.treeId === index);
     const crown = treeline.canopies[0]!;
     expect(leaderIndex).toBeGreaterThanOrEqual(0);
@@ -120,11 +115,6 @@ describe('committed treeline structure', () => {
     const duplicate = { ...treeline, canopies: [...treeline.canopies, { ...crown }] };
     expect(measureTreeline(duplicate, terrain).treeSingleCanopyViolations).toBeGreaterThan(0);
 
-    const detachedShrub = {
-      ...treeline,
-      shrubs: treeline.shrubs.map((shrub, index) => index === 0 ? { ...shrub, x: shrub.x + 30 } : shrub),
-    };
-    expect(measureTreeline(detachedShrub, terrain).treeShrubDetached).toBeGreaterThan(0);
   });
 
   it('keeps every transform finite and all treeline collision radii disabled', () => {

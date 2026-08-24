@@ -3,12 +3,11 @@
 /** CC0 source geometry adapted offline into Herd's crown contract. */
 
 import * as THREE from 'three/webgpu';
-import fox from '../../../../assets/treeline/fox-broad-spreading.json';
-import round from '../../../../assets/treeline/fox-natural-round.json';
+import hybrid from '../../../../assets/treeline/fox-hybrid-family.json';
 
-export type SourcedCrownId = 'fox-broad-spreading' | 'fox-natural-round';
-export const ACTIVE_SOURCED_CROWN: SourcedCrownId = 'fox-broad-spreading';
-const CANDIDATES = { 'fox-broad-spreading': fox, 'fox-natural-round': round } as const;
+export type SourcedCrownId = 'fox-hybrid-family';
+export const ACTIVE_SOURCED_CROWN: SourcedCrownId = 'fox-hybrid-family';
+const CANDIDATES = { 'fox-hybrid-family': hybrid } as const;
 
 export function sourcedCrownReceipt(id: SourcedCrownId = ACTIVE_SOURCED_CROWN) {
   const candidate = CANDIDATES[id];
@@ -16,8 +15,10 @@ export function sourcedCrownReceipt(id: SourcedCrownId = ACTIVE_SOURCED_CROWN) {
     id: candidate.id,
     foliageTriangles: candidate.geometry.foliage.triangles,
     woodTriangles: candidate.geometry.wood.triangles,
-    source: candidate.provenance.source,
-    sha256: candidate.provenance.sha256,
+    foliageSource: candidate.provenance.foliageSource,
+    foliageSha256: candidate.provenance.foliageSha256,
+    woodSource: candidate.provenance.woodSource,
+    woodSha256: candidate.provenance.woodSha256,
   } as const;
 }
 
@@ -38,7 +39,7 @@ export function buildCrownGeometry(
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(source.normals, 3));
   geometry.setAttribute(
     'crownPart',
-    new THREE.Float32BufferAttribute(new Float32Array(source.positions.length / 3), 1),
+    new THREE.Float32BufferAttribute(source.parts, 1),
   );
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();

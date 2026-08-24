@@ -162,14 +162,9 @@ export function rockTransforms(field: Heightfield): RockTransform[] {
 export const LOG_LENGTH = 4.8;
 
 /**
- * One log, out toward the hero oak, crossing the right third of the Follow
- * frame.
- *
- * IT MOVED TO THE TREE. spec/04 puts a hero oak at (-36, 78) and a fallen log is
- * a fallen tree: standing one 22 m from the other, on a different bearing, said
- * they were unrelated props. This anchor is 12 m south of the bole, close enough
- * that the two read as one event and far enough that the log is not inside the
- * oak's own shadow pool.
+ * One log crossing the right third of the Follow frame. The boundary tree moved
+ * beyond the fence, so this remains an independent inside-field dressing
+ * landmark rather than following it through the rails.
  *
  * ITS BEARING IS MEASURED AGAINST THE CAMERA, NOT AGAINST THE FIELD. A trunk
  * lying along the view direction foreshortens to a stub, and 4.8 m of horizontal
@@ -183,17 +178,8 @@ export const LOG_LENGTH = 4.8;
  * nearest the camera's right edge, and the trunk tapers away across frame to the
  * splintered break.
  *
- * IT MOVED OFF THE OAK'S OWN BEARING, and that is the one correction this anchor
- * needed. The hero oak sits at lane offset -31.9 and the log was authored at
- * -31.5: four tenths of a metre apart across a lane that both gameplay cameras
- * look straight down. Two objects at the same lane offset are on the same
- * bearing by construction, and the capture showed the result - the branch stub
- * rose out of the barrel and merged into the bole of the tree behind it, so the
- * one silhouette detail that says "this limb broke off" was reading as part of
- * the trunk. At -33.2 the log stands 1.3 m to the near side of that line, which
- * is eighty-odd pixels of daylight between the stub and the bole at Follow
- * range, and the log is still close enough to the tree that the two read as one
- * event.
+ * The lane offset remains -33.2 so the branch stub does not merge into the dog
+ * or the fence in either gameplay camera.
  */
 export const FALLEN_LOG = { ...beside(0.674, -33.2), yaw: 0.222 } as const;
 
