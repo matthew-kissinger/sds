@@ -113,15 +113,62 @@ const foliageManifest = JSON.parse(
 );
 if (
   foliageManifest.license !== 'AGPL-3.0-or-later'
-  || foliageManifest.runtime !== 'procedural-threejs-tsl'
+  || foliageManifest.runtime !== 'baked-source-geometry-threejs-tsl'
+  || foliageManifest.activeCandidate !== 'fox-hybrid-family'
   || foliageManifest.field?.externalModels !== 0
+  || foliageManifest.field?.sourceModels !== 2
 ) {
-  fail('foliage source ledger is not original procedural AGPL work');
+  fail('foliage source ledger is not the approved Fox hybrid family');
+}
+
+const expectedFoxSources = new Map([
+  ['fox-broad-spreading', {
+    sourceSha256: 'e1fb728c393a53c55b226df6ab434f8891bf517790a24712514ea145e6564441',
+    materialSha256: 'ca81456e4fea21394c6dcfb8d6d8b1a6076c0b6611c5ccf9c5aca34c04f55e83',
+  }],
+  ['fox-natural-round', {
+    sourceSha256: '0185db4da9db2752de368af457044079e2185761bd687e02a177a3a7df20f81d',
+    materialSha256: 'dc8d30fc2d4920bf52d52122ffc9b66592cc7fbb4be4030f55ca9f338db3987d',
+  }],
+]);
+if (!Array.isArray(foliageManifest.sources) || foliageManifest.sources.length !== expectedFoxSources.size) {
+  fail('foliage source ledger does not contain exactly the two approved Fox sources');
+}
+for (const source of foliageManifest.sources) {
+  const expected = expectedFoxSources.get(source.id);
+  if (
+    !expected
+    || source.author !== 'mehrasaur'
+    || source.license !== 'CC0-1.0'
+    || source.archiveSha256 !== 'f18e963af10d3b3f05205eff0907f7b5a3c2c06b846f8c3c8c31e94652adac7f'
+    || source.generated !== 'assets/treeline/fox-hybrid-family.json'
+  ) {
+    fail(`unapproved foliage source entry: ${String(source.id)}`);
+  }
+  for (const [pathKey, digestKey, expectedDigest] of [
+    ['source', 'sha256', expected.sourceSha256],
+    ['materialSource', 'materialSha256', expected.materialSha256],
+  ]) {
+    const relativePath = source[pathKey];
+    const absolutePath = typeof relativePath === 'string'
+      ? join(repo, ...relativePath.split('/'))
+      : '';
+    if (!absolutePath || !existsSync(absolutePath)) {
+      fail(`foliage source absent: ${String(relativePath)}`);
+    }
+    const digest = createHash('sha256').update(readFileSync(absolutePath)).digest('hex');
+    if (source[digestKey] !== expectedDigest || digest !== expectedDigest) {
+      fail(`foliage source digest mismatch: ${relativePath}`);
+    }
+  }
+  for (const relativePath of [source.licenseSnapshot, source.generated]) {
+    if (typeof relativePath !== 'string' || !existsSync(join(repo, ...relativePath.split('/')))) {
+      fail(`foliage provenance file absent: ${String(relativePath)}`);
+    }
+  }
 }
 for (const path of [
   foliageManifest.placement,
-  foliageManifest.concept?.path,
-  foliageManifest.concept?.provenance,
   foliageManifest.recipe?.assembly,
   ...(foliageManifest.recipe?.geometry ?? []),
   ...(foliageManifest.recipe?.materials ?? []),
@@ -130,7 +177,9 @@ for (const path of [
     fail(`procedural foliage source absent: ${String(path)}`);
   }
 }
-const builtExternalModels = distFiles.filter((path) => extname(path).toLowerCase() === '.glb');
+const builtExternalModels = distFiles.filter((path) => (
+  ['.glb', '.gltf', '.obj', '.mtl'].includes(extname(path).toLowerCase())
+));
 if (builtExternalModels.length > 0) {
   fail(`external model entered dist: ${builtExternalModels.map((path) => relative(dist, path))}`);
 }

@@ -12,10 +12,13 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
 - Runtime uses Herd TSL canopy and wood materials, deterministic whole-tree
   proportional variation, three instanced geometry draws plus one pooled
   shadow draw, zero textures and zero runtime model loads.
-- Final active Spreading field: 209 trees, 153 shrubs, 116,676 submitted
-  triangles before shadows, zero unsupported crowns, zero exposed diagnostic
-  terminals and zero vertical drift. WebGPU, WebGL2, Follow, Classic and phone
-  captures completed without page, request or model-load errors.
+- Owner selected a Round and Spreading hybrid as the one shipped family.
+  Final placement has 139 trees, no shrubs, no exposed root runs and a 2.6049
+  metre minimum conservative same-belt crown gap. The source shell is buried
+  at contact and the trunk has a positive base flare.
+- The final runtime submits three instanced geometry draws and 94,798 triangles
+  before pooled shadows. WebGPU, WebGL2, Follow, Classic and phone captures
+  completed without page, request or model-load errors.
 
 ## 2026-08-22 corrective playtest pass
 
@@ -40,8 +43,10 @@ Original prompt: Make the solo-times leaderboard accessible before play, with op
 ## Verification complete
 
 - Lint and client plus Worker typechecks passed.
-- All 77 test files and 610 tests passed.
+- All 77 test files and 613 tests passed after the Fox hybrid import.
 - Production build, discovery gate, and release probe passed.
+- The release probe verifies the exact two CC0 Fox source digests, local
+  license snapshot, baked runtime family and absence of model files in `dist`.
 - Responsive UI probe passed desktop, tablet, phone portrait, phone landscape,
   and reduced-motion cases with no errors, overflow, or undersized controls.
 - The required web-game browser client opened the Times dialog successfully.

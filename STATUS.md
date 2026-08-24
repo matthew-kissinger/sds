@@ -19,6 +19,9 @@ deployment claim.
   owner approval of the same full release-candidate commit SHA.
 - Player-facing branding is `Sheepdog Sim`. The `3.0.0` number is retained only
   in package, migration and release records.
+- The owner selected the CC0 Fox Trees Pack Round and Spreading hybrid for the
+  shipped treeline. The final field contains 139 trees outside the fence, no
+  understory shrubs and no exposed root runs.
 
 ## Passed evidence before public import
 
@@ -35,12 +38,12 @@ deployment claim.
 ## Clean SDS candidate evidence
 
 - Lint passed. Client and Worker TypeScript checks passed.
-- 77 test files and 610 tests passed.
+- 77 test files and 613 tests passed after the Fox hybrid import.
 - Root and Worker dependency audits report zero vulnerabilities.
 - Gitleaks 8.30.1 scanned 12.50 MB with no findings. Direct runtime and build
   dependencies report MIT, ISC, Apache-2.0 or dual MIT/Apache licensing.
-- The production build contains 232 modules. Initial JavaScript is 579,858
-  gzip bytes. Estimated first transfer is 5,760,560 bytes across 35 files,
+- The production build contains 231 modules. Initial JavaScript is 612,634
+  gzip bytes. Estimated first transfer is 5,768,165 bytes across 35 files,
   below the 8 MiB release limit.
 - The audio bake reproduced 17 files and 2,784,342 bytes exactly.
 - Owner accepted the current audio on 2026-08-24. Keep the procedural runtime
@@ -49,6 +52,9 @@ deployment claim.
   independent esbuild and Vite bundles.
 - Actual WebGPU and forced WebGL2 running-game captures passed at 1,600 by
   1,000 with four foliage draws and no runtime errors.
+- The selected Fox hybrid passed its final running-game capture with three
+  foliage geometry draws, 94,798 submitted triangles before shadows and a
+  WebGPU p95 frame time of about 7 ms.
 - Desktop, tablet, phone portrait, phone landscape and reduced-motion UI probes
   passed with no clipped content or controls below 44 CSS pixels. This is
   Chromium touch emulation, not a physical-device receipt.
@@ -78,15 +84,11 @@ deployment claim.
 - Complete a physical iOS or Android playtest. Browser touch emulation already
   covers portrait and landscape layout, joystick, bark, camera and pause.
 - Capture the remaining final launch screenshot set from the accepted commit.
-- Foliage reached its five-iteration review limit without a visual acceptance.
-  The final technical pass was stable, but the hero crown still reads flatter
-  than the grass, the east-fence hedge is not legible in captures, and sway is
-  difficult to read. This is an explicit screenshot-quality launch risk.
 - After production approval, update the stale GitHub description/topics,
   redirect `www.sheepdogsim.com` and `sds-frontend.pages.dev` to the apex, and
   submit the sitemap in Google Search Console and Bing Webmaster Tools.
 
 ## Open questions
 
-- Whether the owner accepts the current foliage as a version 3.0 launch risk or
-  defers the launch for a separate art-direction pass.
+- None for the approved treeline. Physical-device and final launch-media
+  receipts remain release follow-up evidence.

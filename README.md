@@ -22,8 +22,8 @@ Online identity and score requests are fail-soft. Play, completion and local
 personal bests continue when the score service is unavailable.
 
 Play the current public release at [sheepdogsim.com](https://sheepdogsim.com).
-Version 3 replaces the public client only after its release candidate passes the
-checks described below.
+This repository is the current Sheepdog Sim 3 codebase. Production releases
+are built from an exact commit and expose that identity in `release.json`.
 
 ## Controls
 
@@ -83,6 +83,8 @@ authority for the scene and player interface.
 The field is assembled from reproducible source:
 
 - terrain, grass, treeline and scatter placement are deterministic bakes;
+- the treeline uses the CC0 Fox Trees Pack Round and Spreading sources, adapted
+  into a deterministic cel-shaded family with no runtime model loading;
 - sheep, dog, fences and farm structures are code-authored geometry;
 - material and atmosphere systems are TSL source;
 - every audio file is deterministic in-repo synthesis with a runnable recipe
