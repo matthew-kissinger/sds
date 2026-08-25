@@ -23,7 +23,15 @@ import {
   createDogMotion,
 } from '@app/scene/dog/dogMotion';
 import { smoothHeadingInto } from '@app/scene/flock/headingSmoothing';
-import { SHEEP_HEADING_STEP_LIMIT } from '@app/scene/flock/flockTuning';
+import {
+  HOOF_LIFT,
+  SHEEP_HEADING_STEP_LIMIT,
+  SHEEP_MAX_SPEED_MPS,
+  SHEEP_STANCE_SHARE,
+  sheepGaitRateForAgitation,
+  sheepLegPose,
+  sheepStrideForAgitation,
+} from '@app/scene/flock/flockTuning';
 import {
   SHEEP_HOOF_BASELINE,
   SHEEP_AUTHORED_LEG_SPAN,
@@ -112,8 +120,6 @@ describe('animal terrain planting', () => {
     for (let tick = 0; tick < 180; tick++) {
       sim.step(DRIVE, FIXED_DT);
       const phase = tick * 0.137;
-      const phaseSin = Math.sin(phase);
-      const phaseCos = Math.cos(phase);
       const stride = 0.24;
       for (let i = 0; i < sim.headings.length; i++) {
         const x = sim.positions[i * 2]!;
@@ -130,14 +136,15 @@ describe('animal terrain planting', () => {
           1.08,
           1.04,
           contact,
-          (foot === 0 || foot === 3 ? 1 : -1) * phaseSin * stride,
+          sheepLegPose(phase, foot === 0 || foot === 3 ? 1 : -1).travel * stride,
         ));
         const c = Math.cos(yaw);
         const s = Math.sin(yaw);
         for (const sole of SHEEP_HOOF_SOLE_POINTS) {
-          if (phaseCos * sole.legSign > 1e-6) continue;
+          const pose = sheepLegPose(phase, sole.legSign);
+          if (!pose.planted) continue;
           const localX = sole.x * 0.93;
-          const localZ = (sole.z + phaseSin * sole.legSign * stride) * 1.04;
+          const localZ = (sole.z + pose.travel * stride) * 1.04;
           const footX = x + c * localX + s * localZ;
           const footZ = z - s * localX + c * localZ;
           const renderedY = rootGround - SHEEP_HOOF_BASELINE * 1.08
@@ -156,7 +163,9 @@ describe('animal terrain planting', () => {
     let maxSpan = 0;
     for (let tick = 0; tick < 180; tick++) {
       sim.step(DRIVE, FIXED_DT);
-      const swing = Math.sin(tick * 0.137) * 0.24;
+      const phase = tick * 0.137;
+      const positiveSwing = sheepLegPose(phase, 1).travel * 0.24;
+      const negativeSwing = sheepLegPose(phase, -1).travel * 0.24;
       for (let i = 0; i < sim.headings.length; i++) {
         const x = sim.positions[i * 2]!;
         const z = sim.positions[i * 2 + 1]!;
@@ -173,7 +182,8 @@ describe('animal terrain planting', () => {
           0.93,
           1.08,
           1.04,
-          swing,
+          positiveSwing,
+          negativeSwing,
         );
         for (const offset of offsets) {
           maxOffset = Math.max(maxOffset, Math.abs(offset));
@@ -200,6 +210,54 @@ describe('animal terrain planting', () => {
       }
     }
     expect(maxError).toBeLessThan(1e-6);
+  });
+});
+
+describe('sheep gait', () => {
+  it('plants backward and recovers forward while lifted', () => {
+    const strike = sheepLegPose(0, 1);
+    const toeOff = sheepLegPose((SHEEP_STANCE_SHARE - 1e-4) * Math.PI * 2, 1);
+    const recovery = sheepLegPose(
+      (SHEEP_STANCE_SHARE + (1 - SHEEP_STANCE_SHARE) * 0.5) * Math.PI * 2,
+      1,
+    );
+    const nextStrike = sheepLegPose((1 - 1e-4) * Math.PI * 2, 1);
+
+    expect(strike.planted).toBe(true);
+    expect(strike.travel).toBeCloseTo(1, 6);
+    expect(toeOff.planted).toBe(true);
+    expect(toeOff.travel).toBeLessThan(-0.99);
+    expect(recovery.planted).toBe(false);
+    expect(recovery.lift).toBeCloseTo(1, 6);
+    expect(recovery.travel).toBeCloseTo(0, 6);
+    expect(nextStrike.planted).toBe(false);
+    expect(nextStrike.travel).toBeGreaterThan(0.99);
+  });
+
+  it('reduces planted-foot travel error without over-speeding the walk', () => {
+    for (const agitation of [0.1, 0.25]) {
+      const stride = sheepStrideForAgitation(agitation);
+      const rate = sheepGaitRateForAgitation(agitation);
+      const bodyTravelDuringStance = agitation * SHEEP_MAX_SPEED_MPS
+        * SHEEP_STANCE_SHARE * Math.PI * 2 / rate;
+      const plantedHoofSweep = stride * 2;
+      const forwardSlip = bodyTravelDuringStance - plantedHoofSweep;
+
+      expect(forwardSlip).toBeGreaterThanOrEqual(0);
+      expect(forwardSlip / bodyTravelDuringStance).toBeLessThan(0.15);
+      expect(rate / (Math.PI * 2)).toBeLessThan(1.8);
+    }
+  });
+
+  it('keeps rest breathing slow and caps the running cadence', () => {
+    expect(sheepGaitRateForAgitation(0)).toBeCloseTo(1.6, 6);
+    expect(sheepGaitRateForAgitation(1)).toBeLessThanOrEqual(14);
+  });
+
+  it('makes walking travel read wider than its vertical hoof lift', () => {
+    const stride = sheepStrideForAgitation(0.25);
+    expect(stride).toBeGreaterThan(0.2);
+    expect(stride * HOOF_LIFT).toBeLessThan(0.12);
   });
 });
 

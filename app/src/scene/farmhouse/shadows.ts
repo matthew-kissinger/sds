@@ -41,7 +41,7 @@ import * as THREE from 'three/webgpu';
 import { SUN_DIRECTION } from '@app/tsl/palette';
 import { color, float, uv } from '@app/tsl/nodes';
 import { CAST_SHADOW, CAST_SHADOW_OPACITY } from './palette';
-import type { GroundSample } from './ground';
+export type GroundSample = (x: number, z: number) => number;
 
 /** How far above the ground the slab is laid. The fence uses 0.09; this is a
  *  broader surface and wants to clear the same blades. */

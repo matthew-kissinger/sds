@@ -1,6 +1,8 @@
 # Sheepdog Sim 3 release status
 
-Updated 2026-08-24 after the version 3 production cutover.
+Updated 2026-08-24 with the approved loading, launch-media and audio-restoration
+follow-up. The deployed `release.json` remains the authority for production
+commit identity.
 
 ## Production state
 
@@ -29,8 +31,7 @@ Updated 2026-08-24 after the version 3 production cutover.
 
 - 51 test files and 327 tests passed in the clean-room candidate.
 - Lint, TypeScript, production build and release-surface probe passed.
-- The 17 runtime audio files rebuild byte-identically from original,
-  dependency-free synthesis recipes.
+- The 17 runtime audio files are pinned by size and SHA-256 in a source ledger.
 - WebGPU and forced WebGL2 foliage captures matched with four foliage draws,
   276,110 submitted triangles, no textures and no external models.
 - Standalone grass WebGL2 motion evidence found no sharp seam, rhythmic
@@ -47,9 +48,9 @@ Updated 2026-08-24 after the version 3 production cutover.
 - The production build contains 231 modules. Initial JavaScript is 612,634
   gzip bytes. Estimated first transfer is 5,768,165 bytes across 35 files,
   below the 8 MiB release limit.
-- The audio bake reproduced 17 files and 2,784,342 bytes exactly.
-- Owner accepted the current audio on 2026-08-24. Keep the procedural runtime
-  set unchanged; the reduced foreground-audio fallback is not needed.
+- The procedural replacement passed deterministic bake checks but was not
+  owner-accepted for sound character. Treat its inclusion in the public
+  cutover as a release regression, not an approved audio decision.
 - The deterministic simulation produced 23,563 identical bytes through the
   independent esbuild and Vite bundles.
 - Actual WebGPU and forced WebGL2 running-game captures passed at 1,600 by
@@ -79,6 +80,54 @@ Updated 2026-08-24 after the version 3 production cutover.
   Pages preview before merge. The owner then requested the production cutover.
 
 ## Post-release follow-up evidence
+
+### Approved follow-up release
+
+- The 17 actual ElevenLabs-generated MP3 assets from commit `6380fe64` are
+  restored without changing the audio graph, buses or scheduler. This
+  is the earlier 1,255,526-byte set the owner preferred, with the rejected
+  insects and wind loops still absent.
+
+- The blank post-React paper wash is replaced by an immediate loading card.
+  Its percentage is derived from observed terrain, grass, treeline and scatter
+  bytes plus renderer initialization, capability measurement, mounted scene,
+  shader compilation and the first presented frame. It cannot publish 100%
+  before the field has drawn.
+- `npm run probe:boot` now measures the public DOM contract and records named
+  `herd:boot:*` performance marks without relying on the retired debug readout.
+- Two final cold probes reached Play-ready in 2,299 to 2,371 ms on desktop and
+  5,009 to 5,175 ms under 4x CPU plus 9 Mbps mobile emulation. The honest
+  progress card reached `Field ready` without page, request or response errors,
+  but both results miss the 2,000 ms desktop target and the mobile result is 9
+  to 175 ms over its 5,000 ms target. This remains a measured post-release
+  optimization risk rather than an unreported pass.
+- The candidate passes lint, client and Worker TypeScript, dependency audits,
+  production build and 78 test files with 627 tests. The build contains 234
+  modules and 614,466 gzip bytes of initial JavaScript. Its estimated first
+  transfer is 4,009,011 bytes after restoring the smaller MP3 source set.
+- The Open Graph image and GitHub social preview now use a reproducible
+  200-sheep Follow-camera gameplay capture. The GitHub JPEG is 221,312 bytes.
+  The capture forces the real WebGL2 fallback because first-context headless
+  WebGPU screenshots can return a clear canvas; gameplay uses the same TSL
+  material path on both backends.
+- React Three Fiber is now named in the README and package keywords. The
+  repository topic remains a separate metadata follow-up.
+- The loading card and title state share the same boot-grid cell, keeping the
+  loading card vertically and horizontally centered. Desktop 1,440 by 900 and
+  mobile 390 by 844 screenshots passed owner review.
+- Portrait Follow uses a wider lens, higher seat and shorter look-ahead. The
+  packaged 390 by 844, 200-sheep probe kept the dog framed, held the joystick
+  and dedicated Sprint button together, drained stamina from 100 to 76 and fit
+  `200 / 200` inside the progress circle. Desktop movement, bark, pause and
+  resume also completed without console, page, request or response errors.
+- Dog markings now remain attached through vertex deformation; farmhouse dirt
+  remains only inside the pen; sheep cheek wool and upper-leg widths are
+  balanced; and the asymmetric gait plants backward, recovers forward and
+  folds the airborne leg rearward without the rejected body stomp. Matt
+  approved the local candidate and authorized commit, push and deployment.
+- The restored MP3 runtime passed the production-preview audio lifecycle probe:
+  one graph, gesture unlock, five non-duplicated loops, pause/resume, restart,
+  visibility, mute/volume and positional bark all passed with no media errors.
 
 - Complete the desktop, mobile, offline-score and service-worker transition
   matrix in `docs/launch/v3-launch-pack.md`.

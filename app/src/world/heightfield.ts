@@ -38,6 +38,7 @@ import {
   type TerrainPad,
 } from './heightfieldSampler';
 import { TERRAIN_MANIFEST, TERRAIN_PADS } from './terrainLayout';
+import { loadAssetBytes, type LoadProgress } from '@app/boot/loadAsset';
 
 export type { TerrainPad, HeightfieldManifest };
 export { Heightfield };
@@ -61,14 +62,8 @@ let field: Heightfield = flatHeightfield(TERRAIN_MANIFEST);
 let pending: Promise<Heightfield> | null = null;
 
 /** Fetch and decode once. Repeat calls share the first promise. */
-export function loadHeightfield(): Promise<Heightfield> {
-  pending ??= fetch(HEIGHTFIELD_URL)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`heightfield.bin: ${response.status} ${response.statusText}`);
-      }
-      return response.arrayBuffer();
-    })
+export function loadHeightfield(onProgress?: LoadProgress): Promise<Heightfield> {
+  pending ??= loadAssetBytes(HEIGHTFIELD_URL, 'heightfield.bin', onProgress)
     .then((bytes) => {
       field = decodeHeightfield(bytes, TERRAIN_MANIFEST);
       return field;

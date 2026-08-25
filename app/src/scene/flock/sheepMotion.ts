@@ -9,7 +9,7 @@
  *
  *   fleece   a seeded lump field, per instance, so no two sheep in the flock
  *            carry the same crease in the same place
- *   flex     the middle leg rings take weight while shoulder and sole stay fixed
+ *   flex     the airborne middle leg folds rearward while both endpoints hold
  *   jiggle   the fleece lags the body by about a third of a cycle, which is the
  *            only cue in the asset that says the wool has mass
  *   stride   diagonal leg pairs, amplitude from agitation
@@ -44,9 +44,8 @@
 
 import {
   clamp,
-  cos,
   float,
-  max as tslMax,
+  fract,
   mix,
   normalLocal,
   positionLocal,
@@ -56,7 +55,12 @@ import {
   vec3,
   type TSLNode,
 } from '@app/tsl/nodes';
-import { HOOF_LIFT, STRIDE_RUN, STRIDE_WALK } from './flockTuning';
+import {
+  HOOF_LIFT,
+  SHEEP_STANCE_SHARE,
+  STRIDE_RUN,
+  STRIDE_WALK,
+} from './flockTuning';
 import { SHEEP_TERRAIN_OFFSET_LIMIT } from './terrainPlanting';
 
 /** The per-instance wool lump: two octaves in cycles per metre, and how far
@@ -101,9 +105,11 @@ function paintedFleeceField(point: TSLNode): TSLNode {
  *  half a metre per second still visibly steps. */
 const WALK_KNEE = 4;
 
-/** Mid-leg flex at rest and the extra at a full bolt, m. Endpoints stay fixed. */
-const FLEX_REST = 0.008;
-const FLEX_RUN = 0.035;
+/** Rearward fold of the middle leg during airborne recovery, as a fraction of
+ * stride. The shoulder and hoof stay on the authored path while the joint tucks
+ * behind them, avoiding the forward-bending silhouette that reads as a reversed
+ * walk cycle. */
+const LEG_RECOVERY_FOLD = 0.5;
 
 /** How far moving fleece lags the body, radians, and how far it travels. Idle
  * sheep keep the collar and body vertically still on the live title scene. */
@@ -174,15 +180,10 @@ export function createSheepMotion(
     );
   const fleeceLump = normalLocal.mul(lump.mul(masks.x));
 
-  // Flex at twice the gait: endpoints remain fixed while the middle rings take
-  // the weight shift. Moving the barrel upward while pinning only the sole
-  // stretched the thin dark legs into stilts in gameplay captures.
+  // Twice-gait phase remains useful for small fleece follow-through. Leg flex
+  // itself is derived from the airborne recovery below so it bends in a clear
+  // anatomical direction instead of merely squashing the limb vertically.
   const bobArg = gait.mul(float(2));
-  const legFlex = tslMax(sin(bobArg), float(0))
-    .mul(sin(legs.y.mul(float(Math.PI))))
-    .mul(tslMax(legs.x, legs.x.mul(float(-1))))
-    .mul(float(FLEX_REST).add(agitation.mul(float(FLEX_RUN))))
-    .mul(float(-1));
   // Wool carrying a graze mask is the collar around the buried skull root.
   // Keep that join planted while the rest of the fleece retains its secondary
   // motion; lifting only the collar made the neck appear to telescope.
@@ -221,18 +222,41 @@ export function createSheepMotion(
     .mul(float(RESPONSE_JIGGLE))
     .mul(motionScale);
   const stride = walk.mul(float(STRIDE_WALK)).add(agitation.mul(float(STRIDE_RUN)));
-  const swing = sin(gait).mul(legs.x).mul(legs.y).mul(stride);
-  const hoof = tslMax(cos(gait).mul(legs.x), float(0))
+  // A short planted interval moves backward under the body; the longer recovery
+  // moves forward while visibly airborne. The former symmetric sine made the
+  // world-space foot travel forward with the sheep and read as reverse walking.
+  const positivePair = step(float(0), legs.x);
+  const pairOffset = float(1).sub(positivePair).mul(float(0.5));
+  const legTurn = fract(gait.mul(float(1 / (Math.PI * 2))).add(pairOffset));
+  const recovery = step(float(SHEEP_STANCE_SHARE), legTurn);
+  const stanceT = clamp(
+    legTurn.mul(float(1 / SHEEP_STANCE_SHARE)),
+    float(0),
+    float(1),
+  );
+  const recoveryT = clamp(
+    legTurn.sub(float(SHEEP_STANCE_SHARE)).mul(float(1 / (1 - SHEEP_STANCE_SHARE))),
+    float(0),
+    float(1),
+  );
+  const stanceTravel = float(1).sub(stanceT.mul(float(2)));
+  const recoveryTravel = smoothstep(float(0), float(1), recoveryT)
+    .mul(float(2))
+    .sub(float(1));
+  const swing = mix(stanceTravel, recoveryTravel, recovery)
     .mul(legs.y)
-    .mul(stride)
-    .mul(float(HOOF_LIFT));
+    .mul(stride);
+  const recoveryArc = sin(recoveryT.mul(float(Math.PI)))
+    .mul(recovery)
+    .mul(stride);
+  const hoof = recoveryArc.mul(legs.y).mul(float(HOOF_LIFT));
+  const legFold = recoveryArc
+    .mul(sin(legs.y.mul(float(Math.PI))))
+    .mul(float(-LEG_RECOVERY_FOLD));
 
   // Wool follow-through and mid-leg flex never translate either endpoint of a
   // leg. There is therefore no body-to-hoof span inflation hidden in the pose.
-  const rise = jiggle
-    .add(responseJiggle)
-    .add(legFlex.mul(motionScale))
-    .add(hoof);
+  const rise = jiggle.add(responseJiggle).add(hoof);
 
   // Four CPU samples, selected by authored leg quadrant. Applied only down the
   // leg and after the body pitch, so every stance sole lands on the visible
@@ -252,7 +276,7 @@ export function createSheepMotion(
       const woolly = base.add(fleeceLump);
       const life = vec3(tailWiggle.add(earSide.mul(earFlick)), 0, 0);
       const posed = woolly
-        .add(vec3(0, rise, swing))
+        .add(vec3(0, rise, swing.add(legFold)))
         .add(life);
       return posed.add(vec3(0, terrainLift, 0));
     },

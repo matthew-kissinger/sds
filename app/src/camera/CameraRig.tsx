@@ -30,7 +30,7 @@
  * production bundle ignores that override and exposes only the in-game toggle.
  */
 
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
 import { debugFlags } from '@app/scene/glFactory';
@@ -39,6 +39,7 @@ import { createClassicFraming } from './classicFraming';
 import { createFollowFraming } from './followFraming';
 import { MAX_FRAME_DT, MODE_BLEND_SECONDS, easeInOut } from './feel';
 import { useReducedMotion } from '@app/ui/useReducedMotion';
+import { cameraViewProfile } from './viewProfile';
 import {
   COMPLETION_CAMERA_SECONDS,
   advanceCompletion,
@@ -50,7 +51,12 @@ const FORCE_FOLLOW = DEBUG.has('follow');
 
 export function CameraRig() {
   const camera = useThree((state) => state.camera);
+  const size = useThree((state) => state.size);
   const reducedMotion = useReducedMotion();
+  const view = useMemo(
+    () => cameraViewProfile(size.width / Math.max(1, size.height)),
+    [size.height, size.width],
+  );
 
   const rig = useMemo(
     () => ({
@@ -72,6 +78,10 @@ export function CameraRig() {
     [],
   );
 
+  useLayoutEffect(() => {
+    rig.follow.setView(view.follow);
+  }, [rig, view]);
+
   useFrame((_, delta) => {
     const { sim, cameraMode, gamePhase } = useGameStore.getState();
 
@@ -88,6 +98,13 @@ export function CameraRig() {
     rig.blend += Math.max(-step, Math.min(step, remaining));
 
     const weight = easeInOut(rig.blend);
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const targetFov = 45 + (view.fov - 45) * weight;
+      if (Math.abs(camera.fov - targetFov) > 0.01) {
+        camera.fov = targetFov;
+        camera.updateProjectionMatrix();
+      }
+    }
     rig.position.lerpVectors(rig.classic.position, rig.follow.position, weight);
     rig.aim.lerpVectors(rig.classic.aim, rig.follow.aim, weight);
 

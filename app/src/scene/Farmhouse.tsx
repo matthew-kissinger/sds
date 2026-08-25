@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * The homestead on the pad beyond the pen: an L-plan farmhouse, a barn and a
- * lean-to, standing at the head of a worn drive that runs down toward the gate.
+ * lean-to, standing in the grass beyond the pen.
  *
  * IT IS A DISTANCE ASSET AND IT IS BUILT LIKE ONE. At roughly 100 m the frame
  * gives eight pixels to the metre, so this cluster is authored as silhouette,
@@ -19,8 +19,8 @@
  * fence into an approach, and it puts a fixed landmark up-field so the
  * world-locked Classic camera has something to be locked against.
  *
- * ELEVEN DRAW CALLS, one per surface: limewash, slate, rust boards, weathered
- * board, warm stone and masonry, dark openings, lamplit glass, trodden ground,
+ * TEN DRAW CALLS, one per surface: limewash, slate, rust boards, weathered
+ * board, warm stone and masonry, dark openings, lamplit glass,
  * the shadows the buildings cast on it, the inverted hull that keeps the roofline
  * off the treeline, and the smoke. The whole cluster is welded into one buffer
  * per material at build time (farmhouse/shell.ts), so adding a third outbuilding
@@ -43,7 +43,6 @@ import {
   makeOutlineMaterial,
   makeTimberMaterial,
   makeWallMaterial,
-  makeYardMaterial,
 } from './farmhouse/materials';
 import { makeRoofMaterial } from './farmhouse/roofMaterial';
 import { makeShadowMaterial } from './farmhouse/shadows';
@@ -52,8 +51,8 @@ import { makeSmokeMaterial } from './farmhouse/smoke';
 export function Farmhouse() {
   const field = useHeightfield();
 
-  // The pad is flat, so the buildings need one sample; the drive and the cast
-  // shadows run off it onto the rim, so those sample per vertex through the same
+  // The pad is flat, so the buildings need one sample; the cast shadows run off
+  // it onto the rim, so those sample per vertex through the same
   // function every ground-sitting object in the game reads (spec/04). It is
   // called through the field rather than detached from it: `groundY` is a method
   // and reads its own decoded array.
@@ -71,7 +70,6 @@ export function Farmhouse() {
       dress: makeDressMaterial(),
       opening: makeOpeningMaterial(),
       lamp: makeLampMaterial(),
-      ground: makeYardMaterial(),
       shadow: makeShadowMaterial(),
       outline: makeOutlineMaterial(),
       smoke: makeSmokeMaterial(),
@@ -92,7 +90,6 @@ export function Farmhouse() {
     <group>
       {/* The hull first: back faces only, so it is behind everything it edges. */}
       <mesh geometry={g.outline} material={materials.outline} />
-      <mesh geometry={g.ground} material={materials.ground} />
       <mesh geometry={g.wall} material={materials.wall} />
       <mesh geometry={g.roof} material={materials.roof} />
       <mesh geometry={g.barn} material={materials.barn} />

@@ -79,7 +79,8 @@ const DIAGONAL = Math.SQRT1_2;
 
 export function PostProcessing() {
   const quality = useGameStore((state) => state.quality);
-  const renderTier = resolvedRenderTier(quality);
+  const autoTierReceipt = useGameStore((state) => state.autoTierReceipt);
+  const renderTier = resolvedRenderTier(quality, autoTierReceipt);
   return renderTier === 'high' ? <HighPostProcessing /> : null;
 }
 

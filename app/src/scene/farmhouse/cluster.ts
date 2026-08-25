@@ -6,7 +6,7 @@
  *
  * WHAT GOES IN WHICH BUFFER IS A MATERIAL DECISION, not a structural one. Walls,
  * house slate, barn boards, timber, dressings, dark openings, lit openings,
- * ground, cast shadow, outline hull and smoke are eleven draw calls, and the
+ * cast shadow, outline hull and smoke are ten draw calls, and the
  * split exists so each takes its own band set. Anything that would fit an
  * existing band set goes into that buffer rather than earning a new one.
  *
@@ -16,7 +16,7 @@
 
 import * as THREE from 'three/webgpu';
 import { Shell, offsetStand, stand, type Stand } from './shell';
-import { GroundShell, apron, drive, yard, type GroundSample } from './ground';
+import type { GroundSample } from './shadows';
 import { gableWalls, leanTo, logStack, openingPanel } from './parts';
 import { BASE_X as CHIMNEY_HALF_X, BASE_Z as CHIMNEY_HALF_Z, chimney, potLocal } from './chimney';
 import { roofHull } from './hull';
@@ -25,16 +25,12 @@ import { courseRoof, roofSurfaceLocal, type RoofSpec } from './roof';
 import { buildSmoke } from './smoke';
 import { LENGTH, boxCaster, buildShadows, type Caster } from './shadows';
 import {
-  APRON_BIAS,
-  APRON_REACH,
   BARN,
   BARN_AT,
   BARN_YAW,
   CHIMNEY_AT,
   CHIMNEY_DOWN,
   CHIMNEY_RISE,
-  DRIVE,
-  DRIVE_HALF,
   HOUSE,
   HOUSE_AT,
   LEANTO_AT,
@@ -45,7 +41,6 @@ import {
   WING_ALONG,
   WING_OUT,
   WING_SKEW,
-  YARDS,
   YAW,
 } from './plan';
 
@@ -57,7 +52,6 @@ export interface FarmhouseGeometry {
   readonly dress: THREE.BufferGeometry;
   readonly opening: THREE.BufferGeometry;
   readonly lamp: THREE.BufferGeometry;
-  readonly ground: THREE.BufferGeometry;
   readonly shadow: THREE.BufferGeometry;
   readonly outline: THREE.BufferGeometry;
   readonly smoke: THREE.BufferGeometry;
@@ -86,24 +80,6 @@ function toWorld(place: Stand, p: readonly [number, number, number]): [number, n
   return [place.x + p[0] * cos + p[2] * sin, place.y + p[1], place.z - p[0] * sin + p[2] * cos];
 }
 
-/** The pad and everything worn into it: yards, drive, and a contact apron per mass. */
-function buildGround(sample: GroundSample, places: readonly [Stand, RoofSpec][]): THREE.BufferGeometry {
-  const ground = new GroundShell(sample);
-  for (const [x, z, r] of YARDS) yard(ground, x, z, r);
-  drive(ground, DRIVE, DRIVE_HALF);
-  for (const [place, spec] of places) {
-    apron(ground, place.x, place.z, place.yaw, spec.length / 2, spec.width / 2, APRON_REACH, APRON_BIAS);
-  }
-
-  const { positions, normals, uvs } = ground.attributes();
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  geometry.computeBoundingSphere();
-  return geometry;
-}
-
 /** The three marks the cluster lays on the grass under this sun. */
 function buildCasters(house: Stand, wing: Stand, barn: Stand): readonly Caster[] {
   const stack = toWorld(house, [CHIMNEY_AT, 0, CHIMNEY_DOWN]);
@@ -130,7 +106,7 @@ function buildCasters(house: Stand, wing: Stand, barn: Stand): readonly Caster[]
 /**
  * Build the whole cluster against the one `groundY` every ground-sitting object
  * in the game reads (spec/04). The pad is flat, so the buildings take a single
- * sample; the drive and the cast shadows leave the pad, so those sample per
+ * sample; the cast shadows leave the pad, so those sample per
  * vertex.
  */
 export function buildFarmhouse(sample: GroundSample): Farmstead {
@@ -201,11 +177,6 @@ export function buildFarmhouse(sample: GroundSample): Farmstead {
       dress: dress.build()!,
       opening: opening.build()!,
       lamp: lamp.build()!,
-      ground: buildGround(sample, [
-        [house, HOUSE],
-        [wing, WING],
-        [barn, BARN],
-      ]),
       shadow: buildShadows(buildCasters(house, wing, barn), sample),
       outline: hull.build()!,
       smoke: buildSmoke(pot[0], pot[1], pot[2]),

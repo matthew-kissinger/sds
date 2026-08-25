@@ -10,11 +10,13 @@ import {
 import { useReducedMotion } from './useReducedMotion';
 import { PlayerIdentity } from '@app/scores/PlayerIdentity';
 import { LeaderboardPanel } from '@app/scores/LeaderboardPanel';
+import { bootPercent, bootStatus } from '@app/boot/progress';
 
 export function Boot() {
   const startGame = useGameStore((state) => state.startGame);
   const openSettings = useGameStore((state) => state.openSettings);
   const sceneReady = useGameStore((state) => state.sceneReady);
+  const bootProgress = useGameStore((state) => state.bootProgress);
   const gamePhase = useGameStore((state) => state.gamePhase);
   const defaultFlockSize = useGameStore((state) => state.flockSize);
   const [flockSize, setFlockSize] = useState<FlockSize>(defaultFlockSize);
@@ -23,6 +25,8 @@ export function Boot() {
   const timeout = useRef<number | null>(null);
   const timesButton = useRef<HTMLButtonElement | null>(null);
   const reducedMotion = useReducedMotion();
+  const percent = sceneReady ? 100 : bootPercent(bootProgress);
+  const status = sceneReady ? 'Field ready' : bootStatus(bootProgress);
 
   const closeTimes = () => {
     setShowTimes(false);
@@ -52,9 +56,33 @@ export function Boot() {
       className="herd-boot"
       data-ready={sceneReady}
       data-leaving={leaving}
+      data-progress={percent}
+      data-stage={status}
       aria-busy={!sceneReady}
     >
       <div className="herd-boot__wash" aria-hidden="true" />
+      {!sceneReady ? (
+        <section className="herd-loading-card" role="status" aria-live="polite">
+          <div className="herd-loading-card__lockup">
+            <h1>Sheepdog Sim</h1>
+            <p>Preparing one field</p>
+          </div>
+          <div
+            className="herd-loading-track"
+            role="progressbar"
+            aria-label="Loading the game"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+          >
+            <span style={{ width: `${percent}%` }} />
+          </div>
+          <p className="herd-loading-status">
+            <span>{status}</span>
+            <span>{percent}%</span>
+          </p>
+        </section>
+      ) : null}
       <main className="herd-title-card" inert={showTimes ? true : undefined}>
         <div className="herd-title-lockup">
           <h1 className="herd-title">Sheepdog Sim</h1>

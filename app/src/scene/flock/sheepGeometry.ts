@@ -111,12 +111,13 @@ const BODY_PUFFS: readonly BodyPuff[] = [
   { cx: 0.04, cy: 0.26, cz: 0.31, rx: 0.19, ry: 0.15, rz: 0.2, tx: 0.06, ty: 0.12, tz: 0, blend: 0.82 },
   { cx: -0.03, cy: 0.3, cz: 0.035, rx: 0.2, ry: 0.09, rz: 0.24, tx: 0.02, ty: -0.3, tz: 0.05, blend: 0.82 },
   // A paired shoulder ruff is the second layer of the fleece. It rises around
-  // the buried head root and overlaps the cheek. Only the outer five to eight
-  // centimetres stand proud of the core: enough to read as wool at Classic
-  // distance without turning the sheep into a string of beads.
+  // the buried head root and overlaps the cheek. The two lobes keep slightly
+  // different heights and depths, but their outer reaches are balanced around
+  // the face. The former +x lobe was nearly twice the width of its partner and
+  // repeated as an obvious extra tuft on the same side of every sheep.
   // Explicit spins keep every earlier puff's authored contour stable.
-  { cx: 0.22, cy: 0.465, cz: 0.405, rx: 0.275, ry: 0.32, rz: 0.275, tx: -0.41, ty: 0.64, tz: -0.73, blend: 0.72, spin: 16, graze: 0.18 },
-  { cx: -0.18, cy: 0.51, cz: 0.39, rx: 0.145, ry: 0.225, rz: 0.21, tx: 0.77, ty: -0.48, tz: 0.36, blend: 0.78, spin: 17, graze: 0.14 },
+  { cx: 0.19, cy: 0.49, cz: 0.4, rx: 0.21, ry: 0.26, rz: 0.23, tx: -0.41, ty: 0.64, tz: -0.73, blend: 0.72, spin: 16, graze: 0.18 },
+  { cx: -0.18, cy: 0.5, cz: 0.39, rx: 0.18, ry: 0.235, rz: 0.21, tx: 0.77, ty: -0.48, tz: 0.36, blend: 0.78, spin: 17, graze: 0.14 },
   // A centre-front lock surrounds the buried root without climbing into a pale
   // vertical connector. Its width remains broad enough to be the collar from
   // which the visible muzzle emerges.

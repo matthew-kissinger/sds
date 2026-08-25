@@ -35,10 +35,67 @@ export const TAU = Math.PI * 2;
 export const GAIT_REST = 1.6;
 export const GAIT_WALK = 3;
 export const GAIT_RUN = 5.2;
-export const STRIDE_WALK = 0.15;
+export const STRIDE_WALK = 0.18;
 export const STRIDE_RUN = 0.1;
 /** Hoof clearance as a fraction of fore-aft stride. */
-export const HOOF_LIFT = 0.55;
+export const HOOF_LIFT = 0.52;
+
+/**
+ * A planted foot needs this phase rate:
+ *
+ *   body speed * pi * stance share / stride
+ *
+ * because its planted interval sweeps from +stride to -stride. Keeping stance
+ * shorter than recovery allows an ordinary walking cadence to hold the ground,
+ * then gives the hoof longer to lift and return forward. Full lock at a bolt
+ * would still cycle implausibly fast, so the request is capped before blending.
+ */
+export const SHEEP_STANCE_SHARE = 0.34;
+const GAIT_LOCK_BLEND = 0.85;
+const GAIT_LOCK_RATE_MAX = 14;
+
+export interface SheepLegPose {
+  /** -1 at the back reach, +1 at the front reach. */
+  readonly travel: number;
+  /** 0 on stance, 0..1..0 through the forward recovery. */
+  readonly lift: number;
+  readonly planted: boolean;
+}
+
+function unitTurn(turns: number): number {
+  return turns - Math.floor(turns);
+}
+
+/** CPU twin of the TSL leg curve used for terrain contact and regression tests. */
+export function sheepLegPose(gait: number, legSign: number): SheepLegPose {
+  const turn = unitTurn(gait / TAU + (legSign < 0 ? 0.5 : 0));
+  if (turn < SHEEP_STANCE_SHARE) {
+    const t = turn / SHEEP_STANCE_SHARE;
+    return { travel: 1 - t * 2, lift: 0, planted: true };
+  }
+  const t = (turn - SHEEP_STANCE_SHARE) / (1 - SHEEP_STANCE_SHARE);
+  const eased = t * t * (3 - 2 * t);
+  return { travel: -1 + eased * 2, lift: Math.sin(t * Math.PI), planted: false };
+}
+
+export function sheepStrideForAgitation(agitation: number): number {
+  const level = Math.min(Math.max(agitation, 0), 1);
+  const walk = Math.min(level * WALK_KNEE, 1);
+  return walk * STRIDE_WALK + level * STRIDE_RUN;
+}
+
+export function sheepGaitRateForAgitation(agitation: number): number {
+  const level = Math.min(Math.max(agitation, 0), 1);
+  const walk = Math.min(level * WALK_KNEE, 1);
+  const authored = GAIT_REST + walk * GAIT_WALK + level * GAIT_RUN;
+  const stride = sheepStrideForAgitation(level);
+  if (stride <= 1e-6) return authored;
+  const planted = Math.min(
+    level * SHEEP_MAX_SPEED_MPS * Math.PI * SHEEP_STANCE_SHARE / stride,
+    GAIT_LOCK_RATE_MAX,
+  );
+  return authored + Math.max(planted - authored, 0) * GAIT_LOCK_BLEND;
+}
 
 /** Agitation at which the walk is fully open. Matches WALK_KNEE in the motion
  *  module, because the two curves have to describe the same animal. */

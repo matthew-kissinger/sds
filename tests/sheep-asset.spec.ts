@@ -178,6 +178,36 @@ describe('the instanced sheep asset', () => {
     }
   });
 
+  it('keeps the upper legs narrower than the planted hooves', () => {
+    geometry = buildSheepGeometry();
+    const position = geometry.getAttribute('position');
+    const legs = geometry.getAttribute('uv1');
+    const upperRings = new Map<string, { minX: number; maxX: number }>();
+
+    for (let i = 0; i < position.count; i++) {
+      if (Math.abs(legs.getX(i)) < 0.5 || legs.getY(i) > 0.21) continue;
+      const x = position.getX(i);
+      const side = x < 0 ? 'left' : 'right';
+      const key = `${position.getY(i).toFixed(3)}:${position.getZ(i) > 0 ? 'front' : 'back'}:${side}`;
+      const ring = upperRings.get(key) ?? { minX: Infinity, maxX: -Infinity };
+      ring.minX = Math.min(ring.minX, x);
+      ring.maxX = Math.max(ring.maxX, x);
+      upperRings.set(key, ring);
+    }
+
+    const upperWidths = [...upperRings.values()].map((ring) => ring.maxX - ring.minX);
+    expect(upperWidths).toHaveLength(8);
+    expect(Math.max(...upperWidths)).toBeLessThanOrEqual(0.131);
+
+    // Hoof dimensions stay at the accepted readable footprint even though the
+    // shank above them is now slimmer during a stride.
+    const hoofWidths = Array.from({ length: 4 }, (_, contact) => {
+      const sole = SHEEP_HOOF_SOLE_POINTS.filter((point) => point.contact === contact);
+      return Math.max(...sole.map(({ x }) => x)) - Math.min(...sole.map(({ x }) => x));
+    });
+    expect(Math.min(...hoofWidths)).toBeGreaterThan(0.115);
+  });
+
   it('drops the fleece over the upper legs while keeping the hooves planted', () => {
     geometry = buildSheepGeometry();
     const position = geometry.getAttribute('position');
@@ -226,7 +256,43 @@ describe('the instanced sheep asset', () => {
     expect(woolMaxX - woolMinX).toBeGreaterThan(0.82);
     expect(woolMaxX - woolMinX).toBeLessThan(0.95);
     expect(ruffVertices).toBeGreaterThan(20);
-    expect(ruffMaxX - ruffMinX).toBeGreaterThan(0.79);
+    // Keep enough collar to bury the head root, while allowing the former
+    // oversized side lobe to come back into balance with its partner.
+    expect(ruffMaxX - ruffMinX).toBeGreaterThan(0.75);
+  });
+
+  it('balances the paired cheek ruff without making it mechanically mirrored', () => {
+    geometry = buildSheepGeometry();
+    const position = geometry.getAttribute('position');
+    const masks = geometry.getAttribute('uv');
+    const lobes = new Map<number, { minX: number; maxX: number; minY: number; maxY: number }>([
+      [0.18, { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }],
+      [0.14, { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }],
+    ]);
+
+    for (let i = 0; i < position.count; i++) {
+      if (masks.getX(i) <= 0.5) continue;
+      const graze = [...lobes.keys()].find((value) => Math.abs(masks.getY(i) - value) < 1e-5);
+      if (graze === undefined) continue;
+      const lobe = lobes.get(graze)!;
+      lobe.minX = Math.min(lobe.minX, position.getX(i));
+      lobe.maxX = Math.max(lobe.maxX, position.getX(i));
+      lobe.minY = Math.min(lobe.minY, position.getY(i));
+      lobe.maxY = Math.max(lobe.maxY, position.getY(i));
+    }
+
+    const positive = lobes.get(0.18)!;
+    const negative = lobes.get(0.14)!;
+    const positiveReach = positive.maxX;
+    const negativeReach = Math.abs(negative.minX);
+    const positiveWidth = positive.maxX - positive.minX;
+    const negativeWidth = negative.maxX - negative.minX;
+
+    // The collar can keep hand-shaped variation, but neither side may repeat
+    // as a conspicuous extra tuft beside every sheep's head.
+    expect(Math.abs(positiveReach - negativeReach)).toBeLessThan(0.06);
+    expect(Math.max(positiveWidth, negativeWidth) / Math.min(positiveWidth, negativeWidth)).toBeLessThan(1.25);
+    expect(Math.abs((positive.maxY - positive.minY) - (negative.maxY - negative.minY))).toBeGreaterThan(0.015);
   });
 
   it('connects the forelock to a deep central brisket', () => {

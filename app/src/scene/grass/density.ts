@@ -3,8 +3,8 @@
 /**
  * Grass densities selected by the measured boot capability tier
  * (`quality/autoTier.ts`). The renderer backend and a device-pixel-ratio-scaled
- * offscreen fill determine auto; settings can override high/low. The result is
- * held for the session, never adjusted by a per-frame governor.
+ * offscreen fill and device profile determine auto; settings can override all
+ * three tiers. A passive frame-budget check may only demote Auto after warmup.
  *
  * The presets are FRACTIONS of what the bake committed, not counts, because the
  * tier is a prefix of the same buffer (tuftData.ts). Rebaking at a different
@@ -20,7 +20,7 @@
  * and costs not one extra vertex.
  */
 
-export type GrassPreset = 'high' | 'low';
+export type GrassPreset = 'high' | 'medium' | 'low';
 
 export interface GrassDensity {
   /** Fraction of the baked interactive tier to draw. */
@@ -39,11 +39,13 @@ export interface GrassDensity {
 export const GRASS_PRESETS: Record<GrassPreset, GrassDensity> = {
   /** Desktop: every tuft the bake placed, at the size it was authored. */
   high: { field: 1, surround: 1, spread: 1 },
+  /** Balanced phone/desktop tier: materially less vertex work, same coverage. */
+  medium: { field: 0.7, surround: 0.7, spread: 1.18 },
   /**
    * Touch: half the tufts, spread wide enough to still close. That is half the
    * vertex load of the desktop field with the full flock intact - spec/08 is
    * explicit that grass is what gets cut and gameplay entities are what never
    * do, so the flock size is untouched here.
    */
-  low: { field: 0.5, surround: 0.5, spread: 1.28 },
+  low: { field: 0.42, surround: 0.42, spread: 1.34 },
 };

@@ -8,7 +8,7 @@
  *
  * THE PADS DECIDE THE PLACE. assets/terrain/manifest.json declares one flat
  * `farmhouse` rect east of the pen and one `barn` rect north of it. The house
- * keeps the corner nearest the gate so its drive still explains the approach.
+ * keeps the corner nearest the gate so it still anchors the approach.
  * The barn now stands beyond the retirement pasture, with its whole footprint
  * north of the back rail and enough grass between the two to keep both silhouettes
  * readable.
@@ -110,7 +110,7 @@ export const BARN: RoofSpec = {
  * entirely off-screen. The pad's rect starts at x = 40 and the baked heightfield
  * is flat from the pen's own pad all the way across (both declare level -0.608),
  * so the west end of the range now sits a little proud of the rect on ground that
- * is level to the centimetre, and the whole cluster - drive, yard, shadow and all
+ * is level to the centimetre, and the whole cluster - building, shadow and all
  * - clears the frame edge at the two gameplay framings.
  */
 export const HOUSE_AT = { x: 45.6, z: 113 } as const;
@@ -156,36 +156,3 @@ export const CHIMNEY_RISE = 1.6;
 /** Where the lean-to sits along the main range's sunlit wall, and how wide. */
 export const LEANTO_AT = 6.65;
 export const LEANTO_HALF = 1.8;
-
-/**
- * The drive, leaving the yard and running down to the gate. It threads the two
- * metre corridor between the perimeter fence at z = 100 and the pen's south fence
- * at z = 102 (sim/field.ts), which is the only way to the opening, and it stops a
- * few metres short of the gate mouth so it never argues with the gate's geometry.
- */
-export const DRIVE: readonly (readonly [number, number])[] = [
-  [45.5, 104.9],
-  [42, 104.1],
-  [39, 103.6],
-  [34, 102.6],
-  [28.5, 101.8],
-  [22, 101.4],
-  [15, 101.1],
-  [9, 100.95],
-  [5, 100.9],
-];
-/** Half the width of the worn core, metres. A cart and its verges. */
-export const DRIVE_HALF = 2.4;
-
-/** The two beaten patches of yard: one at the house door, one at the barn. */
-export const YARDS: readonly (readonly [number, number, number])[] = [
-  [43, 107.5, 12],
-  [BARN_AT.x, BARN_AT.z, 9.5],
-];
-
-/**
- * How far the contact shadow reaches out from a wall, and which way it leans.
- * Narrow: a wide one reads as paving rather than as bedding.
- */
-export const APRON_REACH = 1.9;
-export const APRON_BIAS: readonly [number, number] = [0.62, -0.74];

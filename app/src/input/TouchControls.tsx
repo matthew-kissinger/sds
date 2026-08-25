@@ -5,10 +5,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { barkPressed, toggleCameraMode } from './actions';
 import {
   beginTouchStick,
+  endAllTouch,
   endTouchStick,
+  setTouchSprint,
   setTouchStick,
   DEADZONE,
-  SPRINT_DEFLECTION,
   STICK_RADIUS,
 } from './touch';
 import { debugFlags } from '@app/scene/glFactory';
@@ -38,32 +39,48 @@ export function TouchControls() {
   const ringRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const pointerId = useRef<number | null>(null);
+  const sprintPointerId = useRef<number | null>(null);
+  const sprintRef = useRef<HTMLButtonElement>(null);
   const origin = useRef({ x: 0, y: 0 });
 
-  const release = useCallback(() => {
+  const releaseStick = useCallback(() => {
     pointerId.current = null;
     endTouchStick();
     const ring = ringRef.current;
     const knob = knobRef.current;
     if (ring) {
       ring.style.opacity = '0';
-      ring.dataset.sprinting = 'false';
     }
     if (knob) knob.style.transform = 'translate(0px, 0px)';
   }, []);
 
+  const releaseSprint = useCallback(() => {
+    sprintPointerId.current = null;
+    setTouchSprint(false);
+    if (sprintRef.current) {
+      sprintRef.current.dataset.active = 'false';
+      sprintRef.current.setAttribute('aria-pressed', 'false');
+    }
+  }, []);
+
+  const releaseAll = useCallback(() => {
+    releaseStick();
+    releaseSprint();
+    endAllTouch();
+  }, [releaseSprint, releaseStick]);
+
   useEffect(() => {
     const releaseOnHide = () => {
-      if (document.visibilityState !== 'visible') release();
+      if (document.visibilityState !== 'visible') releaseAll();
     };
-    window.addEventListener('blur', release);
+    window.addEventListener('blur', releaseAll);
     document.addEventListener('visibilitychange', releaseOnHide);
     return () => {
-      window.removeEventListener('blur', release);
+      window.removeEventListener('blur', releaseAll);
       document.removeEventListener('visibilitychange', releaseOnHide);
-      release();
+      releaseAll();
     };
-  }, [release]);
+  }, [releaseAll]);
 
   if (!present || gamePhase !== 'playing') return null;
 
@@ -95,17 +112,27 @@ export function TouchControls() {
     const deflection = Math.min(distance / STICK_RADIUS, 1);
     const unitX = distance > 0 ? dx / distance : 0;
     const unitY = distance > 0 ? dy / distance : 0;
-    const sprinting = deflection >= SPRINT_DEFLECTION;
-
-    if (deflection < DEADZONE) setTouchStick(0, 0, false);
-    else setTouchStick(unitX * deflection, -unitY * deflection, sprinting);
+    if (deflection < DEADZONE) setTouchStick(0, 0);
+    else setTouchStick(unitX * deflection, -unitY * deflection);
 
     const travel = deflection * STICK_RADIUS;
     if (knobRef.current) {
       knobRef.current.style.transform =
         `translate(${unitX * travel}px, ${unitY * travel}px)`;
     }
-    if (ringRef.current) ringRef.current.dataset.sprinting = String(sprinting);
+  };
+
+  const onSprintDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (sprintPointerId.current !== null) return;
+    sprintPointerId.current = event.pointerId;
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // A synthetic probe can provide an already-released pointer.
+    }
+    setTouchSprint(true);
+    event.currentTarget.dataset.active = 'true';
+    event.currentTarget.setAttribute('aria-pressed', 'true');
   };
 
   return (
@@ -115,20 +142,34 @@ export function TouchControls() {
         data-testid="touch-stick-zone"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={release}
-        onPointerCancel={release}
-        onLostPointerCapture={release}
+        onPointerUp={releaseStick}
+        onPointerCancel={releaseStick}
+        onLostPointerCapture={releaseStick}
       >
         <div
           ref={ringRef}
           className="herd-touch-ring"
           style={{ '--herd-stick-radius': `${STICK_RADIUS}px` } as React.CSSProperties}
-          data-sprinting="false"
           data-testid="touch-stick"
         >
           <div ref={knobRef} className="herd-touch-knob" />
         </div>
       </div>
+      <button
+        ref={sprintRef}
+        type="button"
+        className="herd-sprint-button"
+        data-active="false"
+        data-testid="sprint-button"
+        aria-label="Hold to sprint"
+        aria-pressed="false"
+        onPointerDown={onSprintDown}
+        onPointerUp={releaseSprint}
+        onPointerCancel={releaseSprint}
+        onLostPointerCapture={releaseSprint}
+      >
+        Sprint
+      </button>
       <button
         type="button"
         className="herd-bark-button"

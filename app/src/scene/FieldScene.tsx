@@ -24,6 +24,9 @@ import { loadHeightfield } from '@app/world/heightfield';
 import { loadTufts } from './grass/tuftData';
 import { loadTreelineManifest } from './treeline/manifest';
 import { loadScatterManifest } from './scatter/manifest';
+import type { BootStep } from '@app/boot/progress';
+
+type BootReporter = (step: BootStep, fraction: number) => void;
 
 /**
  * Start every cold field dependency without mounting the GPU scene. App calls
@@ -31,11 +34,11 @@ import { loadScatterManifest } from './scatter/manifest';
  * network work and renderer setup overlap without putting the full field in
  * front of the probe's timestamp readback.
  */
-export function preloadFieldSceneAssets(): void {
-  void loadHeightfield();
-  void loadTufts();
-  void loadTreelineManifest();
-  void loadScatterManifest();
+export function preloadFieldSceneAssets(report?: BootReporter): void {
+  void loadHeightfield((value) => report?.('terrain', value));
+  void loadTufts((value) => report?.('grass', value));
+  void loadTreelineManifest((value) => report?.('treeline', value));
+  void loadScatterManifest((value) => report?.('scatter', value));
 }
 
 /**

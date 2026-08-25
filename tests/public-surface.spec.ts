@@ -23,6 +23,9 @@ describe('public version 3 surface', () => {
     expect(html).not.toContain('<title>herd</title>');
     expect(html).not.toContain('Sheepdog Sim 3');
     expect(read('app/src/ui/Boot.tsx')).toContain('>Sheepdog Sim</h1>');
+    expect(read('app/src/ui/Boot.tsx')).toContain('role="progressbar"');
+    expect(read('app/src/ui/Boot.tsx')).toContain('aria-valuenow={percent}');
+    expect(html).toContain('Loading game code');
   });
 
   it('keeps source and license notices reachable from the game settings', () => {
@@ -58,8 +61,9 @@ describe('public version 3 surface', () => {
     expect(controls).toContain('data-testid="touch-stick"');
     expect(controls).toContain('data-testid="bark-button"');
     expect(controls).toContain('data-testid="camera-button"');
+    expect(controls).toContain('data-testid="sprint-button"');
     expect(controls).toContain('onPointerDown={toggleCameraMode}');
-    expect(controls).toContain('SPRINT_DEFLECTION');
+    expect(controls).toContain('onPointerDown={onSprintDown}');
   });
 
   it('makes solo times reachable before a run', () => {

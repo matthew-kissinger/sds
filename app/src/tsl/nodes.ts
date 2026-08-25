@@ -64,6 +64,7 @@ export const bloom: (...a: unknown[]) => TSLNode = bloomStrict as never;
 export const time: TSLNode = t.time;
 export const deltaTime: TSLNode = t.deltaTime;
 export const positionLocal: TSLNode = t.positionLocal;
+export const positionGeometry: TSLNode = t.positionGeometry;
 export const positionWorld: TSLNode = t.positionWorld;
 export const normalLocal: TSLNode = t.normalLocal;
 export const normalWorld: TSLNode = t.normalWorld;

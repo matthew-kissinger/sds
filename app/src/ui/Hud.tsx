@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '@app/state/store';
-import { TICK_HZ } from '@sim/tuning';
+import { DOG_MAX_STAMINA, TICK_HZ } from '@sim/tuning';
 import { OnlineTimes } from '@app/scores/OnlineTimes';
 import { formatRunTime } from './time';
 
@@ -36,6 +36,49 @@ function RunTimer() {
     return () => cancelAnimationFrame(frame);
   }, [gamePhase]);
   return <div ref={ref} className="herd-timer" aria-label="Run time">0:00.0</div>;
+}
+
+/** Small, always-legible stamina receipt without a React render per frame. */
+function DogStamina() {
+  const ref = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<HTMLSpanElement>(null);
+  const gamePhase = useGameStore((state) => state.gamePhase);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      const { sim, gamePhase: phase } = useGameStore.getState();
+      const dog = sim.state.dogs[0];
+      const fraction = Math.max(0, Math.min(1, (dog?.stamina ?? 0) / DOG_MAX_STAMINA));
+      const percent = Math.round(fraction * 100);
+      if (fillRef.current) fillRef.current.style.width = `${percent}%`;
+      if (ref.current) {
+        ref.current.dataset.low = String(fraction <= 0.25);
+        ref.current.dataset.sprinting = String(dog?.sprinting === true);
+        ref.current.setAttribute('aria-valuenow', String(percent));
+        ref.current.setAttribute('aria-valuetext', `${percent} percent stamina`);
+      }
+      if (phase === 'playing') frame = requestAnimationFrame(update);
+    };
+    update();
+    return () => cancelAnimationFrame(frame);
+  }, [gamePhase]);
+
+  return (
+    <div
+      ref={ref}
+      className="herd-stamina"
+      role="progressbar"
+      aria-label="Dog stamina"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={100}
+    >
+      <span className="herd-stamina__label">Sprint</span>
+      <span className="herd-stamina__track" aria-hidden="true">
+        <span ref={fillRef} className="herd-stamina__fill" />
+      </span>
+    </div>
+  );
 }
 
 function PausePanel() {
@@ -98,6 +141,7 @@ export function Hud() {
         style={{ '--herd-progress-angle': progress } as React.CSSProperties}
         data-testid="penned-count"
         data-penned={pennedCount}
+        data-flock-size={flockSize}
         aria-label={
           `${pennedCount} of ${flockSize} sheep penned`
         }
@@ -110,6 +154,7 @@ export function Hud() {
         </div>
       </div>
       {showTimer && (gamePhase === 'playing' || gamePhase === 'paused') ? <RunTimer /> : null}
+      {gamePhase === 'playing' || gamePhase === 'paused' ? <DogStamina /> : null}
       {gamePhase === 'playing' ? (
         <button type="button" className="herd-icon-button herd-pause-button" aria-label="Pause" onClick={pause}>II</button>
       ) : null}

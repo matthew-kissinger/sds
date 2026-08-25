@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import { HOOF_LIFT } from './flockTuning';
+import { HOOF_LIFT, sheepLegPose } from './flockTuning';
 import {
   SHEEP_HOOF_BASELINE,
   SHEEP_HOOF_CONTACTS,
@@ -90,23 +90,24 @@ export function writeSheepTerrainOffsets(
   scaleX: number,
   scaleY: number,
   scaleZ: number,
-  swing: number,
+  positiveSwing: number,
+  negativeSwing: number,
 ): void {
   out[at] = clampSheepOffset(footTerrainOffsetFromBasis(
     field, rootGround, rootX, rootZ, cosYaw, sinYaw,
-    scaleX, scaleY, scaleZ, SHEEP_HOOF_CONTACTS[0], swing,
+    scaleX, scaleY, scaleZ, SHEEP_HOOF_CONTACTS[0], positiveSwing,
   ));
   out[at + 1] = clampSheepOffset(footTerrainOffsetFromBasis(
     field, rootGround, rootX, rootZ, cosYaw, sinYaw,
-    scaleX, scaleY, scaleZ, SHEEP_HOOF_CONTACTS[1], -swing,
+    scaleX, scaleY, scaleZ, SHEEP_HOOF_CONTACTS[1], negativeSwing,
   ));
   out[at + 2] = clampSheepOffset(footTerrainOffsetFromBasis(
     field, rootGround, rootX, rootZ, cosYaw, sinYaw,
-    scaleX, scaleY, scaleZ, SHEEP_HOOF_CONTACTS[2], -swing,
+    scaleX, scaleY, scaleZ, SHEEP_HOOF_CONTACTS[2], negativeSwing,
   ));
   out[at + 3] = clampSheepOffset(footTerrainOffsetFromBasis(
     field, rootGround, rootX, rootZ, cosYaw, sinYaw,
-    scaleX, scaleY, scaleZ, SHEEP_HOOF_CONTACTS[3], swing,
+    scaleX, scaleY, scaleZ, SHEEP_HOOF_CONTACTS[3], positiveSwing,
   ));
 }
 
@@ -132,16 +133,15 @@ export function measureSheepStanceContact(
   phase: number,
   stride: number,
 ): void {
-  const phaseSin = Math.sin(phase);
-  const phaseCos = Math.cos(phase);
   out.footErrorMax = 0;
   out.stanceContacts = 0;
   for (const sole of SHEEP_HOOF_SOLE_POINTS) {
-    const hoofLift = Math.max(phaseCos * sole.legSign, 0) * stride * HOOF_LIFT;
+    const pose = sheepLegPose(phase, sole.legSign);
+    const hoofLift = pose.lift * stride * HOOF_LIFT;
     if (hoofLift > 1e-6) continue;
     out.stanceContacts += 1;
     const localX = sole.x * scaleX;
-    const localZ = (sole.z + phaseSin * sole.legSign * stride) * scaleZ;
+    const localZ = (sole.z + pose.travel * stride) * scaleZ;
     const footX = rootX + cosYaw * localX + sinYaw * localZ;
     const footZ = rootZ - sinYaw * localX + cosYaw * localZ;
     const renderedY = rootGround - SHEEP_HOOF_BASELINE * scaleY
