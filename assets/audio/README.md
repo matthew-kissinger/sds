@@ -1,52 +1,51 @@
 # Audio source ledger
 
-Every shipped audio file is original, deterministic synthesis produced by the
-repository's dependency-free Node recipe. No recording, sample library,
-provider, model, account, downloaded source, or external encoder is used.
+All 17 MP3 files in this directory were generated for Sheepdog Sim with the account
+owner's ElevenLabs subscription. The initial set was generated on 2026-08-22.
+They contain no sampled or
+downloaded third-party recordings. The exact prompt, model, output format,
+duration, loop intent, processing, byte size, and SHA-256 digest for every file
+are recorded in `manifest.json`.
+
+The source recipe is the repository-independent generator shipped with the
+Codex `threejs-audio-generator` skill:
 
 ```text
-npm run bake:audio
-npm run check:audio-bake
+python threejs_audio_asset.py sfx --prompt <manifest prompt> \
+  --duration <manifest duration target> \
+  --prompt-influence <manifest value> \
+  --output-format mp3_44100_128 [--loop] --out <manifest file>
 ```
 
-`tools/bake-audio.mjs` writes all 17 mono PCM WAV files and `manifest.json`.
-The check command rebakes into a temporary directory and byte-compares every
-file and the ledger. The manifest records the synthesis description, fixed
-seed, recipe version, duration, format, sample rate, bit depth, byte size,
-SHA-256, peak, RMS level and loop-seam delta for each asset. The files and the
-recipe are licensed AGPL-3.0-or-later with the game.
+The runtime synthesizes the pentatonic progress phrase, completion resolve, and
+UI tones with Web Audio oscillators. Those sounds therefore have source code,
+not opaque media files. Generated media remains subject to the account owner's
+ElevenLabs plan and terms; confirm redistribution rights before a public launch.
 
-## Runtime matrix
+The independently controlled birds, leaves, crowd, pant, farmhouse chime,
+footfall, huff, gate and fence sources received deterministic
+FFmpeg loudness passes. Exact targets are recorded per asset in the manifest:
 
-| Category | Files | Loop | Runtime bus |
-| --- | --- | --- | --- |
-| Meadow | birds, leaves | yes | ambient |
-| Flock | crowd, three sheep calls, bell | crowd only | flock |
-| Dog | three barks, two footfalls, pant, huff | pant only | dog |
-| Field | farmhouse chime, gate creak, fence knock | chime only | world |
+```text
+ffmpeg -i <source>.mp3 -af loudnorm=I=<target>:TP=<peak>:LRA=7 \
+  -codec:a libmp3lame -b:a 128k <normalized>.mp3
+```
 
-The progress phrase, completion resolve and interface tones remain small Web
-Audio oscillator voices in `app/src/audio/graph.ts` and
-`app/src/audio/tones.ts`. They have no media asset.
+The complete media set is 1,255,526 bytes. Runtime code keeps birds, leaves,
+crowd murmur, farmhouse chime and dog pant independently
+controllable, while short events remain separate one-shots. The old mixed
+meadow foundation bed was removed so none of those layers can double.
 
-The five continuous sources remain independently controllable. The runtime
-streams those loops after gesture unlock and decodes the twelve short sounds
-sequentially after the scene is ready. It preserves the ambient, flock, dog,
-world and interface buses, spatial panning, six-sheep voice cap, 2.5 dB ambient
-ducking, reduced-transient behavior, pause and visibility lifecycle, and local
-fail-safe startup.
+The generated insects loop was removed from both the runtime and this ledger
+after owner playtesting identified a continuous non-animal buzz. Its isolation
+receipt is under `captures/audio/buzz-isolation/`; no animal source changed.
 
-## Deliberate omissions
-
-The insect and wind loops remain absent. Owner playtesting rejected their
-continuous buzz and repeating high-frequency texture. The new source set does
-not recreate either layer under another name.
-
-## Review evidence
-
-The media ledger test validates every WAV header, duration, digest, recipe and
-loop seam. The graph, scheduler, fatigue and lifecycle suites validate the
-runtime behavior. `tools/audio-capture.mjs` records the post-bus running-game
-mix and measures integrated loudness, loudness range and true peak. Audio still
-requires a separate listening critic and owner review because byte identity and
-meter values do not establish animal-call quality.
+The original wind loop was replaced after Matt identified a second buzz near
+00:10 in the running-game capture. Forensics matched the mix to a harmonic comb
+embedded near the middle of that source, rather than to a loop seam, duplicate
+playback, sheep, or bell audio. Matt rejected the replacement after its rough
+high-frequency opening repeated at 00:01 and 00:21. The wind layer is therefore
+removed from runtime, manifest and shipped media rather than subjected to a
+third speculative generation. Candidate and rejection evidence remains under
+`captures/audio/task1-owner-review/` and
+`captures/audio/task1-wind-replacement-fatigue/`; no other audio source changed.

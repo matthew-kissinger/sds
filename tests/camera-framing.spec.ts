@@ -17,6 +17,7 @@ import * as THREE from 'three/webgpu';
 import type { Dog } from '@sim/types';
 import { createClassicFraming } from '@app/camera/classicFraming';
 import { createFollowFraming } from '@app/camera/followFraming';
+import { cameraViewProfile } from '@app/camera/viewProfile';
 import {
   MAX_POSITION_K,
   MAX_RIG_SPEED,
@@ -177,5 +178,46 @@ describe('Follow framing', () => {
     run(follow, dog, 3);
     expect(follow.aim.z).toBeLessThan(sprinting);
     expect(follow.aim.z).toBeCloseTo(dog.position.z, 1);
+  });
+
+  it('uses a wider, higher follow view only in portrait', () => {
+    const landscape = cameraViewProfile(16 / 9);
+    const portrait = cameraViewProfile(390 / 844);
+    expect(landscape).toMatchObject({
+      fov: 45,
+      portraitBlend: 0,
+      follow: { distance: 20, height: 7.5, lookAhead: 7 },
+    });
+    expect(portrait.fov).toBeGreaterThan(74);
+    expect(portrait.follow.distance).toBeGreaterThan(23.5);
+    expect(portrait.follow.height).toBeGreaterThan(10);
+    expect(portrait.follow.lookAhead).toBeLessThan(5);
+  });
+
+  it('keeps the dog inside portrait framing through a fast right-angle turn', () => {
+    const aspect = 390 / 844;
+    const view = cameraViewProfile(aspect);
+    const follow = createFollowFraming(view.follow);
+    const dog = makeDog(0, 0);
+    dog.velocity.z = 25;
+    run(follow, dog, 2);
+
+    const camera = new THREE.PerspectiveCamera(view.fov, aspect, 0.5, 1200);
+    const dogPoint = new THREE.Vector3();
+    let worstHorizontal = 0;
+    for (let frame = 0; frame < 90; frame++) {
+      dog.heading.x = 1;
+      dog.heading.z = 0;
+      dog.velocity.x = 25;
+      dog.velocity.z = 0;
+      dog.position.x += dog.velocity.x * DT;
+      follow.update(DT, dog);
+      camera.position.copy(follow.position);
+      camera.lookAt(follow.aim);
+      camera.updateMatrixWorld(true);
+      dogPoint.set(dog.position.x, 1.1, dog.position.z).project(camera);
+      worstHorizontal = Math.max(worstHorizontal, Math.abs(dogPoint.x));
+    }
+    expect(worstHorizontal).toBeLessThan(0.82);
   });
 });

@@ -5,13 +5,19 @@ import { create } from 'zustand';
 import { CpuDeterministicSim } from '@sim/FlockSim';
 import { HOME_FIELD } from '@sim/field';
 import type { AutoTierReceipt } from '@app/quality/autoTier';
+import {
+  EMPTY_BOOT_PROGRESS,
+  clampBootProgress,
+  type BootProgress,
+  type BootStep,
+} from '@app/boot/progress';
 
 export type GamePhase = 'title' | 'playing' | 'paused' | 'complete';
 export type UiPanel = 'none' | 'pause' | 'settings';
 export type FlockSize = 25 | 75 | 200;
 export const FLOCK_SIZES: readonly FlockSize[] = [25, 75, 200];
 export type CameraMode = 'classic' | 'follow';
-export type QualityPreference = 'auto' | 'high' | 'low';
+export type QualityPreference = 'auto' | 'high' | 'medium' | 'low';
 export type InputAction =
   | 'forward'
   | 'backward'
@@ -88,6 +94,7 @@ export interface GameStore {
   readonly gamePhase: GamePhase;
   readonly uiPanel: UiPanel;
   readonly sceneReady: boolean;
+  readonly bootProgress: BootProgress;
   readonly flockSize: FlockSize;
   readonly pennedCount: number;
   readonly penSerial: number;
@@ -112,6 +119,7 @@ export interface GameStore {
   readonly sim: CpuDeterministicSim;
 
   markSceneReady(): void;
+  reportBootStep(step: BootStep, fraction: number): void;
   startGame(flockSize: FlockSize): void;
   pause(): void;
   resume(): void;
@@ -124,6 +132,7 @@ export interface GameStore {
   setCameraMode(cameraMode: CameraMode): void;
   setQuality(quality: QualityPreference): void;
   recordAutoTier(receipt: AutoTierReceipt): void;
+  demoteAutoTier(): void;
   setReduceMotion(reduceMotion: boolean): void;
   setColorblindMarker(colorblindMarker: boolean): void;
   setShowTimer(showTimer: boolean): void;
@@ -204,6 +213,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
     gamePhase: 'title',
     uiPanel: 'none',
     sceneReady: false,
+    bootProgress: { ...EMPTY_BOOT_PROGRESS },
     flockSize,
     pennedCount: 0,
     penSerial: 0,
@@ -215,7 +225,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
     lastRunWasBest: false,
     cameraMode: 'classic',
     quality:
-      stored.quality === 'high' || stored.quality === 'low'
+      stored.quality === 'high' || stored.quality === 'medium' || stored.quality === 'low'
         ? stored.quality
         : 'auto',
     autoTierReceipt: null,
@@ -230,7 +240,18 @@ export const useGameStore = create<GameStore>()((set, get) => {
     sim: newSim(flockSize, seed),
 
     markSceneReady() {
+      get().reportBootStep('presented', 1);
       if (!get().sceneReady) set({ sceneReady: true });
+    },
+
+    reportBootStep(step, fraction) {
+      const previous = get().bootProgress[step];
+      const next = Math.max(previous, clampBootProgress(fraction));
+      if (next === previous) return;
+      if (next === 1 && typeof performance !== 'undefined') {
+        performance.mark(`herd:boot:${step}`);
+      }
+      set({ bootProgress: { ...get().bootProgress, [step]: next } });
     },
 
     startGame(nextFlockSize) {
@@ -338,6 +359,19 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     recordAutoTier(receipt) {
       if (get().autoTierReceipt === null) set({ autoTierReceipt: receipt });
+    },
+
+    demoteAutoTier() {
+      const current = get().autoTierReceipt;
+      if (get().quality !== 'auto' || current === null || current.tier === 'low') return;
+      set({
+        autoTierReceipt: {
+          ...current,
+          tier: current.tier === 'high' ? 'medium' : 'low',
+          reason: 'runtime-frame-budget',
+          runtimeDemotions: current.runtimeDemotions + 1,
+        },
+      });
     },
 
     setReduceMotion(reduceMotion) {

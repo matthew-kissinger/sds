@@ -4,7 +4,9 @@ import { bindingMove } from '@app/input/keyboard';
 import { DEFAULT_INPUT_BINDINGS } from '@app/state/store';
 import {
   beginTouchStick,
+  endAllTouch,
   endTouchStick,
+  setTouchSprint,
   setTouchStick,
   touchActive,
   touchAxis,
@@ -23,10 +25,24 @@ describe('remapped keyboard input', () => {
 describe('touch cancellation state', () => {
   it('clears movement and sprint when a pointer is released or cancelled', () => {
     beginTouchStick();
-    setTouchStick(0.75, -0.4, true);
+    setTouchStick(0.75, -0.4);
+    setTouchSprint(true);
     endTouchStick();
     expect(touchActive()).toBe(false);
-    expect(touchSprint()).toBe(false);
+    expect(touchSprint()).toBe(true);
     expect(touchAxis()).toEqual({ right: 0, forward: 0 });
+    endAllTouch();
+    expect(touchSprint()).toBe(false);
+  });
+
+  it('keeps sprint independent from the movement pointer', () => {
+    setTouchSprint(true);
+    beginTouchStick();
+    setTouchStick(-0.5, 0.8);
+    expect(touchSprint()).toBe(true);
+    expect(touchAxis()).toEqual({ right: -0.5, forward: 0.8 });
+    setTouchSprint(false);
+    expect(touchActive()).toBe(true);
+    endAllTouch();
   });
 });

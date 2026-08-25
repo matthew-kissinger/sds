@@ -130,7 +130,7 @@ https://sheepdogsim.com
 4. Capture final media from that same commit.
 5. Verify the score API partition without adding disposable public records.
 6. Push the candidate and verify the non-production Pages preview artifact.
-7. Verify the deterministic audio bake and accept the running-game mix.
+7. Verify the audio source ledger and accept the running-game mix by ear.
 8. Obtain owner approval for the exact production commit and backend change.
 9. Deploy the score-service compatibility change first and verify health.
 10. Deploy Pages, verify the release receipt, then tag `v3.0.0`.

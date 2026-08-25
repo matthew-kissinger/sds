@@ -37,9 +37,8 @@
  * untrodden rim to the polished centre, eight points a step, and the marks read as
  * wear because wear is the only thing that changes across them.
  *
- * All three sit in the farmhouse yard's own colour family (farmhouse/palette.ts,
- * YARD and YARD_PACKED) rather than near it. Two dirt surfaces thirty metres
- * apart in one frame are one material or the frame has two art directions in it.
+ * These warm earth tones now belong to the pen alone. It is the only exposed
+ * soil in the scene, and it stays visibly churned rather than paved.
  */
 export const EARTH = '#987c58';
 /** The dry rim: what earth does where nothing walks on it, and most of the pen's

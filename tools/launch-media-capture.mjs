@@ -3,9 +3,9 @@
 
 /**
  * Rebuild the 1200 x 630 launch card from the production bundle. The capture
- * uses the real title scene and UI. Only identity registration is replaced by
- * a fixed local response, so the recipe never writes to the public score
- * service and the visible running name remains stable.
+ * uses the real 200-sheep simulation, Follow camera and gameplay UI. Only
+ * identity registration is replaced by a fixed local response, so the recipe
+ * never writes to the public score service.
  */
 
 import { mkdirSync, statSync } from 'node:fs';
@@ -66,7 +66,7 @@ try {
       }),
     });
   });
-  await page.goto(`http://localhost:${PORT}/?seed=${SEED}`, {
+  await page.goto(`http://localhost:${PORT}/?seed=${SEED}&debug=webgl`, {
     waitUntil: 'load',
     timeout: 60_000,
   });
@@ -76,7 +76,16 @@ try {
     () => document.body.textContent?.includes('Meadow Scout') === true,
     { timeout: 10_000 },
   );
-  await page.waitForTimeout(1_000);
+  await page.locator('.herd-size').filter({ hasText: '200' }).click();
+  await page.locator('.herd-button--primary').click();
+  await page.waitForSelector('.herd-app[data-phase="playing"]', { timeout: 30_000 });
+  await page.keyboard.down('ShiftLeft');
+  await page.keyboard.down('KeyW');
+  await page.waitForTimeout(1_200);
+  await page.keyboard.up('KeyW');
+  await page.keyboard.up('ShiftLeft');
+  await page.keyboard.press('KeyC');
+  await page.waitForTimeout(600);
 
   const backend = await page.locator('canvas').evaluate((canvas) => {
     try {
@@ -90,15 +99,15 @@ try {
   if (errors.length > 0) throw new Error(`runtime errors: ${errors.join(' | ')}`);
   let fieldVisible = false;
   for (let attempt = 0; attempt < 5; attempt++) {
-    const canvasPng = await page.locator('canvas').screenshot();
-    const pixels = await analyzeScreenshot(page, canvasPng);
+    const framePng = await page.screenshot({ animations: 'disabled' });
+    const pixels = await analyzeScreenshot(page, framePng);
     if (pixels.nonblank && pixels.quantizedColorBuckets >= 40) {
       fieldVisible = true;
       break;
     }
     await page.waitForTimeout(750);
   }
-  if (!fieldVisible) throw new Error('title field did not produce a nonblank capture');
+  if (!fieldVisible) throw new Error('gameplay field did not produce a nonblank capture');
   await page.screenshot({ path: OUTPUT, animations: 'disabled' });
   await page.setViewportSize({ width: 1280, height: 640 });
   await page.waitForTimeout(500);
@@ -117,6 +126,8 @@ try {
     width: 1200,
     height: 630,
     seed: SEED,
+    flockSize: 200,
+    camera: 'follow',
     backend,
     scoreWrites: false,
   }, null, 2));

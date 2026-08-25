@@ -24,7 +24,6 @@ describe('initial decorative shader compile budget', () => {
     const bands = source('app/src/scene/scatter/bandedMaterial.ts');
     const flowers = source('app/src/scene/scatter/flowers.ts');
     const rocks = source('app/src/scene/scatter/rocks.ts');
-    const yard = source('app/src/scene/farmhouse/materials.ts');
 
     expect(bands).toContain('export function paintedField');
     expect(bands.match(/\bsin\(/g)).toHaveLength(2);
@@ -33,8 +32,6 @@ describe('initial decorative shader compile budget', () => {
     expect(flowers).toContain('springDrop');
     expect(rocks).toContain("outline: { color: OUTLINE_COLOR");
     expect(rocks).toContain('colony.patch');
-    expect(yard).toContain('const ragged = cover.add(mottle');
-    expect(yard).toContain('const scuffField = paintedField');
-    expect(yard).toContain('color(CONTACT)');
+    expect(source('app/src/scene/Farmhouse.tsx')).not.toContain('makeYardMaterial');
   });
 });

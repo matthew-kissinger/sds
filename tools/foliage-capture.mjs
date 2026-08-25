@@ -33,8 +33,10 @@ const sourceLedger = JSON.parse(
 );
 const scenarios = [
   { name: 'follow', camera: 'follow', width: 1600, height: 1000, dpr: 1, debug: '', followAfterMove: true, route: [{ keys: ['KeyA'], moveMs: 750 }, { keys: ['KeyW'], moveMs: 2_500 }] },
-  { name: 'hero-fixed', camera: 'follow', width: 1600, height: 1000, dpr: 1, debug: '', flockSize: 25, followAfterMove: true, route: [{ keys: ['KeyA'], moveMs: 750 }, { keys: ['KeyW'], moveMs: 2_500 }], motionSequence: true },
+  { name: 'hero-fixed', camera: 'follow', width: 1600, height: 1000, dpr: 1, debug: '', flockSize: 200, followAfterMove: true, route: [{ keys: ['KeyW'], moveMs: 1_200 }], settleMs: 600, motionSequence: true },
   { name: 'phone', camera: 'classic', width: 390, height: 844, dpr: 3, debug: '', mobile: true, route: [{ keys: ['KeyA'], moveMs: 750 }, { keys: ['KeyW'], moveMs: 2_500 }] },
+  { name: 'phone-follow-turn', camera: 'follow', width: 390, height: 844, dpr: 3, debug: '', mobile: true, follow: true, motionSequence: true, settleMs: 30, route: [{ keys: ['KeyW'], moveMs: 1_000 }, { keys: ['KeyD'], moveMs: 350 }, { keys: ['KeyA'], moveMs: 350 }, { keys: ['KeyS'], moveMs: 500 }] },
+  { name: 'phone-landscape-follow-turn', camera: 'follow', width: 844, height: 390, dpr: 3, debug: '', mobile: true, follow: true, motionSequence: true, settleMs: 30, route: [{ keys: ['KeyW'], moveMs: 1_000 }, { keys: ['KeyD'], moveMs: 350 }, { keys: ['KeyA'], moveMs: 350 }, { keys: ['KeyS'], moveMs: 500 }] },
   // Prime the WebGPU pipeline with the lower cameras before the high Classic
   // view. Some native Chrome runs otherwise return one clear-color canvas for
   // the first post-auto-tier screenshot even though later frames are healthy.
@@ -114,7 +116,7 @@ async function capture(browser, scenario) {
     }
     if (scenario.sprint !== false) await page.keyboard.up('ShiftLeft');
     if (scenario.followAfterMove) await page.keyboard.press('KeyC');
-    await page.waitForTimeout(1_000);
+    await page.waitForTimeout(scenario.settleMs ?? 1_000);
 
     const motionFiles = [];
     if (scenario.motionSequence) {

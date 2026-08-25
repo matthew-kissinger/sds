@@ -30,6 +30,16 @@ import {
   renderDprForTier,
   resolvedRenderTier,
 } from './quality/autoTier';
+import { RuntimeQualityGovernor } from './quality/RuntimeQualityGovernor';
+
+function trackedGlFactory(props: Parameters<typeof glFactory>[0]) {
+  const report = useGameStore.getState().reportBootStep;
+  report('renderer', 0.05);
+  return glFactory(props).then((renderer) => {
+    report('renderer', 1);
+    return renderer;
+  });
+}
 
 function CapabilityProbe() {
   const { gl, setFrameloop } = useThree();
@@ -41,6 +51,7 @@ function CapabilityProbe() {
     // a 137 ms task. The fill probe below creates the first renderer work while
     // field assets continue downloading in parallel.
     setFrameloop('never');
+    useGameStore.getState().reportBootStep('capability', 0.05);
     frame = window.requestAnimationFrame(() => {
       void (async () => {
         const renderer = gl as unknown as THREE.WebGPURenderer;
@@ -56,10 +67,16 @@ function CapabilityProbe() {
             renderer,
             backend,
           );
-          if (alive) useGameStore.getState().recordAutoTier(receipt);
+          if (alive) {
+            useGameStore.getState().reportBootStep('capability', 1);
+            useGameStore.getState().recordAutoTier(receipt);
+          }
         } catch (error: unknown) {
           console.error('scene_boot_failed', error);
-          if (alive) useGameStore.getState().recordAutoTier(fallbackAutoTier(backend));
+          if (alive) {
+            useGameStore.getState().reportBootStep('capability', 1);
+            useGameStore.getState().recordAutoTier(fallbackAutoTier(backend));
+          }
         }
         if (!alive) return;
         // Keep rendering paused across the capability-to-field React commit.
@@ -87,9 +104,12 @@ function SceneReadySignal() {
     // then asks the browser for every pipeline the honest title camera can
     // submit without turning deferred driver work into a first-frame freeze.
     setFrameloop('never');
+    useGameStore.getState().reportBootStep('scene', 1);
+    useGameStore.getState().reportBootStep('shaders', 0.05);
     void compileMountedScene(gl as unknown as THREE.WebGPURenderer, scene, camera)
       .then(() => {
         compiled = true;
+        useGameStore.getState().reportBootStep('shaders', 1);
       })
       .catch((error: unknown) => {
         console.error('scene_compile_failed', error);
@@ -103,6 +123,7 @@ function SceneReadySignal() {
         // One rAF lets R3F submit the compiled field; the second makes the Play
         // button honest by publishing readiness only after that visible frame.
         presentedFrame = window.requestAnimationFrame(() => {
+          useGameStore.getState().reportBootStep('presented', 0.5);
           readyFrame = window.requestAnimationFrame(() => {
             if (alive) useGameStore.getState().markSceneReady();
           });
@@ -149,7 +170,7 @@ function HerdApp() {
   const autoTierReceipt = useGameStore((state) => state.autoTierReceipt);
   const colorblindMarker = useGameStore((state) => state.colorblindMarker);
   const reducedMotion = useReducedMotion();
-  preloadFieldSceneAssets();
+  preloadFieldSceneAssets(useGameStore.getState().reportBootStep);
   const capabilityReady = autoTierReceipt !== null;
   const renderTier = resolvedRenderTier(quality, autoTierReceipt);
   const dpr = renderDprForTier(renderTier);
@@ -163,10 +184,15 @@ function HerdApp() {
         data-ready={sceneReady}
         data-reduced-motion={reducedMotion}
         data-render-tier={renderTier}
+        data-backend={autoTierReceipt?.backend ?? 'pending'}
+        data-device-class={autoTierReceipt?.deviceClass ?? 'pending'}
+        data-tier-reason={autoTierReceipt?.reason ?? 'pending'}
+        data-tier-demotions={autoTierReceipt?.runtimeDemotions ?? 0}
+        data-fill-ms={autoTierReceipt === null ? '' : autoTierReceipt.fillMs.toFixed(2)}
       >
         <UiStyles />
         <Canvas
-          gl={glFactory as never}
+          gl={trackedGlFactory as never}
           dpr={dpr}
           // The capability probe needs one live frame. Its receipt causes this
           // React commit to mount the field, and that commit must stay paused:
@@ -177,6 +203,7 @@ function HerdApp() {
           camera={{ position: [-20, 52, -98], fov: 45, near: 0.5, far: 1200 }}
         >
           <IntentResolver />
+          <RuntimeQualityGovernor />
           {capabilityReady ? (
             <Suspense fallback={null}>
               <FieldScene />

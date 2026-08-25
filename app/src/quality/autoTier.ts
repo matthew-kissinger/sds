@@ -1,12 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-/** One measured render tier, chosen during renderer boot and held for the session. */
+/** Measured boot tier plus a lightweight, demotion-only runtime safety net. */
 
 import { useGameStore, type QualityPreference } from '@app/state/store';
 import type { BackendName } from '@app/scene/glFactory';
 
-export type RenderTier = 'high' | 'low';
+export type RenderTier = 'high' | 'medium' | 'low';
 export type RenderDpr = number | [number, number];
+export type DeviceClass = 'desktop' | 'mobile';
+
+export interface DeviceProfile {
+  readonly deviceClass: DeviceClass;
+  readonly hardwareConcurrency: number;
+  readonly deviceMemory: number | null;
+}
+
+export function detectDeviceProfile(): DeviceProfile {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return { deviceClass: 'desktop', hardwareConcurrency: 8, deviceMemory: null };
+  }
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  return {
+    deviceClass: window.matchMedia('(pointer: coarse)').matches ? 'mobile' : 'desktop',
+    hardwareConcurrency: Math.max(1, navigator.hardwareConcurrency || 4),
+    deviceMemory: Number.isFinite(memory) ? memory ?? null : null,
+  };
+}
 
 /**
  * Bound the drawing buffer independently of CSS size. A 1440 x 900 window at
@@ -16,7 +35,9 @@ export type RenderDpr = number | [number, number];
  * visibly sharper buffer, but 1.5 is the stable ceiling for this full field.
  */
 export function renderDprForTier(tier: RenderTier): RenderDpr {
-  return tier === 'high' ? [1, 1.5] : 1;
+  if (tier === 'high') return [1, 1.5];
+  if (tier === 'medium') return 1;
+  return 0.8;
 }
 
 export interface AutoTierReceipt {
@@ -24,12 +45,16 @@ export interface AutoTierReceipt {
   readonly fillMs: number;
   readonly targetPixels: number;
   readonly tier: RenderTier;
+  readonly deviceClass: DeviceClass;
+  readonly reason: 'measured' | 'mobile-cap' | 'weak-device-cap' | 'fallback' | 'runtime-frame-budget';
+  readonly runtimeDemotions: number;
 }
 
 export function chooseAutoTier(
   backend: Exclude<BackendName, 'pending'>,
   fillMs: number,
   targetPixels: number,
+  profile: DeviceProfile = detectDeviceProfile(),
 ): AutoTierReceipt {
   // WebGPU carries less driver overhead for the same full-screen work. The
   // test target already scales with device pixel ratio, so this threshold is
@@ -39,25 +64,60 @@ export function chooseAutoTier(
   // grass vertex work and post; slower devices take the reduced-grass tier.
   // WebGL2 receives less headroom because its main-thread submission cost is
   // not represented by this isolated draw.
-  const budgetMs = backend === 'webgpu' ? 2 : 1.5;
+  const highBudgetMs = backend === 'webgpu' ? 2 : 1.5;
+  const mediumBudgetMs = backend === 'webgpu' ? 4.5 : 3.5;
+  let tier: RenderTier = Number.isFinite(fillMs) && fillMs <= highBudgetMs
+    ? 'high'
+    : Number.isFinite(fillMs) && fillMs <= mediumBudgetMs
+      ? 'medium'
+      : 'low';
+  let reason: AutoTierReceipt['reason'] = 'measured';
+
+  if (
+    tier !== 'low'
+    && (profile.hardwareConcurrency <= 4
+      || (profile.deviceMemory !== null && profile.deviceMemory <= 4))
+  ) {
+    tier = 'low';
+    reason = 'weak-device-cap';
+  } else if (tier === 'high' && profile.deviceClass === 'mobile') {
+    // A fullscreen fill pass underpredicts the real field's grass vertex work
+    // and flock submission on phones. Start at the balanced tier and let the
+    // passive frame-budget check demote if the full scene still misses budget.
+    tier = 'medium';
+    reason = 'mobile-cap';
+  }
+
   return {
     backend,
     fillMs,
     targetPixels,
-    tier: Number.isFinite(fillMs) && fillMs <= budgetMs ? 'high' : 'low',
+    tier,
+    deviceClass: profile.deviceClass,
+    reason,
+    runtimeDemotions: 0,
   };
 }
 
 /** Conservative receipt for a failed or timed-out one-shot fill measurement. */
 export function fallbackAutoTier(
   backend: Exclude<BackendName, 'pending'>,
+  profile: DeviceProfile = detectDeviceProfile(),
 ): AutoTierReceipt {
   return {
     backend,
     fillMs: Number.POSITIVE_INFINITY,
     targetPixels: 0,
     tier: 'low',
+    deviceClass: profile.deviceClass,
+    reason: 'fallback',
+    runtimeDemotions: 0,
   };
+}
+
+export function demoteRenderTier(tier: RenderTier): RenderTier {
+  if (tier === 'high') return 'medium';
+  return 'low';
 }
 
 export function autoTierReceipt(): AutoTierReceipt | null {

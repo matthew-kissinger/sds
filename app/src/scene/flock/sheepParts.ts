@@ -168,12 +168,11 @@ export function earShape(side: number): THREE.BufferGeometry {
  * fetlock, hoof. Six sides because at Follow distance a square leg reads as a
  * square, and 60 triangles is not a budget worth defending.
  *
- * The lower profile is deliberately short and broad. A narrow 0.12 m fetlock
- * below a high knee still read as a rod at Follow distance, even when most of
- * the upper leg was hidden by wool. The knee now sits below the fleece line and
- * the last 0.14 m opens into a compact 0.11-0.14 m section. That gives the
- * planted extremity enough silhouette to read as a sheep's cloven foot without
- * returning to the oversized pony legs from the first asset pass.
+ * The lower profile is deliberately short and tapered. The upper four rings
+ * stay narrow enough that a swinging leg does not read as a full dark slab
+ * outside the fleece, then the unchanged sole opens into a compact planted
+ * foot. That keeps the hoof readable without returning to either the oversized
+ * pony legs from the first asset pass or a thin rod at Follow distance.
  *
  * The profile is not on one vertical line. The front pair drops near-plumb with
  * the knee a little forward; the back pair carries a real HOCK - the joint sits
@@ -204,18 +203,18 @@ interface Ring {
 }
 
 const FRONT_RINGS: readonly Ring[] = [
-  { y: 0.56, hw: 0.067, hd: 0.073, dz: 0, dx: 0, t: 0 },
-  { y: 0.34, hw: 0.064, hd: 0.069, dz: 0.008, dx: -0.003, t: 0.2 },
-  { y: 0.14, hw: 0.061, hd: 0.064, dz: 0.02, dx: -0.006, t: 0.56 },
-  { y: 0.05, hw: 0.055, hd: 0.058, dz: 0.01, dx: -0.01, t: 0.86 },
+  { y: 0.56, hw: 0.058, hd: 0.065, dz: 0, dx: 0, t: 0 },
+  { y: 0.34, hw: 0.054, hd: 0.061, dz: 0.008, dx: -0.003, t: 0.2 },
+  { y: 0.14, hw: 0.049, hd: 0.056, dz: 0.02, dx: -0.006, t: 0.56 },
+  { y: 0.05, hw: 0.045, hd: 0.052, dz: 0.01, dx: -0.01, t: 0.86 },
   { y: 0, hw: 0.068, hd: 0.08, dz: 0.02, dx: -0.01, t: 1 },
 ];
 
 const BACK_RINGS: readonly Ring[] = [
-  { y: 0.59, hw: 0.075, hd: 0.087, dz: -0.014, dx: 0, t: 0 },
-  { y: 0.35, hw: 0.068, hd: 0.078, dz: -0.04, dx: 0.003, t: 0.2 },
-  { y: 0.145, hw: 0.064, hd: 0.07, dz: -0.07, dx: 0.006, t: 0.56 },
-  { y: 0.05, hw: 0.056, hd: 0.06, dz: -0.026, dx: 0.012, t: 0.86 },
+  { y: 0.59, hw: 0.065, hd: 0.076, dz: -0.014, dx: 0, t: 0 },
+  { y: 0.35, hw: 0.059, hd: 0.069, dz: -0.04, dx: 0.003, t: 0.2 },
+  { y: 0.145, hw: 0.053, hd: 0.061, dz: -0.07, dx: 0.006, t: 0.56 },
+  { y: 0.05, hw: 0.046, hd: 0.054, dz: -0.026, dx: 0.012, t: 0.86 },
   { y: 0, hw: 0.069, hd: 0.082, dz: -0.018, dx: 0.014, t: 1 },
 ];
 

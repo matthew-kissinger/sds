@@ -3,8 +3,9 @@
 /**
  * Where the collie's markings are, as masks over anatomy coordinates.
  *
- * `positionLocal` is dog-local everywhere on this mesh (dogGeometry.ts builds
- * every part in place, with no per-part group transform), so "the blaze is the
+ * `positionGeometry` is undeformed dog-local everywhere on this mesh
+ * (dogGeometry.ts builds every part in place, with no per-part group transform),
+ * so "the blaze is the
  * wedge above y 1.20 between z 0.80 and z 1.40" is a statement the shader can
  * evaluate directly. Three things follow: the marks cannot z-fight the coat,
  * their edges are authored rather than unwrapped, and moving a mark is a number
@@ -53,7 +54,7 @@ import {
   max as tslMax,
   min as tslMin,
   mix,
-  positionLocal,
+  positionGeometry,
   smoothstep,
   vec3,
   type TSLNode,
@@ -128,9 +129,9 @@ function undersideAt(pz: TSLNode): TSLNode {
 
 /** The five white marks, as one 0..1 mask. */
 function creamMask(wander: TSLNode): TSLNode {
-  const py = positionLocal.y.add(wander);
-  const pz = positionLocal.z.add(wander);
-  const px = abs(positionLocal.x);
+  const py = positionGeometry.y.add(wander);
+  const pz = positionGeometry.z.add(wander);
+  const px = abs(positionGeometry.x);
 
   // The blaze. Width falls from 10 cm half between the ears to 3 cm half at the
   // muzzle, so from directly overhead the mark tapers toward the nose and points
@@ -154,7 +155,7 @@ function creamMask(wander: TSLNode): TSLNode {
   // one mark an overhead camera cannot hide. It takes a fifth of the wander,
   // because at full wander a ring this narrow reaches the withers at one end and
   // stops being a ring.
-  const pzRing = positionLocal.z.add(wander.mul(float(0.2)));
+  const pzRing = positionGeometry.z.add(wander.mul(float(0.2)));
   const collar = smoothstep(float(0.5), float(0.525), pzRing)
     .mul(float(1).sub(smoothstep(float(0.58), float(0.605), pzRing)))
     .mul(float(COLLAR_STRENGTH));
@@ -174,11 +175,11 @@ function creamMask(wander: TSLNode): TSLNode {
   // Socks: the foot and nothing above it. The paw's sole is at y 0.02 and its
   // knuckles at 0.12, so a cutoff at 0.13 whitens the foot and stops. A third of
   // the wander, so a sock cannot climb.
-  const pySock = positionLocal.y.add(wander.mul(float(0.3)));
+  const pySock = positionGeometry.y.add(wander.mul(float(0.3)));
   const socks = float(1).sub(smoothstep(float(0.115), float(0.145), pySock));
 
   // The tail tip: the last 13 cm of a plume that runs from z -0.90 to -1.585.
-  const pzTail = positionLocal.z.add(wander.mul(float(0.4)));
+  const pzTail = positionGeometry.z.add(wander.mul(float(0.4)));
   const tailTip = float(1).sub(smoothstep(float(-1.47), float(-1.44), pzTail));
 
   return clamp(blaze.add(collar).add(bib).add(socks).add(tailTip), float(0), float(1));
@@ -188,18 +189,18 @@ function creamMask(wander: TSLNode): TSLNode {
 function eyeDistance(): TSLNode {
   return length(
     vec3(
-      abs(positionLocal.x).sub(float(EYE_X)),
-      positionLocal.y.sub(float(EYE_Y)).mul(float(EYE_SQUASH)),
-      positionLocal.z.sub(float(EYE_Z)),
+      abs(positionGeometry.x).sub(float(EYE_X)),
+      positionGeometry.y.sub(float(EYE_Y)).mul(float(EYE_SQUASH)),
+      positionGeometry.z.sub(float(EYE_Z)),
     ),
   );
 }
 
 /** Eye rim, nose leather and lip line. No wander: these are features. */
 function darkMask(): TSLNode {
-  const x = abs(positionLocal.x);
-  const y = positionLocal.y;
-  const z = positionLocal.z;
+  const x = abs(positionGeometry.x);
+  const y = positionGeometry.y;
+  const z = positionGeometry.z;
 
   const eye = float(1).sub(smoothstep(float(EYE_INNER), float(EYE_OUTER), eyeDistance()));
 
@@ -234,9 +235,9 @@ function irisMask(): TSLNode {
 function catchMask(): TSLNode {
   const d = length(
     vec3(
-      abs(positionLocal.x).sub(float(CATCH_X)),
-      positionLocal.y.sub(float(CATCH_Y)),
-      positionLocal.z.sub(float(CATCH_Z)),
+      abs(positionGeometry.x).sub(float(CATCH_X)),
+      positionGeometry.y.sub(float(CATCH_Y)),
+      positionGeometry.z.sub(float(CATCH_Z)),
     ),
   );
   return float(1)

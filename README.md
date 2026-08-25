@@ -15,6 +15,7 @@ The version 3.0 release focuses on the complete single-player loop:
 - local personal best times;
 - optional online solo times for each flock size;
 - a server-random running name that can be edited;
+- React Three Fiber scene composition over Three.js;
 - WebGPU rendering with automatic WebGL2 fallback;
 - no account, multiplayer or 5,000-sheep mode.
 
@@ -62,6 +63,7 @@ npm run lint
 npm run build
 npm run preview
 node tools/determinism-crosscheck.mjs
+npm run probe:boot
 npm run probe:release
 ```
 
@@ -71,7 +73,7 @@ The application is split into four deliberate boundaries:
 
 ```text
 sim/       deterministic fixed-step herding simulation
-app/       React, Three.js, input, audio and player interface
+app/       React Three Fiber, Three.js, input, audio and player interface
 assets/    runtime assets plus editable sources and bake manifests
 tools/     deterministic bakes, diagnostics and release verification
 ```
@@ -87,8 +89,8 @@ The field is assembled from reproducible source:
   into a deterministic cel-shaded family with no runtime model loading;
 - sheep, dog, fences and farm structures are code-authored geometry;
 - material and atmosphere systems are TSL source;
-- every audio file is deterministic in-repo synthesis with a runnable recipe
-  and digest ledger;
+- every audio file is a committed, provenance-tracked source with its provider,
+  prompt, processing, duration, size and digest recorded in the audio ledger;
 - authoring concepts are retained separately from runtime assets.
 
 Read [the version 3 architecture reset](docs/architecture/v3-reset.md) for what

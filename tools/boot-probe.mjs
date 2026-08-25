@@ -6,7 +6,6 @@
 // mid-mobile profile. The normal app is used; there is no boot-only route.
 
 import {
-  READOUT,
   SEED,
   launchBrowser,
   removeDir,
@@ -86,7 +85,7 @@ async function measure(browser, spec) {
     });
   }
   try {
-    await page.goto(`${base}/?seed=${SEED}&debug=readout`, {
+    await page.goto(`${base}/?seed=${SEED}`, {
       waitUntil: 'domcontentloaded',
       timeout: 60_000,
     });
@@ -126,6 +125,18 @@ async function measure(browser, spec) {
       }))
       .sort((a, b) => b.endMs - a.endMs)
       .slice(0, 8));
+    const quality = await page.locator('.herd-app').evaluate((node) => ({
+      backend: node.getAttribute('data-backend') ?? '',
+      renderTier: node.getAttribute('data-render-tier') ?? '',
+      fillMs: node.getAttribute('data-fill-ms') ?? '',
+    }));
+    const boot = await page.evaluate(() => ({
+      progress: document.querySelector('.herd-boot')?.getAttribute('data-progress') ?? '',
+      stage: document.querySelector('.herd-boot')?.getAttribute('data-stage') ?? '',
+      marks: performance.getEntriesByType('mark')
+        .filter((entry) => entry.name.startsWith('herd:boot:'))
+        .map((entry) => ({ name: entry.name, startMs: Math.round(entry.startTime) })),
+    }));
     const clickStartMs = await page.evaluate(() => performance.now());
     await page.mouse.click(
       actionability.rect.x + actionability.rect.width / 2,
@@ -138,11 +149,6 @@ async function measure(browser, spec) {
       { timeout: 10_000, polling: 25 },
     );
     const playingMs = await page.evaluate(() => performance.now());
-    const quality = await page.locator(READOUT).evaluate((node) => ({
-      backend: node.dataset.backend ?? '',
-      renderTier: node.dataset.renderTier ?? '',
-      fillMs: node.dataset.fillMs ?? '',
-    }));
     return {
       profile: spec.name,
       emulation: spec.mobile ? MID_MOBILE_PROFILE : null,
@@ -158,6 +164,7 @@ async function measure(browser, spec) {
       failedResponses,
       actionability,
       quality,
+      boot,
       pass: playingMs < spec.budgetMs
         && failureCollectionsAreEmpty(crashes, errors, failedRequests, failedResponses),
       budgetMs: spec.budgetMs,

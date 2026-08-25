@@ -6,6 +6,7 @@
 import { use } from 'react';
 import type { FlowerBloom } from './flowerPlacement';
 import type { ContactSpot, LogTransform, RockTransform } from './placement';
+import { loadAssetBytes, type LoadProgress } from '@app/boot/loadAsset';
 
 export interface ScatterManifest {
   readonly version: number;
@@ -20,13 +21,9 @@ export interface ScatterManifest {
 const MANIFEST_URL = new URL('../../../../assets/scatter/manifest.json', import.meta.url).href;
 let pending: Promise<ScatterManifest> | null = null;
 
-export function loadScatterManifest(): Promise<ScatterManifest> {
-  pending ??= fetch(MANIFEST_URL).then(async (response) => {
-    if (!response.ok) {
-      throw new Error(`scatter manifest: ${response.status} ${response.statusText}`);
-    }
-    return (await response.json()) as ScatterManifest;
-  });
+export function loadScatterManifest(onProgress?: LoadProgress): Promise<ScatterManifest> {
+  pending ??= loadAssetBytes(MANIFEST_URL, 'scatter manifest', onProgress)
+    .then((bytes) => JSON.parse(new TextDecoder().decode(bytes)) as ScatterManifest);
   return pending;
 }
 

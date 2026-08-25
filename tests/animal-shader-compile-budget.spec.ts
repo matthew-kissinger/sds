@@ -20,6 +20,7 @@ describe('initial animal shader compile budget', () => {
 
   it('keeps dog paint compact without dropping its authored bands or marks', () => {
     const code = source('app/src/scene/dog/dogMarkings.ts');
+    const marks = source('app/src/scene/dog/dogMarks.ts');
 
     expect(code).not.toContain('mx_noise_float');
     expect(code).toContain('buildDogMarks(wander)');
@@ -27,5 +28,9 @@ describe('initial animal shader compile budget', () => {
     expect(code).toContain('band(COAT_MID, CREAM_MID)');
     expect(code).toContain('band(COAT_LIT, CREAM_LIT)');
     expect(code.match(/\bsin\(/g)).toHaveLength(3);
+    expect(code).toContain('positionGeometry');
+    expect(marks).toContain('positionGeometry');
+    expect(code).not.toMatch(/\bpositionLocal\s*[,.;)]/);
+    expect(marks).not.toMatch(/\bpositionLocal\s*[,.;)]/);
   });
 });

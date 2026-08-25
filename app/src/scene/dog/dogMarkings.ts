@@ -19,13 +19,18 @@
  * back as the one object in the scene that was not cel-shaded. The bands now step
  * eleven and ten points of lightness, and the mottle swings 8 percent: brushwork
  * that lives inside a band rather than across it.
+ *
+ * PAINT IS REST-SPACE. Three's `positionLocal` includes `positionNode` gait and
+ * head deformation. Using it here made the nose move through a stationary white
+ * mask as the head nodded. `positionGeometry` is the undeformed anatomy frame,
+ * so every mark remains attached to the same fur through bob, lean and tilt.
  */
 
 import {
   color,
   dot,
   float,
-  positionLocal,
+  positionGeometry,
   sin,
   vec3,
   type TSLNode,
@@ -71,19 +76,19 @@ const MOTTLE_DEPTH = 0.4;
  *  that breaks up as hard as the coat stops reading as a mark. */
 const CREAM_MOTTLE = 0.4;
 
-/** Two compact painted frequencies, -1..1, anchored to the mesh and never to
+/** Two compact painted frequencies, -1..1, anchored to rest-space and never to
  *  the sun. Interfering sine strokes retain the hand-painted breakup without
  *  compiling MaterialX gradient-noise helpers during the first playable frame. */
 function mottleNode(): TSLNode {
   const broad = sin(
     dot(
-      positionLocal,
+      positionGeometry,
       vec3(float(NOISE_BROAD), float(NOISE_BROAD * 0.61), float(-NOISE_BROAD * 0.77)),
     ).add(float(1.73)),
   );
   const fine = sin(
     dot(
-      positionLocal,
+      positionGeometry,
       vec3(float(-NOISE_FINE * 0.47), float(NOISE_FINE), float(NOISE_FINE * 0.72)),
     ).add(float(7.1)),
   );
@@ -107,7 +112,7 @@ export function paintDog(): DogPaint {
   const wander = mottle.mul(float(WANDER_BROAD)).add(
     sin(
       dot(
-        positionLocal,
+        positionGeometry,
         vec3(float(NOISE_FINE * 0.83), float(-NOISE_FINE * 0.39), float(NOISE_FINE)),
       ).add(float(19.3)),
     ).mul(float(WANDER_FINE)),

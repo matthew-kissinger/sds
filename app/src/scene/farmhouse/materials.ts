@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * The building skins: limewash, weathered board, barn boards, dressings and
- * stone, openings, lamps, the outline and the ground. The slate has its own
+ * stone, openings, lamps and the outline. The slate has its own
  * module because it carries two painted systems (farmhouse/roofMaterial.ts).
  *
  * ALL OF THEM GO THROUGH THE ONE TOON RAMP from tsl/toon.ts except the lamplit
@@ -31,45 +31,21 @@
  */
 
 import * as THREE from 'three/webgpu';
-import { PALETTE } from '@app/tsl/palette';
 import { makeToonMaterial } from '@app/tsl/toon';
 import {
   color,
-  dot,
   float,
-  mix,
   normalLocal,
   positionLocal,
-  positionWorld,
-  sin,
-  smoothstep,
-  uv,
-  vec3,
-  type TSLNode,
 } from '@app/tsl/nodes';
 import { bandedBase } from './bands';
 import {
-  CONTACT,
   OPENING,
   OUTLINE,
   WINDOW_GAIN,
   WINDOW_GLOW,
-  YARD,
-  YARD_PACKED,
 } from './palette';
 import { makeFarmhouseSurfaceMaterial } from './surfaceMaterial';
-
-/**
- * Compact world-space brush field in roughly [-1, 1]. Farmhouse ground only
- * needs broad, deterministic painted breakup. MaterialX gradient noise pulled
- * its full helper graph into the first yard pipeline; two crossed sine strokes
- * keep the irregular edge and close-value mottle without that startup cost.
- */
-function paintedField(point: TSLNode, phase: number): TSLNode {
-  const broad = sin(dot(point, vec3(0.73, 1.17, 1.43)).add(float(phase)));
-  const cross = sin(dot(point, vec3(1.61, -0.91, 0.57)).add(float(phase * 1.73 + 0.41)));
-  return broad.mul(float(0.68)).add(cross.mul(float(0.32)));
-}
 
 /**
  * Limewash. One cream in three values, a hard shadow band under every eave and
@@ -124,56 +100,6 @@ export function makeLampMaterial(): THREE.MeshBasicNodeMaterial {
   const material = new THREE.MeshBasicNodeMaterial();
   material.colorNode = color(WINDOW_GLOW).mul(float(WINDOW_GAIN));
   return material;
-}
-
-/**
- * The ground under the cluster. `uv.x` is how much trodden earth covers the grass
- * - above 1 the ground is packed rather than loose - and `uv.y` is how deep the
- * contact shadow at a footing runs; both come from farmhouse/ground.ts, so the
- * yard, the drive, the ruts and the shadow at every wall are one draw call.
- *
- * THE BOUNDARY IS A RAGGED LINE, NOT A HALO. The yard now holds its cover flat
- * and drops it through this threshold inside a metre (farmhouse/ground.ts), and
- * the threshold itself is displaced by the mottle field, so the edge wanders a
- * good third of a metre in and out and the pasture fingers into the earth the way
- * grass does at the edge of a worn patch.
- *
- * TWO EARTHS. Loose dirt round the outside, packed grey-brown down the middle of
- * the yard and in the wheel ruts. One trodden surface with two values in it has
- * structure; one value is a wash.
- *
- * The surround expression is lifted from scene/Terrain.tsx deliberately: the yard
- * has to land on the green the ground already is. That duplication is the one
- * thing in this asset that wants hoisting in the cohesion pass.
- */
-export function makeYardMaterial(): THREE.MeshBasicNodeMaterial {
-  const yardPoint = vec3(positionWorld.x, float(0), positionWorld.z);
-  const patches = paintedField(yardPoint.mul(float(0.07)), 0.7);
-  const mottle = paintedField(yardPoint.mul(float(0.26)), 2.3);
-  const fine = paintedField(yardPoint.mul(float(0.62)), 5.1);
-  const groundBlend = smoothstep(float(-0.35), float(0.35), patches.add(mottle.mul(float(0.45))));
-  const surround: TSLNode = color(PALETTE.surround).mul(mix(float(0.94), float(1.06), groundBlend));
-
-  const cover = uv().x;
-  const shade = uv().y;
-  const packed = smoothstep(float(0.98), float(1.3), cover.add(mottle.mul(float(0.12))));
-  const scuffField = paintedField(yardPoint.mul(vec3(0.34, 0.02, 0.34)), 6.7);
-  const scuff = smoothstep(float(0.26), float(0.3), scuffField);
-  const earth = mix(bandedBase(YARD), bandedBase(YARD_PACKED), packed).mul(
-    mix(float(1.0), float(0.95), scuff),
-  );
-
-  // The edge. A narrow threshold displaced by two octaves of noise: the step
-  // itself stays a step, and where it lands wanders.
-  const ragged = cover.add(mottle.mul(float(0.2))).add(fine.mul(float(0.09)));
-  const worn = smoothstep(float(0.22), float(0.34), ragged);
-  const ground = mix(surround, earth, worn);
-
-  // The contact shadow is a mix toward an authored warm plum, not a gain. A gain
-  // cannot cool a warm earth without also greying it, and grey mud at a footing
-  // is what makes a building look printed on the ground rather than bedded in it.
-  const contact = smoothstep(float(0.02), float(0.7), shade.sub(mottle.mul(float(0.16))));
-  return makeToonMaterial(mix(ground, color(CONTACT), contact.mul(float(0.82))));
 }
 
 /** How far the hull is pushed out along its normals. Just over a pixel at 100 m. */

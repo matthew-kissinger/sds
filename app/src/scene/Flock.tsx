@@ -64,11 +64,11 @@ import { makeSheepShadow } from './flock/sheepShadow';
 import { uniform } from '@app/tsl/nodes';
 import { advanceSheepResponse } from './flock/sheepResponse';
 import {
-  AGITATION_TAU, GAIT_REST, GAIT_RUN, GAIT_WALK,
+  AGITATION_TAU,
   OUTLINE_FAR_METRES, OUTLINE_FAR_PIXELS, OUTLINE_MAX, OUTLINE_MIN, OUTLINE_NEAR_METRES,
   OUTLINE_NEAR_PIXELS, SHAPE_STRIDE, SHEEP_HEADING_STEP_LIMIT, SHEEP_HEADING_TAU,
-  SHEEP_MAX_SPEED_MPS,
-  STRIDE_RUN, STRIDE_WALK, TAU, WALK_KNEE,
+  SHEEP_MAX_SPEED_MPS, TAU, sheepGaitRateForAgitation, sheepLegPose,
+  sheepStrideForAgitation,
 } from './flock/flockTuning';
 import { smoothHeadingInto } from './flock/headingSmoothing';
 import {
@@ -247,8 +247,7 @@ export function Flock() {
         }
       }
       const level = motionValues[motionAt + 1]! + (target - motionValues[motionAt + 1]!) * blend;
-      const walk = Math.min(level * WALK_KNEE, 1);
-      const rate = GAIT_REST + walk * GAIT_WALK + level * GAIT_RUN;
+      const rate = sheepGaitRateForAgitation(level);
       motionValues[motionAt] = (motionValues[motionAt]! + rate * delta) % TAU;
       motionValues[motionAt + 1] = level;
       const velocityX = sampledMotion ? (simX - previousPositions[positionAt]!) / sampleDelta : 0;
@@ -291,15 +290,16 @@ export function Flock() {
       const cosYaw = Math.cos(yaw);
       const sinYaw = Math.sin(yaw);
 
-      const stride = walk * STRIDE_WALK + level * STRIDE_RUN;
-      const swing = Math.sin(motionValues[motionAt]!) * stride;
+      const stride = sheepStrideForAgitation(level);
+      const positiveSwing = sheepLegPose(motionValues[motionAt]!, 1).travel * stride;
+      const negativeSwing = sheepLegPose(motionValues[motionAt]!, -1).travel * stride;
       const scaleX = shape[at]!;
       const scaleY = shape[at + 1]!;
       const scaleZ = shape[at + 2]!;
       const terrainAt = i * 4;
       writeSheepTerrainOffsets(
         terrainValues, terrainAt, field, groundY, x, z, cosYaw, sinYaw,
-        scaleX, scaleY, scaleZ, swing,
+        scaleX, scaleY, scaleZ, positiveSwing, negativeSwing,
       );
 
       if (reportPresentation) {

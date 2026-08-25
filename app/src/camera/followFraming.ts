@@ -40,22 +40,29 @@ import {
 import type { CameraFraming } from './framing';
 import { createRidgeClamp } from './ridgeClamp';
 import { groundY } from '@app/world/heightfield';
+import type { FollowViewProfile } from './viewProfile';
 
 /** How far behind the dog the rig sits, m. */
-const DISTANCE = 20;
+const DEFAULT_VIEW: FollowViewProfile = {
+  distance: 20,
+  height: 7.5,
+  lookAhead: 7,
+};
 /** How far above the ground the rig sits, m. A 21 deg look-down: low, not flat.
  *  Above the ground UNDER THE RIG, not above sea level: the relief is a few
  *  metres and a world-locked height would swing the pitch as the dog crosses
  *  the field. The ridge clamp then handles the ground BETWEEN rig and dog. */
-const HEIGHT = 7.5;
 /** Aim height above the ground under the aim point, m. The dog's shoulder. */
 const AIM_HEIGHT = 1.6;
 /** Look-ahead throw at full sprint, m. Scaled by the smoothed speedNorm. */
-const LOOK_AHEAD = 7;
 /** Below this heading length the facing is degenerate; hold the last angle. */
 const MIN_HEADING = 1e-4;
 
-export function createFollowFraming(): CameraFraming {
+export interface FollowFraming extends CameraFraming {
+  setView(view: FollowViewProfile): void;
+}
+
+export function createFollowFraming(initialView: FollowViewProfile = DEFAULT_VIEW): FollowFraming {
   const position = new THREE.Vector3();
   const aim = new THREE.Vector3();
   const desiredPosition = new THREE.Vector3();
@@ -64,11 +71,15 @@ export function createFollowFraming(): CameraFraming {
   let aimYaw = 0;
   let speedNorm = 0;
   let seated = false;
+  let view = initialView;
   const ridge = createRidgeClamp();
 
   return {
     position,
     aim,
+    setView(nextView: FollowViewProfile): void {
+      view = nextView;
+    },
     update(dt: number, dog: Dog): void {
       const hx = dog.heading.x;
       const hz = dog.heading.z;
@@ -85,9 +96,9 @@ export function createFollowFraming(): CameraFraming {
         aimYaw = facing;
         speedNorm = rawSpeedNorm;
         seated = true;
-        const seatX = dog.position.x - Math.sin(yaw) * DISTANCE;
-        const seatZ = dog.position.z - Math.cos(yaw) * DISTANCE;
-        desiredPosition.set(seatX, groundY(seatX, seatZ) + HEIGHT, seatZ);
+        const seatX = dog.position.x - Math.sin(yaw) * view.distance;
+        const seatZ = dog.position.z - Math.cos(yaw) * view.distance;
+        desiredPosition.set(seatX, groundY(seatX, seatZ) + view.height, seatZ);
         position.copy(desiredPosition);
         position.y = ridge.clamp(
           position.y,
@@ -109,9 +120,9 @@ export function createFollowFraming(): CameraFraming {
       aimYaw = lerpAngle(aimYaw, facing, smoothing(dt, FOLLOW_AIM_TAU));
       speedNorm += (rawSpeedNorm - speedNorm) * smoothing(dt, SPEED_NORM_TAU);
 
-      const rigX = dog.position.x - Math.sin(yaw) * DISTANCE;
-      const rigZ = dog.position.z - Math.cos(yaw) * DISTANCE;
-      desiredPosition.set(rigX, groundY(rigX, rigZ) + HEIGHT, rigZ);
+      const rigX = dog.position.x - Math.sin(yaw) * view.distance;
+      const rigZ = dog.position.z - Math.cos(yaw) * view.distance;
+      desiredPosition.set(rigX, groundY(rigX, rigZ) + view.height, rigZ);
       approach(position, desiredPosition, positionSmoothing(dt, FOLLOW_POSITION_TAU), dt);
       // What keeps a ridge between the rig and the dog from swallowing the dog.
       position.y = ridge.clamp(
@@ -123,7 +134,7 @@ export function createFollowFraming(): CameraFraming {
         dt,
       );
 
-      const lead = LOOK_AHEAD * speedNorm;
+      const lead = view.lookAhead * speedNorm;
       const aimX = dog.position.x + Math.sin(aimYaw) * lead;
       const aimZ = dog.position.z + Math.cos(aimYaw) * lead;
       desiredAim.set(aimX, groundY(aimX, aimZ) + AIM_HEIGHT, aimZ);

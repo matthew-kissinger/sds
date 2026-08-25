@@ -137,16 +137,6 @@ export const MASONRY: BandSet = { shade: '#645a58', body: '#8b7a6e', key: '#ad9a
  */
 export const OPENING: BandSet = { shade: '#3b3236', body: '#463c3e', key: '#514547' };
 
-/** Trodden earth in the yard and along the drive, lit. palette candidate: promote in cohesion pass */
-export const YARD: BandSet = { shade: '#8a6c55', body: '#a9825a', key: '#c39d70' };
-/**
- * The second earth value: the beaten core of the yard and the wheel ruts, which
- * are older, greyer and packed harder than the loose dirt around them. Two values
- * in the earth is what gives a worn surface structure instead of a wash.
- * palette candidate: promote in cohesion pass
- */
-export const YARD_PACKED: BandSet = { shade: '#6f584a', body: '#8a6b4e', key: '#a2825f' };
-
 /**
  * Lamplit glass. Deeper amber than a lamp looks by eye, on purpose: it is driven
  * above 1.0 in the shader, and a colour whose green and blue are already high
@@ -185,15 +175,6 @@ export const OUTLINE = '#6b5a55';
  * palette candidate: promote in cohesion pass
  */
 export const SMOKE: BandSet = { shade: '#7f7681', body: '#948b8e', key: '#a69d97' };
-
-/**
- * How deep the contact shadow at a footing goes, as a colour rather than a
- * multiply. A gain cannot cool a warm earth without also greying it, so the yard
- * mixes toward this instead: a warm plum, hue-shifted off the earth rather than
- * darker than it, so the buildings are bedded into the pad and not stood on it.
- * palette candidate: promote in cohesion pass
- */
-export const CONTACT = '#7d5a5e';
 
 /**
  * The long shadow the buildings throw.

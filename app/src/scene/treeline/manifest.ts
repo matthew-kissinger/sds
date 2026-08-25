@@ -5,6 +5,7 @@
 
 import { use } from 'react';
 import type { TreelinePlacement } from './placement';
+import { loadAssetBytes, type LoadProgress } from '@app/boot/loadAsset';
 
 export interface TreelineManifest extends TreelinePlacement {
   readonly version: number;
@@ -15,13 +16,9 @@ export interface TreelineManifest extends TreelinePlacement {
 const MANIFEST_URL = new URL('../../../../assets/treeline/manifest.json', import.meta.url).href;
 let pending: Promise<TreelineManifest> | null = null;
 
-export function loadTreelineManifest(): Promise<TreelineManifest> {
-  pending ??= fetch(MANIFEST_URL).then(async (response) => {
-    if (!response.ok) {
-      throw new Error(`treeline manifest: ${response.status} ${response.statusText}`);
-    }
-    return (await response.json()) as TreelineManifest;
-  });
+export function loadTreelineManifest(onProgress?: LoadProgress): Promise<TreelineManifest> {
+  pending ??= loadAssetBytes(MANIFEST_URL, 'treeline manifest', onProgress)
+    .then((bytes) => JSON.parse(new TextDecoder().decode(bytes)) as TreelineManifest);
   return pending;
 }
 

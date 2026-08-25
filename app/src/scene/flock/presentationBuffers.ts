@@ -269,6 +269,7 @@ export function initializeFlockFirstDraw(
       scaleY,
       scaleZ,
       0,
+      0,
     );
     dummy.position.set(x, groundY - SHEEP_HOOF_BASELINE * scaleY, z);
     dummy.rotation.set(0, yaw, 0);

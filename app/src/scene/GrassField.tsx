@@ -4,7 +4,7 @@
  * The grass. The signature system (spec/04): half a million instanced blades
  * with wind you can see and a field that answers every body moving through it.
  *
- * TWO TIERS, TWO DRAW CALLS (spec/08: grass is one draw call per density tier).
+ * TWO GRASS GROUPS, TWO DRAW CALLS (spec/08: grass is one draw call per group).
  *
  *  - `field` covers the 200 m playfield plus six metres, in seven-blade clumps
  *    with a three-segment curve, and it is the tier that pays for interaction.
@@ -78,10 +78,11 @@ function buildTier(
 export function GrassField() {
   const sim = useGameStore((state) => state.sim);
   const quality = useGameStore((state) => state.quality);
+  const autoTierReceipt = useGameStore((state) => state.autoTierReceipt);
   const reducedMotion = useReducedMotion();
   const records = useTufts();
-  // Measured once, held for the session (spec/08: no per-frame governor).
-  const density = GRASS_PRESETS[resolvedRenderTier(quality)];
+  // Boot-measured, then eligible for rare demotion after a sustained slow window.
+  const density = GRASS_PRESETS[resolvedRenderTier(quality, autoTierReceipt)];
 
   // One scoreable-capacity field for the life of the scene. Its update reads
   // the live sim length, so 25/75/200 and the zero-sheep GPU scale controller

@@ -12,6 +12,7 @@
   },
   "keywords": [
     "threejs",
+    "react-three-fiber",
     "typescript",
     "webgpu",
     "webgl2",
@@ -38,14 +39,13 @@
     "typecheck:worker": "npm run typecheck --prefix worker",
     "probe:release": "node tools/release-hardening-probe.mjs",
     "probe:playtest": "node tools/playtest-profile.mjs",
+    "probe:boot": "node tools/boot-probe.mjs",
     "capture:launch": "node tools/launch-media-capture.mjs",
     "check:discovery": "node scripts/verify-public-discovery.mjs",
     "lint": "eslint .",
     "bake:terrain": "node tools/bake-terrain.mjs",
     "bake:grass": "node tools/bake-grass.mjs",
-    "bake:placement": "node tools/bake-world-placement.mjs",
-    "bake:audio": "node tools/bake-audio.mjs",
-    "check:audio-bake": "node tools/bake-audio.mjs --check"
+    "bake:placement": "node tools/bake-world-placement.mjs"
   },
   "dependencies": {
     "kdbush": "^4.0.2",

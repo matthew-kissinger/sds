@@ -19,6 +19,7 @@
 
 import { use } from 'react';
 import manifestJson from '../../../../assets/grass/manifest.json';
+import { loadAssetBytes, type LoadProgress } from '@app/boot/loadAsset';
 
 export interface GrassGroupManifest {
   readonly id: string;
@@ -58,14 +59,8 @@ const TUFTS_URL = new URL('../../../../assets/grass/tufts.bin', import.meta.url)
 let pending: Promise<DataView> | null = null;
 
 /** Fetch and hold the raw records. Repeat calls share the first promise. */
-export function loadTufts(): Promise<DataView> {
-  pending ??= fetch(TUFTS_URL)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`tufts.bin: ${response.status} ${response.statusText}`);
-      }
-      return response.arrayBuffer();
-    })
+export function loadTufts(onProgress?: LoadProgress): Promise<DataView> {
+  pending ??= loadAssetBytes(TUFTS_URL, 'tufts.bin', onProgress)
     .then((bytes) => {
       const records = bytes.byteLength / GRASS_MANIFEST.stride;
       const declared = GRASS_MANIFEST.groups.reduce((sum, group) => sum + group.count, 0);
