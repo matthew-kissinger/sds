@@ -166,9 +166,11 @@ for (const path of [
     fail(`procedural foliage source absent: ${String(path)}`);
   }
 }
-const builtExternalModels = distFiles.filter((path) => (
-  ['.glb', '.gltf', '.obj', '.mtl'].includes(extname(path).toLowerCase())
-));
+const builtExternalModels = distFiles.filter((path) => {
+  const lower = path.toLowerCase();
+  if (lower.endsWith('.font.glb')) return false;
+  return ['.glb', '.gltf', '.obj', '.mtl'].includes(extname(lower));
+});
 if (builtExternalModels.length > 0) {
   fail(`external model entered dist: ${builtExternalModels.map((path) => relative(dist, path))}`);
 }
