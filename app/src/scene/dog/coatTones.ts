@@ -114,20 +114,16 @@ export const CREAM_SHADOW = '#9d978e';
  * a wide margin, and warm-neutral like everything else. Applied to all three
  * bands, because a nose does not brighten when the sun catches it.
  */
-export const FACE_DARK = '#302e2b';
+export const FACE_DARK = '#252220';
 /**
- * The iris, at sRGB(96,62,34). A collie's eye is amber-brown, and giving the eye
- * an iris inside a dark rim is what makes it read as an eye at hero magnification
- * rather than as a drilled hole.
+ * The iris, at warm amber-gold. A working collie's eye is alert amber-brown,
+ * contrasting clearly against the dark rim and dark coat.
  */
-export const EYE_IRIS = '#6e523e';
+export const EYE_IRIS = '#c27632';
 /**
- * The catch light, at sRGB(198,188,172). A warm grey, and mixed in at six tenths
- * rather than laid on opaque, so at hero magnification it is a soft light in a
- * wet eye and at gameplay distance it is nothing at all. The previous pass used
- * a near-white at full strength and the critic read the pair as render glitches.
+ * The catch light: a bright, lively specular glint in the upper eye quadrant.
  */
-export const EYE_CATCH = '#c6c1b7';
+export const EYE_CATCH = '#f2eee6';
 
 // --- the line ----------------------------------------------------------------
 

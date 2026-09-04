@@ -20,6 +20,7 @@ import { Pen } from './Pen';
 import { Scatter } from './Scatter';
 import { Terrain } from './Terrain';
 import { Treeline } from './Treeline';
+import { SheepHoverLabel } from './SheepHoverLabel';
 import { loadHeightfield } from '@app/world/heightfield';
 import { loadTufts } from './grass/tuftData';
 import { loadTreelineManifest } from './treeline/manifest';
@@ -66,6 +67,7 @@ export function FieldScene() {
       <Scatter />
       <Flock />
       <Dog />
+      <SheepHoverLabel />
     </>
   );
 }

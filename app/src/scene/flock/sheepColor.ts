@@ -60,6 +60,7 @@ import {
 } from '@app/tsl/nodes';
 import { SHEEP_FORM } from './sheepGeometry';
 import { woolBands } from './sheepRamp';
+import { getBreedDarkParts, getBreedFleeceGain } from './sheepVariety';
 
 // --- the dark parts ---------------------------------------------------------
 
@@ -211,8 +212,13 @@ function fleeceGain(nodes: SheepNodes): TSLNode {
 }
 
 /** The whole animal's base colour, banded. */
-export function sheepBaseColor(nodes: SheepNodes, light: TSLNode): TSLNode {
+export function sheepBaseColor(
+  nodes: SheepNodes,
+  light: TSLNode,
+  varietyMode?: TSLNode,
+): TSLNode {
   const { masks, legs, seed } = nodes;
+  const modeNode = varietyMode ?? float(0);
 
   const gain = fleeceGain(nodes);
   const bands = woolBands(light, gain);
@@ -269,24 +275,38 @@ export function sheepBaseColor(nodes: SheepNodes, light: TSLNode): TSLNode {
   const soil = smoothstep(float(0.1), float(0.7), broad.add(midOctave.mul(float(0.3))))
     .mul(float(1).sub(crest))
     .mul(float(SOIL_DEPTH));
+  const breedGain = getBreedFleeceGain(seed, modeNode, positionLocal);
   const fleece = bands.fleece
     .mul(paint)
     .mul(mix(float(WOOL_ROOT), float(1), crest))
-    .mul(mix(vec3(1, 1, 1), vec3(...SOIL_TINT), soil));
+    .mul(mix(vec3(1, 1, 1), vec3(...SOIL_TINT), soil))
+    .mul(breedGain);
 
   // abs(legSign) is 1 on a limb and 0 on a skull: the only channel that tells
   // them apart, and what lets the two carry different values of the near-black.
   const limb = abs(legs.x);
   const jaw = smoothstep(float(SHEEP_FORM.jawY), float(SHEEP_FORM.jawY - JAW_SPAN), positionLocal.y)
     .mul(float(1).sub(limb));
-  const skull = color(PALETTE.sheepFace).mul(mix(float(1), float(JAW_DEPTH), jaw));
+  const baseSkull = color(PALETTE.sheepFace).mul(mix(float(1), float(JAW_DEPTH), jaw));
   const hoof = smoothstep(float(0.7), float(0.86), legs.y);
-  const shank = mix(
+  const baseShank = mix(
     color(PALETTE.sheepLeg),
     color(PALETTE.sheepHoof),
     hoof,
   );
-  const dark = mix(skull, shank, limb)
+  const { skull, shank, customPoints } = getBreedDarkParts(
+    seed,
+    modeNode,
+    positionLocal,
+    limb,
+    jaw,
+    hoof,
+    JAW_DEPTH,
+    baseSkull,
+    baseShank,
+    bands.key,
+  );
+  const darkPoints = mix(skull, shank, limb)
     .mul(bands.darkGain)
     .add(vec3(...DARK_FILL).mul(bands.shade))
     .add(
@@ -294,8 +314,9 @@ export function sheepBaseColor(nodes: SheepNodes, light: TSLNode): TSLNode {
         .mul(bands.key.mul(float(0.75)).add(float(1).sub(bands.shade).mul(float(0.25))))
         .mul(float(1).sub(hoof)),
     );
+  const points = mix(darkPoints, customPoints.points, customPoints.isCustom);
 
-  return mix(dark, fleece, masks.x);
+  return mix(points, fleece, masks.x);
 }
 
 /** Warm rim along the silhouette, the sky from above, and the lift that keeps

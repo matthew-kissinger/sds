@@ -153,6 +153,7 @@ export function makeSheepMaterialFromNodes(
   motionScale: TSLNode,
   placement?: SheepMaterialPlacement,
   terrainOffsets?: TSLNode,
+  varietyMode?: TSLNode,
 ): THREE.MeshBasicNodeMaterial {
   // Half-lambert against the key: the raw dot spends most of a rounded mass
   // below zero, which throws away the range the bands need.
@@ -171,7 +172,7 @@ export function makeSheepMaterialFromNodes(
     .add(formWave);
 
   const material = new THREE.MeshBasicNodeMaterial();
-  material.colorNode = sheepBaseColor(nodes, light).add(
+  material.colorNode = sheepBaseColor(nodes, light, varietyMode).add(
     sheepLightAdditions(nodes, light, nDotL),
   );
   const animated = sheepAnimation(nodes, motionScale, terrainOffsets).displace(
@@ -240,10 +241,11 @@ export function makeSheepMaterial(
   motion: THREE.InstancedBufferAttribute,
   motionScale: TSLNode,
   terrain?: THREE.InstancedBufferAttribute,
+  varietyMode?: TSLNode,
 ): THREE.MeshBasicNodeMaterial {
   const nodes = readInstance(style, motion);
   const terrainNode = terrain ? instancedBufferAttribute(terrain, 'vec4') : undefined;
-  return makeSheepMaterialFromNodes(nodes, motionScale, undefined, terrainNode);
+  return makeSheepMaterialFromNodes(nodes, motionScale, undefined, terrainNode, varietyMode);
 }
 
 /**

@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   FLOCK_SIZES,
   useGameStore,
-  type FlockSize,
 } from '@app/state/store';
 import { useReducedMotion } from './useReducedMotion';
 import { PlayerIdentity } from '@app/scores/PlayerIdentity';
@@ -15,11 +14,12 @@ import { bootPercent, bootStatus } from '@app/boot/progress';
 export function Boot() {
   const startGame = useGameStore((state) => state.startGame);
   const openSettings = useGameStore((state) => state.openSettings);
+  const openCustomize = useGameStore((state) => state.openCustomize);
   const sceneReady = useGameStore((state) => state.sceneReady);
   const bootProgress = useGameStore((state) => state.bootProgress);
   const gamePhase = useGameStore((state) => state.gamePhase);
-  const defaultFlockSize = useGameStore((state) => state.flockSize);
-  const [flockSize, setFlockSize] = useState<FlockSize>(defaultFlockSize);
+  const flockSize = useGameStore((state) => state.flockSize);
+  const setFlockSize = useGameStore((state) => state.setFlockSize);
   const [leaving, setLeaving] = useState(false);
   const [showTimes, setShowTimes] = useState(false);
   const timeout = useRef<number | null>(null);
@@ -110,6 +110,13 @@ export function Boot() {
             onClick={play}
           >
             Play
+          </button>
+          <button
+            type="button"
+            className="herd-button herd-button--quiet"
+            onClick={openCustomize}
+          >
+            Customize
           </button>
           <button
             type="button"

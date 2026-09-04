@@ -11,9 +11,19 @@ import {
   type BootProgress,
   type BootStep,
 } from '@app/boot/progress';
+import {
+  DEFAULT_DOG_COAT,
+  DEFAULT_DOG_NAME,
+  type DogCoatId,
+} from '@app/scene/dog/dogCustomization';
+import {
+  DEFAULT_FLOCK_VARIETY,
+  type FlockVarietyId,
+} from '@app/scene/flock/sheepVariety';
+import type { DogCameraAngle } from '@app/camera/customizeFraming';
 
 export type GamePhase = 'title' | 'playing' | 'paused' | 'complete';
-export type UiPanel = 'none' | 'pause' | 'settings';
+export type UiPanel = 'none' | 'pause' | 'settings' | 'customize';
 export type FlockSize = 25 | 75 | 200;
 export const FLOCK_SIZES: readonly FlockSize[] = [25, 75, 200];
 export type CameraMode = 'classic' | 'follow';
@@ -117,6 +127,14 @@ export interface GameStore {
   readonly runtimeDiagnostics: RuntimeDiagnostics;
   readonly seed: number;
   readonly sim: CpuDeterministicSim;
+  readonly dogCoatPreset: DogCoatId;
+  readonly dogName: string;
+  readonly flockVarietyMode: FlockVarietyId;
+  readonly customSheepNames: Readonly<Record<number, string>>;
+  readonly customizeTab: 'dog' | 'flock' | 'sheep';
+  readonly customizeDogAngle: DogCameraAngle;
+  readonly customizeSelectedSheep: number;
+  readonly customizeOrbitAngle: number;
 
   markSceneReady(): void;
   reportBootStep(step: BootStep, fraction: number): void;
@@ -125,6 +143,19 @@ export interface GameStore {
   resume(): void;
   openSettings(): void;
   closeSettings(): void;
+  openCustomize(): void;
+  closeCustomize(): void;
+  setCustomizeTab(tab: 'dog' | 'flock' | 'sheep'): void;
+  setCustomizeDogAngle(angle: DogCameraAngle): void;
+  setCustomizeSelectedSheep(index: number): void;
+  setCustomizeOrbitAngle(angle: number | ((prev: number) => number)): void;
+  setDogCoatPreset(preset: DogCoatId): void;
+  setDogName(name: string): void;
+  setFlockVarietyMode(mode: FlockVarietyId): void;
+  setFlockSize(flockSize: FlockSize): void;
+  setSheepName(index: number, name: string): void;
+  setBatchSheepNames(names: Record<number, string>): void;
+  resetSheepNames(): void;
   sheepPenned(pennedCount: number): void;
   barkAccepted(event: AcceptedBark): void;
   complete(completionTimeMs: number, completionTick?: number): void;
@@ -144,7 +175,15 @@ export interface GameStore {
 
 const SETTINGS_KEY = 'herd.settings.v1';
 const BESTS_KEY = 'herd.personal-bests.v1';
+const CUSTOMIZATION_KEY = 'herd.customization.v1';
 const EMPTY_BESTS: PersonalBests = { 25: null, 75: null, 200: null };
+
+export interface StoredCustomization {
+  readonly dogCoatPreset?: DogCoatId;
+  readonly dogName?: string;
+  readonly flockVarietyMode?: FlockVarietyId;
+  readonly customSheepNames?: Record<number, string>;
+}
 
 function loadJson<T>(key: string, fallback: T): T {
   if (typeof localStorage === 'undefined') return fallback;
@@ -198,6 +237,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
   const seed = initialSeed();
   const flockSize: FlockSize = 25;
   const stored = loadJson<StoredSettings>(SETTINGS_KEY, {});
+  const storedCustom = loadJson<StoredCustomization>(CUSTOMIZATION_KEY, {});
   const bindings: InputBindings = {
     ...DEFAULT_INPUT_BINDINGS,
     ...stored.inputBindings,
@@ -207,6 +247,17 @@ export const useGameStore = create<GameStore>()((set, get) => {
   function updateSetting(patch: Partial<GameStore>): void {
     set(patch);
     saveJson(SETTINGS_KEY, settingsSnapshot(get()));
+  }
+
+  function updateCustomization(patch: Partial<GameStore>): void {
+    set(patch);
+    const current = get();
+    saveJson(CUSTOMIZATION_KEY, {
+      dogCoatPreset: current.dogCoatPreset,
+      dogName: current.dogName,
+      flockVarietyMode: current.flockVarietyMode,
+      customSheepNames: current.customSheepNames,
+    });
   }
 
   return {
@@ -238,6 +289,14 @@ export const useGameStore = create<GameStore>()((set, get) => {
     runtimeDiagnostics: EMPTY_RUNTIME_DIAGNOSTICS,
     seed,
     sim: newSim(flockSize, seed),
+    dogCoatPreset: storedCustom.dogCoatPreset ?? DEFAULT_DOG_COAT,
+    dogName: storedCustom.dogName?.trim() || DEFAULT_DOG_NAME,
+    flockVarietyMode: storedCustom.flockVarietyMode ?? DEFAULT_FLOCK_VARIETY,
+    customSheepNames: storedCustom.customSheepNames ?? {},
+    customizeTab: 'dog',
+    customizeDogAngle: 'hero',
+    customizeSelectedSheep: 0,
+    customizeOrbitAngle: 0,
 
     markSceneReady() {
       get().reportBootStep('presented', 1);
@@ -298,6 +357,84 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     closeSettings() {
       set({ uiPanel: get().gamePhase === 'paused' ? 'pause' : 'none' });
+    },
+
+    openCustomize() {
+      const phase = get().gamePhase;
+      set({
+        gamePhase: phase === 'playing' ? 'paused' : phase,
+        uiPanel: 'customize',
+        customizeTab: 'dog',
+        customizeDogAngle: 'hero',
+        customizeOrbitAngle: 0,
+      });
+    },
+
+    closeCustomize() {
+      set({ uiPanel: get().gamePhase === 'paused' ? 'pause' : 'none' });
+    },
+
+    setCustomizeTab(tab) {
+      set({ customizeTab: tab, customizeOrbitAngle: 0 });
+    },
+
+    setCustomizeDogAngle(angle) {
+      set({ customizeDogAngle: angle, customizeOrbitAngle: 0 });
+    },
+
+    setCustomizeSelectedSheep(index) {
+      set({ customizeSelectedSheep: Math.max(0, index) });
+    },
+
+    setCustomizeOrbitAngle(angle) {
+      set((state) => ({
+        customizeOrbitAngle: typeof angle === 'function' ? angle(state.customizeOrbitAngle) : angle,
+      }));
+    },
+
+    setDogCoatPreset(preset) {
+      updateCustomization({ dogCoatPreset: preset });
+    },
+
+    setDogName(name) {
+      const trimmed = name.trim();
+      const next = trimmed.length > 0 ? trimmed.slice(0, 24) : DEFAULT_DOG_NAME;
+      updateCustomization({ dogName: next });
+    },
+
+    setFlockVarietyMode(mode) {
+      updateCustomization({ flockVarietyMode: mode });
+    },
+
+    setFlockSize(nextFlockSize) {
+      const current = get();
+      if (current.flockSize === nextFlockSize) return;
+      if (current.gamePhase === 'playing') return;
+      set({
+        flockSize: nextFlockSize,
+        sim: newSim(nextFlockSize, current.seed),
+        customizeSelectedSheep: Math.min(current.customizeSelectedSheep, nextFlockSize - 1),
+      });
+    },
+
+    setSheepName(index, name) {
+      const trimmed = name.trim();
+      const next = { ...get().customSheepNames };
+      if (trimmed.length > 0) {
+        next[index] = trimmed;
+      } else {
+        delete next[index];
+      }
+      updateCustomization({ customSheepNames: next });
+    },
+
+    setBatchSheepNames(names) {
+      const next = { ...get().customSheepNames, ...names };
+      updateCustomization({ customSheepNames: next });
+    },
+
+    resetSheepNames() {
+      updateCustomization({ customSheepNames: {} });
     },
 
     sheepPenned(pennedCount) {

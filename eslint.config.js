@@ -17,6 +17,7 @@ export default [
       'worker/**',
       'shared/**',
       'tests/worker/**',
+      'examples/**',
     ],
   },
   {

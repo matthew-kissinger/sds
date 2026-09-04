@@ -38,6 +38,7 @@ import {
   buildDogGeometry,
 } from './dog/dogGeometry';
 import { makeDogMaterial } from './dog/dogMaterial';
+import { DOG_COAT_PRESETS } from './dog/dogCustomization';
 import { advanceDogMotion, createDogMotion, dogPawSwingZ } from './dog/dogMotion';
 import { SHADOW_LIFT, makeContactShadow } from './dog/contactShadow';
 import { DogGroundFeedback } from './juice/DogGroundFeedback';
@@ -89,11 +90,21 @@ export function Dog() {
     receipt: { dogTurnStep: 0 },
   }), []);
 
+  const dogCoatPreset = useGameStore((state) => state.dogCoatPreset);
+
   useLayoutEffect(() => {
     resetPositionPresentationBuffers(position, sim.dogPositions, sim.tick);
     diagnostics.elapsed = 0;
     diagnostics.turnStepMax = 0;
   }, [diagnostics, position, sim]);
+
+  useLayoutEffect(() => {
+    const preset = DOG_COAT_PRESETS[dogCoatPreset] ?? DOG_COAT_PRESETS.classic;
+    dogMaterial.coatUniforms.shadow.value.set(preset.shadow);
+    dogMaterial.coatUniforms.mid.value.set(preset.mid);
+    dogMaterial.coatUniforms.lit.value.set(preset.lit);
+    dogMaterial.coatUniforms.outline.value.set(preset.outline);
+  }, [dogCoatPreset, dogMaterial]);
 
   useFrame((state, delta) => {
     const body = bodyRef.current;
@@ -130,14 +141,21 @@ export function Dog() {
       }
     }
 
+    const isCustomize = store.uiPanel === 'customize';
+    if (isCustomize) {
+      motion.idleSeconds = 0;
+      motion.sit = 0;
+      motion.headTilt = 0;
+    }
+
     dogMaterial.gaitPhase.value = motion.gaitPhase;
     dogMaterial.effort.value = motion.effort;
-    dogMaterial.sit.value = motion.sit;
-    dogMaterial.headTilt.value = motion.headTilt;
+    dogMaterial.sit.value = isCustomize ? 0 : motion.sit;
+    dogMaterial.headTilt.value = isCustomize ? 0 : motion.headTilt;
     dogMaterial.motionScale.value = secondaryMotion;
     dogMaterial.bodyBob.value = motion.bob;
-    dogMaterial.bodyLean.value = motion.lean;
-    dogMaterial.bodyRoll.value = motion.roll;
+    dogMaterial.bodyLean.value = isCustomize ? 0 : motion.lean;
+    dogMaterial.bodyRoll.value = isCustomize ? 0 : motion.roll;
 
     // The sim is flat 2D (spec/04). Presentation reconstructs the fixed loop's
     // remainder and draws between its two latest ticks.
