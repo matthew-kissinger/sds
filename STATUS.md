@@ -129,6 +129,15 @@ commit identity.
   one graph, gesture unlock, five non-duplicated loops, pause/resume, restart,
   visibility, mute/volume and positional bark all passed with no media errors.
 
+### Customizer Studio, Heritage Name Tags and Working Dog Naming
+
+- Added Customizer Studio to personalize working collie coat presets, dog naming, and flock breed variety.
+- Working collie can be named by the player, defaulting to "Pip" with 20 authentic British working sheepdog names in a roll ledger. Persisted to `localStorage` under `herd.customization.v1`.
+- Added high-definition 2× Retina Heritage Name Plaques with trilinear mipmapping and anisotropic filtering, dual-envelope tracking hysteresis (0.055 NDC acquisition, 0.110 NDC retention, 250ms dropout grace window), smooth exponential damping, and complete mobile touch parity (tap-to-pin, tap-to-dismiss).
+- Flock breeds supported: Suffolk, Cheviot, Herdwick, Kerry Hill, Badger Face, Moorit, and Balwen.
+- 81 test files and 648 unit tests pass. Lint, client TypeScript, Worker TypeScript, and production build pass with zero errors and zero warnings. Initial JavaScript bundle is 627.93 kB gzip.
+
+
 - Complete the desktop, mobile, offline-score and service-worker transition
   matrix in `docs/launch/v3-launch-pack.md`.
 - Complete a physical iOS or Android playtest. Browser touch emulation already

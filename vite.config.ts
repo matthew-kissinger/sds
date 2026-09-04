@@ -13,6 +13,7 @@ export default defineConfig({
     alias: {
       '@sim': fileURLToPath(new URL('./sim', import.meta.url)),
       '@app': fileURLToPath(new URL('./app/src', import.meta.url)),
+      'gltf-validator': fileURLToPath(new URL('./app/src/shims/gltf-validator.ts', import.meta.url)),
     },
   },
   build: {
@@ -23,5 +24,8 @@ export default defineConfig({
   server: {
     port: 5199,
     strictPort: true,
+  },
+  optimizeDeps: {
+    include: ['ajv'],
   },
 });

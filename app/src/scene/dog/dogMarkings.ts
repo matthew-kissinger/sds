@@ -106,8 +106,15 @@ export interface DogPaint {
   readonly lit: TSLNode;
 }
 
+export interface DogCoatInputNodes {
+  readonly shadow?: TSLNode;
+  readonly mid?: TSLNode;
+  readonly lit?: TSLNode;
+  readonly outline?: TSLNode;
+}
+
 /** Build the coat: three tones, mottled, marked, and given a face. */
-export function paintDog(): DogPaint {
+export function paintDog(coatNodes?: DogCoatInputNodes): DogPaint {
   const mottle = mottleNode();
   const wander = mottle.mul(float(WANDER_BROAD)).add(
     sin(
@@ -131,10 +138,20 @@ export function paintDog(): DogPaint {
     catchLight: color(EYE_CATCH),
   };
 
-  const band = (coat: string, cream: string): TSLNode => {
+  const band = (coat: string | TSLNode, cream: string): TSLNode => {
     const tones: MarkTones = { ...face, cream: color(cream).mul(creamSwing) };
-    return applyMarks(marks, color(coat).mul(coatSwing), tones);
+    const coatNode = typeof coat === 'string' ? color(coat) : coat;
+    return applyMarks(marks, coatNode.mul(coatSwing), tones);
   };
+
+  if (coatNodes?.shadow && coatNodes?.mid && coatNodes?.lit) {
+    return {
+      mask: marks.cream,
+      shadow: band(coatNodes.shadow, CREAM_SHADOW),
+      mid: band(coatNodes.mid, CREAM_MID),
+      lit: band(coatNodes.lit, CREAM_LIT),
+    };
+  }
 
   return {
     mask: marks.cream,
@@ -151,6 +168,6 @@ export function paintDog(): DogPaint {
  * one silhouette, and a single warm brown is what makes the outline read as
  * drawn rather than as noise.
  */
-export function outlineColor(): TSLNode {
-  return color(OUTLINE);
+export function outlineColor(overrideNode?: TSLNode): TSLNode {
+  return overrideNode ?? color(OUTLINE);
 }

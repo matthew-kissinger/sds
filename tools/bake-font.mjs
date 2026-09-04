@@ -35,9 +35,8 @@ const args = [
   '--output',
   'sheep-font.tmp.font.glb',
   '--unicodes',
-  'U+0020-007E',
-  '--bitmap',
-  '16,32,64',
+  'U+0020-007E,U+00B7,U+2022',
+  '--msdf',
 ];
 
 const res = spawnSync(process.execPath, args, { cwd: root, stdio: 'inherit' });

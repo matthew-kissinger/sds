@@ -12,9 +12,25 @@ export { formatRunTime } from './time';
 function SheepMark() {
   return (
     <svg className="herd-progress__icon" viewBox="0 0 32 24" aria-hidden="true">
-      <path d="M8 6c2-4 7-4 9-1 3-2 7 0 7 4 3 1 3 6 0 7-1 3-5 4-8 2-4 2-10 0-10-5 0-3 3-6 6-7Z" fill="currentColor" />
-      <circle cx="25" cy="8" r="4" fill="currentColor" />
-      <path d="M9 18v5M21 18v5" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M6.5 11 C6 8.5 8.5 6.5 11 7 C13 4.8 17 4.8 19 7 C21.5 6 24 8 23.5 10.5 C25.5 12 25 15 22.5 16.5 C20 17.8 16 17.8 14 17 C11.5 18.2 8 17 7 15 C5.8 13.5 5.8 12.2 6.5 11 Z"
+        fill="currentColor"
+      />
+      <circle cx="24" cy="9.5" r="3.4" fill="currentColor" />
+      <ellipse
+        cx="22.2"
+        cy="11.8"
+        rx="1.2"
+        ry="2"
+        transform="rotate(25 22.2 11.8)"
+        fill="currentColor"
+      />
+      <path
+        d="M10 17v4.5M18.5 17v4.5"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

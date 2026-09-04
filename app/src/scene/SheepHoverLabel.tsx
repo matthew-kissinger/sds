@@ -4,21 +4,29 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
-import { texture } from 'three/tsl';
+import { texture, uniform } from 'three/tsl';
 import { useGameStore } from '@app/state/store';
 import { groundY } from '@app/world/heightfield';
 import { getSheepName } from '@app/game/sheepNames';
-import { UI_TOKENS } from '@app/ui/tokens';
 import { useSheepPicker } from './useSheepPicker';
+import {
+  drawHeritagePlaque,
+  PLAQUE_CANVAS_WIDTH,
+  PLAQUE_CANVAS_HEIGHT,
+  PLAQUE_ASPECT,
+} from './ui/plaqueDrawing';
 
-const CANVAS_WIDTH = 256;
-const CANVAS_HEIGHT = 64;
+/** Physical height in 3D world units. */
+const PLAQUE_WORLD_HEIGHT = 0.44;
 
 /**
- * 3D Billboard Sheep Label.
- * Displays the hovered or tapped sheep's name with distance-compensated scaling
- * and a tactile paper pill backing matching the Sheepdog Sim UI design system.
- * Works seamlessly across genuine WebGPU and forced WebGL2 backends.
+ * 3D Heritage Name Plaque Billboard.
+ * Displays the active sheep or dog's name with artisan wooden framing,
+ * eggshell parchment, tactile spring arrival, animated specular gleam sweep,
+ * distance-compensated scaling, and a graceful uplift-dissolve on hover-off.
+ *
+ * Fully compliant with AGENTS.md Rule 3: Single TSL NodeMaterial across genuine
+ * WebGPU and forced WebGL2 backends.
  */
 export function SheepHoverLabel() {
   const sim = useGameStore((state) => state.sim);
@@ -26,23 +34,42 @@ export function SheepHoverLabel() {
 
   const groupRef = useRef<THREE.Group>(null);
   const pillRef = useRef<THREE.Mesh>(null);
-  const lastActiveIndexRef = useRef<number | null>(null);
 
-  // Dedicated off-screen canvas and texture for the billboard label
+  // Dynamic animation states for tactile AAA feel
+  const activeEntityRef = useRef<number | null>(null);
+  const scaleRef = useRef<number>(0.0);
+  const velocityRef = useRef<number>(0.0);
+  const opacityRef = useRef<number>(0.0);
+  const timeRef = useRef<number>(0);
+  const gleamProgressRef = useRef<number>(2.0); // > 1.2 means inactive
+  const lastActiveNameRef = useRef<string>('');
+  const lastTargetPos = useRef<{ x: number; z: number; baseY: number }>({
+    x: 0,
+    z: 0,
+    baseY: 0,
+  });
+  const currentPos = useRef(new THREE.Vector3());
+  const isPosInitialized = useRef<boolean>(false);
+
+  // Dedicated high-DPI canvas texture for the billboard plaque
   const { ctx, canvasTexture } = useMemo(() => {
     const c = document.createElement('canvas');
-    c.width = CANVAS_WIDTH;
-    c.height = CANVAS_HEIGHT;
+    c.width = PLAQUE_CANVAS_WIDTH;
+    c.height = PLAQUE_CANVAS_HEIGHT;
     const context = c.getContext('2d', { willReadFrequently: false });
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.minFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
-    tex.generateMipmaps = false;
+    if (gl.capabilities?.getMaxAnisotropy) {
+      tex.anisotropy = Math.min(gl.capabilities.getMaxAnisotropy(), 8);
+    }
     return { ctx: context, canvasTexture: tex };
-  }, []);
+  }, [gl]);
 
-  // Material using TSL texture node
+  // Material using TSL texture and opacity nodes
+  const opacityUniform = useMemo(() => uniform(0), []);
   const pillMaterial = useMemo(() => {
     const mat = new THREE.MeshBasicNodeMaterial({
       transparent: true,
@@ -51,14 +78,13 @@ export function SheepHoverLabel() {
       side: THREE.DoubleSide,
     });
     mat.colorNode = texture(canvasTexture);
+    mat.opacityNode = texture(canvasTexture).a.mul(opacityUniform);
     return mat;
-  }, [canvasTexture]);
+  }, [canvasTexture, opacityUniform]);
 
-  const pillGeometry = useMemo(() => {
-    return new THREE.PlaneGeometry(1, 1);
-  }, []);
+  const pillGeometry = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
 
-  // Ensure font is ready in document
+  // Ensure Alice font is preloaded in document
   useEffect(() => {
     const fontFace = new FontFace('Alice', 'url(/fonts/Alice-Regular.ttf)');
     fontFace
@@ -71,91 +97,159 @@ export function SheepHoverLabel() {
       });
   }, []);
 
-  // Hook for picking sheep by cursor/touch
+  // Pick sheep or dog by cursor/touch
   const { update } = useSheepPicker(sim, camera, pointer, gl.domElement);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const group = groupRef.current;
     if (!group) return;
 
-    // Pick hovered/tapped sheep
-    const hoveredIndex = update();
+    const safeDelta = Math.min(delta, 0.05);
+    timeRef.current += safeDelta;
 
-    if (hoveredIndex === null) {
+    // Pick hovered entity or fallback to customized sheep in studio
+    let activeIndex = update();
+    const state = useGameStore.getState();
+    const isCustomizeStudio = state.uiPanel === 'customize';
+
+    if (activeIndex === null && isCustomizeStudio) {
+      if (state.customizeTab === 'sheep') {
+        activeIndex = state.customizeSelectedSheep;
+      } else if (state.customizeTab === 'dog') {
+        activeIndex = -1;
+      }
+    }
+
+    const hasTarget = activeIndex !== null;
+
+    // Detect target transition (hover-on or target change)
+    if (hasTarget && activeIndex !== activeEntityRef.current) {
+      activeEntityRef.current = activeIndex;
+      // Trigger tactile entrance bounce & specular gleam sweep
+      scaleRef.current = 0.6;
+      velocityRef.current = 4.2;
+      gleamProgressRef.current = 0.0;
+    }
+
+    // Determine target 3D world position
+    let targetX = lastTargetPos.current.x;
+    let targetZ = lastTargetPos.current.z;
+    let targetBaseY = lastTargetPos.current.baseY;
+
+    if (activeIndex === -1) {
+      if (sim.dogPositions && sim.dogPositions.length >= 2) {
+        targetX = sim.dogPositions[0]!;
+        targetZ = sim.dogPositions[1]!;
+        targetBaseY = groundY(targetX, targetZ) + 1.05;
+      }
+    } else if (activeIndex !== null) {
+      const pos = sim.positions;
+      if (activeIndex < sim.headings.length) {
+        targetX = pos[activeIndex * 2]!;
+        targetZ = pos[activeIndex * 2 + 1]!;
+        targetBaseY =
+          groundY(targetX, targetZ) + (isCustomizeStudio ? 1.25 : 1.45);
+      }
+    }
+
+    lastTargetPos.current.x = targetX;
+    lastTargetPos.current.z = targetZ;
+    lastTargetPos.current.baseY = targetBaseY;
+
+    // Smooth exponential position tracking to eliminate physics tick micro-stutter
+    if (!isPosInitialized.current || (hasTarget && activeIndex !== activeEntityRef.current)) {
+      currentPos.current.set(targetX, targetBaseY, targetZ);
+      isPosInitialized.current = true;
+    } else {
+      currentPos.current.x = THREE.MathUtils.damp(currentPos.current.x, targetX, 26, safeDelta);
+      currentPos.current.y = THREE.MathUtils.damp(currentPos.current.y, targetBaseY, 26, safeDelta);
+      currentPos.current.z = THREE.MathUtils.damp(currentPos.current.z, targetZ, 26, safeDelta);
+    }
+
+    // Target animation parameters
+    const targetOpacity = hasTarget ? 1.0 : 0.0;
+    const targetScale = hasTarget ? 1.0 : 0.85;
+
+    // Smooth opacity fade (crisp entry, graceful exit)
+    opacityRef.current = THREE.MathUtils.damp(opacityRef.current, targetOpacity, hasTarget ? 24 : 14, safeDelta);
+    opacityUniform.value = opacityRef.current;
+
+    // When fully faded out, hide group and reset state
+    if (!hasTarget && opacityRef.current < 0.008) {
       group.visible = false;
+      scaleRef.current = 0.0;
+      velocityRef.current = 0.0;
+      activeEntityRef.current = null;
+      gleamProgressRef.current = 2.0;
+      isPosInitialized.current = false;
       return;
     }
 
-    const pos = sim.positions;
-    const count = sim.headings.length;
-    if (hoveredIndex >= count) {
-      group.visible = false;
-      return;
+    // Damped harmonic oscillator for tactile spring arrival and hover-off settle
+    const stiffness = 260;
+    const damping = 18;
+    const springForce = (targetScale - scaleRef.current) * stiffness;
+    const dampingForce = -velocityRef.current * damping;
+    velocityRef.current += (springForce + dampingForce) * safeDelta;
+    scaleRef.current += velocityRef.current * safeDelta;
+
+    // Figure out display name and entity kind
+    let currentName = '';
+    let isDog = false;
+    if (activeEntityRef.current === -1) {
+      currentName = state.dogName || 'Pip';
+      isDog = true;
+    } else if (activeEntityRef.current !== null && activeEntityRef.current < sim.headings.length) {
+      currentName = getSheepName(activeEntityRef.current, state.customSheepNames);
+      isDog = false;
     }
 
-    const sx = pos[hoveredIndex * 2]!;
-    const sz = pos[hoveredIndex * 2 + 1]!;
-    const sy = groundY(sx, sz) + 1.25;
+    // Animate specular light sweep on entrance
+    let needsRedraw = false;
+    if (gleamProgressRef.current <= 1.25) {
+      gleamProgressRef.current += safeDelta * 2.6;
+      needsRedraw = true;
+    }
 
-    // Position above the sheep
-    group.position.set(sx, sy, sz);
+    // Draw plaque onto canvas only when text changed or during the entrance gleam
+    if (currentName && (needsRedraw || lastActiveNameRef.current !== currentName) && ctx) {
+      lastActiveNameRef.current = currentName;
+      drawHeritagePlaque(ctx, {
+        name: currentName,
+        isDog,
+        gleamProgress: gleamProgressRef.current <= 1.2 ? gleamProgressRef.current : undefined,
+      });
+      canvasTexture.needsUpdate = true;
+    }
 
-    // Billboard towards camera
+    // Gentle organic breathing bobbing while hovered
+    const bobY = Math.sin(timeRef.current * 2.4) * 0.02;
+
+    // Hover-off graceful uplift: floats upwards into the air while fading out
+    const hoverOffLift = hasTarget ? 0.0 : (1.0 - opacityRef.current) * 0.22;
+
+    group.position.set(
+      currentPos.current.x,
+      currentPos.current.y + bobY + hoverOffLift,
+      currentPos.current.z,
+    );
+
+    // Billboard alignment facing the active camera
     group.quaternion.copy(camera.quaternion);
 
     // Distance-compensated scaling:
-    // Classic camera sits at 54m, Follow camera sits at 15m.
-    // Clamped linear distance scaling keeps label ~28px tall across all camera distances.
+    // Clamped linear distance scaling keeps plaque legible from 4.5m studio to 54m classic view.
     const dist = camera.position.distanceTo(group.position);
-    const k = THREE.MathUtils.clamp(dist * 0.038, 0.75, 2.1);
-    group.scale.set(k, k, k);
+    const k = isCustomizeStudio
+      ? PLAQUE_WORLD_HEIGHT
+      : THREE.MathUtils.clamp(dist * 0.055, 1.0, 2.8);
 
-    // Update text and dimensions if changed
-    if (lastActiveIndexRef.current !== hoveredIndex) {
-      lastActiveIndexRef.current = hoveredIndex;
-      const name = getSheepName(hoveredIndex);
+    const effectiveScale = Math.max(k * scaleRef.current, 0.001);
+    group.scale.set(effectiveScale, effectiveScale, effectiveScale);
 
-      if (ctx) {
-        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-        ctx.font = '600 28px Alice, Georgia, "Times New Roman", serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        const metrics = ctx.measureText(name);
-        const textWidth = metrics.width;
-        const paddingX = 24;
-        const pillWidthPx = Math.min(Math.max(textWidth + paddingX * 2, 110), CANVAS_WIDTH - 8);
-        const pillHeightPx = 44;
-        const radius = pillHeightPx / 2;
-
-        const x0 = (CANVAS_WIDTH - pillWidthPx) / 2;
-        const y0 = (CANVAS_HEIGHT - pillHeightPx) / 2;
-
-        // Draw pill background with warm paper tone
-        ctx.beginPath();
-        ctx.roundRect(x0, y0, pillWidthPx, pillHeightPx, radius);
-        ctx.fillStyle = UI_TOKENS.color.paper;
-        ctx.fill();
-
-        // Subtle dark line border
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = UI_TOKENS.color.line;
-        ctx.stroke();
-
-        // Draw sheep name in dark ink
-        ctx.fillStyle = UI_TOKENS.color.ink;
-        ctx.fillText(name, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 1);
-
-        canvasTexture.needsUpdate = true;
-
-        if (pillRef.current) {
-          const aspect = CANVAS_WIDTH / CANVAS_HEIGHT;
-          const height = 0.52;
-          const width = height * aspect;
-          pillRef.current.scale.set(width, height, 1);
-        }
-      }
+    // Update billboard quad aspect
+    if (pillRef.current) {
+      pillRef.current.scale.set(PLAQUE_ASPECT, 1, 1);
     }
 
     group.visible = true;

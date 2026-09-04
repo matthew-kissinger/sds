@@ -40,6 +40,7 @@ import {
   type TSLNode,
 } from '@app/tsl/nodes';
 import { outlineColor, paintDog } from './dogMarkings';
+import { COAT_LIT, COAT_MID, COAT_SHADOW, OUTLINE } from './coatTones';
 import { makeDogSurface, shadeDog } from './dogToon';
 import { DOG_PAW_BASELINE } from './dogGeometry';
 
@@ -93,6 +94,13 @@ export interface DogMaterial {
   readonly bodyRoll: TSLNode;
   /** Per-paw local extensions sampled from the visible terrain. */
   readonly terrainOffsets: TSLNode;
+  /** Dynamic coat color uniforms for real-time coat customization without recompilation. */
+  readonly coatUniforms: {
+    readonly shadow: TSLNode;
+    readonly mid: TSLNode;
+    readonly lit: TSLNode;
+    readonly outline: TSLNode;
+  };
 }
 
 /** Build the dog's materials, plus the handles the frame loop drives. */
@@ -108,8 +116,17 @@ export function makeDogMaterial(): DogMaterial {
   const bodyRoll = uniform(0);
   const terrainOffsets = uniform(new THREE.Vector4());
 
-  const material = makeDogSurface(shadeDog(paintDog()));
-  const outlineMaterial = makeDogSurface(outlineColor());
+  const coatShadow = uniform(new THREE.Color(COAT_SHADOW));
+  const coatMid = uniform(new THREE.Color(COAT_MID));
+  const coatLit = uniform(new THREE.Color(COAT_LIT));
+  const coatOutline = uniform(new THREE.Color(OUTLINE));
+
+  const material = makeDogSurface(shadeDog(paintDog({
+    shadow: coatShadow,
+    mid: coatMid,
+    lit: coatLit,
+  })));
+  const outlineMaterial = makeDogSurface(outlineColor(coatOutline));
   outlineMaterial.side = THREE.BackSide;
 
   // --- gait ---------------------------------------------------------------
@@ -257,5 +274,11 @@ export function makeDogMaterial(): DogMaterial {
     bodyLean,
     bodyRoll,
     terrainOffsets,
+    coatUniforms: {
+      shadow: coatShadow,
+      mid: coatMid,
+      lit: coatLit,
+      outline: coatOutline,
+    },
   };
 }

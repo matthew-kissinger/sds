@@ -17,6 +17,7 @@ import { TouchControls } from './input/TouchControls';
 import { Boot } from './ui/Boot';
 import { Hud } from './ui/Hud';
 import { SettingsPanel } from './ui/SettingsPanel';
+import { CustomizePanel } from './ui/CustomizePanel';
 import { UiStyles } from './ui/UiStyles';
 import { useReducedMotion } from './ui/useReducedMotion';
 import { UI_TOKENS } from './ui/tokens';
@@ -217,6 +218,7 @@ function HerdApp() {
         {uiPanel === 'none' ? <Boot /> : null}
         {gamePhase !== 'title' ? <Hud /> : null}
         {uiPanel === 'settings' ? <SettingsPanel /> : null}
+        {uiPanel === 'customize' ? <CustomizePanel /> : null}
         <TouchControls />
       </div>
     </AudioRoot>

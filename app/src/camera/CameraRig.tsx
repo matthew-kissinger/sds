@@ -37,6 +37,7 @@ import { debugFlags } from '@app/scene/glFactory';
 import { useGameStore } from '@app/state/store';
 import { createClassicFraming } from './classicFraming';
 import { createFollowFraming } from './followFraming';
+import { createCustomizeFraming } from './customizeFraming';
 import { MAX_FRAME_DT, MODE_BLEND_SECONDS, easeInOut } from './feel';
 import { useReducedMotion } from '@app/ui/useReducedMotion';
 import { cameraViewProfile } from './viewProfile';
@@ -62,9 +63,11 @@ export function CameraRig() {
     () => ({
       classic: createClassicFraming(),
       follow: createFollowFraming(),
+      customize: createCustomizeFraming(),
       // Seated from the mode the page loaded in, so the first frame is the
       // framing the player asked for rather than a transition into it.
       blend: FORCE_FOLLOW || useGameStore.getState().cameraMode === 'follow' ? 1 : 0,
+      customizeBlend: 0,
       position: new THREE.Vector3(),
       aim: new THREE.Vector3(),
       completionPosition: new THREE.Vector3(),
@@ -83,7 +86,16 @@ export function CameraRig() {
   }, [rig, view]);
 
   useFrame((_, delta) => {
-    const { sim, cameraMode, gamePhase } = useGameStore.getState();
+    const {
+      sim,
+      cameraMode,
+      gamePhase,
+      uiPanel,
+      customizeTab,
+      customizeDogAngle,
+      customizeOrbitAngle,
+      customizeSelectedSheep,
+    } = useGameStore.getState();
 
     const dog = sim.state.dogs[0];
     if (!dog) return;
@@ -91,15 +103,33 @@ export function CameraRig() {
 
     rig.classic.update(dt, dog);
     rig.follow.update(dt, dog);
+    rig.customize.update(
+      dt,
+      customizeTab,
+      customizeDogAngle,
+      customizeOrbitAngle,
+      customizeSelectedSheep,
+      dog,
+      sim.state.sheep,
+    );
 
     const target = FORCE_FOLLOW || cameraMode === 'follow' ? 1 : 0;
     const step = dt / MODE_BLEND_SECONDS;
     const remaining = target - rig.blend;
     rig.blend += Math.max(-step, Math.min(step, remaining));
 
+    const isCustomize = uiPanel === 'customize';
+    const customizeTarget = isCustomize ? 1 : 0;
+    const customizeStep = dt / 0.4;
+    const customizeRemaining = customizeTarget - rig.customizeBlend;
+    rig.customizeBlend += Math.max(-customizeStep, Math.min(customizeStep, customizeRemaining));
+
     const weight = easeInOut(rig.blend);
+    const cWeight = easeInOut(rig.customizeBlend);
+
     if (camera instanceof THREE.PerspectiveCamera) {
-      const targetFov = 45 + (view.fov - 45) * weight;
+      const baseFov = 45 + (view.fov - 45) * weight;
+      const targetFov = baseFov + (38 - baseFov) * cWeight;
       if (Math.abs(camera.fov - targetFov) > 0.01) {
         camera.fov = targetFov;
         camera.updateProjectionMatrix();
@@ -107,6 +137,11 @@ export function CameraRig() {
     }
     rig.position.lerpVectors(rig.classic.position, rig.follow.position, weight);
     rig.aim.lerpVectors(rig.classic.aim, rig.follow.aim, weight);
+
+    if (cWeight > 0) {
+      rig.position.lerpVectors(rig.position, rig.customize.position, cWeight);
+      rig.aim.lerpVectors(rig.aim, rig.customize.aim, cWeight);
+    }
 
     const complete = gamePhase === 'complete';
     if (complete && !rig.wasComplete) {

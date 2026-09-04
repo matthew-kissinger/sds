@@ -60,6 +60,7 @@ import {
   SHEEP_HOOF_BASELINE,
 } from './flock/sheepParts';
 import { makeSheepMaterial, makeSheepOutlineMaterial } from './flock/sheepMaterial';
+import { FLOCK_VARIETY_MODE_VALUES } from './flock/sheepVariety';
 import { makeSheepShadow } from './flock/sheepShadow';
 import { uniform } from '@app/tsl/nodes';
 import { advanceSheepResponse } from './flock/sheepResponse';
@@ -97,6 +98,7 @@ const SHEEP_RAMP_ONLY = import.meta.env.DEV
 
 export function Flock() {
   const sim = useGameStore((state) => state.sim);
+  const flockVarietyMode = useGameStore((state) => state.flockVarietyMode);
   const field = useHeightfield();
   const count = sim.headings.length;
 
@@ -118,6 +120,15 @@ export function Flock() {
 
   /** One shared accessibility gain, not one flag in every instance record. */
   const motionScale = useMemo(() => uniform(1), []);
+  const varietyModeUniform = useMemo(
+    () => uniform(FLOCK_VARIETY_MODE_VALUES[flockVarietyMode] ?? 0),
+    [],
+  );
+
+  useLayoutEffect(() => {
+    varietyModeUniform.value = FLOCK_VARIETY_MODE_VALUES[flockVarietyMode] ?? 0;
+  }, [flockVarietyMode, varietyModeUniform]);
+
   /**
    * One packed style buffer serves body and outline: tint, seed, then the X and
    * Z ratios needed to cancel nonuniform instance scale. Replacing the original
@@ -135,8 +146,8 @@ export function Flock() {
   const geometry = useMemo(() => buildSheepGeometry(), []);
   const outlineGeometry = useMemo(() => buildSheepOutlineGeometry(geometry), [geometry]);
   const material = useMemo(
-    () => makeSheepMaterial(packedStyle, motion, motionScale, terrain),
-    [motion, motionScale, packedStyle, terrain],
+    () => makeSheepMaterial(packedStyle, motion, motionScale, terrain, varietyModeUniform),
+    [motion, motionScale, packedStyle, terrain, varietyModeUniform],
   );
   const outlineMaterial = useMemo(
     () => makeSheepOutlineMaterial(packedStyle, motion, motionScale, terrain),

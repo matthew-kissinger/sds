@@ -15,6 +15,8 @@ The version 3.0 release focuses on the complete single-player loop:
 - local personal best times;
 - optional online solo times for each flock size;
 - a server-random running name that can be edited;
+- Customizer Studio to personalize working collie coat presets, dog naming, and flock breed variety;
+- 3D Heritage Name Plaques with high-definition typography, tracking hysteresis, and mobile touch parity;
 - React Three Fiber scene composition over Three.js;
 - WebGPU rendering with automatic WebGL2 fallback;
 - no account, multiplayer or 5,000-sheep mode.
