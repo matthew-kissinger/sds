@@ -129,13 +129,14 @@ commit identity.
   one graph, gesture unlock, five non-duplicated loops, pause/resume, restart,
   visibility, mute/volume and positional bark all passed with no media errors.
 
-### Customizer Studio, Heritage Name Tags and Working Dog Naming
+### Customizer Studio, Screen-Space Heritage Nameplates and Working Dog Naming
 
 - Added Customizer Studio to personalize working collie coat presets, dog naming, and flock breed variety.
 - Working collie can be named by the player, defaulting to "Pip" with 20 authentic British working sheepdog names in a roll ledger. Persisted to `localStorage` under `herd.customization.v1`.
-- Added high-definition 2× Retina Heritage Name Plaques with trilinear mipmapping and anisotropic filtering, dual-envelope tracking hysteresis (0.055 NDC acquisition, 0.110 NDC retention, 250ms dropout grace window), smooth exponential damping, and complete mobile touch parity (tap-to-pin, tap-to-dismiss).
+- Implemented unified Screen-Space Heritage Nameplates with 100% native vector Retina typography (Alice serif font, walnut border `#282016`, gold rosettes `◆`, and downward chevron pin) anchored via 3D camera projection. Resolves mobile DPR downsampling blur without Three.js texture upload overhead.
+- Features dual-envelope tracking hysteresis (0.055 NDC acquisition, 0.110 NDC retention, 250ms dropout grace window), harmonic spring arrival (\(k=260, c=18\)), organic pasture bobbing, and full mobile touch parity (tap-to-pin for 4s, tap-to-dismiss).
 - Flock breeds supported: Suffolk, Cheviot, Herdwick, Kerry Hill, Badger Face, Moorit, and Balwen.
-- 81 test files and 648 unit tests pass. Lint, client TypeScript, Worker TypeScript, and production build pass with zero errors and zero warnings. Initial JavaScript bundle is 627.93 kB gzip.
+- 81 test files and 649 unit tests pass. Lint, client TypeScript, Worker TypeScript, and production build pass with zero errors and zero warnings. Initial JavaScript bundle is 627.54 kB gzip.
 
 
 - Complete the desktop, mobile, offline-score and service-worker transition

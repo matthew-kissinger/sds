@@ -1,48 +1,70 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
-import { texture, uniform } from 'three/tsl';
 import { useGameStore } from '@app/state/store';
 import { groundY } from '@app/world/heightfield';
 import { getSheepName } from '@app/game/sheepNames';
 import { useSheepPicker } from './useSheepPicker';
-import {
-  drawHeritagePlaque,
-  PLAQUE_CANVAS_WIDTH,
-  PLAQUE_CANVAS_HEIGHT,
-  PLAQUE_ASPECT,
-} from './ui/plaqueDrawing';
-
-/** Physical height in 3D world units. */
-const PLAQUE_WORLD_HEIGHT = 0.44;
 
 /**
- * 3D Heritage Name Plaque Billboard.
- * Displays the active sheep or dog's name with artisan wooden framing,
- * eggshell parchment, tactile spring arrival, animated specular gleam sweep,
- * distance-compensated scaling, and a graceful uplift-dissolve on hover-off.
+ * Static DOM badge element for the screen-space nameplate.
+ * Rendered in standard React DOM outside <Canvas> to avoid R3F reconciler conflicts.
+ */
+export function NameplateBadge() {
+  return (
+    <div
+      id="herd-nameplate-anchor"
+      className="herd-nameplate-anchor"
+      style={{ display: 'none', opacity: 0 }}
+      aria-hidden="true"
+    >
+      <div className="herd-nameplate-badge">
+        <span id="herd-nameplate-rosette-l" className="herd-nameplate-rosette" style={{ display: 'none' }}>◆</span>
+        <span id="herd-nameplate-title" className="herd-nameplate-title" />
+        <span id="herd-nameplate-rosette-r" className="herd-nameplate-rosette" style={{ display: 'none' }}>◆</span>
+        <span id="herd-nameplate-gleam" className="herd-nameplate-gleam" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Screen-Space Heritage Nameplate Controller.
+ * Anchored to the active animal's 3D world position via camera projection.
  *
- * Fully compliant with AGENTS.md Rule 3: Single TSL NodeMaterial across genuine
- * WebGPU and forced WebGL2 backends.
+ * Delivers 100% vector-crisp, native Retina typography on mobile and desktop
+ * (bypassing the WebGL DPR 1.0 limit), zero GPU texture uploads, tactile
+ * harmonic spring arrival, specular gleam sweep, and graceful hover-off uplift.
  */
 export function SheepHoverLabel() {
   const sim = useGameStore((state) => state.sim);
-  const { camera, pointer, gl } = useThree();
+  const { camera, pointer, gl, size } = useThree();
 
-  const groupRef = useRef<THREE.Group>(null);
-  const pillRef = useRef<THREE.Mesh>(null);
+  const domRefs = useRef<{
+    anchor: HTMLElement | null;
+    title: HTMLElement | null;
+    rosetteL: HTMLElement | null;
+    rosetteR: HTMLElement | null;
+    gleam: HTMLElement | null;
+  }>({
+    anchor: null,
+    title: null,
+    rosetteL: null,
+    rosetteR: null,
+    gleam: null,
+  });
 
-  // Dynamic animation states for tactile AAA feel
+  // Animation & tracking state
   const activeEntityRef = useRef<number | null>(null);
   const scaleRef = useRef<number>(0.0);
   const velocityRef = useRef<number>(0.0);
   const opacityRef = useRef<number>(0.0);
   const timeRef = useRef<number>(0);
-  const gleamProgressRef = useRef<number>(2.0); // > 1.2 means inactive
   const lastActiveNameRef = useRef<string>('');
+
   const lastTargetPos = useRef<{ x: number; z: number; baseY: number }>({
     x: 0,
     z: 0,
@@ -50,85 +72,84 @@ export function SheepHoverLabel() {
   });
   const currentPos = useRef(new THREE.Vector3());
   const isPosInitialized = useRef<boolean>(false);
+  const projVec = useRef(new THREE.Vector3());
 
-  // Dedicated high-DPI canvas texture for the billboard plaque
-  const { ctx, canvasTexture } = useMemo(() => {
-    const c = document.createElement('canvas');
-    c.width = PLAQUE_CANVAS_WIDTH;
-    c.height = PLAQUE_CANVAS_HEIGHT;
-    const context = c.getContext('2d', { willReadFrequently: false });
-    const tex = new THREE.CanvasTexture(c);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.generateMipmaps = true;
-    tex.minFilter = THREE.LinearMipmapLinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    if (gl.capabilities?.getMaxAnisotropy) {
-      tex.anisotropy = Math.min(gl.capabilities.getMaxAnisotropy(), 8);
-    }
-    return { ctx: context, canvasTexture: tex };
-  }, [gl]);
-
-  // Material using TSL texture and opacity nodes
-  const opacityUniform = useMemo(() => uniform(0), []);
-  const pillMaterial = useMemo(() => {
-    const mat = new THREE.MeshBasicNodeMaterial({
-      transparent: true,
-      depthWrite: false,
-      depthTest: false,
-      side: THREE.DoubleSide,
-    });
-    mat.colorNode = texture(canvasTexture);
-    mat.opacityNode = texture(canvasTexture).a.mul(opacityUniform);
-    return mat;
-  }, [canvasTexture, opacityUniform]);
-
-  const pillGeometry = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
-
-  // Ensure Alice font is preloaded in document
-  useEffect(() => {
-    const fontFace = new FontFace('Alice', 'url(/fonts/Alice-Regular.ttf)');
-    fontFace
-      .load()
-      .then((loaded) => {
-        document.fonts.add(loaded);
-      })
-      .catch(() => {
-        // Fallback serif available via CSS
-      });
-  }, []);
-
-  // Pick sheep or dog by cursor/touch
+  // Pick sheep or dog by cursor/touch with dual-envelope hysteresis
   const { update } = useSheepPicker(sim, camera, pointer, gl.domElement);
 
   useFrame((_, delta) => {
-    const group = groupRef.current;
-    if (!group) return;
+    // Lazy element discovery
+    if (!domRefs.current.anchor) {
+      domRefs.current = {
+        anchor: document.getElementById('herd-nameplate-anchor'),
+        title: document.getElementById('herd-nameplate-title'),
+        rosetteL: document.getElementById('herd-nameplate-rosette-l'),
+        rosetteR: document.getElementById('herd-nameplate-rosette-r'),
+        gleam: document.getElementById('herd-nameplate-gleam'),
+      };
+    }
+
+    const { anchor, title, rosetteL, rosetteR, gleam } = domRefs.current;
+    if (!anchor) return;
 
     const safeDelta = Math.min(delta, 0.05);
     timeRef.current += safeDelta;
 
-    // Pick hovered entity or fallback to customized sheep in studio
-    let activeIndex = update();
+    // Pick hovered entity
+    const activeIndex = update();
+    const hasTarget = activeIndex !== null;
     const state = useGameStore.getState();
-    const isCustomizeStudio = state.uiPanel === 'customize';
 
-    if (activeIndex === null && isCustomizeStudio) {
-      if (state.customizeTab === 'sheep') {
-        activeIndex = state.customizeSelectedSheep;
-      } else if (state.customizeTab === 'dog') {
-        activeIndex = -1;
+    // Target change detection & DOM text update
+    if (activeIndex !== null && activeIndex !== activeEntityRef.current) {
+      activeEntityRef.current = activeIndex;
+      scaleRef.current = 0.55;
+      velocityRef.current = 4.4;
+
+      let name = '';
+      let isDog = false;
+      if (activeIndex === -1) {
+        name = state.dogName || 'Pip';
+        isDog = true;
+      } else if (activeIndex < sim.headings.length) {
+        name = getSheepName(activeIndex, state.customSheepNames);
+        isDog = false;
+      }
+
+      lastActiveNameRef.current = name;
+
+      if (title) {
+        title.textContent = name;
+      }
+      if (rosetteL && rosetteR) {
+        const rosetteDisplay = isDog ? 'inline-block' : 'none';
+        rosetteL.style.display = rosetteDisplay;
+        rosetteR.style.display = rosetteDisplay;
+      }
+
+      // Re-trigger specular light sweep
+      if (gleam) {
+        gleam.style.animation = 'none';
+        void gleam.offsetWidth;
+        gleam.style.animation = 'herd-plaque-gleam 850ms cubic-bezier(.2,.8,.3,1) forwards';
       }
     }
 
-    const hasTarget = activeIndex !== null;
+    // Target animation parameters
+    const targetOpacity = hasTarget ? 1.0 : 0.0;
+    const targetScale = hasTarget ? 1.0 : 0.82;
 
-    // Detect target transition (hover-on or target change)
-    if (hasTarget && activeIndex !== activeEntityRef.current) {
-      activeEntityRef.current = activeIndex;
-      // Trigger tactile entrance bounce & specular gleam sweep
-      scaleRef.current = 0.6;
-      velocityRef.current = 4.2;
-      gleamProgressRef.current = 0.0;
+    // Smooth opacity fade (crisp entry, graceful exit)
+    opacityRef.current = THREE.MathUtils.damp(opacityRef.current, targetOpacity, hasTarget ? 24 : 14, safeDelta);
+
+    // Fully faded out: hide and reset
+    if (!hasTarget && opacityRef.current < 0.008) {
+      anchor.style.display = 'none';
+      scaleRef.current = 0.0;
+      velocityRef.current = 0.0;
+      activeEntityRef.current = null;
+      isPosInitialized.current = false;
+      return;
     }
 
     // Determine target 3D world position
@@ -140,16 +161,13 @@ export function SheepHoverLabel() {
       if (sim.dogPositions && sim.dogPositions.length >= 2) {
         targetX = sim.dogPositions[0]!;
         targetZ = sim.dogPositions[1]!;
-        targetBaseY = groundY(targetX, targetZ) + 1.05;
+        targetBaseY = groundY(targetX, targetZ) + 0.95;
       }
-    } else if (activeIndex !== null) {
+    } else if (activeIndex !== null && activeIndex < sim.headings.length) {
       const pos = sim.positions;
-      if (activeIndex < sim.headings.length) {
-        targetX = pos[activeIndex * 2]!;
-        targetZ = pos[activeIndex * 2 + 1]!;
-        targetBaseY =
-          groundY(targetX, targetZ) + (isCustomizeStudio ? 1.25 : 1.45);
-      }
+      targetX = pos[activeIndex * 2]!;
+      targetZ = pos[activeIndex * 2 + 1]!;
+      targetBaseY = groundY(targetX, targetZ) + 1.22;
     }
 
     lastTargetPos.current.x = targetX;
@@ -166,25 +184,6 @@ export function SheepHoverLabel() {
       currentPos.current.z = THREE.MathUtils.damp(currentPos.current.z, targetZ, 26, safeDelta);
     }
 
-    // Target animation parameters
-    const targetOpacity = hasTarget ? 1.0 : 0.0;
-    const targetScale = hasTarget ? 1.0 : 0.85;
-
-    // Smooth opacity fade (crisp entry, graceful exit)
-    opacityRef.current = THREE.MathUtils.damp(opacityRef.current, targetOpacity, hasTarget ? 24 : 14, safeDelta);
-    opacityUniform.value = opacityRef.current;
-
-    // When fully faded out, hide group and reset state
-    if (!hasTarget && opacityRef.current < 0.008) {
-      group.visible = false;
-      scaleRef.current = 0.0;
-      velocityRef.current = 0.0;
-      activeEntityRef.current = null;
-      gleamProgressRef.current = 2.0;
-      isPosInitialized.current = false;
-      return;
-    }
-
     // Damped harmonic oscillator for tactile spring arrival and hover-off settle
     const stiffness = 260;
     const damping = 18;
@@ -193,71 +192,40 @@ export function SheepHoverLabel() {
     velocityRef.current += (springForce + dampingForce) * safeDelta;
     scaleRef.current += velocityRef.current * safeDelta;
 
-    // Figure out display name and entity kind
-    let currentName = '';
-    let isDog = false;
-    if (activeEntityRef.current === -1) {
-      currentName = state.dogName || 'Pip';
-      isDog = true;
-    } else if (activeEntityRef.current !== null && activeEntityRef.current < sim.headings.length) {
-      currentName = getSheepName(activeEntityRef.current, state.customSheepNames);
-      isDog = false;
-    }
-
-    // Animate specular light sweep on entrance
-    let needsRedraw = false;
-    if (gleamProgressRef.current <= 1.25) {
-      gleamProgressRef.current += safeDelta * 2.6;
-      needsRedraw = true;
-    }
-
-    // Draw plaque onto canvas only when text changed or during the entrance gleam
-    if (currentName && (needsRedraw || lastActiveNameRef.current !== currentName) && ctx) {
-      lastActiveNameRef.current = currentName;
-      drawHeritagePlaque(ctx, {
-        name: currentName,
-        isDog,
-        gleamProgress: gleamProgressRef.current <= 1.2 ? gleamProgressRef.current : undefined,
-      });
-      canvasTexture.needsUpdate = true;
-    }
-
     // Gentle organic breathing bobbing while hovered
-    const bobY = Math.sin(timeRef.current * 2.4) * 0.02;
+    const bobY = Math.sin(timeRef.current * 2.4) * 0.025;
 
     // Hover-off graceful uplift: floats upwards into the air while fading out
-    const hoverOffLift = hasTarget ? 0.0 : (1.0 - opacityRef.current) * 0.22;
+    const hoverOffLift = hasTarget ? 0.0 : (1.0 - opacityRef.current) * 0.35;
 
-    group.position.set(
+    // Project 3D world position to screen NDC coordinates
+    projVec.current.set(
       currentPos.current.x,
       currentPos.current.y + bobY + hoverOffLift,
       currentPos.current.z,
     );
+    projVec.current.project(camera);
 
-    // Billboard alignment facing the active camera
-    group.quaternion.copy(camera.quaternion);
-
-    // Distance-compensated scaling:
-    // Clamped linear distance scaling keeps plaque legible from 4.5m studio to 54m classic view.
-    const dist = camera.position.distanceTo(group.position);
-    const k = isCustomizeStudio
-      ? PLAQUE_WORLD_HEIGHT
-      : THREE.MathUtils.clamp(dist * 0.055, 1.0, 2.8);
-
-    const effectiveScale = Math.max(k * scaleRef.current, 0.001);
-    group.scale.set(effectiveScale, effectiveScale, effectiveScale);
-
-    // Update billboard quad aspect
-    if (pillRef.current) {
-      pillRef.current.scale.set(PLAQUE_ASPECT, 1, 1);
+    // Clip if behind the camera
+    if (projVec.current.z > 1.0) {
+      anchor.style.display = 'none';
+      return;
     }
 
-    group.visible = true;
+    // Convert NDC (-1..1) to CSS pixels
+    const screenX = (projVec.current.x * 0.5 + 0.5) * size.width;
+    const screenY = (-projVec.current.y * 0.5 + 0.5) * size.height;
+
+    // Subtle distance-compensated scaling
+    const dist = camera.position.distanceTo(currentPos.current);
+    const distScale = THREE.MathUtils.clamp(1.0 - (dist - 20) * 0.004, 0.85, 1.15);
+    const effectiveScale = Math.max(scaleRef.current * distScale, 0.001);
+
+    // Direct GPU compositor style update (zero layout reflow)
+    anchor.style.display = 'block';
+    anchor.style.opacity = opacityRef.current.toFixed(3);
+    anchor.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0) translate(-50%, -100%) scale(${effectiveScale.toFixed(3)})`;
   });
 
-  return (
-    <group ref={groupRef} visible={false}>
-      <mesh ref={pillRef} geometry={pillGeometry} material={pillMaterial} renderOrder={200} />
-    </group>
-  );
+  return null;
 }

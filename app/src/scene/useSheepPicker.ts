@@ -11,7 +11,7 @@ const HOVER_ACQUISITION_NDC = 0.055;
 /** Normalised device coordinate leash threshold to retain a currently hovered entity. */
 const HOVER_RETENTION_LEASH_NDC = 0.110;
 /** Normalised device coordinate threshold for mobile touch tap. */
-const TOUCH_THRESHOLD_NDC = 0.100;
+const TOUCH_THRESHOLD_NDC = 0.160;
 /** Duration in milliseconds to keep a sheep pinned after a touch tap. */
 const TOUCH_PIN_MS = 4000;
 /** Grace window in milliseconds before dropping target on brief cursor dropout. */
@@ -56,6 +56,10 @@ export function useSheepPicker(
   // Listen for pointer gestures and mobile touch taps on the canvas
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('button, input, select, textarea, a, .herd-modal, .herd-customize-dock, .herd-pause-button')) {
+        return;
+      }
       isPointerActiveRef.current = true;
       if (e.pointerType === 'touch') {
         touchStartRef.current = {
@@ -73,9 +77,9 @@ export function useSheepPicker(
         const dist = Math.hypot(dx, dy);
         const duration = performance.now() - touchStartRef.current.time;
 
-        // Only treat as a deliberate tap if movement was small (<12px) and fast (<350ms).
+        // Treat as a deliberate tap if movement was small (<20px) and fast (<400ms).
         // This rejects camera orbit swipes and dog steering joystick drags.
-        if (dist < 12 && duration < 350) {
+        if (dist < 20 && duration < 400) {
           const rect = glDom.getBoundingClientRect();
           const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
           const ndcY = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
@@ -130,7 +134,6 @@ export function useSheepPicker(
             stateRef.current.hoveredIndex = null;
           }
         }
-        // Touch finger is lifted from screen
         isPointerActiveRef.current = false;
       }
     };
@@ -155,18 +158,18 @@ export function useSheepPicker(
       }
     };
 
-    glDom.addEventListener('pointerdown', handlePointerDown);
-    glDom.addEventListener('pointerup', handlePointerUp);
-    glDom.addEventListener('pointercancel', handlePointerCancel);
-    glDom.addEventListener('pointermove', handlePointerMove);
-    glDom.addEventListener('pointerleave', handlePointerLeave);
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerCancel);
+    window.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerleave', handlePointerLeave);
 
     return () => {
-      glDom.removeEventListener('pointerdown', handlePointerDown);
-      glDom.removeEventListener('pointerup', handlePointerUp);
-      glDom.removeEventListener('pointercancel', handlePointerCancel);
-      glDom.removeEventListener('pointermove', handlePointerMove);
-      glDom.removeEventListener('pointerleave', handlePointerLeave);
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerCancel);
+      window.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerleave', handlePointerLeave);
     };
   }, [glDom, sim, camera]);
 
