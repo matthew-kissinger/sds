@@ -86,11 +86,15 @@ export function SheepRegistryTab() {
     return result;
   }, [flockSize, flockVarietyMode, filterBreed, searchQuery, customSheepNames]);
 
-  // Keep active chip scrolled into view
+  // Scroll only the chip grid, never the outer editor: opening the registry
+  // must leave the naming form visible rather than jump past it to the list.
   useEffect(() => {
-    if (activeChipRef.current) {
-      activeChipRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
+    const chip = activeChipRef.current;
+    const grid = chip?.parentElement;
+    if (!chip || !grid) return;
+    const item = chip.getBoundingClientRect(), bounds = grid.getBoundingClientRect();
+    if (item.top < bounds.top) grid.scrollTop -= bounds.top - item.top;
+    else if (item.bottom > bounds.bottom) grid.scrollTop += item.bottom - bounds.bottom;
   }, [selectedSheep]);
 
   const handlePrevSheep = () => {
@@ -156,21 +160,6 @@ export function SheepRegistryTab() {
 
   return (
     <div className="herd-tab-content">
-      {/* Flock Size Scope Control */}
-      <div className="herd-flock-scope" role="group" aria-label="Flock size selection">
-        <span className="herd-scope-label">Flock size:</span>
-        {FLOCK_SIZES.map((size) => (
-          <button
-            key={size}
-            type="button"
-            className={`herd-scope-btn ${flockSize === size ? 'herd-scope-btn--active' : ''}`}
-            onClick={() => setFlockSize(size)}
-          >
-            {size} sheep
-          </button>
-        ))}
-      </div>
-
       <div className="herd-sheep-editor">
         <SheepInspectorCard
           selectedSheep={selectedSheep}
@@ -180,6 +169,15 @@ export function SheepRegistryTab() {
           onPrevSheep={handlePrevSheep}
           onNextSheep={handleNextSheep}
         />
+
+        <div className="herd-flock-scope" role="group" aria-label="Flock size selection">
+          <span className="herd-scope-label">Flock size:</span>
+          {FLOCK_SIZES.map((size) => (
+            <button key={size} type="button" aria-label={`${size} sheep`}
+              className={`herd-scope-btn ${flockSize === size ? 'herd-scope-btn--active' : ''}`}
+              onClick={() => setFlockSize(size)}>{size}</button>
+          ))}
+        </div>
 
         {/* Unified Search and Breed Filter Bar */}
         <div className="herd-filter-bar">

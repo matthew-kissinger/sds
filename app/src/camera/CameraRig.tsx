@@ -38,6 +38,7 @@ import { useGameStore } from '@app/state/store';
 import { createClassicFraming } from './classicFraming';
 import { createFollowFraming } from './followFraming';
 import { createCustomizeFraming } from './customizeFraming';
+import { studioLayout } from './studioLayout';
 import { MAX_FRAME_DT, MODE_BLEND_SECONDS, easeInOut } from './feel';
 import { useReducedMotion } from '@app/ui/useReducedMotion';
 import { cameraViewProfile } from './viewProfile';
@@ -56,6 +57,7 @@ export function CameraRig() {
   const camera = useThree((state) => state.camera);
   const size = useThree((state) => state.size);
   const reducedMotion = useReducedMotion();
+  const studio = useMemo(() => studioLayout(size.width, size.height), [size.width, size.height]);
   const view = useMemo(
     () => cameraViewProfile(size.width / Math.max(1, size.height)),
     [size.height, size.width],
@@ -68,6 +70,7 @@ export function CameraRig() {
       transitionFloor: createRidgeClamp(),
       follow: createFollowFraming(),
       customize: createCustomizeFraming(),
+      studioEye: new THREE.Vector3(),
       // Seated from the mode the page loaded in, so the first frame is the
       // framing the player asked for rather than a transition into it.
       blend: FORCE_FOLLOW || useGameStore.getState().cameraMode === 'follow' ? 1 : 0,
@@ -138,12 +141,21 @@ export function CameraRig() {
         camera.fov = targetFov;
         camera.updateProjectionMatrix();
       }
+      if (cWeight > 0) {
+        const x = studio.offsetX * cWeight, y = studio.offsetY * cWeight;
+        if (!camera.view?.enabled || camera.view.offsetX !== x || camera.view.offsetY !== y
+          || camera.view.fullWidth !== size.width || camera.view.fullHeight !== size.height) {
+          camera.setViewOffset(size.width, size.height, x, y, size.width, size.height);
+        }
+      } else if (camera.view?.enabled) camera.clearViewOffset();
     }
     rig.position.lerpVectors(rig.classic.position, rig.follow.position, weight);
     rig.aim.lerpVectors(rig.classic.aim, rig.follow.aim, weight);
 
     if (cWeight > 0) {
-      rig.position.lerpVectors(rig.position, rig.customize.position, cWeight);
+      rig.studioEye.copy(rig.customize.position).sub(rig.customize.aim)
+        .multiplyScalar(studio.distanceScale).add(rig.customize.aim);
+      rig.position.lerpVectors(rig.position, rig.studioEye, cWeight);
       rig.aim.lerpVectors(rig.aim, rig.customize.aim, cWeight);
     }
 

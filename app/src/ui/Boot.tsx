@@ -114,6 +114,9 @@ export function Boot() {
           <button
             type="button"
             className="herd-button herd-button--quiet"
+            id="customize-trigger"
+            aria-haspopup="dialog"
+            aria-controls="customization-studio"
             onClick={openCustomize}
           >
             Customize

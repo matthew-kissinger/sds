@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useStudioLayout } from './useStudioLayout';
 import { useGameStore } from '@app/state/store';
 import {
   DOG_COAT_PRESETS,
@@ -10,8 +11,6 @@ import {
 } from '@app/scene/dog/dogCustomization';
 import {
   FLOCK_VARIETY_OPTIONS,
-  SHEEP_BREEDS,
-  getSheepBreed,
   type FlockVarietyId,
 } from '@app/scene/flock/sheepVariety';
 import { getSheepName } from '@app/game/sheepNames';
@@ -45,11 +44,20 @@ export function CustomizePanel() {
   const setSelectedSheep = useGameStore((state) => state.setCustomizeSelectedSheep);
   const setOrbitAngle = useGameStore((state) => state.setCustomizeOrbitAngle);
 
+  const { layout, style: layoutStyle } = useStudioLayout();
+  const studioRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    studioRef.current?.querySelector<HTMLElement>('[aria-label="Close customization studio"]')?.focus();
+    return () => { window.requestAnimationFrame(() => {
+      const target = previous?.isConnected && previous !== document.body
+        ? previous : document.getElementById('customize-trigger');
+      target?.focus();
+    }); };
+  }, []);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef(0);
 
-  const currentBreedId = getSheepBreed(selectedSheep, flockVarietyMode);
-  const currentBreed = SHEEP_BREEDS[currentBreedId];
   const currentName = getSheepName(selectedSheep, customSheepNames);
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -83,7 +91,17 @@ export function CustomizePanel() {
   };
 
   return (
-    <>
+    <div ref={studioRef} id="customization-studio" className="herd-studio" data-bottom={layout.bottom} style={layoutStyle}
+      role="dialog" aria-modal="true" aria-labelledby="customize-title"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') { event.stopPropagation(); closeCustomize(); }
+        if (event.key !== 'Tab') return;
+        const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button, input, select, [tabindex="0"]')]
+          .filter(node => !node.hasAttribute('disabled') && node.getClientRects().length > 0);
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }}>
       {/* 3D Viewport Interaction & Orbit Controls */}
       <div
         className={`herd-customize-drag-zone ${isDragging ? 'herd-customize-drag-zone--active' : ''}`}
@@ -99,14 +117,19 @@ export function CustomizePanel() {
         <div className="herd-customize-pill">
           <span>
             {activeTab === 'dog'
-              ? `3D Sheepdog Preview: ${dogName}`
+              ? dogName
               : activeTab === 'flock'
-              ? '3D Pasture Flock Overview'
-              : `Inspecting Sheep #${selectedSheep + 1}: ${currentName} (${currentBreed.name})`}
+              ? 'Flock preview'
+              : `#${selectedSheep + 1}: ${currentName}`}
           </span>
         </div>
 
         {activeTab === 'dog' ? (
+          <>
+          <select className="herd-angle-select" aria-label="Camera angle" value={dogAngle}
+            onChange={(e) => setDogAngle(e.target.value as typeof dogAngle)}>
+            {DOG_ANGLES.map(angle => <option key={angle.id} value={angle.id}>{angle.label}</option>)}
+          </select>
           <div className="herd-angle-controls" role="group" aria-label="Camera angles">
             {DOG_ANGLES.map((angle) => (
               <button
@@ -119,6 +142,7 @@ export function CustomizePanel() {
               </button>
             ))}
           </div>
+          </>
         ) : null}
 
         {activeTab === 'sheep' ? (
@@ -137,9 +161,6 @@ export function CustomizePanel() {
       {/* Left-docked AAA Customization Sidebar */}
       <aside
         className="herd-customize-dock"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="customize-title"
       >
         <header className="herd-panel__header">
           <h2 id="customize-title" className="herd-panel__title">Studio</h2>
@@ -158,6 +179,7 @@ export function CustomizePanel() {
           </button>
         </div>
 
+        <div className="herd-studio-body">
         {activeTab === 'dog' ? (
           <div className="herd-tab-content">
             <p className="herd-customize-desc">
@@ -241,7 +263,8 @@ export function CustomizePanel() {
         ) : null}
 
         {activeTab === 'sheep' ? <SheepRegistryTab /> : null}
+        </div>
       </aside>
-    </>
+    </div>
   );
 }

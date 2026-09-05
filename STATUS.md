@@ -1,5 +1,28 @@
 # Sheepdog Sim 3 release status
 
+## Studio release authorization — 2026-09-05
+
+Owner approved the responsive Studio, requested an updated README and authorized
+commit, push and deployment. The release includes the local Studio correction
+below and documentation corrected against current input and asset sources.
+The exact-commit Pages workflow verifies the published identity and discovery.
+
+## Mobile Studio correction — local review, 2026-09-05
+
+Owner-reported Customize overflow is corrected in local build `index-Bq-a9SiU.js`.
+Compact portrait bottom panel/landscape sidebar and shared camera composition
+keep the animal in clear space. Toolbar selection, naming grids, registry scroll,
+safe-area spacing, visual-viewport keyboard handling and focus behavior revised.
+See `docs/studio-mobile-review.md`. Full suite94 files/719 tests passed; focused
+checks after adjustments, lint, TypeScript/build and release probe pass.
+623,633 gzip JS bytes;5,773,849 estimated transfer bytes. Not deployed.
+Six-size renderer receipts: `captures/studio-mobile-accepted-webgpu/` and
+`captures/studio-mobile-accepted-webgl2/`, all tabs/presets, names, orientation,
+Escape/focus and overflow checks pass with no errors. Final naming-first reorder
+and landscape visual-keyboard adjustment have a focused final probe. Physical
+keyboard/notch behavior remains device-unverified. Probe browsers close; local
+preview remains available for owner review at port5330.
+
 ## Release authorization — 2026-09-05
 
 Owner requested "commit push and deploy" after the combined local playtest

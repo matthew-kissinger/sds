@@ -20,7 +20,6 @@ export interface DogCameraConfig {
   readonly camHeight: number;
   readonly aimHeight: number;
   readonly baseAngle: number;
-  readonly lateralOffset: number;
 }
 
 export const DOG_CAMERA_CONFIGS: Record<DogCameraAngle, DogCameraConfig> = {
@@ -29,42 +28,36 @@ export const DOG_CAMERA_CONFIGS: Record<DogCameraAngle, DogCameraConfig> = {
     camHeight: 1.65,
     aimHeight: 0.9,
     baseAngle: 0.35,
-    lateralOffset: -0.5,
   },
   face: {
     camDist: 3.8,
     camHeight: 1.65,
     aimHeight: 1.18,
     baseAngle: 0.22,
-    lateralOffset: -0.44,
   },
   profile: {
     camDist: 5.8,
     camHeight: 1.45,
     aimHeight: 0.9,
     baseAngle: Math.PI / 2,
-    lateralOffset: -0.85,
   },
   front: {
     camDist: 4.9,
     camHeight: 1.5,
     aimHeight: 0.95,
     baseAngle: 0.0,
-    lateralOffset: -0.48,
   },
   rear: {
     camDist: 4.8,
     camHeight: 1.55,
     aimHeight: 0.85,
     baseAngle: Math.PI * 0.82,
-    lateralOffset: -0.42,
   },
   top: {
     camDist: 4.6,
     camHeight: 4.2,
     aimHeight: 0.75,
     baseAngle: 0.25,
-    lateralOffset: -0.35,
   },
 };
 
@@ -119,24 +112,9 @@ export function createCustomizeFraming(): CustomizeFraming {
         const eyeZ = dogZ + Math.cos(totalAngle) * cfg.camDist;
         const eyeY = ground + cfg.camHeight;
 
-        // Shift aim slightly to the left relative to camera direction
-        // so the dog appears pleasantly centered in the unobstructed right-hand viewport
-        const dirX = dogX - eyeX;
-        const dirZ = dogZ - eyeZ;
-        const dirLen = Math.hypot(dirX, dirZ) || 1;
-        const rightX = -dirZ / dirLen;
-        const rightZ = dirX / dirLen;
-
-        desiredAim.set(
-          dogX + rightX * cfg.lateralOffset,
-          ground + cfg.aimHeight,
-          dogZ + rightZ * cfg.lateralOffset,
-        );
-        desiredPosition.set(
-          eyeX + rightX * cfg.lateralOffset,
-          eyeY,
-          eyeZ + rightZ * cfg.lateralOffset,
-        );
+        // Screen composition belongs to the shared Studio viewport in CameraRig.
+        desiredAim.set(dogX, ground + cfg.aimHeight, dogZ);
+        desiredPosition.set(eyeX, eyeY, eyeZ);
       } else if (tab === 'sheep') {
         const sheep = sheepList[selectedSheep] ?? sheepList[0];
         const sheepX = sheep ? sheep.position.x : 0;
@@ -152,24 +130,8 @@ export function createCustomizeFraming(): CustomizeFraming {
         const eyeGround = groundY(eyeX, eyeZ);
         const eyeY = Math.max(ground + camHeight, eyeGround + 1.25);
 
-        const dirX = sheepX - eyeX;
-        const dirZ = sheepZ - eyeZ;
-        const dirLen = Math.hypot(dirX, dirZ) || 1;
-        const rightX = -dirZ / dirLen;
-        const rightZ = dirX / dirLen;
-
-        const lateralOffset = -0.52;
-
-        desiredAim.set(
-          sheepX + rightX * lateralOffset,
-          ground + aimHeight,
-          sheepZ + rightZ * lateralOffset,
-        );
-        desiredPosition.set(
-          eyeX + rightX * lateralOffset,
-          eyeY,
-          eyeZ + rightZ * lateralOffset,
-        );
+        desiredAim.set(sheepX, ground + aimHeight, sheepZ);
+        desiredPosition.set(eyeX, eyeY, eyeZ);
       } else {
         // 'flock' pasture overview
         let sumX = 0;
