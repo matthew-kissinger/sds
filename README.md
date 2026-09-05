@@ -1,45 +1,52 @@
 # Sheepdog Sim
 
-Sheepdog Sim is a browser game about one dog, one flock and one field. Get
-behind the sheep, apply pressure carefully and guide every animal through the
-gate into the attached pen.
+One dog, one flock, one field. A calm, cel-shaded browser game about guiding
+sheep through a pasture gate. Get behind the flock, move patiently and use a
+well-timed bark to bring stragglers home.
+
+**[Play Sheepdog Sim](https://sheepdogsim.com)** ·
+[Controls and help](https://sheepdogsim.com/support) ·
+[Report a bug](https://github.com/matthew-kissinger/sds/issues)
 
 ![Sheepdog Sim field and title](app/public/og/sheepdog-sim.png)
 
-The version 3.0 release focuses on the complete single-player loop:
+## In the field
 
-- 25, 75 or 200 sheep;
-- move, sprint and bark;
-- Classic and Follow cameras;
-- keyboard, gamepad and touch controls;
-- local personal best times;
-- optional online solo times for each flock size;
-- a server-random running name that can be edited;
-- Customizer Studio to personalize working collie coat presets, dog naming, and flock breed variety;
-- Screen-Space Heritage Nameplates with native Retina typography, 3D tracking hysteresis, tactile spring physics, and mobile touch parity;
-- React Three Fiber scene composition over Three.js;
-- WebGPU rendering with automatic WebGL2 fallback;
-- no account, multiplayer or 5,000-sheep mode.
+- Choose a flock of **25, 75 or 200 sheep** and guide every sheep into the pen.
+- Move, sprint and bark with keyboard, gamepad or touch controls.
+- Switch between the overhead **Classic** camera and the closer **Follow** view.
+- Find the entrance through an in-world highlight and an offscreen direction cue.
+- Personalize your dog’s coat and name, choose flock breeds and name individual
+  sheep in **Studio**. Compact phone controls leave room for the animal preview;
+  larger screens use a side panel.
+- Explore a golden-hour field with dense grass, authored trees, moving clouds,
+  an animated farmhand and a quieter, spatial soundscape.
+- Keep local personal bests and optionally compare online solo times for each
+  flock size. Edit the running name assigned to your device.
 
 Online identity and score requests are fail-soft. Play, completion and local
 personal bests continue when the score service is unavailable.
 
-Play the current public release at [sheepdogsim.com](https://sheepdogsim.com).
-This repository is the current Sheepdog Sim 3 codebase. Production releases
-are built from an exact commit and expose that identity in `release.json`.
+No account is required to play. This is the single-player version 3 client;
+campaign, survival and multiplayer modes are not included.
 
 ## Controls
 
 | Action | Keyboard | Gamepad | Touch |
 | --- | --- | --- | --- |
 | Move | W A S D or arrows | Left stick | Left joystick |
-| Sprint | Shift | Left trigger | Sprint button |
-| Bark | Space | Right shoulder | Bark button |
+| Sprint | Shift | Right trigger or A / Cross | Sprint button |
+| Bark | Space | B / Circle or X / Square | Bark button |
 | Change camera | C | Y / Triangle | Camera button |
-| Pause | Escape | Menu | Pause button |
+| Pause | Escape or pause button | Use the on-screen pause button | Pause button |
 
-Controls can be remapped in Settings. Reduced motion, quality, audio levels and
-a colorblind dog marker are also available there.
+After stamina runs out, release Sprint and press again to start another sprint.
+Holding it down through recovery does not automatically restart it. Partial
+stick movement provides a slower walking pace.
+
+Settings includes keyboard remapping, reduced motion, quality, audio levels and
+a colorblind dog marker. In Studio, drag the preview or use the orbit controls;
+choose a camera preset to inspect the dog from another angle.
 
 ## Run locally
 
@@ -57,17 +64,31 @@ npm run dev
 
 Open the local URL printed by Vite.
 
+The client runs without a local score server. To run the full test suite,
+including the retained score-service tests, install its dependencies too:
+
+```bash
+npm ci --prefix worker
+```
+
 Useful commands:
 
 ```bash
 npm test
 npm run lint
+npm run typecheck
+npm run typecheck:worker
 npm run build
 npm run preview
-node tools/determinism-crosscheck.mjs
 npm run probe:boot
 npm run probe:release
+npm run check:discovery
 ```
+
+Run `npm run build` before the preview and built-artifact checks. See
+[the testing guide](spec/09-testing.md) for validation expectations.
+Current evidence and remaining device
+or performance limitations are tracked in [STATUS.md](STATUS.md).
 
 ## Architecture
 
@@ -78,6 +99,7 @@ sim/       deterministic fixed-step herding simulation
 app/       React Three Fiber, Three.js, input, audio and player interface
 assets/    runtime assets plus editable sources and bake manifests
 tools/     deterministic bakes, diagnostics and release verification
+worker/    retained identity and score service; separate from the v3 client
 ```
 
 The simulation imports no Three.js, React, DOM or network code. The renderer
@@ -87,9 +109,9 @@ authority for the scene and player interface.
 The field is assembled from reproducible source:
 
 - terrain, grass, treeline and scatter placement are deterministic bakes;
-- the treeline uses the CC0 Fox Trees Pack Round and Spreading sources, adapted
-  into a deterministic cel-shaded family with no runtime model loading;
-- sheep, dog, fences and farm structures are code-authored geometry;
+- the active treeline is an original, procedurally authored sculpted-oak family,
+  baked into instanced geometry with no external model loading;
+- sheep, the skinned dog and farmer, fences and farm structures are code-authored;
 - material and atmosphere systems are TSL source;
 - every audio file is a committed, provenance-tracked source with its provider,
   prompt, processing, duration, size and digest recorded in the audio ledger;
@@ -97,20 +119,31 @@ The field is assembled from reproducible source:
 
 Read [the version 3 architecture reset](docs/architecture/v3-reset.md) for what
 was retained from version 2, what was removed and why the codebase was rebuilt.
+Asset-specific recipes and provenance are documented under [assets/](assets/),
+including [trees](assets/treeline/README.md), [dog](assets/dog/README.md),
+[farmer](assets/farmer/README.md) and [audio](assets/audio/README.md).
 
 ## Release discipline
 
-A production candidate must pass:
+Production deploys use the manually dispatched
+[Pages workflow](.github/workflows/deploy.yml), pinned to a full commit SHA on
+`main`. It installs dependencies, runs lint, typechecks, tests and the build,
+archives the artifact, then verifies the live release and discovery pages.
 
-- clean install, lint, typecheck, unit tests and deterministic fixtures;
-- a production build and static preview;
+Contributor checks additionally cover:
+
+- deterministic fixtures and a running production preview;
 - a built-artifact scan that permits only the score REST client and excludes
   rooms, WebSockets, multiplayer, deferred scale and debug code;
 - complete 25, 75 and 200 sheep runs on both renderer backends;
 - desktop and mobile interaction, layout and audio checks;
 - asset source, license, secret and local-artifact checks;
-- exact commit identity in the deployed `release.json`;
-- a tested static rollback to the last version 2 Pages deployment.
+- release and rollback procedures for the static client.
+
+The deployed [release manifest](https://sheepdogsim.com/release.json) records
+the source commit and artifact identity. Device coverage and performance numbers
+in [STATUS.md](STATUS.md) describe measured configurations, not a guarantee for
+every phone or PC. Production publication requires owner approval.
 
 Public builds contain no multiplayer client, room flow, bundled Worker or
 5,000-sheep code. Solo-time boards use the existing score service through the
