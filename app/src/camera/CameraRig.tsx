@@ -41,6 +41,8 @@ import { createCustomizeFraming } from './customizeFraming';
 import { MAX_FRAME_DT, MODE_BLEND_SECONDS, easeInOut } from './feel';
 import { useReducedMotion } from '@app/ui/useReducedMotion';
 import { cameraViewProfile } from './viewProfile';
+import { createCameraSubject } from './subject';
+import { createRidgeClamp } from './ridgeClamp';
 import {
   COMPLETION_CAMERA_SECONDS,
   advanceCompletion,
@@ -62,6 +64,8 @@ export function CameraRig() {
   const rig = useMemo(
     () => ({
       classic: createClassicFraming(),
+      subject: createCameraSubject(),
+      transitionFloor: createRidgeClamp(),
       follow: createFollowFraming(),
       customize: createCustomizeFraming(),
       // Seated from the mode the page loaded in, so the first frame is the
@@ -97,7 +101,7 @@ export function CameraRig() {
       customizeSelectedSheep,
     } = useGameStore.getState();
 
-    const dog = sim.state.dogs[0];
+    const dog = rig.subject.sample(sim, delta);
     if (!dog) return;
     const dt = Math.min(delta, MAX_FRAME_DT);
 
@@ -114,7 +118,7 @@ export function CameraRig() {
     );
 
     const target = FORCE_FOLLOW || cameraMode === 'follow' ? 1 : 0;
-    const step = dt / MODE_BLEND_SECONDS;
+    const step = dt / (reducedMotion ? 0.15 : MODE_BLEND_SECONDS);
     const remaining = target - rig.blend;
     rig.blend += Math.max(-step, Math.min(step, remaining));
 
@@ -181,6 +185,11 @@ export function CameraRig() {
       rig.aim.lerpVectors(rig.completionAim, rig.completionTargetAim, settle);
     }
 
+    // Safe endpoints do not imply a safe path between camera modes.
+    if (weight > 0 && weight < 1 && cWeight === 0) {
+      rig.position.y = rig.transitionFloor.clamp(rig.position.y, rig.position.x,
+        rig.position.z, dog.position.x, dog.position.z, dt);
+    }
     camera.position.copy(rig.position);
     camera.lookAt(rig.aim);
   });

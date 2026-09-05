@@ -5,6 +5,8 @@
  * Authored using the same Khronos Neutral inverse palette standards as coatTones.ts.
  */
 
+import { COAT_SHADOW, OUTLINE } from './coatTones';
+
 export type DogCoatId = 'classic' | 'red' | 'merle' | 'chocolate' | 'golden';
 
 export interface DogCoatPreset {
@@ -24,10 +26,10 @@ export const DOG_COAT_PRESETS: Readonly<Record<DogCoatId, DogCoatPreset>> = {
     name: 'Classic Black & White',
     description: 'Traditional working Border Collie with charcoal-black coat and white trim.',
     swatch: '#36302a',
-    shadow: '#2e2720',
+    shadow: COAT_SHADOW,
     mid: '#5c5246',
     lit: '#766654',
-    outline: '#20150c',
+    outline: OUTLINE,
   },
   red: {
     id: 'red',

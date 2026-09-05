@@ -61,10 +61,10 @@ const RENDER_PRIORITY = 1;
  * the field. Above about 0.4 strength the flock stops reading as individuals at
  * Classic distance, which is a spec/05 hard rule.
  */
-const BLOOM_STRENGTH = 0.26;
+const BLOOM_STRENGTH = 0.18;
 const BLOOM_RADIUS = 0.6;
 /** Linear luminance. Lit grass sits near 0.6; the sun disc is above 1.8. */
-const BLOOM_THRESHOLD = 0.92;
+const BLOOM_THRESHOLD = 1.05;
 
 /**
  * Vignette. A fifth of a stop at the corners, starting past the halfway mark,
@@ -72,7 +72,7 @@ const BLOOM_THRESHOLD = 0.92;
  * the diagonal, so it is round rather than aspect-stretched.
  */
 const VIGNETTE_START = 0.55;
-const VIGNETTE_DEPTH = 0.2;
+const VIGNETTE_DEPTH = 0.12;
 
 /** Half the screen diagonal in UV space: 0 at centre, 1 at every corner. */
 const DIAGONAL = Math.SQRT1_2;

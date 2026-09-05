@@ -89,9 +89,9 @@ const IDLE_INPUT: PlayerInputs = { direction: { x: 0, z: 0 }, sprint: false, bar
 
 /**
  * Slew the dog's heading toward its velocity direction without trig: lerp the
- * unit vector and renormalize. On an exact 180 degree reversal the lerp can
- * collapse to zero length, in which case the heading snaps (normalize() zeroes
- * anything under its epsilon, and a zero heading would break the bark cone).
+ * unit vector and renormalize. Opposing unit vectors otherwise normalize back
+ * to the original heading forever at our fixed step. Start that ambiguous
+ * reversal with a small, deterministic right turn, then use the usual slew.
  */
 function updateHeading(dog: Dog, dt: number): void {
   const speed = dog.velocity.magnitude();
@@ -103,6 +103,14 @@ function updateHeading(dog: Dog, dt: number): void {
 
   let k = DOG_TURN_RATE * dt;
   if (k > 1) k = 1;
+
+  if (dog.heading.x * dx + dog.heading.z * dz < -0.999999) {
+    const hx = dog.heading.x;
+    dog.heading.x += dog.heading.z * k;
+    dog.heading.z -= hx * k;
+    dog.heading.normalize();
+    return;
+  }
 
   dog.heading.x += (dx - dog.heading.x) * k;
   dog.heading.z += (dz - dog.heading.z) * k;
@@ -179,7 +187,12 @@ export function step(state: SimState, inputs: readonly PlayerInputs[], rng: Rng)
 
     const maxSpeed = dog.sprinting ? DOG_SPRINT_SPEED : DOG_MAX_SPEED;
     _dogAccel.maxSpeed = maxSpeed;
-    _dogTarget.set(input.direction.x, input.direction.z).normalize().multiply(maxSpeed);
+    _dogTarget.set(input.direction.x, input.direction.z);
+    // Partial stick/thumb travel gives precise walking near the flock. Keep
+    // unit/digital input on the exact existing full-speed arithmetic path.
+    const intentLength = _dogTarget.magnitude();
+    const effort = intentLength >= 0.9999 ? 1 : intentLength;
+    _dogTarget.normalize().multiply(maxSpeed * effort);
     applyAcceleration(dog, _dogTarget, dt, _dogAccel);
 
     dog.position.x += dog.velocity.x * dt;

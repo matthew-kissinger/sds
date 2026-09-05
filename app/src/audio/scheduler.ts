@@ -10,7 +10,7 @@ import type { AudioAssetId, AudioCommand } from './types';
 const BARKS: readonly AudioAssetId[] = ['bark-01', 'bark-02', 'bark-03'];
 const BAAS: readonly AudioAssetId[] = ['baa-01', 'baa-02', 'baa-03'];
 const FOOTFALLS: readonly AudioAssetId[] = ['footfall-01', 'footfall-02'];
-const MIN_BAA_SPACING_TICKS = 28;
+const BAA_SEARCH_SPACING_TICKS = 60;
 const DOG_IDLE_HUFF_TICKS = 300;
 
 export interface AudioStoreSnapshot {
@@ -220,19 +220,22 @@ export class FlockAudioScheduler {
     }
 
     if (chosen < 0) {
-      this.nextGlobalTick = tick + MIN_BAA_SPACING_TICKS;
+      this.nextGlobalTick = tick + BAA_SEARCH_SPACING_TICKS;
       return null;
     }
 
     const jitter = hash32(this.seed ^ chosen ^ tick) % 240;
     this.nextBaaTick[chosen] = tick + 210 + Math.round((1 - chosenAgitation) * 540) + jitter;
-    this.nextGlobalTick = tick + MIN_BAA_SPACING_TICKS;
+    // An eligible flock is not a queue that must be emptied. Leave audible
+    // space after a call regardless of flock size, with seeded irregular gaps.
+    this.nextGlobalTick = tick + Math.round(210 - chosenAgitation * 90
+      + unitHash(this.seed ^ tick ^ 0x2f6e2b1) * 150);
     const pitch = 0.91 + unitHash(this.seed ^ (chosen * 0x9e3779b9)) * 0.18;
     return {
       kind: 'asset',
       assetId: BAAS[hash32(this.seed ^ chosen) % BAAS.length]!,
       bus: 'flock',
-      gain: 0.23 + chosenAgitation * 0.09,
+      gain: 0.17 + chosenAgitation * 0.08,
       playbackRate: pitch,
       point: {
         x: sim.positions[chosen * 2]!,

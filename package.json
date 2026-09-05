@@ -39,6 +39,7 @@
     "typecheck:worker": "npm run typecheck --prefix worker",
     "probe:release": "node tools/release-hardening-probe.mjs",
     "probe:playtest": "node tools/playtest-profile.mjs",
+    "review:art": "node tools/art-review.mjs",
     "probe:boot": "node tools/boot-probe.mjs",
     "capture:launch": "node tools/launch-media-capture.mjs",
     "check:discovery": "node scripts/verify-public-discovery.mjs",

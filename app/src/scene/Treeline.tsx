@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * The sourced Fox Round + Spreading treeline and its rooted wood.
+ * The authored sculpted oak treeline and its rooted wood.
  *
  * Geometry is authored in the adjacent TypeScript recipes. The committed
  * placement manifest supplies deterministic transforms, so runtime performs no
@@ -17,10 +17,10 @@ import { useGameStore } from '@app/state/store';
 import { debugFlags } from './glFactory';
 import { CANOPY_ATTRIBUTE_SIZE, makeCanopyMaterial } from './treeline/canopyMaterial';
 import {
-  ACTIVE_SOURCED_CROWN,
+  ACTIVE_TREE_FAMILY,
   buildCrownGeometry,
-  buildSourcedWoodGeometry,
-  sourcedCrownReceipt,
+  buildTreeWoodGeometry,
+  treeGeometryReceipt,
 } from './treeline/crownShape';
 import { measureTreeline } from './treeline/diagnostics';
 import { useTreelineManifest } from './treeline/manifest';
@@ -79,7 +79,7 @@ export function Treeline() {
     const trunkAttribute = new Float32Array(canopies.length * TRUNK_ATTRIBUTE_SIZE);
 
     const crownGeometry = buildCrownGeometry();
-    const trunkGeometry = buildSourcedWoodGeometry();
+    const trunkGeometry = buildTreeWoodGeometry();
     const placeWholeTree = (
       tree: (typeof canopies)[number],
       dummy: THREE.Object3D,
@@ -91,7 +91,7 @@ export function Treeline() {
       dummy.scale.set(tree.width, tree.y + tree.height - ground, tree.depth);
     };
     const canopyMesh = buildMesh(
-      'sourced-broadleaf-crowns',
+      'sculpted-oak-crowns',
       canopies,
       crownGeometry,
       makeCanopyMaterial({
@@ -109,7 +109,7 @@ export function Treeline() {
       },
     );
     const trunkMesh = buildMesh(
-      'sourced-rooted-wood',
+      'sculpted-oak-wood',
       canopies,
       trunkGeometry,
       makeTrunkMaterial({
@@ -139,8 +139,8 @@ export function Treeline() {
       instanced: [canopyMesh, trunkMesh] as const,
       shadows,
       receipt: {
-        source: ACTIVE_SOURCED_CROWN,
-        sourceAsset: sourcedCrownReceipt(),
+        source: ACTIVE_TREE_FAMILY,
+        sourceAsset: treeGeometryReceipt(),
         treeInstances: canopies.length,
         shrubInstances: shrubs.length,
         woodInstances: canopies.length,

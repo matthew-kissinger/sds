@@ -11,6 +11,21 @@ body { background: var(--herd-paper-solid); color: var(--herd-ink); font-family:
 button, select, input { font: inherit; color: inherit; }
 canvas { display: block; touch-action: none; }
 .herd-app { position: relative; width: 100%; height: 100%; isolation: isolate; }
+.herd-gate-cue { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: var(--herd-s2); padding: var(--herd-s1) var(--herd-s2); border: 1px solid var(--herd-line); border-radius: var(--herd-control); background: var(--herd-paper-glass); color: var(--herd-ink); font-size: var(--herd-small); white-space: nowrap; pointer-events: none; }
+.herd-gate-cue[hidden] { display: none; }
+.herd-title-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; font-size: var(--herd-small); }
+.herd-title-links a { color: var(--herd-ink-soft); text-underline-offset: 3px; }
+.herd-title-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+@media (max-height: 500px) {
+  .herd-boot .herd-title-card { gap: var(--herd-s2); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 4px; }
+  .herd-title-card > * { flex-shrink: 0; }
+  .herd-title-card .herd-title { font-size: 44px; }
+  .herd-title-card .herd-title-links { margin-top: 0; }
+}
+.herd-gate-cue { max-width: 148px; min-height: 30px; transition: transform var(--herd-quick) linear; }
+.herd-app[data-reduced-motion=true] .herd-gate-cue { transition: none; }
+.herd-gate-cue__distance { color: var(--herd-ink-soft); font-size: var(--herd-small); font-variant-numeric: tabular-nums; }
+.herd-gate-cue__arrow { flex: 0 0 18px; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transform: rotate(var(--gate-angle)); }
 .herd-button, .herd-icon-button, .herd-size, .herd-select {
   min-height: var(--herd-target); border: 1px solid var(--herd-line); color: var(--herd-ink);
   background: var(--herd-paper-glass); transition: transform var(--herd-quick) var(--herd-ease),

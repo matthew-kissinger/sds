@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "id": "owned-skinned-collie",
+  "author": "Matthew Kissinger",
+  "license": "AGPL-3.0-or-later",
+  "licenseFile": "LICENSE",
+  "digestEncoding": "UTF-8 with LF line endings",
+  "geometryRecipe": "app/src/scene/dog/dogGeometry.ts",
+  "skeletonRecipe": "app/src/scene/dog/dogRigDefinition.ts",
+  "animationRecipe": "app/src/scene/dog/dogRig.ts",
+  "bones": 22,
+  "triangles": 1696,
+  "skeletons": 1,
+  "bodyDraws": 2,
+  "contactShadowDraws": 1,
+  "externalAssets": 0,
+  "sources": [
+    {
+      "path": "app/src/scene/Dog.tsx",
+      "sha256": "30d1a004bd0f9cc9e5a37530672d3520f48619b4fbde96e58fbfcf2960e4f0b0"
+    },
+    {
+      "path": "app/src/scene/dog/dogParts.ts",
+      "sha256": "537c22c5733fd97728febbc980b4a5c1b89a26bb77573cc04272ab9bc01f5121"
+    },
+    {
+      "path": "app/src/scene/dog/loft.ts",
+      "sha256": "8c1c725f88ef3ca4c4b3df08db6d2b91d94c9630ea29a754ead860823cf2e4bb"
+    },
+    {
+      "path": "app/src/scene/dog/dogGeometry.ts",
+      "sha256": "2ba61cc4cf32f36790652147034a91870b92d62fd386b48e04ea12964b87db55"
+    },
+    {
+      "path": "app/src/scene/dog/dogRigDefinition.ts",
+      "sha256": "1402caa9d5d4d275efc1969f6526ab8b1a8caded33d26c5c8076eeb0dff7bd6b"
+    },
+    {
+      "path": "app/src/scene/dog/dogSkin.ts",
+      "sha256": "260678377835624b1196853c142721ef90ea83eb889d414d186195a66f16e07c"
+    },
+    {
+      "path": "app/src/scene/dog/dogRig.ts",
+      "sha256": "23add6afddf1bce0963729827efebba874208a95d1d07399ce43cc33ddaa0fcd"
+    },
+    {
+      "path": "app/src/scene/dog/dogLegSolver.ts",
+      "sha256": "62bb1809b8e038c8f72e80db965f04eef1d93e52c3cb4f3e75f57136e61737dd"
+    },
+    {
+      "path": "app/src/scene/dog/dogGait.ts",
+      "sha256": "0930d6458fce6b44c30458db82d306b34d84cb67a7806a19b8074ff9a8653118"
+    },
+    {
+      "path": "app/src/scene/dog/dogMotion.ts",
+      "sha256": "a40436dc386a183e240e35986db0419240f2cefe7fc3897833b059501063985b"
+    },
+    {
+      "path": "app/src/scene/dog/dogMaterial.ts",
+      "sha256": "fe26d3310ff3308dfdc7dbd12a3dea4ae336405d110de2956eb5b2543ed35cce"
+    },
+    {
+      "path": "app/src/scene/dog/dogMarkings.ts",
+      "sha256": "02aa38ea3285f4d87042eba50a5facb7ad3b6f41edabb1b299f558af16bf8527"
+    },
+    {
+      "path": "app/src/scene/dog/dogMarks.ts",
+      "sha256": "423b28cbe0e598e8be65a1b15bf872864c090f8e3cf8b7ffced03ee8c2e90b68"
+    },
+    {
+      "path": "app/src/scene/dog/coatTones.ts",
+      "sha256": "39f82eba48c11fe5e8081761bac96baedfc148db092b3696f08fbeaeb4e8bee7"
+    },
+    {
+      "path": "app/src/scene/dog/dogToon.ts",
+      "sha256": "d80e1b09943718888de7add7caa1aa33da36d52ccc2dbb1e4efdffcb9cb7adde"
+    },
+    {
+      "path": "app/src/scene/dog/dogCustomization.ts",
+      "sha256": "c34400fd5e2a534313b378ecc126c36d60ee519d97b7554aaa292af27ba84a03"
+    },
+    {
+      "path": "app/src/scene/dog/outlineWidth.ts",
+      "sha256": "7a1e67e51ad6454bc26a1aef85dcd633a7542131b87f5a507d1ad187005bf111"
+    },
+    {
+      "path": "app/src/scene/dog/contactShadow.ts",
+      "sha256": "cb51c35b4a356a30300eb4909ab14f2c09def009f39a66d33a326e165a40d138"
+    },
+    {
+      "path": "tools/record-dog-asset.mjs",
+      "sha256": "024f97eafb7e07783737c3fccec6e6442014e2f8db4fd70468da4c00a64e3d71"
+    }
+  ]
+}

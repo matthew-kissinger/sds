@@ -20,10 +20,9 @@
  * pressing right moves the dog toward -x. That inversion is correct framing, not
  * a sign bug, and `tests/input-axis.spec.ts` pins it.
  *
- * Magnitude is preserved below 1 and clamped at 1. Note that `sim/step.ts`
- * normalizes the direction before use, so partial deflection does not mean
- * partial speed: sprint is the only speed axis. Magnitude is kept honest anyway
- * because it is what the intent shape claims to carry.
+ * Magnitude is preserved below 1 and clamped at 1. The simulation consumes it
+ * as movement effort: partial stick travel walks, full travel runs, and sprint
+ * raises the speed ceiling. Digital diagonals never exceed full effort.
  */
 
 /** What a device asks for, in screen space. Both components in [-1, 1]. */

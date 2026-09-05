@@ -30,6 +30,7 @@ import {
   color,
   dot,
   float,
+  mix,
   positionGeometry,
   sin,
   vec3,
@@ -134,12 +135,12 @@ export function paintDog(coatNodes?: DogCoatInputNodes): DogPaint {
   // catch light that dimmed with it would stop being a catch light.
   const face = {
     faceDark: color(FACE_DARK),
-    iris: color(EYE_IRIS),
+    iris: mix(color(EYE_IRIS), color(COAT_MID), float(0.4)),
     catchLight: color(EYE_CATCH),
   };
 
   const band = (coat: string | TSLNode, cream: string): TSLNode => {
-    const tones: MarkTones = { ...face, cream: color(cream).mul(creamSwing) };
+    const tones: MarkTones = { ...face, cream: mix(color(cream), color(CREAM_MID), float(0.18)).mul(creamSwing) };
     const coatNode = typeof coat === 'string' ? color(coat) : coat;
     return applyMarks(marks, coatNode.mul(coatSwing), tones);
   };
@@ -147,7 +148,7 @@ export function paintDog(coatNodes?: DogCoatInputNodes): DogPaint {
   if (coatNodes?.shadow && coatNodes?.mid && coatNodes?.lit) {
     return {
       mask: marks.cream,
-      shadow: band(coatNodes.shadow, CREAM_SHADOW),
+      shadow: band(mix(coatNodes.shadow, coatNodes.mid, float(0.1)), CREAM_SHADOW),
       mid: band(coatNodes.mid, CREAM_MID),
       lit: band(coatNodes.lit, CREAM_LIT),
     };

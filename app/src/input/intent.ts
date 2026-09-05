@@ -25,6 +25,8 @@
  */
 
 /** One tick of player intent. `direction` need not be normalized. */
+import { MIN_STAMINA_TO_SPRINT } from '@sim/tuning';
+
 export interface PlayerIntent {
   direction: { x: number; z: number };
   sprint: boolean;
@@ -43,6 +45,8 @@ const current: PlayerIntent = {
   sprint: false,
   bark: false,
 };
+let sprintHeld = false;
+let sprintExhausted = false;
 
 /**
  * The live intent object. Stable identity for the lifetime of the page, so the
@@ -58,8 +62,23 @@ export function setMoveDirection(x: number, z: number): void {
   current.direction.z = z;
 }
 
-export function setSprint(sprint: boolean): void {
-  current.sprint = sprint;
+export function setSprint(sprint: boolean, allSourcesReleased = false): void {
+  sprintHeld = sprint;
+  if (!sprint || allSourcesReleased) sprintExhausted = false;
+  current.sprint = sprint && !sprintExhausted;
+}
+
+/** Sample immediately before every fixed tick, including catch-up ticks. An
+ * exhausted hold cannot re-arm itself as stamina regenerates between frames. */
+export function resolveSprintForTick(stamina: number): void {
+  if (sprintHeld && stamina < MIN_STAMINA_TO_SPRINT) sprintExhausted = true;
+  current.sprint = sprintHeld && !sprintExhausted;
+}
+
+/** A replacement run owns a fresh stamina/hold lifecycle. */
+export function resetSprintExhaustion(): void {
+  sprintExhausted = false;
+  current.sprint = sprintHeld;
 }
 
 /** Ask for a bark on the next fixed tick. Cleared by the loop once consumed. */
@@ -78,4 +97,6 @@ export function clearIntent(): void {
   current.direction.z = 0;
   current.sprint = false;
   current.bark = false;
+  sprintHeld = false;
+  sprintExhausted = false;
 }

@@ -48,6 +48,7 @@
 
 import {
   abs,
+  attribute,
   clamp,
   float,
   length,
@@ -62,6 +63,14 @@ import {
   type TSLNode,
 } from '@app/tsl/nodes';
 
+/** Undo the authored neck shortening and muzzle compression for stable coat/eye
+ * coordinates. This is rest-space only; native skinning moves marks with bones. */
+const oldZ = positionGeometry.z
+  .add(tslMin(tslMax(positionGeometry.z.sub(float(0.54)), float(0)), float(0.25)).mul(float(0.56)))
+  .add(tslMax(positionGeometry.z.sub(float(1.085)), float(0)).mul(float(0.2)));
+const markPosition = vec3(positionGeometry.x,
+  positionGeometry.y.sub(smoothstep(float(0.54), float(0.93), oldZ).mul(float(0.2))), oldZ);
+
 // --- the eye, in metres ------------------------------------------------------
 
 /** Centre of the eye: placed on the front-outer temple of the skull at the brow.
@@ -69,16 +78,16 @@ import {
 const EYE_X = 0.138;
 const EYE_Y = 1.332;
 const EYE_Z = 1.172;
-/** How much the eye is squashed vertically into an alert almond. 1.35 forms an expressive almond without compressing into a slit. */
-const EYE_SQUASH = 1.35;
+/** Gentle oval eye with a level, open upper lid; no inward slant. */
+const EYE_SQUASH = 1.45;
 /**
  * The outer dark eyeliner rim framing the eye.
  */
-const EYE_INNER = 0.04;
-const EYE_OUTER = 0.054;
+const EYE_INNER = 0.035;
+const EYE_OUTER = 0.047;
 /** The amber iris fills the middle of the eye, contrasting against the dark rim. */
-const IRIS_INNER = 0.024;
-const IRIS_OUTER = 0.038;
+const IRIS_INNER = 0.018;
+const IRIS_OUTER = 0.029;
 /** Central dark pupil inside the iris giving the dog depth and focal gaze. */
 const PUPIL_INNER = 0.01;
 const PUPIL_OUTER = 0.018;
@@ -88,15 +97,15 @@ const PUPIL_OUTER = 0.018;
 const CATCH_X = 0.134;
 const CATCH_Y = 1.346;
 const CATCH_Z = 1.182;
-const CATCH_INNER = 0.004;
-const CATCH_OUTER = 0.014;
-const CATCH_STRENGTH = 0.9;
+const CATCH_INNER = 0.003;
+const CATCH_OUTER = 0.008;
+const CATCH_STRENGTH = 0.45;
 
 /**
  * How much of the white the collar is allowed to be. Working collies have a
  * proud, bright white neck ring.
  */
-const COLLAR_STRENGTH = 0.88;
+const COLLAR_STRENGTH = 0.58;
 
 /** One white mark set, plus the dark face features, as 0..1 masks. */
 export interface DogMarks {
@@ -120,14 +129,14 @@ export interface DogMarks {
  * whole run, and the bib is the band of surface above it.
  */
 function undersideAt(pz: TSLNode): TSLNode {
-  return float(0.64).add(smoothstep(float(0.25), float(1.0), pz).mul(float(0.44)));
+  return float(0.64).add(smoothstep(float(0.32), float(1.0), pz).mul(float(0.40)));
 }
 
 /** The five white marks, as one 0..1 mask. */
 function creamMask(wander: TSLNode): TSLNode {
-  const py = positionGeometry.y.add(wander);
-  const pz = positionGeometry.z.add(wander);
-  const px = abs(positionGeometry.x);
+  const py = markPosition.y.add(wander);
+  const pz = markPosition.z.add(wander);
+  const px = abs(markPosition.x);
 
   // The blaze. Runs smoothly from between the ears down the forehead and bridge
   // of the muzzle, tapering gracefully toward the nose leather.
@@ -137,66 +146,69 @@ function creamMask(wander: TSLNode): TSLNode {
   const blaze = float(1)
     .sub(smoothstep(blazeEdge, blazeEdge.add(float(0.016)), px))
     .mul(smoothstep(float(0.78), float(0.83), pz))
-    .mul(float(1).sub(smoothstep(float(1.41), float(1.44), pz)))
+    .mul(float(1).sub(smoothstep(float(1.51), float(1.54), pz)))
     .mul(blazeDorsal);
 
   // The collar: a crisp, handsome white ring wrapping the base of the neck.
-  const pzRing = positionGeometry.z.add(wander.mul(float(0.2)));
-  const collar = smoothstep(float(0.46), float(0.51), pzRing)
-    .mul(float(1).sub(smoothstep(float(0.61), float(0.66), pzRing)))
+  const pzRing = markPosition.z.add(wander.mul(float(0.2)))
+    .add(markPosition.y.sub(float(1.15)).mul(float(0.16)));
+  const collar = smoothstep(float(0.48), float(0.52), pzRing)
+    .mul(float(1).sub(smoothstep(float(0.59), float(0.64), pzRing)))
     .mul(float(COLLAR_STRENGTH));
 
   // Throat and forechest: a lush, elegant white chest ruff filling the forechest down
   // to the brisket, joining naturally with the neck collar.
-  const cutoff = undersideAt(pz).add(float(0.2));
+  const cutoff = undersideAt(pz).add(float(0.17));
   const bib = smoothstep(float(0.32), float(0.42), pz)
     .mul(float(1).sub(smoothstep(float(0.92), float(0.98), pz)))
-    .mul(float(1).sub(smoothstep(float(0.1), float(0.22), px)))
+    .mul(float(1).sub(smoothstep(float(0.105), float(0.235), px)))
     .mul(float(1).sub(smoothstep(cutoff.sub(float(0.03)), cutoff.add(float(0.03)), py)));
 
   // Socks: white stockings rising past the pasterns on forelegs and hocks on hindlegs.
-  const pySock = positionGeometry.y.add(wander.mul(float(0.25)));
-  const sockHeight = mix(float(0.16), float(0.24), step(float(0), positionGeometry.z));
+  const pySock = markPosition.y.add(wander.mul(float(0.25)));
+  const sockHeight = mix(float(0.16), float(0.24), step(float(0), markPosition.z));
   const socks = float(1).sub(smoothstep(sockHeight.sub(float(0.025)), sockHeight.add(float(0.025)), pySock));
 
   // The tail tip: the last 14 cm of the plume.
-  const pzTail = positionGeometry.z.add(wander.mul(float(0.35)));
+  const pzTail = markPosition.z.add(wander.mul(float(0.35)));
   const tailTip = float(1).sub(smoothstep(float(-1.48), float(-1.43), pzTail));
 
-  return clamp(blaze.add(collar).add(bib).add(socks).add(tailTip), float(0), float(1));
+  const chestMarks = collar.add(bib).mul(attribute('dogBodyMask', 'float'));
+  return clamp(blaze.add(chestMarks).add(socks).add(tailTip), float(0), float(1));
 }
 
 /** Distance to the eye centre, squashed into the almond the eye actually is. */
 function eyeDistance(): TSLNode {
   return length(
     vec3(
-      abs(positionGeometry.x).sub(float(EYE_X)),
-      positionGeometry.y.sub(float(EYE_Y)).mul(float(EYE_SQUASH)),
-      positionGeometry.z.sub(float(EYE_Z)),
+      abs(markPosition.x).sub(float(EYE_X)),
+      markPosition.y.sub(float(EYE_Y)).mul(float(EYE_SQUASH)),
+      markPosition.z.sub(float(EYE_Z)),
     ),
   );
 }
 
 /** Eye rim, nose leather and lip line. No wander: these are features. */
 function darkMask(): TSLNode {
-  const x = abs(positionGeometry.x);
-  const y = positionGeometry.y;
-  const z = positionGeometry.z;
+  const x = abs(markPosition.x);
+  const y = markPosition.y;
+  const z = markPosition.z;
 
-  const eye = float(1).sub(smoothstep(float(EYE_INNER), float(EYE_OUTER), eyeDistance()));
+  const eye = float(1).sub(smoothstep(float(EYE_INNER), float(EYE_OUTER), eyeDistance()))
+    .mul(eyeAperture());
 
   // Nose leather: rounded anatomical pad capping the front of the muzzle and snout tip.
   // Replaces the narrow streak with full-width rounded coverage wrapping the front cap.
-  const nx = x.div(float(0.080));
-  const ny = y.sub(float(1.221)).div(float(0.072));
+  const nx = x.div(float(0.060));
+  const ny = y.sub(float(1.227)).div(float(0.046));
   const noseRadial = length(vec2(nx, ny));
-  const noseZ = smoothstep(float(1.425), float(1.455), z);
+  const noseZ = smoothstep(float(1.525), float(1.555), z);
   const noseRounded = float(1).sub(smoothstep(float(0.85), float(1.10), noseRadial)).mul(noseZ);
 
   // Front cap: ensures the entire forward-most tip (z >= 1.46) across the nose plane is dark leather
-  const noseCap = smoothstep(float(1.458), float(1.478), z)
-    .mul(float(1).sub(smoothstep(float(0.068), float(0.088), x)))
-    .mul(smoothstep(float(1.145), float(1.175), y));
+  const noseCap = smoothstep(float(1.558), float(1.578), z)
+    .mul(float(1).sub(smoothstep(float(0.049), float(0.065), x)))
+    .mul(smoothstep(float(1.165), float(1.190), y));
 
   const nose = clamp(tslMax(noseRounded, noseCap), float(0), float(1));
 
@@ -205,15 +217,22 @@ function darkMask(): TSLNode {
   const lip = float(1)
     .sub(smoothstep(float(0.005), float(0.016), abs(y.sub(float(1.168)))))
     .mul(smoothstep(float(1.24), float(1.29), z))
-    .mul(float(1).sub(smoothstep(float(1.43), float(1.46), z)))
+    .mul(float(1).sub(smoothstep(float(1.53), float(1.56), z)))
     .mul(float(0.38));
 
   return clamp(eye.add(nose).add(lip), float(0), float(1));
 }
 
+/** A restrained upper lid cuts the circular rim as well as the iris. */
+function eyeAperture(): TSLNode {
+  const lidHeight = markPosition.y;
+  return float(1).sub(smoothstep(float(EYE_Y + 0.027), float(EYE_Y + 0.040), lidHeight));
+}
+
 /** The amber iris, inside the dark rim. */
 function irisMask(): TSLNode {
-  return float(1).sub(smoothstep(float(IRIS_INNER), float(IRIS_OUTER), eyeDistance()));
+  return float(1).sub(smoothstep(float(IRIS_INNER), float(IRIS_OUTER), eyeDistance()))
+    .mul(eyeAperture());
 }
 
 /** The deep dark central pupil inside the amber iris. */
@@ -225,9 +244,9 @@ function pupilMask(): TSLNode {
 function catchMask(): TSLNode {
   const d = length(
     vec3(
-      abs(positionGeometry.x).sub(float(CATCH_X)),
-      positionGeometry.y.sub(float(CATCH_Y)),
-      positionGeometry.z.sub(float(CATCH_Z)),
+      abs(markPosition.x).sub(float(CATCH_X)),
+      markPosition.y.sub(float(CATCH_Y)),
+      markPosition.z.sub(float(CATCH_Z)),
     ),
   );
   return float(1)
@@ -245,7 +264,7 @@ export function buildDogMarks(wander: TSLNode): DogMarks {
     dark,
     iris,
     pupil,
-    glint: catchMask(),
+    glint: tslMin(catchMask(), iris),
   };
 }
 

@@ -22,7 +22,7 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { FIXED_DT, TICK_HZ } from '@sim/tuning';
-import { clearBark, currentIntent, NEUTRAL_INTENT, type PlayerIntent } from '@app/input/intent';
+import { clearBark, currentIntent, NEUTRAL_INTENT, resolveSprintForTick, resetSprintExhaustion, type PlayerIntent } from '@app/input/intent';
 import { useGameStore, type GamePhase } from '@app/state/store';
 
 /** Ticks per frame ceiling. 5 covers a 12 fps frame; beyond that we drop time. */
@@ -39,10 +39,15 @@ export function useGameLoop(): void {
   const accumulator = useRef(0);
   // One stable array, one stable intent object: the loop allocates nothing.
   const inputs = useRef<Readonly<PlayerIntent>[]>([NEUTRAL_INTENT]);
+  const inputSim = useRef(useGameStore.getState().sim);
 
   useFrame((_, delta) => {
     const store = useGameStore.getState();
     const sim = store.sim;
+    if (inputSim.current !== sim) {
+      inputSim.current = sim;
+      resetSprintExhaustion();
+    }
     const playing = store.gamePhase === 'playing';
 
     // Pause is a true simulation freeze. Reset the partial fixed-step so a
@@ -62,6 +67,7 @@ export function useGameLoop(): void {
     accumulator.current += delta;
     let steps = 0;
     while (accumulator.current >= FIXED_DT && steps < MAX_STEPS_PER_FRAME) {
+      if (playing) resolveSprintForTick(sim.state.dogs[0]?.stamina ?? 0);
       sim.step(inputs.current, FIXED_DT);
       // A bark request is spent on the first tick that sees it, so one press is
       // one bark no matter how many ticks this frame folded in.

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-    <title>Sheepdog Sim - Browser Herding Game</title>
+    <title>Sheepdog Sim - Free Sheep Herding Browser Game</title>
     <meta name="description" content="Play Sheepdog Sim, a free browser herding game. Guide 25, 75 or 200 sheep through one field with keyboard, gamepad or touch controls." />
     <meta name="author" content="Matthew Kissinger" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
@@ -11,16 +11,16 @@
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:site_name" content="Sheepdog Sim" />
-    <meta property="og:title" content="Sheepdog Sim" />
-    <meta property="og:description" content="One dog, one flock and one field. Guide every sheep through the gate." />
+    <meta property="og:title" content="Sheepdog Sim - Free Sheep Herding Game" />
+    <meta property="og:description" content="Play as a sheepdog in a golden-hour pasture. Guide 25, 75 or 200 sheep into the pen with keyboard, gamepad or touch controls." />
     <meta property="og:url" content="https://sheepdogsim.com/" />
     <meta property="og:image" content="https://sheepdogsim.com/og/sheepdog-sim.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="A sheepdog faces a large flock across the cel-shaded Sheepdog Sim field." />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Sheepdog Sim" />
-    <meta name="twitter:description" content="One dog, one flock and one field. Guide every sheep through the gate." />
+    <meta name="twitter:title" content="Sheepdog Sim - Free Sheep Herding Game" />
+    <meta name="twitter:description" content="Play as a sheepdog in a golden-hour pasture. Guide 25, 75 or 200 sheep into the pen with keyboard, gamepad or touch controls." />
     <meta name="twitter:image" content="https://sheepdogsim.com/og/sheepdog-sim.png" />
     <meta name="twitter:image:alt" content="A sheepdog faces a large flock across the cel-shaded Sheepdog Sim field." />
     <link rel="canonical" href="https://sheepdogsim.com/" />
@@ -31,13 +31,16 @@
         "@context": "https://schema.org",
         "@type": ["VideoGame", "WebApplication"],
         "name": "Sheepdog Sim",
+        "@id": "https://sheepdogsim.com/#game",
         "url": "https://sheepdogsim.com/",
         "image": "https://sheepdogsim.com/og/sheepdog-sim.png",
         "description": "Play a free browser herding game and guide 25, 75 or 200 sheep through one field.",
         "applicationCategory": "GameApplication",
-        "operatingSystem": "Any modern desktop or mobile web browser",
+        "operatingSystem": "Web browser",
         "browserRequirements": "Requires JavaScript and WebGL2 or WebGPU",
-        "playMode": "SinglePlayer",
+        "playMode": "https://schema.org/SinglePlayer",
+        "inLanguage": "en",
+        "genre": ["Simulation", "Herding"],
         "gamePlatform": ["Web browser", "Desktop", "Mobile"],
         "isAccessibleForFree": true,
         "offers": {
@@ -62,6 +65,9 @@
       .static-shell__card { width: min(88vw, 440px); box-sizing: border-box; padding: 32px; border: 1px solid rgba(78,65,46,.2); border-radius: 32px; background: rgba(244,234,215,.72); box-shadow: 0 18px 70px rgba(65,51,34,.12); }
       .static-shell h1 { margin: 0 0 10px; font: 400 48px/1 Georgia, serif; letter-spacing: .035em; }
       .static-shell p { margin: 0; color: #596052; letter-spacing: .12em; text-transform: uppercase; }
+      .static-shell .static-shell__description { margin: 16px 0; letter-spacing: normal; text-transform: none; }
+      .static-shell nav { display: flex; justify-content: center; gap: 20px; }
+      .static-shell a { color: #365f44; text-underline-offset: 3px; }
     </style>
   </head>
   <body>
@@ -70,10 +76,12 @@
         <section class="static-shell__card" aria-label="Loading Sheepdog Sim">
           <h1>Sheepdog Sim</h1>
           <p>Loading game code</p>
+          <p class="static-shell__description">A free sheep herding game in your browser. Move, sprint and bark as a sheepdog to guide 25, 75 or 200 sheep into the pen.</p>
+          <noscript><p class="static-shell__description">Enable JavaScript to play. The game information and controls below are available without it.</p></noscript>
+          <nav aria-label="Game information"><a href="/about">About the game</a><a href="/support">How to play</a></nav>
         </section>
       </main>
     </div>
-    <noscript>Sheepdog Sim requires JavaScript to run.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

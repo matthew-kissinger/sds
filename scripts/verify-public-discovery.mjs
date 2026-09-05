@@ -14,6 +14,8 @@ function option(name, fallback) {
 }
 
 const baseUrl = option('url', '');
+const sourceFiles = args.includes('--source');
+assert(!(baseUrl && sourceFiles), '--source and --url cannot be combined.');
 const retries = Number(option('retries', '1'));
 const requireAnalytics = args.includes('--require-analytics');
 
@@ -29,7 +31,7 @@ function pngDimensions(bytes) {
 
 function verifyPages(files) {
   const root = files['/'];
-  assert(root.includes('<title>Sheepdog Sim - Browser Herding Game</title>'), 'Root title is not canonical.');
+  assert(/<title>Sheepdog Sim - Free Sheep Herding Browser Game<\/title>/.test(root), 'Root title does not describe the free browser game.');
   assert(!root.includes('Sheepdog Sim 3'), 'Release number leaked into the public brand.');
   assert(root.includes('name="robots" content="index, follow'), 'Root robots metadata is missing.');
   assert(root.includes('property="og:image" content="https://sheepdogsim.com/og/sheepdog-sim.png"'), 'Open Graph image is missing.');
@@ -42,6 +44,12 @@ function verifyPages(files) {
   assert(Array.isArray(jsonLd['@type']) && jsonLd['@type'].includes('WebApplication'), 'JSON-LD WebApplication type is missing.');
   assert(jsonLd.applicationCategory === 'GameApplication', 'JSON-LD game category is missing.');
   assert(jsonLd.offers?.price === '0', 'JSON-LD free offer is missing.');
+  assert(jsonLd.playMode === 'https://schema.org/SinglePlayer', 'JSON-LD must describe the shipped single-player game.');
+  assert(!jsonLd.aggregateRating && !jsonLd.review, 'Ratings need independently sourced public evidence.');
+  assert(root.includes('A free sheep herding game in your browser.'), 'Initial HTML lacks a readable game description.');
+  for (const path of ['/about', '/support']) {
+    assert(root.includes(`href="${path}"`), `Initial HTML lacks a crawlable ${path} link.`);
+  }
 
   const canonical = {
     '/': 'https://sheepdogsim.com/',
@@ -49,10 +57,25 @@ function verifyPages(files) {
     '/support': 'https://sheepdogsim.com/support',
     '/privacy': 'https://sheepdogsim.com/privacy',
   };
+  const titles = new Set();
+  const descriptions = new Set();
   for (const [route, expected] of Object.entries(canonical)) {
     assert(files[route].includes(`rel="canonical" href="${expected}"`), `${route} canonical URL is missing.`);
     assert(!files[route].includes('Sheepdog Sim 3'), `${route} contains the retired numbered brand.`);
+    assert((files[route].match(/rel="canonical"/g) || []).length === 1, `${route} has conflicting canonicals.`);
+    assert((files[route].match(/<h1[ >]/g) || []).length === 1, `${route} needs one visible main heading.`);
+    assert(!/content="[^"]*noindex/i.test(files[route]), `${route} unexpectedly prevents indexing.`);
+    const title = files[route].match(/<title>([^<]+)<\/title>/)?.[1];
+    const description = files[route].match(/name="description" content="([^"]+)"/)?.[1];
+    assert(title && description, `${route} needs a title and description.`);
+    titles.add(title); descriptions.add(description);
+    assert(files[route].includes(`property="og:url" content="${expected}"`), `${route} social URL differs from canonical.`);
+    assert(files[route].includes('name="twitter:card" content="summary_large_image"'), `${route} lacks its social card.`);
   }
+  assert(titles.size === Object.keys(canonical).length, 'Page titles must be distinct.');
+  assert(descriptions.size === Object.keys(canonical).length, 'Page descriptions must be distinct.');
+  assert(files['/about'].includes('href="/support"'), 'Game explanation must link to controls.');
+  assert(files['/support'].includes('gamepad B or X') && files['/support'].includes('right trigger'), 'Published gamepad help has stale bindings.');
 
   assert(files['/robots.txt'].includes('Allow: /'), 'robots.txt does not allow crawling.');
   assert(files['/robots.txt'].includes('Sitemap: https://sheepdogsim.com/sitemap.xml'), 'robots.txt does not advertise the sitemap.');
@@ -72,7 +95,7 @@ function verifyPages(files) {
 }
 
 function readLocal() {
-  const dist = join(repo, 'dist');
+  const dist = join(repo, sourceFiles ? 'app/public' : 'dist');
   const paths = {
     '/': 'index.html',
     '/about': 'about.html',
@@ -84,8 +107,8 @@ function readLocal() {
   };
   const files = {};
   for (const [route, relative] of Object.entries(paths)) {
-    const path = join(dist, relative);
-    assert(existsSync(path), `Built discovery surface is missing ${relative}.`);
+    const path = sourceFiles && route === '/' ? join(repo, 'app/index.html') : join(dist, relative);
+    assert(existsSync(path), `Discovery surface is missing ${relative}.`);
     files[route] = readFileSync(path);
   }
   for (const route of Object.keys(files)) {
@@ -116,7 +139,7 @@ async function run() {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const result = verifyPages(baseUrl ? await readRemote() : readLocal());
-      console.log(JSON.stringify({ source: baseUrl || 'dist', ...result }, null, 2));
+      console.log(JSON.stringify({ source: baseUrl || (sourceFiles ? 'app source (not built or deployed)' : 'dist'), ...result }, null, 2));
       return;
     } catch (error) {
       lastError = error;

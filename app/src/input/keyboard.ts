@@ -19,6 +19,7 @@
 
 import { barkPressed, isPlaying, toggleCameraMode } from './actions';
 import { clearAxis, type MoveAxis } from './axis';
+import { setSprintSource } from './sprintSources';
 import {
   useGameStore,
   type InputBindings,
@@ -96,16 +97,19 @@ function onKeyDown(event: KeyboardEvent): void {
     code === 'ShiftRight'
   ) {
     held.add(code);
+    setSprintSource('keyboard', keyboardSprint());
     if (isPlaying() && code.startsWith('Arrow')) event.preventDefault();
   }
 }
 
 function onKeyUp(event: KeyboardEvent): void {
   held.delete(event.code);
+  setSprintSource('keyboard', keyboardSprint());
 }
 
 function releaseAll(): void {
   held.clear();
+  setSprintSource('keyboard', false);
 }
 
 /** Attach the listeners. Returns the detach function, for a React effect. */

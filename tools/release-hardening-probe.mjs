@@ -86,6 +86,25 @@ for (const name of recipeManifests) {
   }
 }
 
+// Runtime character recipes are source assets too. Validate their declared
+// LF-normalized encoding, rather than platform-dependent checkout bytes.
+const dogAsset = JSON.parse(readFileSync(join(repo, 'assets/dog/procedural-manifest.json'), 'utf8'));
+const farmerAsset = JSON.parse(readFileSync(join(repo, 'assets/farmer/source-digests.json'), 'utf8'));
+if (dogAsset.license !== 'AGPL-3.0-or-later' || farmerAsset.license !== 'AGPL-3.0-or-later'
+  || dogAsset.licenseFile !== 'LICENSE' || !existsSync(join(repo, 'LICENSE'))
+  || dogAsset.digestEncoding !== 'UTF-8 with LF line endings'
+  || farmerAsset.encoding !== 'UTF-8 with LF line endings') fail('character source provenance is incomplete');
+const characterSources = [...dogAsset.sources,
+  ...Object.entries(farmerAsset.sha256).map(([path, sha256]) => ({ path, sha256 }))];
+if (dogAsset.sources.length < 10 || Object.keys(farmerAsset.sha256).length !== 4) fail('character source ledger is incomplete');
+for (const source of characterSources) {
+  if ((!source.path.startsWith('app/src/scene/') && source.path !== 'tools/record-dog-asset.mjs')
+    || source.path.includes('..')) fail('invalid character source path');
+  const bytes = readFileSync(join(repo, source.path), 'utf8').replaceAll('\r\n', '\n');
+  const digest = createHash('sha256').update(bytes).digest('hex');
+  if (digest !== source.sha256) fail(`character source digest mismatch: ${source.path}`);
+}
+
 const audioManifest = JSON.parse(readFileSync(join(repo, 'assets/audio/manifest.json'), 'utf8'));
 for (const asset of audioManifest.assets) {
   const path = join(repo, 'assets/audio', asset.file);
@@ -101,60 +120,60 @@ const foliageManifest = JSON.parse(
   readFileSync(join(repo, 'assets/treeline/procedural-manifest.json'), 'utf8'),
 );
 if (
-  foliageManifest.license !== 'AGPL-3.0-or-later'
-  || foliageManifest.runtime !== 'baked-source-geometry-threejs-tsl'
-  || foliageManifest.activeCandidate !== 'fox-hybrid-family'
+  foliageManifest.version !== 7
+  || foliageManifest.id !== 'authored-sculpted-oak-family-v1'
+  || foliageManifest.license !== 'AGPL-3.0-or-later'
+  || foliageManifest.runtime !== 'baked-procedural-geometry-threejs-tsl'
+  || foliageManifest.activeCandidate !== 'sculpted-oak-family'
   || foliageManifest.field?.externalModels !== 0
-  || foliageManifest.field?.sourceModels !== 2
+  || foliageManifest.field?.sourceModels !== 0
+  || foliageManifest.field?.textures !== 0
+  || foliageManifest.field?.treeInstances !== 139
+  || foliageManifest.field?.shrubInstances !== 0
+  || foliageManifest.field?.draws !== 3
+  || !(foliageManifest.field?.submittedTrianglesBeforeShadows < 400_000)
 ) {
-  fail('foliage source ledger is not the approved Fox hybrid family');
+  fail('foliage ledger is not the authored sculpted oak family within its field budget');
 }
-
-const expectedFoxSources = new Map([
-  ['fox-broad-spreading', {
-    sourceSha256: 'e1fb728c393a53c55b226df6ab434f8891bf517790a24712514ea145e6564441',
-    materialSha256: 'ca81456e4fea21394c6dcfb8d6d8b1a6076c0b6611c5ccf9c5aca34c04f55e83',
-  }],
-  ['fox-natural-round', {
-    sourceSha256: '0185db4da9db2752de368af457044079e2185761bd687e02a177a3a7df20f81d',
-    materialSha256: 'dc8d30fc2d4920bf52d52122ffc9b66592cc7fbb4be4030f55ca9f338db3987d',
-  }],
-]);
-if (!Array.isArray(foliageManifest.sources) || foliageManifest.sources.length !== expectedFoxSources.size) {
-  fail('foliage source ledger does not contain exactly the two approved Fox sources');
+if (!Array.isArray(foliageManifest.sources) || foliageManifest.sources.length !== 1) {
+  fail('foliage source ledger must contain exactly the authored oak recipe');
 }
 for (const source of foliageManifest.sources) {
-  const expected = expectedFoxSources.get(source.id);
   if (
-    !expected
-    || source.author !== 'mehrasaur'
-    || source.license !== 'CC0-1.0'
-    || source.archiveSha256 !== 'f18e963af10d3b3f05205eff0907f7b5a3c2c06b846f8c3c8c31e94652adac7f'
-    || source.generated !== 'assets/treeline/fox-hybrid-family.json'
+    source.id !== 'sculpted-oak-recipe'
+    || source.author !== 'Matthew Kissinger'
+    || source.license !== 'AGPL-3.0-or-later'
+    || source.licenseFile !== 'LICENSE'
+    || !existsSync(join(repo, 'LICENSE'))
+    || source.source !== 'tools/bake-sculpted-trees.mjs'
+    || source.generated !== 'assets/treeline/sculpted-oak-family.json'
+    || foliageManifest.recipe?.authoring !== source.source
   ) {
     fail(`unapproved foliage source entry: ${String(source.id)}`);
   }
-  for (const [pathKey, digestKey, expectedDigest] of [
-    ['source', 'sha256', expected.sourceSha256],
-    ['materialSource', 'materialSha256', expected.materialSha256],
+  for (const [pathKey, digestKey] of [
+    ['source', 'sha256'],
+    ['generated', 'generatedSha256'],
   ]) {
     const relativePath = source[pathKey];
-    const absolutePath = typeof relativePath === 'string'
-      ? join(repo, ...relativePath.split('/'))
-      : '';
-    if (!absolutePath || !existsSync(absolutePath)) {
-      fail(`foliage source absent: ${String(relativePath)}`);
-    }
+    const absolutePath = join(repo, ...relativePath.split('/'));
+    if (!existsSync(absolutePath)) fail(`foliage source absent: ${relativePath}`);
     const digest = createHash('sha256').update(readFileSync(absolutePath)).digest('hex');
-    if (source[digestKey] !== expectedDigest || digest !== expectedDigest) {
+    if (!/^[a-f0-9]{64}$/.test(source[digestKey]) || digest !== source[digestKey]) {
       fail(`foliage source digest mismatch: ${relativePath}`);
     }
   }
-  for (const relativePath of [source.licenseSnapshot, source.generated]) {
-    if (typeof relativePath !== 'string' || !existsSync(join(repo, ...relativePath.split('/')))) {
-      fail(`foliage provenance file absent: ${String(relativePath)}`);
-    }
-  }
+  const geometry = JSON.parse(readFileSync(join(repo, source.generated), 'utf8'));
+  if (
+    geometry.id !== foliageManifest.activeCandidate
+    || geometry.provenance?.source !== source.source
+    || geometry.provenance?.sha256 !== source.sha256
+    || geometry.provenance?.license !== source.license
+    || geometry.geometry?.foliage?.triangles !== foliageManifest.geometry?.crownTriangles
+    || geometry.geometry?.wood?.triangles !== foliageManifest.geometry?.trunkTriangles
+    || (geometry.geometry.foliage.triangles + geometry.geometry.wood.triangles) * 139
+      !== foliageManifest.field.submittedTrianglesBeforeShadows
+  ) fail('baked foliage geometry does not match its authoring ledger');
 }
 for (const path of [
   foliageManifest.placement,
@@ -234,6 +253,7 @@ const result = {
   },
   playerPageParams: [...new Set(playerParamReads.map(({ name }) => name))].sort(),
   recipeManifests: recipeManifests.length,
+  characterSourcesVerified: characterSources.length,
   audioAssetsVerified: audioManifest.assets.length,
   foliageSource: foliageManifest.id,
   foliageExternalModels: foliageManifest.field.externalModels,

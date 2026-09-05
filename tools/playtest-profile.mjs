@@ -33,6 +33,7 @@ import {
   sameBuildReceipt,
 } from './playtest-profile-receipt.mjs';
 import { analyzeScreenshot } from './screenshot-analysis.mjs';
+import { installArtRenderCounters } from './art-render-counters.mjs';
 
 const argv = process.argv.slice(2);
 
@@ -90,6 +91,30 @@ if (!/^[a-zA-Z0-9._-]+$/.test(label)) throw new Error('--label may contain lette
 const outputDir = join(repo, 'captures', 'profiling', label);
 
 const SCENARIOS = {
+  'art-classic-webgpu': {
+    viewport: { width: 2560, height: 1440 }, deviceScaleFactor: 1,
+    quality: 'high', bootBudgetMs: 2_000, frameBudgetMs: 16.7,
+  },
+  'art-follow-webgpu': {
+    viewport: { width: 2560, height: 1440 }, deviceScaleFactor: 1,
+    quality: 'high', followCamera: true, bootBudgetMs: 2_000, frameBudgetMs: 16.7,
+  },
+  'art-follow-webgl2': {
+    viewport: { width: 2560, height: 1440 }, deviceScaleFactor: 1,
+    quality: 'high', followCamera: true, forceWebGL: true, bootBudgetMs: 2_000, frameBudgetMs: 16.7,
+  },
+  'art-phone-high-webgpu': {
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, mobile: true,
+    quality: 'high', followCamera: true, bootBudgetMs: 5_000, frameBudgetMs: 16.7,
+  },
+  'art-phone-low-webgl2': {
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, mobile: true,
+    quality: 'low', forceWebGL: true, bootBudgetMs: 5_000, frameBudgetMs: 33.4,
+  },
+  'art-landscape-low-webgl2': {
+    viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, mobile: true,
+    quality: 'low', followCamera: true, forceWebGL: true, bootBudgetMs: 5_000, frameBudgetMs: 33.4,
+  },
   'desktop-webgpu': {
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 1,
@@ -140,12 +165,12 @@ const SCENARIOS = {
   },
 };
 
-const requested = flag('scenarios', Object.keys(SCENARIOS).join(',')).split(',').filter(Boolean);
+const requested = flag('scenarios', Object.keys(SCENARIOS).filter((name) => !name.startsWith('art-')).join(',')).split(',').filter(Boolean);
 for (const name of requested) {
   if (!(name in SCENARIOS)) throw new Error(`unknown scenario ${name}`);
 }
 
-async function sampleRuntime(page, durationMs) {
+async function sampleRuntime(page, durationMs, selector = READOUT) {
   return page.evaluate(async ({ durationMs, selector }) => {
     const deltas = [];
     const renderer = [];
@@ -213,7 +238,7 @@ async function sampleRuntime(page, durationMs) {
       )),
       sampleWindow: { startedAtMs: started, endedAtMs: ended },
     };
-  }, { durationMs, selector: READOUT });
+  }, { durationMs, selector });
 }
 
 /**
@@ -306,10 +331,12 @@ function diagnosticSummary(samples) {
 
 async function runScenario(browser, name, spec) {
   const context = await browser.newContext({
+    serviceWorkers: 'block',
     viewport: spec.viewport,
     deviceScaleFactor: spec.deviceScaleFactor,
     ...(spec.mobile ? { isMobile: true, hasTouch: true } : {}),
   });
+  if (name.startsWith('art-')) await context.addInitScript(installArtRenderCounters);
   if (spec.quality !== undefined) {
     await context.addInitScript((quality) => {
       const key = 'herd.settings.v1';
@@ -362,6 +389,15 @@ async function runScenario(browser, name, spec) {
     contentType: 'application/json',
     body: '{"lobbies":[]}',
   }));
+  // Local art iteration must never create production identities or scores.
+  if (name.startsWith('art-')) await context.route('**/api/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      token: 'local-art-review', authSecret: 'local-art-review', entries: [],
+      playerProfile: { persistentId: 'local-art-review', displayName: 'Art Review', fullName: 'Art Review' },
+    }),
+  }));
 
   try {
     const debug = [
@@ -374,7 +410,7 @@ async function runScenario(browser, name, spec) {
       waitUntil: 'domcontentloaded',
       timeout: 60_000,
     });
-    const startupPromise = sampleStartup(page, 90_000, sampleTick);
+    const startupPromise = name.startsWith('art-') ? Promise.resolve(null) : sampleStartup(page, 90_000, sampleTick);
     // If boot fails and the page is closed before the sampler resolves, keep
     // that rejection from becoming an unrelated unhandled-promise warning.
     void startupPromise.catch(() => {});
@@ -408,8 +444,78 @@ async function runScenario(browser, name, spec) {
       };
     });
 
+    if (name.startsWith('art-')) {
+      await page.locator('.herd-size').filter({ hasText: String(flockSize) }).click();
+      await play.click();
+      await play.waitFor({ state: 'hidden' });
+      if (spec.followCamera) await page.keyboard.press('KeyC');
+      await page.keyboard.down('KeyW');
+      const runtime = await sampleRuntime(page, seconds * 1000, '[data-testid="render-readout"]');
+      await page.keyboard.up('KeyW');
+      const frameTimes = stats(runtime.deltas);
+      const screenshot = join(outputDir, `${name}.png`);
+      const png = await page.screenshot({ path: screenshot });
+      const visual = await analyzeScreenshot(page, png);
+      const motionScreenshots = [];
+      for (let index = 0; index < 3; index += 1) {
+        await page.waitForTimeout(650);
+        const file = join(outputDir, `${name}-motion-${index}.png`);
+        await page.screenshot({ path: file });
+        motionScreenshots.push(file);
+      }
+      const surface = await page.locator('canvas').evaluate((canvas) => {
+        const app = document.querySelector('.herd-app');
+        const backend = app?.dataset.backend ?? 'unknown';
+        const rect = canvas.getBoundingClientRect();
+        return { backend, tier: app?.dataset.renderTier ?? 'unverified', canvas: { cssWidth: Math.round(rect.width), cssHeight: Math.round(rect.height), bufferWidth: canvas.width, bufferHeight: canvas.height } };
+      });
+      const requestedBackend = spec.forceWebGL ? 'webgl2' : 'webgpu';
+      const drawCalls = runtime.renderer.length ? stats(runtime.renderer.map((sample) => sample.drawCalls)) : null;
+      const triangles = runtime.renderer.length ? stats(runtime.renderer.map((sample) => sample.triangles)) : null;
+      const checks = { boot: interactiveMs <= spec.bootBudgetMs,
+        backend: surface.backend === requestedBackend, frames: frameTimes.p95 <= spec.frameBudgetMs,
+        freezeFree: frameTimes.max <= 100, stablePage: failureCollectionsAreEmpty(errors, failedRequests, failedResponses),
+        canvas: visual.nonblank, drawCalls: drawCalls !== null && drawCallsWithinBudget(drawCalls)
+          && runtime.renderer.every((sample) => sample.drawCalls >= 0 && sample.triangles >= 0),
+        beautyCameraAvailable: !spec.beautyCamera };
+      // Optional composition evidence comes AFTER the timing sample, so a
+      // screenshot or camera rehearsal cannot hide first-use compilation cost.
+      const flockScreenshots = [];
+      if (argv.includes('--flock-views')) {
+        if (spec.followCamera) await page.keyboard.press('KeyC');
+        // Start a fresh normal run: the timed approach has already split and
+        // scattered the flock, so simply backing up does not frame its spawn.
+        await page.locator('.herd-pause-button').click();
+        await page.getByRole('button', { name: 'Title', exact: true }).click();
+        await play.click();
+        await page.keyboard.down('KeyW');
+        await page.waitForTimeout(1600);
+        await page.keyboard.up('KeyW');
+        await page.waitForTimeout(1000);
+        for (const camera of ['classic', 'follow']) {
+          if (camera === 'follow') {
+            await page.keyboard.press('KeyC');
+            await page.waitForTimeout(1200);
+          }
+          const file = join(outputDir, `${name}-flock-${camera}.png`);
+          await page.screenshot({ path: file });
+          flockScreenshots.push(file);
+        }
+      }
+      return { name, requestedBackend, ...surface,
+        camera: spec.followCamera ? 'follow' : 'classic', cameraVerification: 'scripted-controls',
+        viewport: spec.viewport, deviceScaleFactor: spec.deviceScaleFactor,
+        emulation: spec.mobile ? MID_MOBILE_PROFILE : null, flockSize,
+        quality: { requested: spec.quality ?? 'auto', tier: surface.tier },
+        boot: { interactiveMs: Math.round(interactiveMs), budgetMs: spec.bootBudgetMs, ...boot },
+        runtime: { seconds, frameBudgetMs: spec.frameBudgetMs, frameTimes, drawCalls, triangles, sampleWindow: runtime.sampleWindow },
+        visual, screenshot, motionScreenshots, flockScreenshots, checks, pass: Object.values(checks).every(Boolean), errors, failedRequests, failedResponses,
+        note: 'Browser rAF includes tools-only API instrumentation overhead; draw/triangle counts are instrumented API submissions, not native renderer statistics or GPU timing. Camera names describe scripted controls, not measured transforms. Production strips the deterministic driver, beauty camera and grounding diagnostics; this art workload uses real W input.',
+      };
+    }
     await pressPlay(page, { flockSize });
     const startupRuntime = await startupPromise;
+    if (spec.followCamera) await page.keyboard.press('KeyC');
     const startupFrameTimes = stats(startupRuntime.deltas);
     const before = await readout(page);
     const runtime = await sampleRuntime(page, seconds * 1000);
@@ -436,6 +542,15 @@ async function runScenario(browser, name, spec) {
     const screenshot = join(outputDir, `${name}.png`);
     const screenshotPng = await page.screenshot({ path: screenshot });
     const visual = await analyzeScreenshot(page, screenshotPng);
+    const motionScreenshots = [];
+    if (name.startsWith('art-')) {
+      for (let index = 1; index <= 2; index++) {
+        await page.waitForTimeout(650);
+        const file = join(outputDir, `${name}-motion-${index}.png`);
+        await page.screenshot({ path: file });
+        motionScreenshots.push(file);
+      }
+    }
     const canvas = await page.locator('canvas').evaluate((element) => {
       const rect = element.getBoundingClientRect();
       return {
@@ -478,6 +593,7 @@ async function runScenario(browser, name, spec) {
     return {
       name,
       requestedBackend,
+      camera: spec.beautyCamera ? 'beauty' : spec.followCamera ? 'follow' : 'classic',
       backend: after.backend,
       viewport: spec.viewport,
       deviceScaleFactor: spec.deviceScaleFactor,
@@ -534,7 +650,12 @@ async function runScenario(browser, name, spec) {
       failedRequests,
       failedResponses,
       screenshot,
+      motionScreenshots,
     };
+  } catch (error) {
+    const screenshot = join(outputDir, `${name}-failure.png`);
+    await page.screenshot({ path: screenshot, timeout: 5_000 }).catch(() => {});
+    return { name, pass: false, error: String(error?.stack ?? error), screenshot, errors, failedRequests, failedResponses };
   } finally {
     // Closing the page may abort harmless in-flight work. Freeze the sampled
     // failure window before teardown so cleanup cannot mutate the receipt.

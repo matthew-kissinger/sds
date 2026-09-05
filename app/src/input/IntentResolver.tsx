@@ -26,7 +26,7 @@
  * mapping function, two forward vectors, no mode branch downstream.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
 import { barkPressed, toggleCameraMode } from './actions';
@@ -42,6 +42,7 @@ import { pollGamepad } from './gamepad';
 import { installKeyboard, keyboardAxis, keyboardSprint } from './keyboard';
 import { setMoveDirection, setSprint } from './intent';
 import { touchActive, touchAxis, touchSprint } from './touch';
+import { setSprintSource, sprintReleaseSerial } from './sprintSources';
 import { useGameStore } from '@app/state/store';
 
 /** Below useGameLoop's -1: intent is resolved before the sim reads it. */
@@ -49,6 +50,7 @@ const RESOLVE_PRIORITY = -2;
 
 export function IntentResolver() {
   useEffect(() => installKeyboard(), []);
+  const releaseSerial = useRef(sprintReleaseSerial());
 
   // Stable scratch, allocated once: this runs every frame and allocates nothing.
   const scratch = useMemo(
@@ -65,6 +67,10 @@ export function IntentResolver() {
     const reading = pollGamepad(scratch.pad);
     keyboardAxis(scratch.axis);
     let sprint = keyboardSprint();
+    // Synchronize remapped keyboard bindings and the normally polled pad.
+    // Keyboard/touch event paths retain intervening all-released edges.
+    setSprintSource('keyboard', sprint);
+    setSprintSource('gamepad', reading.present && reading.sprint);
 
     if (reading.present) {
       sprint = sprint || reading.sprint;
@@ -80,8 +86,10 @@ export function IntentResolver() {
       const thumb = touchAxis();
       scratch.axis.right = thumb.right;
       scratch.axis.forward = thumb.forward;
-      sprint = sprint || touchSprint();
     }
+    // Sprint owns its pointer independently. Lifting the steering thumb must
+    // not manufacture a release/re-press of a still-held exhausted Sprint.
+    sprint = sprint || touchSprint();
 
     let forwardX = CLASSIC_FORWARD_X;
     let forwardZ = CLASSIC_FORWARD_Z;
@@ -93,7 +101,9 @@ export function IntentResolver() {
 
     worldFromAxis(scratch.axis, forwardX, forwardZ, scratch.world);
     setMoveDirection(scratch.world.x, scratch.world.z);
-    setSprint(sprint);
+    const released = sprintReleaseSerial();
+    setSprint(sprint, released !== releaseSerial.current);
+    releaseSerial.current = released;
   }, RESOLVE_PRIORITY);
 
   return null;

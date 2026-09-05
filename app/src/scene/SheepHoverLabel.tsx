@@ -161,7 +161,8 @@ export function SheepHoverLabel() {
       if (sim.dogPositions && sim.dogPositions.length >= 2) {
         targetX = sim.dogPositions[0]!;
         targetZ = sim.dogPositions[1]!;
-        targetBaseY = groundY(targetX, targetZ) + 0.95;
+        // Anchor above the standing dog's head, not through its shoulder.
+        targetBaseY = groundY(targetX, targetZ) + 2.0;
       }
     } else if (activeIndex !== null && activeIndex < sim.headings.length) {
       const pos = sim.positions;
@@ -214,7 +215,10 @@ export function SheepHoverLabel() {
 
     // Convert NDC (-1..1) to CSS pixels
     const screenX = (projVec.current.x * 0.5 + 0.5) * size.width;
-    const screenY = (-projVec.current.y * 0.5 + 0.5) * size.height;
+    // World-height clearance collapses in the distant Classic camera. Keep
+    // a small screen-space gap too so the badge cannot cover the player.
+    const screenY = (-projVec.current.y * 0.5 + 0.5) * size.height
+      - (activeEntityRef.current === -1 ? 20 : 0);
 
     // Subtle distance-compensated scaling
     const dist = camera.position.distanceTo(currentPos.current);

@@ -9,9 +9,17 @@ import { AUDIO_LOOP_IDS } from '@app/audio/types';
 
 class FakeParam {
   value = 0;
-  setValueAtTime(value: number) { this.value = value; }
-  cancelScheduledValues() {}
-  linearRampToValueAtTime(value: number) { this.value = value; }
+  events: { value: number; time: number }[] = [];
+  calls: string[] = [];
+  setValueAtTime(value: number, time = 0) {
+    this.calls.push('set'); this.value = value; this.events.push({ value, time });
+  }
+  cancelScheduledValues(time: number) {
+    this.calls.push('cancel'); this.events = this.events.filter(event => event.time < time);
+  }
+  linearRampToValueAtTime(value: number, time = 0) {
+    this.calls.push('ramp'); this.value = value; this.events.push({ value, time });
+  }
   exponentialRampToValueAtTime(value: number) { this.value = value; }
   setTargetAtTime(value: number) { this.value = value; }
 }
@@ -22,6 +30,7 @@ class FakeNode {
 }
 
 class FakeGain extends FakeNode { gain = new FakeParam(); }
+class FakeFilter extends FakeNode { type = ''; frequency = new FakeParam(); Q = new FakeParam(); }
 class FakePanner extends FakeNode {
   panningModel = '';
   distanceModel = '';
@@ -71,6 +80,7 @@ class FakeContext {
   closeCalls = 0;
   gains: FakeGain[] = [];
   panners: FakePanner[] = [];
+  filters: FakeFilter[] = [];
   listener = {
     positionX: new FakeParam(), positionY: new FakeParam(), positionZ: new FakeParam(),
     forwardX: new FakeParam(), forwardY: new FakeParam(), forwardZ: new FakeParam(),
@@ -88,6 +98,11 @@ class FakeContext {
     return panner;
   }
   createOscillator() { return new FakeOscillator(); }
+  createBiquadFilter() {
+    const filter = new FakeFilter();
+    this.filters.push(filter);
+    return filter;
+  }
   createMediaElementSource() { return new FakeNode(); }
   createBufferSource() {
     const source = new FakeSource();
@@ -101,6 +116,56 @@ class FakeContext {
 }
 
 describe('Web Audio graph', () => {
+  it('softens the crowd as either listener or flock moves away without adding voices', async () => {
+    const context = new FakeContext();
+    const graph = new HerdAudioGraph({
+      context: context as unknown as AudioContext,
+      createLoopElement: (url) => Object.assign(new FakeMediaElement(), { src: url }) as unknown as HTMLAudioElement,
+    });
+    await graph.unlock();
+    const crowd = context.filters.find(filter => filter.type === 'lowpass' && filter.frequency.value === 1300)!;
+    const filterCount = context.filters.length;
+    const pannerCount = context.panners.length;
+    graph.setListener(0, 0);
+    graph.setLoopLevel('crowd-loop', 0.1, 0, 0);
+    expect(crowd.frequency.value).toBe(1300);
+    graph.setListener(100, 0);
+    expect(crowd.frequency.value).toBe(650);
+    graph.setLoopLevel('crowd-loop', 0.1, 40, 0);
+    expect(crowd.frequency.value).toBeGreaterThan(650);
+    expect(crowd.frequency.value).toBeLessThan(1300);
+    graph.setLoopLevel('crowd-loop', 0.1, 100, 0);
+    expect(crowd.frequency.value).toBe(1300);
+    expect(context.filters).toHaveLength(filterCount);
+    expect(context.panners).toHaveLength(pannerCount);
+    await graph.dispose();
+  });
+  it('keeps ambient muted when the slider changes during bark duck recovery', async () => {
+    const context = new FakeContext();
+    const graph = new HerdAudioGraph({
+      context: context as unknown as AudioContext,
+      fetchAsset: async () => new ArrayBuffer(1),
+      decodeYield: async () => undefined,
+    });
+    await graph.preload();
+    graph.setBusGain('ambient', 0.4);
+    const bark = { kind: 'asset', assetId: 'bark-01', bus: 'dog', gain: 0.72, duckAmbient: true } as const;
+    expect(graph.execute(bark)).toBe(true);
+    const ambient = context.gains[1]!.gain;
+    expect(ambient.events.some(event => event.time > context.currentTime && event.value === 0.4)).toBe(true);
+    context.currentTime += 0.1;
+    graph.setBusGain('ambient', 0);
+    expect(ambient.calls.slice(-2)).toEqual(['cancel', 'set']);
+    expect(ambient.events.filter(event => event.time >= context.currentTime)).toEqual([
+      { value: 0, time: context.currentTime },
+    ]);
+    // A subsequent bark must also recover to the new muted baseline.
+    context.currentTime += 1;
+    expect(graph.execute(bark)).toBe(true);
+    expect(ambient.events.filter(event => event.time >= context.currentTime).every(event => event.value === 0)).toBe(true);
+    await graph.dispose();
+  });
+
   it('preloads once, starts one ambience loop, and enforces six flock voices', async () => {
     const context = new FakeContext();
     let fetches = 0;

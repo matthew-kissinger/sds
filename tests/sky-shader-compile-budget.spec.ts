@@ -4,38 +4,59 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three/webgpu';
+import { makeSkyMaterial, SKY_DOME_RADIUS } from '@app/tsl/sky';
 
 const code = readFileSync(resolve(process.cwd(), 'app/src/tsl/sky.ts'), 'utf8');
 
-describe('initial sky shader compile budget', () => {
-  it('shares one compact three-wave field across both cloud samples', () => {
-    expect(code).not.toContain('mx_fractal_noise_float');
-    expect(code).toContain('const cloudField = Fn(');
-    expect(code.match(/\bsin\(/g)).toHaveLength(3);
-    expect(code).toContain('const density = cloudField(sample);');
-    expect(code).toContain('const towardSun = cloudField(sample.add(sunward));');
+describe('initial sky authoring and material budget', () => {
+  it('keeps startup-visible clouds off expensive MaterialX noise and texture loading', () => {
+    expect(code).not.toMatch(/\bmx_(?:fractal_)?noise_\w+/);
+    expect(code).not.toMatch(/\b(?:TextureLoader|CubeTextureLoader|texture3D|texture)\s*\(/);
+    // Each authored mass expands into shader work. Keep the small ellipse-union
+    // kernel bounded while allowing its shape and shading to be art-directed.
+    expect((code.match(/\bellipse\(/g) ?? []).length).toBeLessThanOrEqual(6);
   });
 
-  it('uses warped oblique directions rather than repeating axis bands', () => {
-    const directions = [...code.matchAll(/dot\(point, vec3\(([^)]+)\)\)/g)]
-      .map((match) => match[1]!.split(',').map(Number));
-
-    expect(directions).toHaveLength(3);
-    for (const direction of directions) {
-      expect(direction).toHaveLength(3);
-      expect(direction.every((component) => Math.abs(component) > 0.2)).toBe(true);
+  it('bounds the authored cloud population and keeps projection divisors finite and positive', () => {
+    const recipe = code.match(/const CLOUDS = (\[[\s\S]*?\]) as const;/)?.[1];
+    expect(recipe, 'sky must expose a bounded static authoring table').toBeDefined();
+    // The recipe is a literal numeric table; remove its optional trailing comma
+    // without executing authoring source in the test process.
+    const clouds = JSON.parse(recipe!.replace(/,\s*\]/g, ']')) as number[][];
+    expect(clouds.length).toBeGreaterThan(0);
+    expect(clouds.length).toBeLessThanOrEqual(8);
+    for (const cloud of clouds) {
+      expect(cloud).toHaveLength(5);
+      expect(cloud.every(Number.isFinite)).toBe(true);
+      const [azimuth, base, width, tower, lean] = cloud as [number, number, number, number, number];
+      expect(Math.abs(azimuth)).toBeLessThanOrEqual(Math.PI);
+      expect(base).toBeGreaterThan(0);
+      expect(base).toBeLessThan(1);
+      for (const divisor of [width, tower]) {
+        expect(divisor).toBeGreaterThan(0.001);
+        expect(divisor).toBeLessThan(1);
+      }
+      expect(Math.abs(lean)).toBeLessThanOrEqual(1);
     }
-    expect(new Set(directions.map((direction) => direction.join(','))).size).toBe(3);
-    expect(code).toContain('.add(warp.mul(float(0.64)))');
-    expect(code).toContain('.sub(warp.mul(float(0.31)))');
   });
 
-  it('retains authored coverage, fades, cloud palette, and sun math', () => {
-    expect(code).toContain('smoothstep(float(COVERAGE_LO), float(COVERAGE_HI), density)');
-    expect(code).toContain('smoothstep(float(HORIZON_FADE_LO), float(HORIZON_FADE_HI), height)');
-    expect(code).toContain('smoothstep(float(ZENITH_FADE_LO), float(ZENITH_FADE_HI), height)');
-    expect(code).toContain('mix(color(PALETTE.cloudShade), color(PALETTE.cloudLit), litEdge)');
-    expect(code).toContain('const toSun = clamp(dot(ray, sun), float(0), float(1));');
-    expect(code).toContain('smoothstep(float(DISC_OUTER), float(DISC_INNER), toSun)');
+  it('builds one opaque texture-free inside-dome material without depth or fog feedback', () => {
+    const material = makeSkyMaterial();
+    try {
+      expect(material).toBeInstanceOf(THREE.MeshBasicNodeMaterial);
+      expect(material.side).toBe(THREE.BackSide);
+      expect(material.transparent).toBe(false);
+      expect(material.opacity).toBe(1);
+      expect(material.depthWrite).toBe(false);
+      expect(material.fog).toBe(false);
+      expect(material.map).toBeNull();
+      expect(material.alphaMap).toBeNull();
+      expect(material.colorNode).not.toBeNull();
+      expect(SKY_DOME_RADIUS).toBeGreaterThan(400);
+      expect(SKY_DOME_RADIUS).toBeLessThan(1200);
+    } finally {
+      material.dispose();
+    }
   });
 });

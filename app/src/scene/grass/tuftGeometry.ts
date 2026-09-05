@@ -55,9 +55,9 @@ export interface TuftShape {
 
 /**
  * The interactive tier: seven blades, three segments. 0.52 m before the tuft's
- * own 0.62-1.50 height scale, so the meadow runs 0.32 m to 0.78 m - shin to
- * knee on a sheep whose body centre sits at 0.58 m, which is the height that
- * lets a flock part the grass without disappearing into it.
+ * own 0.75-1.25 height scale, so authored heights range from 0.39 m to 0.65 m
+ * before blade variation and curvature. Modest height variation sits within a
+ * continuously dense meadow, without correlated short clearings or tall islands.
  */
 export const FIELD_TUFT: TuftShape = {
   blades: 7,

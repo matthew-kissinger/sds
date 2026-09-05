@@ -111,7 +111,11 @@ export class HerdAudioGraph {
   setBusGain(bus: AudioBus, level: number): void {
     const value = clamp01(level);
     this.busLevels.set(bus, value);
-    this.buses.get(bus)!.gain.setValueAtTime(value, this.context.currentTime);
+    const gain = this.buses.get(bus)!.gain;
+    const now = this.context.currentTime;
+    // A settings change supersedes any pending duck recovery to the old level.
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(value, now);
   }
 
   setReduceTransients(reduce: boolean): void {
@@ -141,6 +145,7 @@ export class HerdAudioGraph {
     listener.upX.setValueAtTime(upX, now);
     listener.upY.setValueAtTime(upY, now);
     listener.upZ.setValueAtTime(upZ, now);
+    this.soundscape.setListener(x, z);
   }
 
   startSoundscape(): boolean {

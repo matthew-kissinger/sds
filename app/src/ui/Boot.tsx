@@ -134,6 +134,10 @@ export function Boot() {
             Times
           </button>
         </div>
+        <nav className="herd-title-links" aria-label="Game information">
+          <a href="/about">About the game</a>
+          <a href="/support">Controls and help</a>
+        </nav>
       </main>
       {showTimes ? (
         <LeaderboardPanel initialFlockSize={flockSize} onClose={closeTimes} />

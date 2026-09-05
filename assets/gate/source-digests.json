@@ -1,0 +1,8 @@
+{
+  "license": "AGPL-3.0-or-later",
+  "provenance": "Original deterministic in-repository gate guidance recipe",
+  "files": {
+    "app/src/scene/gateOpeningGeometry.ts": "96b420225c968cf7201cf7f621e89b22641ff2b63aabb0372cea812583ecfe60",
+    "app/src/scene/GateOpeningMarker.tsx": "72979ce31c9f2af1309f4d645e7cb09c1c4f202a7f0afed1fa13c36c1c68c789"
+  }
+}

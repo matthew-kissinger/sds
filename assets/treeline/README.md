@@ -1,30 +1,49 @@
 # Treeline asset source and recipe
 
-The shipped treeline combines two complete trees from mehrasaur's
-[Fox Trees Pack](https://opengameart.org/content/fox-trees-pack):
-`tree-round` and `tree-spreading`. The source pack is CC0. The exact source
-archive URL, archive digest, extracted-file digests and a local license
-snapshot are recorded in `procedural-manifest.json` and `sources/`.
+The active tree family is an original, procedurally authored sculpted oak.
+Seven overlapping opaque crown masses form an uneven spreading silhouette over
+a tapered trunk and thirteen branch segments. Smooth crown normals preserve
+soft volume while the shared TSL material supplies the game's cel-shaded light.
+Four instance profiles provide wide, upright, balanced and windswept trees.
 
-The committed OBJ and MTL pairs are editable source, not runtime downloads.
-`tools/bake-sourced-tree-candidates.mjs` normalizes both trees, tucks their
-foliage slightly over the branch junction and writes
-`fox-hybrid-family.json`. Runtime code applies the game's TSL wood and canopy
-materials and deterministic whole-tree variation.
+`tools/bake-sculpted-trees.mjs` is the editable, deterministic source recipe,
+authored for this repository under AGPL-3.0-or-later. It writes
+`assets/treeline/sculpted-oak-family.json`; both files are pinned by SHA-256 in
+`procedural-manifest.json`. The generated geometry also records its recipe
+digest, author and license. No third-party tree geometry is used by this family.
 
-Rebuild the derived family from the repository root:
+Rebuild the geometry from the repository root:
 
 ```bash
-node tools/bake-sourced-tree-candidates.mjs
+node tools/bake-sculpted-trees.mjs
 ```
 
-The shipped placement is in `manifest.json`. It contains 139 trees, all
-outside the fence, with no understory shrubs or exposed root runs. The four
-profiles vary the two source silhouettes without changing their trunk and
-crown proportions independently. The closest conservative same-belt crown
-gap is 2.6049 metres.
+Verify a rebuild without writing files:
 
-The runtime submits three instanced geometry draws and 94,798 triangles before
-pooled shadows. It uses no textures, external model fetches or opaque binary
-assets. `tests/treeline-assets.spec.ts` verifies provenance, geometry,
-placement and the no-shrub contract.
+```bash
+node tools/bake-sculpted-trees.mjs --check
+```
+
+After an intentional recipe change, review the geometry and update its source
+and generated digests and triangle counts in `procedural-manifest.json`.
+The tests and release probe reject stale provenance receipts.
+
+The existing `manifest.json` placement remains unchanged: 139 trees outside
+the fence, no understory shrubs and no exposed root runs. The closest
+conservative same-belt crown gap remains 2.6049 metres. Inactive shrub source
+and its geometry contract remain available, with zero runtime instances.
+
+Each tree has 560 crown and 364 wood triangles. The field submits three
+instanced geometry draws and 128,436 triangles before pooled shadows. It uses
+no textures, transparent leaf cards, external model fetches or runtime geometry
+generation. Mobile performance and visual acceptance are measured in the
+running production build; these geometry counts alone are not an acceptance.
+
+The earlier CC0 Fox Trees Pack OBJ/MTL sources, their license snapshot under
+`sources/`, the old baking tool and `fox-hybrid-family.json` are retained as
+historical reference. They are not inputs to the active sculpted oak recipe or
+the runtime tree family. Their attribution remains with those source files.
+
+Use `docs/art-review.md` for production-build comparison captures and
+`tests/treeline-assets.spec.ts` for provenance, deterministic bake, geometry,
+placement, opaque-material and no-shrub contracts.

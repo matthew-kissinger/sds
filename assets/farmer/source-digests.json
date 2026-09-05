@@ -1,0 +1,11 @@
+{
+  "license": "AGPL-3.0-or-later",
+  "provenance": "Owned deterministic procedural geometry and skeletal animation; no external art inputs.",
+  "encoding": "UTF-8 with LF line endings",
+  "sha256": {
+    "app/src/scene/Farmer.tsx": "e287073ed18f4b76f8c1a69d78b197205071ed0700d49c49d078375251b9c514",
+    "app/src/scene/farmer/geometry.ts": "291053d068406b1d9cc45de8904f85e3785ef4eaa40d962b4c5235c13c7d8c0a",
+    "app/src/scene/farmer/animation.ts": "aa79d1b3a95864d1aa968cb7b5aee26abaa90960dbf22dd7be4636bfd27af0dd",
+    "app/src/scene/farmer/route.ts": "2dcc4f3d9e12d4e77c29629e1171af7e8f6057afe550ad1f4ffa6faa082c1d71"
+  }
+}

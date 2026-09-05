@@ -20,7 +20,7 @@
 
 import * as THREE from 'three/webgpu';
 import { makeToonColorMaterial, makeToonMaterial } from '@app/tsl/toon';
-import { color, float, mix, positionLocal, smoothstep } from '@app/tsl/nodes';
+import { color, float, mix, positionGeometry, smoothstep } from '@app/tsl/nodes';
 import { hash01 } from '../fenceGeometry';
 import type { GroundSampler } from '../fence/placement';
 
@@ -242,13 +242,15 @@ export function buildBoundaryDressing(
 ): THREE.InstancedMesh[] {
   // Root shadow, root, head: three stops up a blade, the lowest of them a hard
   // dark at the foot so a tuft is bedded into the dirt rather than stood on it.
-  const up = positionLocal.y.mul(float(0.95));
+  // Instancing translates positionLocal; paint must retain authored blade height
+  // even where the terrain and entire tuft sit below world zero.
+  const up = positionGeometry.y.mul(float(0.95));
   const blade = mix(color(TUFT_ROOT), color(TUFT_TIP), up);
   const midway = mix(blade, color(TUFT_MID), smoothstep(float(0.2), float(0.55), up));
   const bedded = mix(
     color(ROOT_SHADOW),
     midway,
-    smoothstep(float(0), float(ROOT_DEPTH), positionLocal.y),
+    smoothstep(float(0), float(ROOT_DEPTH), positionGeometry.y),
   );
   const tuftMaterial = makeToonMaterial(bedded);
   tuftMaterial.side = THREE.DoubleSide;

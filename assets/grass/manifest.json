@@ -8,8 +8,8 @@
   "encoding": {
     "xzRange": 200,
     "yRange": 8,
-    "heightMin": 0.62,
-    "heightMax": 1.5
+    "heightMin": 0.75,
+    "heightMax": 1.25
   },
   "footprint": {
     "fieldHalf": 106,
@@ -21,12 +21,12 @@
     {
       "id": "field",
       "offset": 0,
-      "count": 64946
+      "count": 81752
     },
     {
       "id": "surround",
-      "offset": 64946,
-      "count": 13350
+      "offset": 81752,
+      "count": 16595
     }
   ]
 }

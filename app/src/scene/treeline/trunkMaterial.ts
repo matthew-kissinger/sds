@@ -48,6 +48,7 @@
  */
 
 import * as THREE from 'three/webgpu';
+import { PALETTE } from '@app/tsl/palette';
 import {
   color,
   float,
@@ -57,6 +58,7 @@ import {
   instancedBufferAttribute,
   mix,
   positionLocal,
+  positionGeometry,
   positionWorld,
   sin,
   smoothstep,
@@ -65,10 +67,6 @@ import {
 } from '@app/tsl/nodes';
 import {
   BAND_SHADOW_EDGE,
-  BARK_BODY,
-  BARK_BOUNCE,
-  BARK_LIT,
-  BARK_SHADOW,
   recedeBark,
   sunFacing,
   threeBand,
@@ -171,10 +169,10 @@ export function makeTrunkMaterial(inputs: TrunkMaterialInputs): THREE.MeshBasicN
   const tintSeed = instance.x;
   const shade = mix(float(1), float(BOUGH_SHADE), instance.y);
 
-  // The exact Round source fork is retained. A few centimetres of deterministic
+  // The authored oak fork is retained. A few centimetres of deterministic
   // top lean distinguish family members while the sunk flare stays fixed.
   const forkLean = hash(instanceIndex).sub(float(0.5)).mul(float(0.045));
-  const bend = smoothstep(float(0.12), float(0.56), positionLocal.y);
+  const bend = smoothstep(float(0.12), float(0.56), positionGeometry.y);
   material.positionNode = positionLocal.add(vec3(
     forkLean.mul(bend.mul(bend)),
     float(0),
@@ -201,12 +199,12 @@ export function makeTrunkMaterial(inputs: TrunkMaterialInputs): THREE.MeshBasicN
   const relief = paintedWave(positionWorld.mul(float(RELIEF_SCALE)), 9.3)
     .mul(float(RELIEF_DEPTH));
   const nDotL = sunFacing().add(relief);
-  const banded = threeBand(color(BARK_SHADOW), color(BARK_BODY), color(BARK_LIT), nDotL);
+  const banded = threeBand(color(PALETTE.treeBarkShadow), color(PALETTE.treeBarkBody), color(PALETTE.treeBarkLit), nDotL);
   const tint = mix(float(TINT_MIN), float(TINT_MAX), fract(tintSeed.mul(float(5.73))));
   const root = mix(
     float(ROOT_SHADE),
     float(1),
-    smoothstep(float(0), float(ROOT_HEIGHT), positionLocal.y),
+    smoothstep(float(0), float(ROOT_HEIGHT), positionGeometry.y),
   );
 
   // Rises as nDotL falls past the shadow edge, so it lands on the shade side of
@@ -218,7 +216,7 @@ export function makeTrunkMaterial(inputs: TrunkMaterialInputs): THREE.MeshBasicN
   );
   const lit = banded.mul(painted).mul(tint).mul(root).mul(shade);
   material.colorNode = recedeBark(
-    lit.add(color(BARK_BOUNCE).mul(float(BOUNCE_STRENGTH)).mul(inShade).mul(shade)),
+    lit.add(color(PALETTE.treeBarkBounce).mul(float(BOUNCE_STRENGTH)).mul(inShade).mul(shade)),
   );
   return material;
 }

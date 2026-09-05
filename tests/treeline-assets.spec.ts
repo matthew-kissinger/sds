@@ -4,6 +4,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -14,10 +15,10 @@ import {
   CANOPY_FAMILY_STARTS,
 } from '@app/scene/treeline/canopyMaterial';
 import {
-  ACTIVE_SOURCED_CROWN,
+  ACTIVE_TREE_FAMILY,
   buildCrownGeometry,
-  buildSourcedWoodGeometry,
-  sourcedCrownReceipt,
+  buildTreeWoodGeometry,
+  treeGeometryReceipt,
 } from '@app/scene/treeline/crownShape';
 import type { TreelineManifest } from '@app/scene/treeline/manifest';
 import { makeShrubMaterial, SHRUB_ATTRIBUTE_SIZE } from '@app/scene/treeline/shrubMaterial';
@@ -39,25 +40,16 @@ interface ProceduralFoliageManifest {
   readonly sources: readonly {
     readonly id: string;
     readonly author: string;
-    readonly page: string;
-    readonly archive: string;
-    readonly archiveSha256: string;
-    readonly archiveBytes: number;
     readonly license: string;
-    readonly licenseSnapshot: string;
+    readonly licenseFile: string;
     readonly source: string;
-    readonly materialSource: string;
     readonly sha256: string;
-    readonly materialSha256: string;
     readonly generated: string;
-    readonly foliageTriangles: number;
-    readonly woodTriangles: number;
-    readonly foliageTuck: number;
+    readonly generatedSha256: string;
   }[];
   readonly recipe: {
     readonly assembly: string;
     readonly authoring: string;
-    readonly contactSheet: string;
     readonly geometry: readonly string[];
     readonly materials: readonly string[];
   };
@@ -113,37 +105,34 @@ function expectValidGeometry(geometry: THREE.BufferGeometry): void {
   }
 }
 
-describe('sourced CC0 foliage chain', () => {
-  it('pins the complete AGPL and CC0 authoring chain in the repository', () => {
-    expect(source.version).toBe(6);
-    expect(source.id).toBe('sourced-fox-hybrid-family-v1');
+describe('authored sculpted foliage chain', () => {
+  it('pins the complete AGPL procedural authoring chain in the repository', () => {
+    expect(source.version).toBe(7);
+    expect(source.id).toBe('authored-sculpted-oak-family-v1');
     expect(source.license).toBe('AGPL-3.0-or-later');
-    expect(source.runtime).toBe('baked-source-geometry-threejs-tsl');
-    expect(source.activeCandidate).toBe(ACTIVE_SOURCED_CROWN);
+    expect(source.runtime).toBe('baked-procedural-geometry-threejs-tsl');
+    expect(source.activeCandidate).toBe(ACTIVE_TREE_FAMILY);
     expect(source.sources.map((entry) => entry.id)).toEqual([
-      'fox-broad-spreading',
-      'fox-natural-round',
+      'sculpted-oak-recipe',
     ]);
-    expect(source.sources.every((entry) => entry.license === 'CC0-1.0')).toBe(true);
+    expect(source.sources.every((entry) => entry.license === 'AGPL-3.0-or-later')).toBe(true);
     for (const path of [
       source.placement,
       source.recipe.assembly,
       source.recipe.authoring,
-      source.recipe.contactSheet,
       ...source.sources.flatMap((entry) => [
         entry.source,
-        entry.materialSource,
-        entry.licenseSnapshot,
+        entry.licenseFile,
         entry.generated,
       ]),
       ...source.recipe.geometry,
       ...source.recipe.materials,
     ]) expect(existsSync(join(repo, ...path.split('/')))).toBe(true);
     expect(source.families.trees.map((family) => family.name)).toEqual([
-      'fox-broad',
-      'fox-compact',
-      'fox-balanced',
-      'fox-leaning',
+      'oak-wide',
+      'oak-upright',
+      'oak-balanced',
+      'oak-windswept',
     ]);
     expect(source.families.shrubs.map((family) => family.name)).toEqual([
       'hawthorn',
@@ -151,10 +140,18 @@ describe('sourced CC0 foliage chain', () => {
     ]);
   });
 
+  it('rebuilds the authored geometry byte-for-byte without rewriting the asset', () => {
+    const result = spawnSync(process.execPath, [source.recipe.authoring, '--check'], {
+      cwd: repo, encoding: 'utf8', timeout: 30_000, windowsHide: true,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+  });
+
   it('builds finite, grounded geometry at the committed triangle budget', () => {
     const crown = buildCrownGeometry();
     const shrub = buildShrubGeometry();
-    const trunk = buildSourcedWoodGeometry();
+    const trunk = buildTreeWoodGeometry();
     for (const geometry of [crown, shrub, trunk]) expectValidGeometry(geometry);
 
     expect(triangleCount(crown)).toBe(source.geometry.crownTriangles);
@@ -164,7 +161,7 @@ describe('sourced CC0 foliage chain', () => {
     expect(crownParts).toBeDefined();
     expect(new Set(Array.from({ length: crownParts.count }, (_, index) => (
       crownParts.getX(index)
-    )))).toEqual(new Set([0, 1, 2]));
+    )))).toEqual(new Set([0, 1, 2, 3, 4, 5, 6]));
     expect(crown.boundingBox!.min.y).toBeGreaterThan(0.2);
     expect(crown.boundingBox!.min.y).toBeLessThan(0.6);
     expect(shrub.boundingBox!.min.y).toBeCloseTo(0, 5);
@@ -206,7 +203,7 @@ describe('sourced CC0 foliage chain', () => {
     expect(source.field.draws).toBe(3);
     expect(source.field.textures).toBe(0);
     expect(source.field.externalModels).toBe(0);
-    expect(source.field.sourceModels).toBe(2);
+    expect(source.field.sourceModels).toBe(0);
 
     const submitted = source.geometry.crownTriangles * placement.canopies.length
       + source.geometry.shrubTriangles * placement.shrubs.length
@@ -271,24 +268,27 @@ describe('sourced CC0 foliage chain', () => {
     }
   });
 
-  it('matches the active source receipt and preserves the authored hybrid family', () => {
-    const receipt = sourcedCrownReceipt();
+  it('matches the active recipe receipt and verifies both source and generated digests', () => {
+    const receipt = treeGeometryReceipt();
     expect(receipt.id).toBe(source.activeCandidate);
     expect(receipt.foliageTriangles).toBe(source.geometry.crownTriangles);
     expect(receipt.woodTriangles).toBe(source.geometry.trunkTriangles);
-    expect(receipt.foliageSource).toBe(source.sources[0]!.source);
-    expect(receipt.woodSource).toBe(source.sources[1]!.source);
+    expect(receipt.recipe).toBe(source.recipe.authoring);
+    expect(receipt.recipeSha256).toBe(source.sources[0]!.sha256);
+    expect(receipt.license).toBe(source.license);
     for (const candidate of source.sources) {
-      expect(candidate.foliageTriangles).toBeGreaterThan(0);
-      expect(candidate.woodTriangles).toBeGreaterThan(0);
-      expect(candidate.sha256).toMatch(/^[a-f0-9]{64}$/);
-      expect(candidate.materialSha256).toMatch(/^[a-f0-9]{64}$/);
-      expect(candidate.archiveSha256).toMatch(/^[a-f0-9]{64}$/);
-      expect(candidate.archiveBytes).toBe(3_444_385);
-      expect(createHash('sha256').update(readFileSync(join(repo, candidate.source))).digest('hex'))
-        .toBe(candidate.sha256);
-      expect(createHash('sha256').update(readFileSync(join(repo, candidate.materialSource))).digest('hex'))
-        .toBe(candidate.materialSha256);
+      expect(candidate.author).toBe('Matthew Kissinger');
+      expect(candidate.licenseFile).toBe('LICENSE');
+      expect(candidate.source).toBe('tools/bake-sculpted-trees.mjs');
+      expect(candidate.generated).toBe('assets/treeline/sculpted-oak-family.json');
+      for (const [path, digest] of [
+        [candidate.source, candidate.sha256],
+        [candidate.generated, candidate.generatedSha256],
+      ] as const) {
+        expect(digest).toMatch(/^[a-f0-9]{64}$/);
+        expect(createHash('sha256').update(readFileSync(join(repo, path))).digest('hex'))
+          .toBe(digest);
+      }
     }
   });
 

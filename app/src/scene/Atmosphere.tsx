@@ -38,8 +38,8 @@ import { PostProcessing } from './PostProcessing';
  * dissolves into the horizon colour before it runs out of geometry: there is no
  * visible rim to the field, only distance.
  */
-const FOG_NEAR = 160;
-const FOG_FAR = 520;
+const FOG_NEAR = 210;
+const FOG_FAR = 580;
 
 /** Enough segments that the gradient has no banding at the horizon. */
 const DOME_SEGMENTS_WIDE = 48;

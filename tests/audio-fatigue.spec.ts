@@ -30,9 +30,9 @@ function quietFlock(count: number): FlockSim {
 }
 
 describe('ten-minute fatigue envelope', () => {
-  it('keeps deterministic flock events bounded and globally spaced for 36,000 ticks', () => {
-    const sim = quietFlock(75);
-    const scheduler = new FlockAudioScheduler(20260821, 75);
+  it.each([25, 75, 200])('keeps %i sheep quiet and globally spaced for 36,000 ticks', (count) => {
+    const sim = quietFlock(count);
+    const scheduler = new FlockAudioScheduler(20260821, count);
     const commands: AudioCommand[] = [];
     const baaTicks: number[] = [];
     const bellTicks: number[] = [];
@@ -50,8 +50,8 @@ describe('ten-minute fatigue envelope', () => {
       }
     }
     expect(baaTicks.length).toBeGreaterThan(40);
-    expect(baaTicks.length).toBeLessThan(1_300);
-    for (let i = 1; i < baaTicks.length; i++) expect(baaTicks[i]! - baaTicks[i - 1]!).toBeGreaterThanOrEqual(28);
+    expect(baaTicks.length).toBeLessThan(180);
+    for (let i = 1; i < baaTicks.length; i++) expect(baaTicks[i]! - baaTicks[i - 1]!).toBeGreaterThanOrEqual(210);
     for (let i = 1; i < bellTicks.length; i++) expect(bellTicks[i]! - bellTicks[i - 1]!).toBeGreaterThanOrEqual(420);
     expect(huffs).toBe(1);
     expect(maxAtOneTick).toBeLessThanOrEqual(3);

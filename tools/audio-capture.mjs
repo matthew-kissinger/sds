@@ -10,6 +10,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { collectBuildReceipt, sameBuildReceipt } from './playtest-profile-receipt.mjs';
 import {
   SEED,
   launchBrowser,
@@ -30,6 +31,12 @@ const port = Number(value('port', '5320'));
 const label = value('label', 'phase5-running-mix');
 const seconds = Number(value('seconds', '20'));
 const production = argv.includes('--production');
+const flockSize = Number(value('flock', '25'));
+const layer = value('layer', 'mix');
+const position = value('position', 'spawn');
+if (!['spawn', 'treeline'].includes(position)) throw new Error('Use --position=spawn or treeline');
+if (!['mix', 'leaves-loop', 'crowd-loop', 'birds-loop', 'pant-loop', 'farmhouse-chime-loop'].includes(layer)) throw new Error('Invalid --layer');
+if (![25, 75, 200].includes(flockSize)) throw new Error('Use --flock=25,75,200');
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error(`bad port ${port}`);
 if (!/^[a-z0-9][a-z0-9._-]*$/i.test(label)) throw new Error(`bad label ${label}`);
 if (![20, 600].includes(seconds)) throw new Error('--seconds must be 20 or 600');
@@ -37,6 +44,7 @@ if (![20, 600].includes(seconds)) throw new Error('--seconds must be 20 or 600')
 const base = `http://localhost:${port}`;
 const outDir = join(repo, 'captures', 'audio', label);
 const recording = join(outDir, 'herd-running-mix.webm');
+const buildBefore = production ? collectBuildReceipt(repo) : null;
 mkdirSync(outDir, { recursive: true });
 
 let server = null;
@@ -55,12 +63,24 @@ try {
     viewport: { width: 1280, height: 800 },
     acceptDownloads: true,
   });
-  await context.addInitScript(() => {
+  // Audio review must not register identities or submit production scores.
+  await context.route('**/api/**', route => route.fulfill({ status: 200,
+    contentType: 'application/json', body: JSON.stringify({ token: 'local-audio-review',
+      authSecret: 'local-audio-review', entries: [], playerProfile: { persistentId: 'local-audio-review',
+        displayName: 'Audio Review', fullName: 'Audio Review' } }) }));
+  await context.addInitScript((isolatedLayer) => {
     const NativeAudioContext = globalThis.AudioContext;
     const destinationTaps = new WeakMap();
     const records = [];
     const nativeConnect = globalThis.AudioNode.prototype.connect;
     globalThis.AudioNode.prototype.connect = function (destination, ...args) {
+      // Silence other source nodes only. The selected layer still traverses
+      // the real filters, spatializer, gains and ducking buses in the game.
+      if (isolatedLayer !== 'mix') {
+        if (this instanceof AudioBufferSourceNode || this instanceof OscillatorNode) return destination;
+        if (this instanceof MediaElementAudioSourceNode
+          && !new URL(this.mediaElement.src).pathname.includes(`/${isolatedLayer}`)) return destination;
+      }
       const tap = destinationTaps.get(destination);
       if (tap !== undefined && destination !== tap) nativeConnect.call(this, tap);
       return nativeConnect.call(this, destination, ...args);
@@ -125,7 +145,7 @@ try {
         },
       },
     });
-  });
+  }, layer);
   page = await context.newPage();
   page.on('pageerror', (error) => errors.push(`page: ${String(error)}`));
   page.on('console', (message) => {
@@ -142,9 +162,15 @@ try {
   });
   await page.locator('.herd-app[data-ready="true"]').waitFor({ state: 'attached', timeout: 60_000 });
   await page.waitForFunction(() => globalThis.__herdToolAudioCapture?.snapshot().length === 1);
-  await page.locator('.herd-size').filter({ hasText: '25' }).click();
+  await page.locator('.herd-size').filter({ hasText: String(flockSize) }).click();
   await page.locator('.herd-title-actions > .herd-button--primary').click();
   await page.locator('.herd-pause-button').waitFor({ state: 'visible', timeout: 30_000 });
+  if (position === 'treeline') {
+    await page.keyboard.down('KeyS');
+    await page.waitForTimeout(1800);
+    await page.keyboard.up('KeyS');
+    await page.waitForTimeout(1200);
+  }
 
   const downloadPromise = page.waitForEvent('download', { timeout: (seconds + 120) * 1000 });
   await page.evaluate((durationSeconds) => globalThis.__herdToolAudioCapture.start(durationSeconds), seconds);
@@ -176,7 +202,7 @@ try {
   const duration = (lastPacket[0] ?? 0) + (lastPacket[1] ?? 0);
   const loudnessRun = spawnSync('ffmpeg', [
     '-hide_banner', '-nostats', '-i', recording,
-    '-filter_complex', 'ebur128=peak=true', '-f', 'null', 'NUL',
+    '-filter_complex', 'ebur128=peak=true', '-f', 'null', '-',
   ], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
   const loudnessText = loudnessRun.stderr ?? '';
   const lastNumber = (pattern) => [...loudnessText.matchAll(pattern)].at(-1)?.[1] ?? null;
@@ -195,6 +221,11 @@ try {
     tool: 'tools/audio-capture.mjs',
     server: production ? 'production-preview' : 'vite-dev',
     seed: SEED,
+    flockSize,
+    layer,
+    position,
+    isolation: layer === 'mix' ? 'none' : 'Tools-only source isolation; normal downstream mix retained.',
+    build: production ? { before: buildBefore, stable: sameBuildReceipt(buildBefore, collectBuildReceipt(repo)) } : null,
     capturedAt: new Date().toISOString(),
     durationSeconds: duration,
     byteSize: statSync(recording).size,
@@ -213,6 +244,7 @@ try {
       integratedLufs !== null &&
       loudnessRangeLu !== null && truePeakDbfs !== null,
   };
+  if (production && !receipt.build.stable) receipt.pass = false;
   writeFileSync(join(outDir, 'manifest.json'), `${JSON.stringify(receipt, null, 2)}\n`);
   console.log(JSON.stringify(receipt, null, 2));
   if (!receipt.pass) process.exitCode = 1;

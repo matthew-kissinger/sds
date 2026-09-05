@@ -9,7 +9,7 @@ const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.ur
 describe('public version 3 surface', () => {
   it('brands the player page and links canonical release metadata', () => {
     const html = read('app/index.html');
-    expect(html).toContain('<title>Sheepdog Sim - Browser Herding Game</title>');
+    expect(html).toContain('<title>Sheepdog Sim - Free Sheep Herding Browser Game</title>');
     expect(html).toContain('rel="canonical" href="https://sheepdogsim.com/"');
     expect(html).toContain('rel="manifest" href="/site.webmanifest"');
     expect(html).toContain('property="og:image"');

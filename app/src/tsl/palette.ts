@@ -54,19 +54,27 @@ export const PALETTE = {
   // Sky. The horizon is the load-bearing one: scene.fog is driven from it every
   // frame (spec/04), so the ground melts into the sky at the same colour.
   /** Zenith. Dusty blue, desaturated by the haze below it. */
-  skyZenith: '#4d7cb4',
+  skyZenith: '#477fa6',
   /** The band between. Pale, slightly warm, where blue gives up. */
-  skyMid: '#93aecb',
+  skyMid: '#9fb5c9',
   /** Horizon haze. Also the fog colour, always. */
-  skyHorizon: '#eebd88',
+  skyHorizon: '#dfc39a',
   /** The sun's own disc. Driven above 1.0 in the sky shader so bloom finds it. */
   sunDisc: '#fff0cc',
   /** The warm halo around it. No god rays (spec/04): the glow is the effect. */
   sunGlow: '#ffc582',
   /** Cloud tops, catching the key. */
-  cloudLit: '#ffe6c0',
+  cloudLit: '#fff0d5',
   /** Cloud undersides. Violet-mauve, hue-shifted cool, never grey. */
-  cloudShade: '#bfa1ae',
+  cloudShade: '#a5a9c2',
+  treeShadow: '#557451',
+  treeBody: '#819353',
+  treeLit: '#a7b568',
+  treeTurning: '#93984f',
+  treeBarkLit: '#96724a',
+  treeBarkBody: '#6d4f33',
+  treeBarkShadow: '#503a3b',
+  treeBarkBounce: '#a4652f',
 
   // Ground.
   /** The pasture inside the fence, lit tone. Green pushed toward gold. */
@@ -86,6 +94,14 @@ export const PALETTE = {
   timber: '#8d6a43',
   /** Gate posts, marked out so the opening reads from across the field. */
   gatePost: '#b8834b',
+  gatePaint: '#567c82',
+  farmerShirt: '#ddcba7',
+  farmerOveralls: '#637c88',
+  farmerSkin: '#c48f6a',
+  farmerHat: '#c4a16b',
+  farmerBoots: '#625244',
+  farmerInk: '#55534f',
+  farmerShadow: '#667363',
 
   // Animals.
   /** Sheep wool in full key. Held under paper white so the rim retains room. */

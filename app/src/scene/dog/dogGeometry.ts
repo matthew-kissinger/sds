@@ -1,36 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-/**
- * Where the collie's parts hang. The shapes are in dogParts.ts; this file is the
- * skeleton, and every constant in it is a joint position in dog-local metres.
- *
- * One mesh, one draw call, and - the part the material depends on - every part
- * authored directly in dog-local space with no per-part group transform. That
- * makes `positionLocal` mean the same thing everywhere on the mesh, which is what
- * lets dogMarkings paint the collie's marks from anatomy coordinates.
- *
- * THE LEGS HANG UNDER THE BARREL. Fore legs at x 0.24 against a 0.43 half-width
- * withers and hind legs at x 0.22 against a 0.44 half-width haunch keep even the
- * widest upper-arm and thigh rings inside the body envelope. The previous 0.34 /
- * 0.35 stance put those masses proud of the ribs and hips, making the shoulders
- * and thighs read much broader than the body.
- *
- * This is not a centreline stack. The upper arms retain 15 cm of daylight
- * between their medial edges, the thigh swells retain a narrow seam, and the
- * smaller lower legs and paws separate clearly at gameplay distance. The body
- * keeps the collie silhouette while the limbs now read as supporting it rather
- * than being bolted to its sides. Burying each first-ring cap well inside the
- * body also prevents the outline hull from drawing a plate at either joint.
- */
+/** Owned border-collie loft geometry with authored skeletal skin weights.
+ * Rest-space anatomy is retained for coat markings and editable provenance. */
 
 import * as THREE from 'three/webgpu';
+import { attachDogSkin } from './dogSkin';
+import type { DogPart, DogPartRange } from './dogRigDefinition';
 import { LoftBuilder, place } from './loft';
-import { EAR, FORE_LEG, GASKIN, PAW, SPINE, TAIL, THIGH } from './dogParts';
+import { dogEarProfile, FORE_LEG, GASKIN, PAW, SPINE, TAIL, THIGH } from './dogParts';
 
 /** Where the four legs hang from. Both pairs sit beneath their body masses but
  *  remain far enough apart that the left and right legs never merge. */
 const FORE_LEG_X = 0.24;
-const FORE_LEG_Z = 0.32;
+const FORE_LEG_Z = 0.46;
 /** Shoulder joint height. FORE_LEG drops 0.85 m from here to the pastern, and
  *  the paw takes the last 0.18 m, so the sole lands at 0.02 m: on the ground,
  *  with a sliver left for the contact shadow. */
@@ -62,8 +44,8 @@ export const DOG_PAW_CONTACTS = [
 ] as const;
 
 const EAR_X = 0.175;
-const EAR_Y = 1.45;
-const EAR_Z = 0.95;
+const EAR_Y = 1.65;
+const EAR_Z = 0.81;
 /** Outward tilt of an ear from vertical, radians. 17 degrees: a clear V from
  *  overhead, well short of the alert-terrier look, and shallow enough that the
  *  pair keep the same width from the front as they have from behind. */
@@ -91,23 +73,37 @@ const LIMB_SIDES = 6;
 /** Build the whole dog as one geometry. */
 export function buildDogGeometry(): THREE.BufferGeometry {
   const dog = new LoftBuilder();
+  const ranges: DogPartRange[] = [];
+  const add = (part: DogPart, ...args: Parameters<LoftBuilder['add']>) => {
+    ranges.push({ part, ...dog.add(...args) });
+  };
 
-  dog.add(SPINE, BODY_SIDES);
+  add('body', SPINE, 12);
 
   for (const side of [1, -1]) {
-    dog.add(FORE_LEG, LIMB_SIDES, place(side * FORE_LEG_X, FORE_LEG_Y, FORE_LEG_Z, DOWN));
-    dog.add(PAW, LIMB_SIDES, place(side * FORE_LEG_X, FORE_PASTERN_Y, FORE_PASTERN_Z, DOWN));
-    dog.add(THIGH, BODY_SIDES, place(side * HIND_LEG_X, HIND_LEG_Y, HIND_LEG_Z, DOWN));
-    dog.add(GASKIN, LIMB_SIDES, place(side * HIND_LEG_X, STIFLE_Y, STIFLE_Z, DOWN));
-    dog.add(PAW, LIMB_SIDES, place(side * HIND_LEG_X, HIND_PASTERN_Y, HIND_PASTERN_Z, DOWN));
-    dog.add(
-      EAR,
+    const label = side > 0 ? 'left' : 'right';
+    add(`fore-${label}`, FORE_LEG, 8, place(side * FORE_LEG_X, FORE_LEG_Y, FORE_LEG_Z, DOWN));
+    add(`paw-fore-${label}`, PAW, 8, place(side * FORE_LEG_X, FORE_PASTERN_Y, FORE_PASTERN_Z, DOWN));
+    add(`hind-${label}`, THIGH, BODY_SIDES, place(side * HIND_LEG_X, HIND_LEG_Y, HIND_LEG_Z, DOWN));
+    add(`hind-${label}`, GASKIN, LIMB_SIDES, place(side * HIND_LEG_X, STIFLE_Y, STIFLE_Z, DOWN));
+    add(`paw-hind-${label}`, PAW, 8, place(side * HIND_LEG_X, HIND_PASTERN_Y, HIND_PASTERN_Z, DOWN));
+    add(
+      `ear-${label}`, dogEarProfile(side),
       LIMB_SIDES,
       place(side * EAR_X, EAR_Y, EAR_Z, UP, side * EAR_TWIST, -side * EAR_SPLAY),
     );
   }
 
-  dog.add(TAIL, BODY_SIDES, place(0, TAIL_Y, TAIL_Z, 0, BACKWARD));
+  add('tail', TAIL, BODY_SIDES, place(0, TAIL_Y, TAIL_Z, 0, BACKWARD));
 
-  return dog.build();
+  const geometry = dog.build();
+  // Anatomical ownership survives repositioning: chest paint must never migrate
+  // onto a limb merely because its vertices enter the same coordinate region.
+  const bodyMask = new Float32Array(geometry.getAttribute('position').count);
+  for (const range of ranges) {
+    if (range.part === 'body') bodyMask.fill(1, range.start, range.start + range.count);
+  }
+  geometry.setAttribute('dogBodyMask', new THREE.Float32BufferAttribute(bodyMask, 1));
+  attachDogSkin(geometry, ranges);
+  return geometry;
 }

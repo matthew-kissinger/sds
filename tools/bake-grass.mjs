@@ -119,11 +119,10 @@ const RECIPE = {
   /** Vigour (height and colour health) at the outer edge of the open field. */
   surroundVigour: 0.72,
 
-  /** Tuft height scale range. 1.0 is the tuft mesh's authored height. Wide, on
-   *  purpose: from the Classic camera the meadow is the entire frame, and the
-   *  only thing that gives a top-down field relief is clumps of unequal size. */
-  heightMin: 0.62,
-  heightMax: 1.5,
+  /** Owner-directed continuous meadow: modest individual height variation,
+   *  without short clearings alternating with isolated tall islands. */
+  heightMin: 0.75,
+  heightMax: 1.25,
 
   /** Encoding ranges. Positions are int16 over +/- this, in metres. */
   xzRange: 200,
@@ -220,9 +219,9 @@ function valueNoise(x, z) {
   return (a + (b - a) * fx) * (1 - fz) + (c + (d - c) * fx) * fz;
 }
 
-/** Patch field in [0, 1]: ~18 m lushness patches broken by ~6 m mottling. */
+/** Broad meadow masses, with smaller irregular edges rather than uniform detail. */
 function patchiness(x, z) {
-  return valueNoise(x / 18, z / 18) * 0.68 + valueNoise(x / 6 + 31.7, z / 6 - 12.3) * 0.32;
+  return valueNoise(x / 28, z / 28) * 0.8 + valueNoise(x / 7 + 31.7, z / 7 - 12.3) * 0.2;
 }
 
 // ---------------------------------------------------------------------------
@@ -300,9 +299,9 @@ function density(x, z) {
   // Under the trees.
   d *= 1 - RECIPE.treelineThinning * ring(radius, RECIPE.treelineInner, RECIPE.treelineOuter);
 
-  // Lush and thin patches. Never below half: a bald patch is a hole, and this
-  // is meant to read as ground that grows unevenly, not as damage.
-  d *= 0.52 + 0.48 * patchiness(x, z);
+  // Maintain an evenly dense field. Only subtle density variation remains;
+  // paths, structures and authored boundary thinning retain their keep-outs.
+  d *= 0.92 + 0.08 * patchiness(x, z);
 
   // Keep-outs.
   const penned = Math.max(

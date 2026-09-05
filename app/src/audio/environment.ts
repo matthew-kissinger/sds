@@ -45,14 +45,15 @@ export function measureSoundscape(
 ): SoundscapeFrame {
   const count = sim.positions.length / 2;
   const sampleCount = Math.min(count, MAX_AGITATION_SAMPLES);
-  const stride = Math.max(1, Math.floor(count / Math.max(1, sampleCount)));
   const dogX = sim.dogPositions[0] ?? 0;
   const dogZ = sim.dogPositions[1] ?? 0;
   let agitation = 0;
   let flockX = 0;
   let flockZ = 0;
   let sampled = 0;
-  for (let i = 0; i < count && sampled < sampleCount; i += stride) {
+  for (let sample = 0; sample < sampleCount; sample++) {
+    // Include both ends of the flock array within the fixed sample budget.
+    const i = sampleCount > 1 ? Math.round(sample * (count - 1) / (sampleCount - 1)) : 0;
     const x = sim.positions[i * 2]!;
     const z = sim.positions[i * 2 + 1]!;
     const dx = x - dogX;
@@ -75,8 +76,13 @@ export function measureSoundscape(
   const staminaDebt = 1 - (sim.dogStamina[0] ?? 1);
 
   frame.birds = 0.52 * (1 - agitation * 0.82);
-  frame.leaves = 0.68 * treelineNear;
-  frame.crowd = 0.15 + agitation * 0.25;
+  frame.leaves = 0.25 * treelineNear;
+  // Long, unequal phrases let the distant flock bed rest without tying its
+  // loudness to the number of sheep. Nearby calls carry individual activity.
+  const seconds = tick / 60;
+  const crowdPhrase = Math.max(0, Math.sin(seconds * 0.071) * 0.55
+    + Math.sin(seconds * 0.113 + 1.7) * 0.45 - 0.12);
+  frame.crowd = (0.045 + agitation * 0.10) * crowdPhrase;
   frame.pant = Math.max(0, Math.min(0.46, staminaDebt * 0.5 + dogSpeed / 85 - 0.06));
   frame.agitation = agitation;
   frame.flockX = flockX;

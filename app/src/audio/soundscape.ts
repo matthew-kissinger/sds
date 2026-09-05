@@ -8,6 +8,7 @@ interface LoopVoice {
   readonly element: HTMLAudioElement;
   readonly source: MediaElementAudioSourceNode;
   readonly gain: GainNode;
+  readonly filters: readonly BiquadFilterNode[];
   readonly panner: PannerNode | null;
   level: number;
   x: number;
@@ -36,6 +37,9 @@ export const LOOP_PLAYBACK_RATES: Readonly<Record<AudioLoopId, number>> = {
  */
 export class SoundscapeLoops {
   private readonly voices = new Map<AudioLoopId, LoopVoice>();
+  private listenerX = 0;
+  private listenerZ = 0;
+  private crowdCutoff = 1300;
 
   constructor(
     private readonly context: AudioContext,
@@ -59,7 +63,23 @@ export class SoundscapeLoops {
       const gain = this.context.createGain();
       const panner = SPATIAL_LOOPS.has(id) ? this.makePanner() : null;
       gain.gain.value = 0;
-      source.connect(gain);
+      const filters: BiquadFilterNode[] = [];
+      let tail: AudioNode = source;
+      if (id === 'leaves-loop' || id === 'crowd-loop') {
+        const highpass = this.context.createBiquadFilter();
+        highpass.type = 'highpass';
+        highpass.frequency.value = id === 'leaves-loop' ? 180 : 100;
+        highpass.Q.value = 0.5;
+        const lowpass = this.context.createBiquadFilter();
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = id === 'leaves-loop' ? 2600 : 1300;
+        lowpass.Q.value = 0.5;
+        tail.connect(highpass);
+        highpass.connect(lowpass);
+        tail = lowpass;
+        filters.push(highpass, lowpass);
+      }
+      tail.connect(gain);
       if (panner === null) gain.connect(this.getBus(id));
       else {
         gain.connect(panner);
@@ -67,7 +87,7 @@ export class SoundscapeLoops {
       }
       element.load();
       element.playbackRate = LOOP_PLAYBACK_RATES[id];
-      this.voices.set(id, { element, source, gain, panner, level: 0, x: 0, z: 0 });
+      this.voices.set(id, { element, source, gain, filters, panner, level: 0, x: 0, z: 0 });
     }
   }
 
@@ -90,6 +110,25 @@ export class SoundscapeLoops {
     for (const voice of this.voices.values()) voice.element.pause();
   }
 
+  setListener(x: number, z: number): void {
+    this.listenerX = x;
+    this.listenerZ = z;
+    this.updateCrowdDistance();
+  }
+
+  private updateCrowdDistance(): void {
+    const voice = this.voices.get('crowd-loop');
+    const filter = voice?.filters[1];
+    if (voice === undefined || filter === undefined) return;
+    const distance = Math.hypot(voice.x - this.listenerX, voice.z - this.listenerZ);
+    const fade = Math.max(0, Math.min(1, (distance - 20) / 80));
+    const cutoff = 1300 - 650 * fade * fade * (3 - 2 * fade);
+    if (Math.abs(cutoff - this.crowdCutoff) < 5) return;
+    filter.frequency.cancelScheduledValues(this.context.currentTime);
+    filter.frequency.setTargetAtTime(cutoff, this.context.currentTime, 0.25);
+    this.crowdCutoff = cutoff;
+  }
+
   set(id: AudioLoopId, level: number, x?: number, z?: number): void {
     const voice = this.voices.get(id);
     if (voice === undefined) return;
@@ -110,6 +149,7 @@ export class SoundscapeLoops {
         voice.z = z;
       }
     }
+    if (id === 'crowd-loop') this.updateCrowdDistance();
   }
 
   stop(): void {
@@ -119,9 +159,11 @@ export class SoundscapeLoops {
       voice.element.load();
       voice.source.disconnect();
       voice.gain.disconnect();
+      for (const filter of voice.filters) filter.disconnect();
       voice.panner?.disconnect();
     }
     this.voices.clear();
+    this.crowdCutoff = 1300;
   }
 
   private makePanner(): PannerNode {

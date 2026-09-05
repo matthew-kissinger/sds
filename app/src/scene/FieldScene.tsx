@@ -12,7 +12,9 @@
 import { useGameLoop } from '@app/game/useGameLoop';
 import { Atmosphere } from './Atmosphere';
 import { Dog } from './Dog';
+import { GateGuidance } from './GateGuidance';
 import { Farmhouse } from './Farmhouse';
+import { Farmer } from './Farmer';
 import { FenceLine } from './FenceLine';
 import { Flock } from './Flock';
 import { GrassField } from './GrassField';
@@ -63,10 +65,12 @@ export function FieldScene() {
       <FenceLine />
       <Pen />
       <Farmhouse />
+      <Farmer />
       <Treeline />
       <Scatter />
       <Flock />
       <Dog />
+      <GateGuidance />
       <SheepHoverLabel />
     </>
   );

@@ -13,6 +13,7 @@
  */
 
 import { clearAxis, type MoveAxis } from './axis';
+import { setSprintSource } from './sprintSources';
 
 /** Pixels from the touch-down point to full deflection. */
 export const STICK_RADIUS = 56;
@@ -53,6 +54,7 @@ export function setTouchStick(right: number, forward: number): void {
 /** The dedicated sprint button is held or released. */
 export function setTouchSprint(held: boolean): void {
   sprintHeld = held;
+  setSprintSource('touch', held);
 }
 
 /** The thumb lifted, or the pointer was cancelled. */
@@ -64,5 +66,5 @@ export function endTouchStick(): void {
 /** Window blur and visibility loss must release every held touch control. */
 export function endAllTouch(): void {
   endTouchStick();
-  sprintHeld = false;
+  setTouchSprint(false);
 }

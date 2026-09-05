@@ -6,6 +6,7 @@ import { useGameStore } from '@app/state/store';
 import { DOG_MAX_STAMINA, TICK_HZ } from '@sim/tuning';
 import { OnlineTimes } from '@app/scores/OnlineTimes';
 import { formatRunTime } from './time';
+import { GateIndicator } from './GateIndicator';
 
 export { formatRunTime } from './time';
 
@@ -152,6 +153,7 @@ export function Hud() {
 
   return (
     <div className="herd-hud">
+      <GateIndicator />
       <div
         className="herd-progress"
         style={{ '--herd-progress-angle': progress } as React.CSSProperties}

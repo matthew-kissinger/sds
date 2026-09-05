@@ -26,6 +26,7 @@
  */
 
 import * as THREE from 'three/webgpu';
+import { PALETTE } from '@app/tsl/palette';
 import {
   cameraPosition,
   color,
@@ -36,6 +37,7 @@ import {
   mix,
   normalLocal,
   positionLocal,
+  positionGeometry,
   positionWorld,
   sin,
   smoothstep,
@@ -228,7 +230,13 @@ export function makeTimberMaterial(
       ? float(1).sub(isGate.add(isCap).mul(float(AERIAL_GATE_DAMP)))
       : float(1).sub(isCap.mul(float(AERIAL_GATE_DAMP)));
   const aerial = aerialAmount();
-  const surfaceColor = mix(wood, color(screenTone(AERIAL)), aerial.mul(damp));
+  // Painted collars distinguish the gate by a repeated physical mark. This
+  // remains in the existing batch, with no glow pass or animated distraction.
+  const collarHeight = positionGeometry.y.add(float(0.5));
+  const painted = isGate.mul(smoothstep(float(0.42), float(0.45), collarHeight))
+    .mul(float(1).sub(smoothstep(float(0.84), float(0.87), collarHeight)));
+  const markedWood = mix(wood, color(PALETTE.gatePaint).mul(level.mul(float(0.35)).add(float(0.8))), painted.mul(float(0.9)));
+  const surfaceColor = mix(markedWood, color(screenTone(AERIAL)), aerial.mul(damp));
   const outlineColor = mix(
     color(screenTone(OUTLINE)),
     color(screenTone(AERIAL)),

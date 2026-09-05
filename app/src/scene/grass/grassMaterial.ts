@@ -173,27 +173,26 @@ export function springResponse(age: number): number {
 
 /** Linear multiplier turning the pasture green into the tone at a blade's
  *  root, where light does not reach. Cool, not black: shadows keep their hue. */
-const ROOT_SHADE = [0.55, 0.66, 0.8] as const;
+const ROOT_SHADE = [0.72, 0.8, 0.9] as const;
 /** How much of the sun's own halo the tips take. Grass that catches the light
  *  goes gold before it goes white, and this is the whole difference between a
  *  green field and a golden-hour one. */
-const TIP_GOLD = 0.28;
-/** Ambient occlusion at the base of a clump, so the mass sits INTO the ground
- *  instead of on top of it. Deep, and over a short run: at Classic distance
- *  this shadow between the clumps is the only thing that gives a whole frame of
- *  grass any depth at all. */
-const ROOT_AO = 0.62;
+const TIP_GOLD = 0.16;
+/** Shallow root occlusion grounds each clump. Root tint and toon shade already
+ *  supply depth; avoid multiplying them into a dark outline around every clump
+ *  beside the softer tree masses. */
+const ROOT_AO = 0.82;
 const ROOT_AO_HEIGHT = 0.26;
 /** Per-tuft brightness spread. Enough to break the mass, not enough to read as
  *  patchwork. */
-const TINT_MIN = 0.86;
-const TINT_MAX = 1.16;
+const TINT_MIN = 0.95;
+const TINT_MAX = 1.05;
 /**
  * How far a clump's own colour may pull away from the pasture tone, toward the
  * duller surround green at one end and the light pasture green at the other.
  * Brightness variation alone reads as noise; hue variation reads as plants.
  */
-const CLUMP_HUE = 0.45;
+const CLUMP_HUE = 0.28;
 /** How trodden ground is coloured: the surround's duller green carried toward
  *  the pen floor's warm trodden earth. */
 const WORN_EARTH = 0.35;
@@ -488,7 +487,7 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
   );
   // A little darker at the two long edges, so a flat strip of triangles reads
   // as a strand with a spine.
-  const spine = mix(float(0.9), float(1), sin(across.mul(float(Math.PI))));
+  const spine = mix(float(0.96), float(1), sin(across.mul(float(Math.PI))));
 
   const material = makeToonMaterial(health.mul(tint).mul(occlusion).mul(spine));
   material.positionNode = positionLocal.add(vec3(displaceX, displaceY, displaceZ));

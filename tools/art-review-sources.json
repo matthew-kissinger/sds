@@ -1,0 +1,42 @@
+[
+  {
+    "system": "Trees",
+    "intent": "Distinct crown silhouettes, visible branch structure, irregular spacing and saturated shade. Review whole trees at Follow and treeline rhythm at Classic.",
+    "files": ["assets/treeline/README.md", "assets/treeline/procedural-manifest.json", "assets/treeline/sculpted-oak-family.json", "assets/treeline/manifest.json", "tools/bake-sculpted-trees.mjs", "app/src/scene/Treeline.tsx", "app/src/scene/treeline/crownShape.ts", "app/src/scene/treeline/foliage.ts", "app/src/scene/treeline/canopyMaterial.ts", "app/src/scene/treeline/trunkMaterial.ts"]
+  },
+  {
+    "system": "Sky, clouds and sun",
+    "intent": "Broad authored cloud masses, quiet negative space, coherent sun direction and soft horizon haze. Preserve the one-draw sky before considering more expensive effects.",
+    "files": ["app/src/tsl/sky.ts", "app/src/tsl/palette.ts", "app/src/scene/Atmosphere.tsx"]
+  },
+  {
+    "system": "Lighting and atmosphere",
+    "intent": "Warm highlights, cool saturated shadows, depth without washing out the trees. Low quality must retain the composition without bloom.",
+    "files": ["app/src/tsl/toon.ts", "app/src/scene/PostProcessing.tsx", "app/src/quality/autoTier.ts", "app/src/quality/RuntimeQualityGovernor.tsx", "tools/art-render-counters.mjs"]
+  },
+  {
+    "system": "Meadow masses",
+    "intent": "Review broad short and tall grass groups, animal readability and consistent low-tier coverage. The baked asset is an intentional art decision, not a simulation fixture.",
+    "files": ["tools/bake-grass.mjs", "assets/grass/manifest.json", "assets/grass/tufts.bin", "app/src/scene/grass/tuftGeometry.ts", "app/src/scene/grass/grassMaterial.ts", "app/src/scene/grass/tuftData.ts", "app/src/scene/grass/density.ts"]
+  },
+  {
+    "system": "Dog model and motion",
+    "intent": "Review face, chest, grounded paws and the actual skinned gait in Studio and both gameplay cameras. Static images do not establish motion acceptance.",
+    "files": ["assets/dog/procedural-manifest.json", "app/src/scene/Dog.tsx", "app/src/scene/dog/dogParts.ts", "app/src/scene/dog/dogGeometry.ts", "app/src/scene/dog/dogRig.ts", "app/src/scene/dog/dogRigDefinition.ts", "app/src/scene/dog/dogLegSolver.ts", "app/src/scene/dog/dogGait.ts", "app/src/scene/dog/dogMotion.ts", "app/src/scene/dog/dogMarkings.ts", "app/src/scene/dog/dogMarks.ts", "app/src/scene/dog/dogCustomization.ts", "app/src/scene/dog/outlineWidth.ts"]
+  },
+  {
+    "system": "Farmer",
+    "intent": "Check full-body silhouette, feet and route clearance around the house and barn, including pauses and chore poses.",
+    "files": ["assets/farmer/source-digests.json", "app/src/scene/Farmer.tsx", "app/src/scene/farmer/geometry.ts", "app/src/scene/farmer/animation.ts", "app/src/scene/farmer/route.ts"]
+  },
+  {
+    "system": "Gate and camera",
+    "intent": "Find the entrance at a glance without HUD or touch-control overlap; verify behind-camera direction and movement framing.",
+    "files": ["app/src/scene/GateGuidance.tsx", "app/src/ui/GateIndicator.tsx", "app/src/ui/gateProjection.ts", "app/src/ui/UiStyles.tsx", "app/src/camera/CameraRig.tsx", "app/src/camera/subject.ts", "sim/step.ts"]
+  },
+  {
+    "system": "Neighboring assets",
+    "intent": "Check sheep and dog readability, grass scale, fence and farmhouse cohesion whenever vegetation or light changes.",
+    "files": ["app/src/scene/flock/sheepMaterial.ts", "app/src/scene/dog/dogMaterial.ts", "app/src/scene/grass/grassMaterial.ts", "app/src/scene/fence/timberMaterial.ts", "app/src/scene/farmhouse/palette.ts"]
+  }
+]

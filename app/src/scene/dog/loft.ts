@@ -28,6 +28,8 @@ export interface LoftRing {
   readonly y: number;
   readonly halfWidth: number;
   readonly halfHeight: number;
+  /** Exponent below the centerline; <1 broadens the brisket without lowering it. */
+  readonly lowerRoundness?: number;
 }
 
 const _vertex = new THREE.Vector3();
@@ -75,7 +77,7 @@ export class LoftBuilder {
    * Add one lofted part. `sides` is the cross-section polygon count: 8 reads as
    * a body, 6 is chunky enough for a leg and a tail at gameplay distance.
    */
-  add(rings: readonly LoftRing[], sides: number, transform?: THREE.Matrix4): void {
+  add(rings: readonly LoftRing[], sides: number, transform?: THREE.Matrix4): { start: number; count: number } {
     const base = this.positions.length / 3;
 
     for (const ring of rings) {
@@ -83,7 +85,9 @@ export class LoftBuilder {
         const angle = (s / sides) * Math.PI * 2;
         _vertex.set(
           (ring.x ?? 0) + Math.cos(angle) * ring.halfWidth,
-          ring.y + Math.sin(angle) * ring.halfHeight,
+          ring.y + (Math.sin(angle) < 0
+            ? -Math.pow(-Math.sin(angle), ring.lowerRoundness ?? 1)
+            : Math.sin(angle)) * ring.halfHeight,
           ring.z,
         );
         if (transform !== undefined) _vertex.applyMatrix4(transform);
@@ -106,6 +110,7 @@ export class LoftBuilder {
     const last = rings.length - 1;
     this.cap(rings[0]!, base, sides, false, transform);
     this.cap(rings[last]!, base + last * sides, sides, true, transform);
+    return { start: base, count: this.positions.length / 3 - base };
   }
 
   /** Fan the terminal ring to its own centre so the part is closed. */
