@@ -6,9 +6,6 @@ export type AudioBus = (typeof AUDIO_BUSES)[number];
 
 export const AUDIO_ASSET_IDS = [
   'birds-loop',
-  'leaves-loop',
-  'crowd-loop',
-  'farmhouse-chime-loop',
   'pant-loop',
   'baa-01',
   'baa-02',
@@ -27,9 +24,6 @@ export type AudioAssetId = (typeof AUDIO_ASSET_IDS)[number];
 
 export const AUDIO_LOOP_IDS = [
   'birds-loop',
-  'leaves-loop',
-  'crowd-loop',
-  'farmhouse-chime-loop',
   'pant-loop',
 ] as const satisfies readonly AudioAssetId[];
 export type AudioLoopId = (typeof AUDIO_LOOP_IDS)[number];

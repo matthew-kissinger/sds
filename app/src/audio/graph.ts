@@ -145,7 +145,6 @@ export class HerdAudioGraph {
     listener.upX.setValueAtTime(upX, now);
     listener.upY.setValueAtTime(upY, now);
     listener.upZ.setValueAtTime(upZ, now);
-    this.soundscape.setListener(x, z);
   }
 
   startSoundscape(): boolean {

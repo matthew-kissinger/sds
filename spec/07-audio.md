@@ -13,6 +13,21 @@ Layered ambient bed + spatialized events, all through Web Audio (three's AudioLi
 - **Progress**: each penned sheep plays the next note of a slow pentatonic phrase, so filling the pen literally composes a melody; the final sheep resolves the phrase. This is the score system: no looping music track in v1, the field plus the pentatonic progress phrase IS the music. (A composed track can be evaluated later against this baseline; the spec bets that tuned quiet beats a loop.)
 - **UI**: soft felt-like taps, one warm confirm, one gentle back. Nothing skeuomorphic-clicky.
 
+Owner decision (2026-09-07): omit leaf rustle after isolated listening identified
+its mechanical, wispy texture. Keep the existing birds as the ambient bed.
+The previously rejected dedicated wind and insect loops also remain absent.
+This overrides those layers in the original ambient-bed description above.
+
+Owner listening decision (2026-09-07, superseding the preceding source choice):
+use Mixkit 17 birds and Mixkit 58 panting for local integration review. Preserve
+the existing three baa variations. Omit the rejected crowd murmur and farmhouse
+wind chime; six spatial baa voices represent the flock without a continuous bed.
+Bird phrases include quiet gaps; panting follows exertion and stamina recovery.
+These two licensed recordings are a scoped exception to the CC0/owned rule below
+for the game end product. Their license prohibits source-file redistribution:
+keep both originals and prepared files out of git. Owner approved the running mix and deployment on 2026-09-07. Builds acquire
+hash-verified originals and publish only the game artifact, never source media.
+
 ## Mixing rules
 
 - Master ducking: events duck the ambient bed by 2-3 dB, never silence it.

@@ -2,6 +2,14 @@
 
 2026-09-05. Added by owner request during the active presentation/feel goal.
 
+## Owner identification and removal - 2026-09-07
+
+Owner confirmed the isolated leaf-rustle source contains the mechanical, wispy
+texture and authorized removal or replacement. Removed that source entirely,
+including its proximity calculation and filters. Retained all other sources
+and mix settings. Earlier unresolved-source statements below are historical.
+No replacement is needed for this candidate; birds remain the ambient bed.
+
 ## Requested outcome
 
 Latest integrated receipt: `captures/audio/combined-final-mix/` includes the

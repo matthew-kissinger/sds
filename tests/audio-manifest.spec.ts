@@ -42,7 +42,7 @@ describe('audio media ledger', () => {
   });
 
   it('holds the complete media set below 3 MB', () => {
-    expect(TOTAL_AUDIO_BYTES).toBe(1255526);
+    expect(TOTAL_AUDIO_BYTES).toBe(2186181);
     expect(TOTAL_AUDIO_BYTES).toBeLessThan(3 * 1024 * 1024);
   });
 

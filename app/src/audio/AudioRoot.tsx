@@ -207,13 +207,7 @@ export function AudioScene() {
       listener.up.y,
       listener.up.z,
     );
-    measureSoundscape(
-      frame,
-      sim,
-      sim.tick,
-      camera.position.x,
-      camera.position.z,
-    );
+    measureSoundscape(frame, sim);
     applySoundscape(graph, frame, sim);
     commands.length = 0;
     scheduler.scheduleFrame(sim, sim.tick, camera.position.x, camera.position.z, commands);

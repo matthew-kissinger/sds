@@ -1,5 +1,82 @@
 # Sheepdog Sim 3 release status
 
+## Footsteps - owner approved for release, 2026-09-07
+
+Owner found the generated footsteps too high pitched and requested correction
+and another local review before deployment. Owner subsequently approved the
+revised mix and explicitly requested commit, push and deployment. Retained
+the two original sources and baked softened mono FLAC files with 65 Hz highpass,
+1800 Hz lowpass and rounded boundaries. Runtime pitch is 0.82-0.86 with lower
+gain; cadence and movement triggers are unchanged. Recipe and source hashes are
+in tools/prepare-footsteps.mjs and assets/audio/manifest.json. Combined footsteps
+are 49,079 bytes; complete audio is 2,186,181 bytes.
+Independent review caught excessive attenuation in the initial lowpass pass;
+static +12/+8 dB compensation restores the paw impact and balances the takes.
+Owner listening accepted this candidate. Release checks and exact-SHA deployment
+are authorized. Possible tail overlap during sprinting remains a known property.
+Validation: lint, typecheck, 95 files / 722 tests, build and release probe pass.
+Final JS index-BnAI9eCO.js; gzip JS 622,816 bytes; transfer estimate 6,703,688 bytes.
+Desktop and mobile-emulation running captures pass with no browser/network errors:
+captures/audio/footsteps-reviewed-desktop/ and footsteps-reviewed-mobile/
+under captures/audio/, including running-field.png screenshots. No new renderer
+or performance claim; mobile capture uses scripted keys, not physical input.
+
+## Approved recordings - owner accepted for release, 2026-09-07
+
+Approved Mixkit 17 birds and 58 dog panting replace the rejected generated files.
+Crowd murmur and farmhouse wind chimes are removed; the existing three baa variants
+and other twelve short effects are preserved. Native-rate lossless FLAC avoids a
+lossy re-encode; birds have twelve-second rests and panting follows fatigue.
+Two streaming voices, natural 1x playback, 0.8-second gain time constants.
+See docs/audio-approved-integration.md for recipe, provenance and release limits.
+
+Validation: lint, typecheck, 95 files / 722 tests, production build and release
+probe pass. JS gzip 622,811 bytes; estimated transfer 6,673,183 bytes; 14 audio
+files totaling 2,155,682 bytes. Final JS asset index-BcYn3DdT.js. The preparation
+recipe reproduces both manifest hashes and rejects unapproved source hashes.
+Production desktop and mobile-emulation captures pass with stable build receipts,
+no browser/network errors and active playback. Desktop mix -34.2 LUFS / -15.4 dBTP;
+mobile mix -34.4 LUFS / -15.5 dBTP. Eleven lifecycle checks pass, including unlock,
+pause/resume, mute, restart and tab visibility with no duplicate voices.
+Evidence: captures/audio/approved-recordings-desktop-final/,
+approved-recordings-mobile/ and approved-recordings-lifecycle/ (each under
+captures/audio/); running-field.png in both capture directories. Mobile is browser
+emulation with scripted keyboard movement, not physical-device listening.
+No renderer change; performance percentiles were not measured in this audio pass.
+
+Independent critic found no lifecycle blocker; source-hash checks, source sizes
+and dead flock-position state were corrected. Objective boundaries are smooth.
+Owner approved the running mix as "much better" and requested commit, push and
+deploy. Remaining limitations: panting is very quiet, birds repeat every 20.33 seconds, and
+10-minute auditory fatigue acceptance has not been established. Numeric signal
+checks do not certify sound quality. Mixkit permits the game end product but
+prohibits redistribution with source files. All licensed originals and prepared
+files remain git-ignored. CI/preview/deploy now acquire hash-verified originals
+and prepare the licensed audio before building; only the game artifact is
+archived and deployed. Bitexact container metadata reduces total audio to
+2,155,622 bytes without changing approved PCM. Release validation follows.
+
+## Leaf-rustle removal - local candidate, 2026-09-07
+
+Owner identified the isolated leaves loop as the mechanical, wispy sound and
+approved removal or replacement. Removed it from media, manifest, runtime,
+filters and proximity state; other audio sources and mix settings are unchanged.
+The dated spec/07 override records this departure from the original ambient bed.
+
+Validation: lint, TypeScript, 95 files / 723 tests, build and release probe pass.
+16 audio assets; 623,467 gzip JS bytes; estimated transfer 5,548,615 bytes.
+Independent static audio review found no actionable issues. Production-preview
+lifecycle passes all 11 checks with four loops, including unlock, pause/resume,
+restart, visibility, volume/mute, positional bark and no duplicate playback.
+Desktop and 390x844 touch-emulated mobile running mixes pass with stable build
+hashes and no runtime/network errors: captures/audio/leaves-removed-desktop/
+and leaves-removed-mobile/. Both are approximately 20 seconds at -37.2 LUFS;
+true peaks -15.6/-15.5 dBFS. Mobile uses scripted keyboard movement in a touch
+viewport, not a physical-device input or listening receipt. Lifecycle evidence:
+captures/audio/leaves-removed-lifecycle/. Probe browsers and servers closed.
+Owner listening to the resulting mix and physical-device review remain open;
+no new performance or renderer gate is claimed. Not committed or deployed.
+
 ## Studio release authorization — 2026-09-05
 
 Owner approved the responsive Studio, requested an updated README and authorized

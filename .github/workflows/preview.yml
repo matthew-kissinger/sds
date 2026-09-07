@@ -72,6 +72,11 @@ jobs:
       - run: npm run lint --if-present
       - run: npm run typecheck --if-present
       - run: npm run typecheck:worker
+      - name: Acquire approved game audio
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          node tools/prepare-approved-audio.mjs --download
       - run: npm run build
         env:
           SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}

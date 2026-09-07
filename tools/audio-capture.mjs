@@ -31,11 +31,12 @@ const port = Number(value('port', '5320'));
 const label = value('label', 'phase5-running-mix');
 const seconds = Number(value('seconds', '20'));
 const production = argv.includes('--production');
+const mobile = argv.includes('--mobile');
 const flockSize = Number(value('flock', '25'));
 const layer = value('layer', 'mix');
 const position = value('position', 'spawn');
 if (!['spawn', 'treeline'].includes(position)) throw new Error('Use --position=spawn or treeline');
-if (!['mix', 'leaves-loop', 'crowd-loop', 'birds-loop', 'pant-loop', 'farmhouse-chime-loop'].includes(layer)) throw new Error('Invalid --layer');
+if (!['mix', 'birds-loop', 'pant-loop'].includes(layer)) throw new Error('Invalid --layer');
 if (![25, 75, 200].includes(flockSize)) throw new Error('Use --flock=25,75,200');
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error(`bad port ${port}`);
 if (!/^[a-z0-9][a-z0-9._-]*$/i.test(label)) throw new Error(`bad label ${label}`);
@@ -60,7 +61,9 @@ try {
   profile = scratchDir(`herd-audio-${port}`);
   browser = await launchBrowser(profile);
   context = await browser.newContext({
-    viewport: { width: 1280, height: 800 },
+    viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 800 },
+    isMobile: mobile,
+    hasTouch: mobile,
     acceptDownloads: true,
   });
   // Audio review must not register identities or submit production scores.
@@ -192,6 +195,7 @@ try {
   }
   const download = await downloadPromise;
   await download.saveAs(recording);
+  await page.screenshot({ path: join(outDir, 'running-field.png') });
   const audioActivity = await page.evaluate(() => globalThis.__herdToolAudioCapture.snapshot());
 
   const packets = execFileSync('ffprobe', [
@@ -222,6 +226,7 @@ try {
     server: production ? 'production-preview' : 'vite-dev',
     seed: SEED,
     flockSize,
+    mobileEmulation: mobile,
     layer,
     position,
     isolation: layer === 'mix' ? 'none' : 'Tools-only source isolation; normal downstream mix retained.',

@@ -116,30 +116,6 @@ class FakeContext {
 }
 
 describe('Web Audio graph', () => {
-  it('softens the crowd as either listener or flock moves away without adding voices', async () => {
-    const context = new FakeContext();
-    const graph = new HerdAudioGraph({
-      context: context as unknown as AudioContext,
-      createLoopElement: (url) => Object.assign(new FakeMediaElement(), { src: url }) as unknown as HTMLAudioElement,
-    });
-    await graph.unlock();
-    const crowd = context.filters.find(filter => filter.type === 'lowpass' && filter.frequency.value === 1300)!;
-    const filterCount = context.filters.length;
-    const pannerCount = context.panners.length;
-    graph.setListener(0, 0);
-    graph.setLoopLevel('crowd-loop', 0.1, 0, 0);
-    expect(crowd.frequency.value).toBe(1300);
-    graph.setListener(100, 0);
-    expect(crowd.frequency.value).toBe(650);
-    graph.setLoopLevel('crowd-loop', 0.1, 40, 0);
-    expect(crowd.frequency.value).toBeGreaterThan(650);
-    expect(crowd.frequency.value).toBeLessThan(1300);
-    graph.setLoopLevel('crowd-loop', 0.1, 100, 0);
-    expect(crowd.frequency.value).toBe(1300);
-    expect(context.filters).toHaveLength(filterCount);
-    expect(context.panners).toHaveLength(pannerCount);
-    await graph.dispose();
-  });
   it('keeps ambient muted when the slider changes during bark duck recovery', async () => {
     const context = new FakeContext();
     const graph = new HerdAudioGraph({

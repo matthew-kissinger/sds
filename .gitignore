@@ -23,5 +23,6 @@ output/
 test-results/
 playwright-report/
 *.webm
+assets/audio/licensed/
 .tmp/
 tmp/

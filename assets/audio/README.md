@@ -1,6 +1,13 @@
+# Current local audio candidate
+
+Two approved Mixkit recordings now replace generated birds and panting; crowd and
+farmhouse chimes are removed. See [integration and license](../../docs/audio-approved-integration.md).
+The manifest is authoritative. The retained ElevenLabs provenance below applies
+only to the remaining short effects, not the Mixkit recordings.
+
 # Audio source ledger
 
-All 17 MP3 files in this directory were generated for Sheepdog Sim with the account
+The remaining 12 short effects were generated for Sheepdog Sim with the account
 owner's ElevenLabs subscription. The initial set was generated on 2026-08-22.
 They contain no sampled or
 downloaded third-party recordings. The exact prompt, model, output format,
@@ -22,8 +29,7 @@ UI tones with Web Audio oscillators. Those sounds therefore have source code,
 not opaque media files. Generated media remains subject to the account owner's
 ElevenLabs plan and terms; confirm redistribution rights before a public launch.
 
-The independently controlled birds, leaves, crowd, pant, farmhouse chime,
-footfall, huff, gate and fence sources received deterministic
+The retained footfall, huff, gate and fence sources received deterministic
 FFmpeg loudness passes. Exact targets are recorded per asset in the manifest:
 
 ```text
@@ -31,10 +37,12 @@ ffmpeg -i <source>.mp3 -af loudnorm=I=<target>:TP=<peak>:LRA=7 \
   -codec:a libmp3lame -b:a 128k <normalized>.mp3
 ```
 
-The complete media set is 1,255,526 bytes. Runtime code keeps birds, leaves,
-crowd murmur, farmhouse chime and dog pant independently
-controllable, while short events remain separate one-shots. The old mixed
-meadow foundation bed was removed so none of those layers can double.
+The current 14-file media set is 2,186,181 bytes. Runtime code keeps the approved
+birds and pant independently controllable, while 12 short effects remain
+separate one-shots. Both licensed FLAC files and their WAV originals are ignored
+by git.
+
+## Earlier listening decisions
 
 The generated insects loop was removed from both the runtime and this ledger
 after owner playtesting identified a continuous non-animal buzz. Its isolation
@@ -49,3 +57,10 @@ removed from runtime, manifest and shipped media rather than subjected to a
 third speculative generation. Candidate and rejection evidence remains under
 `captures/audio/task1-owner-review/` and
 `captures/audio/task1-wind-replacement-fatigue/`; no other audio source changed.
+
+The leaf-rustle loop was removed on 2026-09-07 after owner isolation identified
+its repeated mechanical, wispy texture. Birds remain the ambient bed; no
+replacement source was added. The removed source and recipe remain in Git history.
+
+Footstep originals are retained in `sources/`; `tools/prepare-footsteps.mjs`
+bakes the softer FLAC review candidate. These two files total 49,079 bytes.

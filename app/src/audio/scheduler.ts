@@ -255,8 +255,8 @@ export class FlockAudioScheduler {
         kind: 'asset',
         assetId: FOOTFALLS[this.footfallSerial % FOOTFALLS.length]!,
         bus: 'dog',
-        gain: Math.min(0.105, 0.045 + speed * 0.004),
-        playbackRate: 0.96 + (this.footfallSerial % 3) * 0.025,
+        gain: Math.min(0.085, 0.035 + speed * 0.003),
+        playbackRate: 0.82 + (this.footfallSerial % 3) * 0.02,
         point,
         transient: true,
       });

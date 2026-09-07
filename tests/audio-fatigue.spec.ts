@@ -57,10 +57,8 @@ describe('ten-minute fatigue envelope', () => {
     expect(maxAtOneTick).toBeLessThanOrEqual(3);
   });
 
-  it('de-correlates loop periods without audible pitch extremes', () => {
+  it('preserves approved recordings at their natural playback rate', () => {
     const rates = Object.values(LOOP_PLAYBACK_RATES);
-    expect(new Set(rates).size).toBe(rates.length);
-    for (const rate of rates) expect(rate).toBeGreaterThanOrEqual(0.975);
-    for (const rate of rates) expect(rate).toBeLessThanOrEqual(1.025);
+    expect(rates).toEqual([1, 1]);
   });
 });

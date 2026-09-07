@@ -31,7 +31,7 @@ if (!/^[a-z0-9][a-z0-9._-]*$/i.test(label)) throw new Error(`bad label ${label}`
 
 const outDir = join(repo, 'captures', 'audio', label);
 const base = `http://localhost:${port}`;
-const EXPECTED_LOOP_RATES = [1.011, 0.983, 0.991, 1.007, 0.976];
+const EXPECTED_LOOP_RATES = [1, 1];
 mkdirSync(outDir, { recursive: true });
 
 let server = null;
