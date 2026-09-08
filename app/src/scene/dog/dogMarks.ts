@@ -42,7 +42,7 @@
  * at all: an eye is a feature, and a wandering pupil reads as a bug.
  *
  * THE FACE IS FIVE MASKS, and they exist for hero magnification: a dark almond
- * rim, an amber iris inside it, a soft catch light, a small nose button and a lip
+ * rim, an soft brown iris inside it, a soft catch light, a small nose button and a lip
  * line along the jaw.
  */
 
@@ -79,27 +79,27 @@ const EYE_X = 0.138;
 const EYE_Y = 1.332;
 const EYE_Z = 1.172;
 /** Gentle oval eye with a level, open upper lid; no inward slant. */
-const EYE_SQUASH = 1.45;
+const EYE_SQUASH = 1.05;
 /**
  * The outer dark eyeliner rim framing the eye.
  */
 const EYE_INNER = 0.035;
 const EYE_OUTER = 0.047;
-/** The amber iris fills the middle of the eye, contrasting against the dark rim. */
-const IRIS_INNER = 0.018;
-const IRIS_OUTER = 0.029;
+/** The soft brown iris fills the middle of the eye, contrasting against the dark rim. */
+const IRIS_INNER = 0.026;
+const IRIS_OUTER = 0.036;
 /** Central dark pupil inside the iris giving the dog depth and focal gaze. */
-const PUPIL_INNER = 0.01;
-const PUPIL_OUTER = 0.018;
+const PUPIL_INNER = 0.021;
+const PUPIL_OUTER = 0.029;
 /**
  * The catch light: a bright specular glint in the upper-forward eye quadrant.
  */
 const CATCH_X = 0.134;
 const CATCH_Y = 1.346;
 const CATCH_Z = 1.182;
-const CATCH_INNER = 0.003;
-const CATCH_OUTER = 0.008;
-const CATCH_STRENGTH = 0.45;
+const CATCH_INNER = 0.004;
+const CATCH_OUTER = 0.011;
+const CATCH_STRENGTH = 0.9;
 
 /**
  * How much of the white the collar is allowed to be. Working collies have a
@@ -113,7 +113,7 @@ export interface DogMarks {
   readonly cream: TSLNode;
   /** Eye rim, nose leather and lip line, unioned. */
   readonly dark: TSLNode;
-  /** The amber iris, laid inside the dark rim. */
+  /** The soft brown iris, laid inside the dark rim. */
   readonly iris: TSLNode;
   /** The central dark pupil, laid inside the iris. */
   readonly pupil: TSLNode;
@@ -177,7 +177,7 @@ function creamMask(wander: TSLNode): TSLNode {
   return clamp(blaze.add(chestMarks).add(socks).add(tailTip), float(0), float(1));
 }
 
-/** Distance to the eye centre, squashed into the almond the eye actually is. */
+/** Distance to the eye centre, with a nearly round, softly open aperture. */
 function eyeDistance(): TSLNode {
   return length(
     vec3(
@@ -226,16 +226,16 @@ function darkMask(): TSLNode {
 /** A restrained upper lid cuts the circular rim as well as the iris. */
 function eyeAperture(): TSLNode {
   const lidHeight = markPosition.y;
-  return float(1).sub(smoothstep(float(EYE_Y + 0.027), float(EYE_Y + 0.040), lidHeight));
+  return float(1).sub(smoothstep(float(EYE_Y + 0.039), float(EYE_Y + 0.049), lidHeight));
 }
 
-/** The amber iris, inside the dark rim. */
+/** The soft brown iris, inside the dark rim. */
 function irisMask(): TSLNode {
   return float(1).sub(smoothstep(float(IRIS_INNER), float(IRIS_OUTER), eyeDistance()))
     .mul(eyeAperture());
 }
 
-/** The deep dark central pupil inside the amber iris. */
+/** The deep dark central pupil inside the soft brown iris. */
 function pupilMask(): TSLNode {
   return float(1).sub(smoothstep(float(PUPIL_INNER), float(PUPIL_OUTER), eyeDistance()));
 }

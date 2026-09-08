@@ -65,11 +65,11 @@
     },
     {
       "path": "app/src/scene/dog/dogMarks.ts",
-      "sha256": "423b28cbe0e598e8be65a1b15bf872864c090f8e3cf8b7ffced03ee8c2e90b68"
+      "sha256": "1255546d3091f068c9d5d3d5e1486ac10df9e11230d2da9759cc4eafea8f2226"
     },
     {
       "path": "app/src/scene/dog/coatTones.ts",
-      "sha256": "39f82eba48c11fe5e8081761bac96baedfc148db092b3696f08fbeaeb4e8bee7"
+      "sha256": "2de2a2a08209f20dabff6aed9262694e574b747b0be013aaab02cd5e473f0a69"
     },
     {
       "path": "app/src/scene/dog/dogToon.ts",

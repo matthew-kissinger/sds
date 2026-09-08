@@ -116,10 +116,9 @@ export const CREAM_SHADOW = '#9d978e';
  */
 export const FACE_DARK = '#252220';
 /**
- * The iris, at warm amber-gold. A working collie's eye is alert amber-brown,
- * contrasting clearly against the dark rim and dark coat.
+ * Soft brown iris around a broad dark pupil; avoid a bright amber stare.
  */
-export const EYE_IRIS = '#c27632';
+export const EYE_IRIS = '#806248';
 /**
  * The catch light: a bright, lively specular glint in the upper eye quadrant.
  */
