@@ -175,6 +175,7 @@ async function sampleRuntime(page, durationMs, selector = READOUT) {
     const deltas = [];
     const renderer = [];
     const diagnostics = [];
+    const gaps = [];
     const longTasks = [];
     const started = performance.now();
     let observer = null;
@@ -195,7 +196,9 @@ async function sampleRuntime(page, durationMs, selector = READOUT) {
       let last = performance.now();
       let frame = 0;
       const sample = (now) => {
-        deltas.push(now - last);
+        const gap = now - last;
+        deltas.push(gap);
+        if (gap > 33.4) gaps.push({ atMs: now, durationMs: gap, frame });
         last = now;
         const node = document.querySelector(selector);
         if (node instanceof HTMLElement && frame % 8 === 0) {
@@ -233,6 +236,7 @@ async function sampleRuntime(page, durationMs, selector = READOUT) {
       deltas,
       renderer,
       diagnostics,
+      gaps,
       longTasks: longTasks.filter((entry) => (
         entry.startTime >= started && entry.startTime <= ended
       )),
@@ -508,7 +512,7 @@ async function runScenario(browser, name, spec) {
         emulation: spec.mobile ? MID_MOBILE_PROFILE : null, flockSize,
         quality: { requested: spec.quality ?? 'auto', tier: surface.tier },
         boot: { interactiveMs: Math.round(interactiveMs), budgetMs: spec.bootBudgetMs, ...boot },
-        runtime: { seconds, frameBudgetMs: spec.frameBudgetMs, frameTimes, drawCalls, triangles, sampleWindow: runtime.sampleWindow },
+        runtime: { seconds, frameBudgetMs: spec.frameBudgetMs, frameTimes, drawCalls, triangles, gapTimeline: runtime.gaps, longTaskTimeline: runtime.longTasks, sampleWindow: runtime.sampleWindow },
         visual, screenshot, motionScreenshots, flockScreenshots, checks, pass: Object.values(checks).every(Boolean), errors, failedRequests, failedResponses,
         note: 'Browser rAF includes tools-only API instrumentation overhead; draw/triangle counts are instrumented API submissions, not native renderer statistics or GPU timing. Camera names describe scripted controls, not measured transforms. Production strips the deterministic driver, beauty camera and grounding diagnostics; this art workload uses real W input.',
       };

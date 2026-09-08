@@ -71,15 +71,15 @@ export async function startServer(port) {
 }
 
 /** Start the built production preview on `port` and resolve once it answers. */
-export async function startPreviewServer(port) {
+export async function startPreviewServer(port, buildDir = join(repo, 'dist')) {
   const vite = join(repo, 'node_modules', 'vite', 'bin', 'vite.js');
-  const dist = join(repo, 'dist', 'index.html');
+  const dist = join(buildDir, 'index.html');
   if (!existsSync(vite)) throw new Error(`vite not found at ${vite}`);
   if (!existsSync(dist)) throw new Error('dist missing; run npm run build first');
   if (await reachable(`http://localhost:${port}/`)) {
     throw new Error(`port ${port} is already in use. Stop it, or pass --url to use it on purpose.`);
   }
-  const child = spawn(process.execPath, [vite, 'preview', '--port', String(port), '--strictPort'], {
+  const child = spawn(process.execPath, [vite, 'preview', '--port', String(port), '--strictPort', '--outDir', buildDir], {
     cwd: repo,
     stdio: ['ignore', 'pipe', 'pipe'],
   });

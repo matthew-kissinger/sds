@@ -9,18 +9,24 @@ import { execFileSync } from 'node:child_process';
 import { hostname, loadavg } from 'node:os';
 import { collectBuiltFiles } from './playtest-profile-receipt.mjs';
 import { installArtRenderCounters } from './art-render-counters.mjs';
+import { analyzeScreenshot } from './screenshot-analysis.mjs';
 
 const arg = (name, fallback) => process.argv.find(x => x.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
 const dependency = arg('playwright', '');
 const executablePath = arg('chrome', '/opt/google/chrome/chrome');
 const backend = arg('backend', 'webgpu');
-const phone = arg('viewport', 'desktop') === 'phone';
+const viewportName = arg('viewport', 'native');
+if (!['native', 'desktop', 'phone', 'hidpi'].includes(viewportName)) throw new Error('Invalid viewport');
+const phone = viewportName === 'phone';
+const viewport = phone ? { width: 390, height: 844 } : viewportName === 'desktop'
+  ? { width: 2560, height: 1440 } : viewportName === 'hidpi' ? { width: 1707, height: 960 } : { width: 1440, height: 900 };
+const follow = arg('camera', 'classic') === 'follow';
 const bootOnly = process.argv.includes('--boot-only');
 const seconds = Number(arg('seconds', '60'));
 if (!dependency || !['webgpu', 'webgl2'].includes(backend) || seconds < 60 || seconds > 600) throw new Error('Supply --playwright, valid backend and 60–600 seconds');
 const { chromium } = await import(pathToFileURL(resolve(dependency)).href);
 const root = resolve('dist');
-const out = resolve('receipts', `${backend}-${phone ? 'phone-emulation' : 'desktop'}-${Date.now()}`);
+const out = resolve('receipts', `${backend}-${viewportName}-${Date.now()}`);
 mkdirSync(out, { recursive: true });
 const command = (file, args) => {
   try { return execFileSync(file, args, { encoding: 'utf8', timeout: 5000 }).trim(); }
@@ -30,12 +36,14 @@ const activity = () => ({ at: new Date().toISOString(), load: loadavg(),
   gpu: command('nvidia-smi', ['--query-gpu=name,utilization.gpu,utilization.memory,memory.used', '--format=csv,noheader']),
   processes: command('ps', ['-eo', 'pid,ppid,comm,pcpu', '--sort=-pcpu']).split('\n').slice(0, 18),
 });
-const report = { host: hostname(), backend, phoneEmulation: phone, seconds,
+const report = { host: hostname(), backend, phoneEmulation: phone, viewportName, viewport, camera: follow ? 'follow' : 'classic', seconds,
   measurement: bootOnly ? 'startup diagnostic only; no frame-budget acceptance' : '60-second-or-longer runtime',
   power: command('powerprofilesctl', ['get']), before: activity(), samples: [],
   build: collectBuiltFiles(root), errors: [], requestsFailed: [],
   isolation: 'Review before/during process samples. Timings alone do not establish isolation.',
 };
+const displayMatch = command('xrandr', ['--current']).match(/current (\d+) x (\d+)/);
+report.physicalDisplay = displayMatch ? { width: Number(displayMatch[1]), height: Number(displayMatch[2]) } : null;
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.mp3': 'audio/mpeg', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const server = createServer((req, res) => {
@@ -50,16 +58,44 @@ const server = createServer((req, res) => {
 let browser, monitor;
 try {
   await new Promise((resolveListen, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolveListen); });
+  report.idleSamples = [];
+  const cpuTimes = () => readFileSync('/proc/stat', 'utf8').split('\n')[0].trim().split(/\s+/).slice(1, 9).map(Number);
+  let previousCpu = cpuTimes(); let quiet = 0;
+  for (let attempt = 0; attempt < 20 && quiet < 2; attempt++) {
+    await new Promise(r => setTimeout(r, 1000));
+    const current = cpuTimes();
+    const total = current.reduce((sum, value, i) => sum + value - previousCpu[i], 0);
+    const idle = current[3] + current[4] - previousCpu[3] - previousCpu[4];
+    const cpu = total > 0 ? 100 * (1 - idle / total) : 100;
+    const gpu = Number.parseFloat(command('nvidia-smi', ['--query-gpu=utilization.gpu', '--format=csv,noheader']));
+    report.idleSamples.push({ cpu, gpu }); previousCpu = current;
+    quiet = cpu <= 15 && gpu <= 5 ? quiet + 1 : 0;
+  }
+  if (quiet < 2) throw new Error('CPU/GPU preflight did not become quiet');
   browser = await chromium.launch({ executablePath, headless: false,
     args: backend === 'webgpu'
       ? ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-angle=vulkan']
       : ['--ignore-gpu-blocklist', '--use-angle=gl'] });
-  const context = await browser.newContext({ viewport: phone ? { width: 390, height: 844 } : { width: 2560, height: 1440 },
-    deviceScaleFactor: phone ? 3 : 1, isMobile: phone, hasTouch: phone, serviceWorkers: 'block' });
+  const context = await browser.newContext({ viewport,
+    deviceScaleFactor: phone ? 3 : viewportName === 'hidpi' ? 1.5 : 1, isMobile: phone, hasTouch: phone, serviceWorkers: 'block' });
   await context.route('**/api/**', route => route.fulfill({ status: 200, contentType: 'application/json',
     body: JSON.stringify({ entries: [], token: 'local-review', authSecret: 'local-review', playerProfile: { persistentId: 'local-review', displayName: 'Review' } }) }));
   await context.addInitScript(installArtRenderCounters);
   await context.addInitScript(() => {
+    const trace = { gaps: [], events: [], live: true };
+    globalThis.__hubInteraction = trace;
+    document.addEventListener('keydown', e => trace.events.push({ type: 'key', key: e.code, at: performance.now() }), true);
+    document.addEventListener('click', e => {
+      const button = e.target instanceof Element ? e.target.closest('button') : null;
+      if (button) trace.events.push({ type: 'click', label: button.textContent.trim(), at: performance.now() });
+    }, true);
+    let previous;
+    const sample = now => {
+      if (!trace.live) return;
+      if (previous !== undefined && now - previous > 33.4) trace.gaps.push({ at: now, duration: now - previous });
+      previous = now; requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
     const observer = new MutationObserver(() => {
       if (document.querySelector('.herd-app')?.getAttribute('data-ready') !== 'true') return;
       performance.mark('herd:probe:ready');
@@ -73,7 +109,7 @@ try {
   page.on('requestfailed', r => report.requestsFailed.push({ url: r.url(), failure: r.failure() }));
   monitor = setInterval(() => report.samples.push(activity()), 5000);
   const started = Date.now();
-  await page.goto(`http://127.0.0.1:${server.address().port}/?seed=20260821&debug=${backend === 'webgl2' ? 'webgl' : '1'}`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/?seed=20260821${backend === 'webgl2' ? '&debug=webgl' : ''}`);
   await page.locator('.herd-app[data-ready="true"]').waitFor({ state: 'attached', timeout: 90000 });
   report.observedWallReadyMs = Date.now() - started;
   report.readyMs = await page.evaluate(() => performance.getEntriesByName('herd:probe:ready')[0]?.startTime ?? null);
@@ -86,6 +122,20 @@ try {
       startTime: entry.startTime, duration: entry.duration, transferSize: entry.transferSize })),
   }));
   report.surface = await page.locator('.herd-app').evaluate(node => ({ ...node.dataset }));
+  report.viewportReceipt = await page.evaluate(() => {
+    const canvas = document.querySelector('canvas');
+    return { innerWidth, innerHeight, screenWidth: screen.width, screenHeight: screen.height,
+      canvasWidth: canvas.width, canvasHeight: canvas.height, canvasRect: canvas.getBoundingClientRect().toJSON(),
+      outerWidth, outerHeight };
+  });
+  const windowSession = await context.newCDPSession(page);
+  report.windowBounds = (await windowSession.send('Browser.getWindowForTarget')).bounds;
+  await windowSession.detach();
+  report.fitsPhysicalDisplay = report.physicalDisplay !== null
+    && report.windowBounds.left >= 0 && report.windowBounds.top >= 0
+    && report.windowBounds.left + report.windowBounds.width <= report.physicalDisplay.width
+    && report.windowBounds.top + report.windowBounds.height <= report.physicalDisplay.height;
+  if (viewportName === 'hidpi' && (!report.fitsPhysicalDisplay || report.viewportReceipt.canvasWidth !== 2560 || report.viewportReceipt.canvasHeight !== 1440)) throw new Error('1440p buffer or physical-window fit mismatch');
   report.adapter = await page.evaluate(async () => {
     const adapter = await navigator.gpu?.requestAdapter();
     if (!adapter) return null;
@@ -100,7 +150,9 @@ try {
   if (!bootOnly) {
   await page.locator('.herd-size').filter({ hasText: '200' }).click();
   await page.locator('.herd-title-actions > .herd-button--primary').click();
+  if (follow) await page.keyboard.press('KeyC');
   await page.waitForTimeout(3000);
+  report.initialVisual = await analyzeScreenshot(page, await page.screenshot({ path: resolve(out, 'initial-play.png') }));
   const framesPromise = page.evaluate(duration => new Promise(resolveFrames => {
     const frames = []; let previous; const start = performance.now();
     const tick = now => {
@@ -123,13 +175,20 @@ try {
   const percentile = p => sorted[Math.ceil(sorted.length * p) - 1];
   report.frames = { count: frames.length, p50: percentile(.5), p95: percentile(.95), p99: percentile(.99), max: sorted.at(-1), over100: frames.filter(x => x > 100).length };
   report.render = await page.locator('[data-testid="render-readout"]').evaluate(node => ({ ...node.dataset }));
-  await page.screenshot({ path: resolve(out, 'active-play.png') });
+  report.finalVisual = await analyzeScreenshot(page, await page.screenshot({ path: resolve(out, 'active-play.png') }));
+  await page.waitForTimeout(2000);
+  report.settledVisual = await analyzeScreenshot(page, await page.screenshot({ path: resolve(out, 'settled-play.png') }));
   report.budgets = { frameMs: phone ? 33.4 : 16.7, startupMs: phone ? 5000 : 2000,
     framePass: report.frames.p95 <= (phone ? 33.4 : 16.7), startupPass: report.readyMs < (phone ? 5000 : 2000),
     freezePass: report.frames.max <= 100,
     sampledDrawsPass: Number(report.render.drawCalls) >= 0 && Number(report.render.drawCalls) < 100 };
   report.drawCoverage = 'Final 250 ms API submission window only; not a whole-run maximum.';
   report.framesRaw = frames;
+  report.interaction = await page.evaluate(() => {
+    globalThis.__hubInteraction.live = false;
+    return globalThis.__hubInteraction;
+  });
+  if (!report.initialVisual.nonblank || !report.finalVisual.nonblank || !Object.values(report.budgets).filter(v => typeof v === 'boolean').every(Boolean)) process.exitCode = 1;
   }
   await context.close();
 } catch (error) {
@@ -140,6 +199,9 @@ try {
   await new Promise(resolveClose => server.close(resolveClose));
   report.after = activity();
   report.buildStable = JSON.stringify(report.build) === JSON.stringify(collectBuiltFiles(root));
+  if (!report.buildStable || report.errors.length || report.requestsFailed.length
+    || report.fitsPhysicalDisplay !== true) process.exitCode = 1;
+  report.acceptance = 'Diagnostic receipt only; framing, input coverage and full stabilization gates require separate review.';
   writeFileSync(resolve(out, 'report.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ out, frames: report.frames, budgets: report.budgets, adapter: report.adapter, errors: report.errors }));
 }
