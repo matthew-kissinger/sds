@@ -83,7 +83,7 @@ export function Boot() {
           </p>
         </section>
       ) : null}
-      <main className="herd-title-card" inert={showTimes ? true : undefined}>
+      <main className="herd-title-card" inert={!sceneReady || showTimes ? true : undefined}>
         <div className="herd-title-lockup">
           <h1 className="herd-title">Sheepdog Sim</h1>
           <p className="herd-kicker">every sheep through the gate</p>

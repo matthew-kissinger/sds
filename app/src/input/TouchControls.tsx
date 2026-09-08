@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { barkPressed, toggleCameraMode } from './actions';
 import {
   beginTouchStick,
@@ -40,6 +40,7 @@ export function TouchControls() {
   const knobRef = useRef<HTMLDivElement>(null);
   const pointerId = useRef<number | null>(null);
   const sprintPointerId = useRef<number | null>(null);
+  const sprintKeys = useRef(new Set<string>());
   const sprintRef = useRef<HTMLButtonElement>(null);
   const origin = useRef({ x: 0, y: 0 });
 
@@ -54,14 +55,26 @@ export function TouchControls() {
     if (knob) knob.style.transform = 'translate(0px, 0px)';
   }, []);
 
-  const releaseSprint = useCallback(() => {
-    sprintPointerId.current = null;
-    setTouchSprint(false);
+  const syncSprint = useCallback(() => {
+    const active = sprintPointerId.current !== null || sprintKeys.current.size > 0;
+    setTouchSprint(active);
     if (sprintRef.current) {
-      sprintRef.current.dataset.active = 'false';
-      sprintRef.current.setAttribute('aria-pressed', 'false');
+      sprintRef.current.dataset.active = String(active);
+      sprintRef.current.setAttribute('aria-pressed', String(active));
     }
   }, []);
+
+  const releaseSprintPointer = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    if (sprintPointerId.current !== event.pointerId) return;
+    sprintPointerId.current = null;
+    syncSprint();
+  }, [syncSprint]);
+
+  const releaseSprint = useCallback(() => {
+    sprintPointerId.current = null;
+    sprintKeys.current.clear();
+    syncSprint();
+  }, [syncSprint]);
 
   const releaseAll = useCallback(() => {
     releaseStick();
@@ -81,6 +94,13 @@ export function TouchControls() {
       releaseAll();
     };
   }, [releaseAll]);
+
+  // Removing a captured control can retarget lostpointercapture to document,
+  // so its React handler is not a reliable release path. Clear device state
+  // when controls leave play, before a subsequent resume can sample it.
+  useLayoutEffect(() => {
+    if (!present || gamePhase !== 'playing') releaseAll();
+  }, [gamePhase, present, releaseAll]);
 
   if (!present || gamePhase !== 'playing') return null;
 
@@ -130,9 +150,7 @@ export function TouchControls() {
     } catch {
       // A synthetic probe can provide an already-released pointer.
     }
-    setTouchSprint(true);
-    event.currentTarget.dataset.active = 'true';
-    event.currentTarget.setAttribute('aria-pressed', 'true');
+    syncSprint();
   };
 
   return (
@@ -164,9 +182,25 @@ export function TouchControls() {
         aria-label="Hold to sprint"
         aria-pressed="false"
         onPointerDown={onSprintDown}
-        onPointerUp={releaseSprint}
-        onPointerCancel={releaseSprint}
-        onLostPointerCapture={releaseSprint}
+        onPointerUp={releaseSprintPointer}
+        onPointerCancel={releaseSprintPointer}
+        onLostPointerCapture={releaseSprintPointer}
+        onKeyDown={(event) => {
+          if (event.code !== 'Space' && event.code !== 'Enter') return;
+          event.preventDefault();
+          sprintKeys.current.add(event.code);
+          syncSprint();
+        }}
+        onKeyUp={(event) => {
+          if (event.code !== 'Space' && event.code !== 'Enter') return;
+          event.preventDefault();
+          sprintKeys.current.delete(event.code);
+          syncSprint();
+        }}
+        onBlur={() => {
+          sprintKeys.current.clear();
+          syncSprint();
+        }}
       >
         Sprint
       </button>
@@ -176,6 +210,9 @@ export function TouchControls() {
         data-testid="bark-button"
         aria-label="Bark"
         onPointerDown={barkPressed}
+        // Pointer input fires immediately above; keyboard/assistive clicks
+        // have no pointer-down event and must activate the same action once.
+        onClick={(event) => { if (event.detail === 0) barkPressed(); }}
       >
         Bark
       </button>
@@ -185,6 +222,7 @@ export function TouchControls() {
         data-testid="camera-button"
         aria-label="Change camera"
         onPointerDown={toggleCameraMode}
+        onClick={(event) => { if (event.detail === 0) toggleCameraMode(); }}
       >
         Camera
       </button>

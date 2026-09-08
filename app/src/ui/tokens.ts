@@ -32,6 +32,8 @@ export const UI_TOKENS = {
   },
   type: {
     family: 'ui-serif, Georgia, "Times New Roman", serif',
+    keyFamily: 'system-ui, sans-serif',
+    key: '11px',
     title: 'clamp(58px, 12vw, 126px)',
     display: 'clamp(42px, 8vw, 80px)',
     body: '17px',
@@ -43,6 +45,7 @@ export const UI_TOKENS = {
     round: '999px',
     panel: '30px',
     control: '18px',
+    key: '4px',
   },
   z: {
     hud: 4,
@@ -76,6 +79,7 @@ export function uiTokenVariables(): string {
     --herd-s1:${t.space.x1}; --herd-s2:${t.space.x2}; --herd-s3:${t.space.x3};
     --herd-s4:${t.space.x4}; --herd-s5:${t.space.x5}; --herd-s6:${t.space.x6};
     --herd-s7:${t.space.x7}; --herd-font:${t.type.family};
+    --herd-key-font:${t.type.keyFamily}; --herd-key-size:${t.type.key}; --herd-key-radius:${t.radius.key};
     --herd-title:${t.type.title}; --herd-display:${t.type.display};
     --herd-body:${t.type.body}; --herd-small:${t.type.small};
     --herd-track:${t.type.tracking}; --herd-track-wide:${t.type.trackingWide};

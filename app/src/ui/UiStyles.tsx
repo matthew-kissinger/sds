@@ -73,6 +73,10 @@ canvas { display: block; touch-action: none; }
 .herd-identity-message { flex-basis: 100%; color: var(--herd-ink-soft); font-size: var(--herd-small); }
 .herd-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .herd-hud { position: fixed; inset: 0; z-index: var(--herd-z-hud); pointer-events: none; }
+.herd-desktop-controls { position: absolute; left: max(var(--herd-s5), env(safe-area-inset-left)); bottom: max(var(--herd-s5), env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: var(--herd-s2) var(--herd-s5); max-width: calc(100% - 2 * var(--herd-s5)); padding: var(--herd-s2) var(--herd-s3); border: 1px solid var(--herd-line); border-radius: var(--herd-control); background: var(--herd-paper-glass); color: var(--herd-ink-soft); font-size: var(--herd-small); line-height: 1.3; }
+.herd-desktop-controls span { display: inline-flex; align-items: center; gap: var(--herd-s2); white-space: nowrap; }
+.herd-desktop-controls kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 2px 6px; border: 1px solid var(--herd-line-strong); border-bottom-width: 2px; border-radius: var(--herd-key-radius); background: var(--herd-paper-solid); color: var(--herd-ink); font: 600 var(--herd-key-size)/1.2 var(--herd-key-font); letter-spacing: .02em; }
+@media (pointer: coarse) { .herd-desktop-controls { display: none; } }
 .herd-progress { --herd-progress-angle: 0deg; position: absolute; top: max(var(--herd-s5), env(safe-area-inset-top)); left: max(var(--herd-s5), env(safe-area-inset-left)); width: 74px; height: 74px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--herd-gold) var(--herd-progress-angle), rgba(244,234,215,.34) 0); filter: drop-shadow(0 3px 12px var(--herd-shadow)); }
 .herd-progress::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--herd-paper-glass); border: 1px solid var(--herd-line); }
 .herd-progress__content { position: relative; display: grid; justify-items: center; line-height: 1; }

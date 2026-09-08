@@ -64,6 +64,7 @@ export function bindingMove(
 }
 
 function onKeyDown(event: KeyboardEvent): void {
+  if (event.defaultPrevented) return;
   const { code } = event;
   const state = useGameStore.getState();
   const bindings = state.inputBindings;
@@ -76,6 +77,13 @@ function onKeyDown(event: KeyboardEvent): void {
     }
     return;
   }
+
+  // Text entry and native keyboard activation belong to the focused control.
+  // Keep keyup unconditional so changing focus cannot strand a held game key.
+  const target = event.target as HTMLElement | null;
+  if (target?.isContentEditable || target?.closest?.('input, textarea, select')) return;
+  if ((code === 'Space' || code === 'Enter')
+    && target?.closest?.('button, a[href], [role="button"]')) return;
 
   if (code === bindings.camera) {
     if (!event.repeat) toggleCameraMode();
