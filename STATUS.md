@@ -1,5 +1,66 @@
 # Sheepdog Sim 3 release status
 
+## Walking, Studio selection and launch trailer — 2026-09-08
+
+Owner approved commit, push and deployment of the performance/HUD work and
+this presentation/input revision. E holds 30% keyboard effort; Shift remains
+sprint, walk wins over keyboard sprint, and Settings/HUD expose the binding.
+Existing saved E bindings survive migration by assigning a free walk key.
+The simulation and deterministic fixtures are unchanged.
+
+The rounder eyes use larger dark pupils, warm irises and a clear catchlight.
+The TSL recipe remains the authority, with its procedural-manifest digests
+updated. Separate critical review accepted the bounded eye/input changes;
+saved-binding collision findings were fixed. Performance, controls/HUD and
+eyes shipped in b14e11e1f529f249d4a9c67a564492f92c64d74c:
+Client CI 34190473390 passed 101 files / 749 tests; Pages run 34190710807 and the
+live manifest matched that SHA. This supersedes the pending stabilization
+deployment described in the September 7 historical section below.
+
+Studio selection fix d1f144988eff5615c688f3ff82b9ac3acd3ca6e5 derives picking
+coordinates from the actual canvas-relative mouse/pen position. This fixes
+stale hover beneath the Studio orbit overlay and dismisses names over controls.
+Touch selection is preserved. Separate code/interaction review accepted the
+change. Production-build checks selected multiple sheep names on desktop
+WebGPU, touch-enabled phone emulation WebGPU and forced WebGL2, with zero
+page errors. Run/walk/resume speeds: 15 / 4.5 / 15. Receipts:
+captures/trailer/local-hover.json and local-hover-*.png.
+
+Latest lint, client/worker typechecks, full tests, build and release probe pass.
+Local tests: 102 files / 753 tests, including four unrelated uncommitted
+discovery tests excluded from this release. Logs: captures/trailer/hover-*.log.
+Runtime bundle: index-BtWN66w6.js, 2,245.92 kB / 624.22 kB gzip (existing size
+warning). Estimated first transfer: 6,705,511 bytes, below the 8 MiB gate.
+Release probe verified 23 character sources and 14 audio assets. Final exact
+workflow/manifest evidence is retained in captures/trailer/deployment-final.json;
+normal post-deploy input and renderer checks are in live-controls.json.
+
+The 42.5-second v3 trailer replaces prior real-time captures with fixed 1/60
+second frame capture of the normal app and normal analog input. It features a
+200-sheep split, higher overhead details, multiple off-center names, Studio
+color changes, and a real completed herding run. The run and replay matched
+all 18,178 checked frames. No simulation positions or completion state are
+injected. The nine sources all have decoded 16.667 ms frame spacing with no
+timing gaps. Sampled gallery playback: 390 frames / zero dropped; phone layout
+has no overflow. This is offline trailer filming, not a live FPS benchmark.
+
+Separate final visual review accepted composition and full-frame consistency,
+including reduced underside/leg emphasis. Names/Studio have no letterbox
+bands or browser chrome. Music defaults to the owner's piano-bossa choice:
+BossaBossa by Kevin MacLeod, CC BY 4.0. Game audio is excluded from the new
+offline mixes; the selected master/teaser's final 0.35 seconds decode to digital
+silence. Source identity of the older crow-like sound was not established.
+Owner listening and creative preference remain authoritative; phone emulation
+is not a physical-device receipt.
+
+Gallery: http://127.0.0.1:5488/?revision=3. Preview: port 5489. These two servers
+remain intentionally available for owner review; capture browsers close.
+Media, downloaded music and capture receipts remain ignored under
+captures/trailer/. Recipes and provenance are in tools/trailer/ and
+docs/launch/trailer-production.md. The original publishing drafts were found
+outside X; captures/trailer/distribution-brief.md records their paths and the current
+venue/format recommendations. No external posts or messages were sent.
+
 ## Bounded stabilization release candidate — 2026-09-07
 
 Owner requested closeout, commit, push and exact-version deployment rather than
