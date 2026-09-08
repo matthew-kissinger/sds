@@ -4,15 +4,31 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 const root = resolve('captures/trailer');
-const results = { media: [], pages: [], sourceTiming: [], errors: [] };
+const results = { media: [], audio: [], pages: [], sourceTiming: [], errors: [] };
+const peak = (file, start, duration) => {
+  const pcm = execFileSync('ffmpeg', ['-v','error','-i',file,'-ss',String(start),'-t',String(duration),'-ac','1','-ar','48000','-f','f32le','pipe:1']);
+  if (!pcm.length) throw new Error('Missing decoded audio: ' + file);
+  let maximum = 0;
+  for (let i = 0; i < pcm.length; i += 4) maximum = Math.max(maximum, Math.abs(pcm.readFloatLE(i)));
+  return maximum;
+};
 for (const id of ['A-bossa', 'B-playful', 'C-bossa-piano', 'silent', 'teaser-15s']) {
-  const file = join(root, 'deliverables', `sheepdog-sim-v3-${id}.mp4`);
+  const file = join(root, 'deliverables', `sheepdog-sim-v4-${id}.mp4`);
   const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', file], { encoding: 'utf8' }));
   const video = probe.streams.find(s => s.codec_type === 'video');
   const duration = id === 'teaser-15s' ? 15 : 42.5;
   if (video.width !== 1920 || video.height !== 1080 || video.r_frame_rate !== '60/1' || Math.abs(Number(video.duration) - duration) > 0.12) throw new Error(`Invalid export ${id}`);
   if (id !== 'silent' && !probe.streams.some(s => s.codec_name === 'aac')) throw new Error(`Missing AAC ${id}`);
   results.media.push({ id, width: video.width, height: video.height, fps: video.r_frame_rate, duration: video.duration, bytes: Number(probe.format.size) });
+}
+for (const [id, file, tail] of [
+  ['game', join(root,'game-audio.wav'), 39.6],
+  ['selected', join(root,'deliverables/sheepdog-sim-v4-C-bossa-piano.mp4'), 42.15],
+  ['teaser', join(root,'deliverables/sheepdog-sim-v4-teaser-15s.mp4'), 14.65],
+]) {
+  const contentPeak = peak(file, 0, 5), tailPeak = peak(file, tail, .3);
+  if (contentPeak <= .000001 || tailPeak !== 0) throw new Error('Audio content/tail check failed: ' + id);
+  results.audio.push({ id, contentPeak, tailStart: tail, tailPeak });
 }
 const cuts = JSON.parse(readFileSync(join(root, 'edit-decision-list.json'))).cuts;
 const timestamps = new Map();
@@ -50,7 +66,7 @@ try {
   await page.screenshot({ path: join(root, 'review-desktop.png') });
   for (const cut of ['B-playful', 'C-bossa-piano', 'silent']) {
     await page.locator(`[data-cut="${cut}"]`).click();
-    await page.waitForFunction(cut => { const v = document.querySelector('video'); return v.currentSrc.endsWith(`sheepdog-sim-v3-${cut}.mp4`) && v.readyState >= 2 && v.currentTime > 19; }, cut);
+    await page.waitForFunction(cut => { const v = document.querySelector('video'); return v.currentSrc.endsWith(`sheepdog-sim-v4-${cut}.mp4`) && v.readyState >= 2 && v.currentTime > 19; }, cut);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('video').evaluate(v => { v.currentTime = 30; });

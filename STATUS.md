@@ -35,7 +35,7 @@ Release probe verified 23 character sources and 14 audio assets. Final exact
 workflow/manifest evidence is retained in captures/trailer/deployment-final.json;
 normal post-deploy input and renderer checks are in live-controls.json.
 
-The 42.5-second v3 trailer replaces prior real-time captures with fixed 1/60
+The 42.5-second v4 trailer replaces prior real-time captures with fixed 1/60
 second frame capture of the normal app and normal analog input. It features a
 200-sheep split, higher overhead details, multiple off-center names, Studio
 color changes, and a real completed herding run. The run and replay matched
@@ -47,13 +47,16 @@ has no overflow. This is offline trailer filming, not a live FPS benchmark.
 Separate final visual review accepted composition and full-frame consistency,
 including reduced underside/leg emphasis. Names/Studio have no letterbox
 bands or browser chrome. Music defaults to the owner's piano-bossa choice:
-BossaBossa by Kevin MacLeod, CC BY 4.0. Game audio is excluded from the new
-offline mixes; the selected master/teaser's final 0.35 seconds decode to digital
-silence. Source identity of the older crow-like sound was not established.
+BossaBossa by Kevin MacLeod, CC BY 4.0. Recorded game ambience/effects from the
+earlier live takes are restored beneath the retakes, fading from 37.5 to 39.5
+seconds and excluded thereafter. The brief ending flyover is removed; the
+completed herd leads straight to a five-second closing card. The selected
+master/teaser's final 0.35 seconds decode to digital silence. Source identity
+of the older crow-like sound was not established.
 Owner listening and creative preference remain authoritative; phone emulation
 is not a physical-device receipt.
 
-Gallery: http://127.0.0.1:5488/?revision=3. Preview: port 5489. These two servers
+Gallery: http://127.0.0.1:5488/?revision=4. Preview: port 5489. These two servers
 remain intentionally available for owner review; capture browsers close.
 Media, downloaded music and capture receipts remain ignored under
 captures/trailer/. Recipes and provenance are in tools/trailer/ and

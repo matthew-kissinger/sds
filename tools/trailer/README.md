@@ -10,6 +10,13 @@ intent, truthful-input constraints and music attribution. Source music files
 must already be present in `captures/trailer/music/`: `bossabossa.mp3`,
 `bossa-antigua.mp3` and `carefree.mp3`, downloaded from the credited sources.
 
+`soundtrack.mjs` also needs the retained real-time game-audio master (default:
+`deliverables/sheepdog-sim-v2-game-audio.mp4` under the output directory).
+Pass a different recorded source as its first argument. This restores the
+earlier recorded ambience/effects and excludes its ending after 39.5 seconds.
+An optional private posting brief at `captures/trailer/distribution-brief.md`
+is copied to the gallery; personal draft paths and plans stay outside Git.
+
 Current pipeline:
 
 ```powershell
@@ -17,6 +24,7 @@ New-Item -ItemType Directory -Force captures/trailer
 node tools/trailer/offline-film.mjs all
 node tools/trailer/offline-herding.mjs
 node tools/trailer/titles.mjs
+node tools/trailer/soundtrack.mjs
 node tools/trailer/edit.mjs
 node tools/trailer/review-page.mjs
 node tools/trailer/serve.mjs
@@ -39,5 +47,5 @@ Selective retakes: `offline-film.mjs flock` (opening), `wide`, `details`,
 in the output directory for the complete edit.
 
 The older real-time capture scripts remain as reference recipes. The gallery
-uses only the v3 offline exports. Fixed-frame filming is not a live frame-rate
+uses only the v4 offline exports. Fixed-frame filming is not a live frame-rate
 measurement; owner review remains the creative and audio acceptance step.
