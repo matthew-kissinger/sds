@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
 import { PALETTE } from '@app/tsl/palette';
+import { COMPILE_WHEN_HIDDEN } from '../compileScene';
 import { useGameStore } from '@app/state/store';
 import { useHeightfield } from '@app/world/heightfield';
 import { HERO } from '../treeline/oakSkeleton';
@@ -116,6 +117,7 @@ export function BirdLift({ reducedMotion }: BirdLiftProps) {
       frustumCulled={false}
       renderOrder={3}
       visible={false}
+      userData={{ [COMPILE_WHEN_HIDDEN]: true }}
     />
   );
 }

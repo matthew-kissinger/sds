@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
 import { PALETTE } from '@app/tsl/palette';
+import { COMPILE_WHEN_HIDDEN } from '../compileScene';
 import { useGameStore } from '@app/state/store';
 import { useHeightfield } from '@app/world/heightfield';
 import { BarkEdgeTracker, BARK_RING_SECONDS, barkRingFrame } from './barkPulse';
@@ -104,6 +105,7 @@ export function BarkRing({ reducedMotion }: BarkRingProps) {
       renderOrder={7}
       frustumCulled={false}
       visible={false}
+      userData={{ [COMPILE_WHEN_HIDDEN]: true }}
     />
   );
 }

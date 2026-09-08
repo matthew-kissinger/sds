@@ -106,6 +106,7 @@ export interface GameStore {
   readonly gamePhase: GamePhase;
   readonly uiPanel: UiPanel;
   readonly sceneReady: boolean;
+  readonly graphicsLost: boolean;
   readonly bootProgress: BootProgress;
   readonly flockSize: FlockSize;
   readonly pennedCount: number;
@@ -139,6 +140,7 @@ export interface GameStore {
   readonly customizeOrbitAngle: number;
 
   markSceneReady(): void;
+  reportGraphicsLost(): void;
   reportBootStep(step: BootStep, fraction: number): void;
   startGame(flockSize: FlockSize): void;
   pause(): void;
@@ -266,6 +268,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
     gamePhase: 'title',
     uiPanel: 'none',
     sceneReady: false,
+    graphicsLost: false,
     gateIndicator: null,
     bootProgress: { ...EMPTY_BOOT_PROGRESS },
     flockSize,
@@ -302,8 +305,13 @@ export const useGameStore = create<GameStore>()((set, get) => {
     customizeOrbitAngle: 0,
 
     markSceneReady() {
+      if (get().graphicsLost) return;
       get().reportBootStep('presented', 1);
       if (!get().sceneReady) set({ sceneReady: true });
+    },
+
+    reportGraphicsLost() {
+      set({ graphicsLost: true, sceneReady: false, gamePhase: 'paused', uiPanel: 'none' });
     },
 
     reportBootStep(step, fraction) {
@@ -318,6 +326,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     startGame(nextFlockSize) {
       const current = get();
+      if (current.graphicsLost) return;
       const canUseColdTitleSim =
         current.gamePhase === 'title' &&
         current.flockSize === nextFlockSize &&
@@ -345,7 +354,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
     },
 
     resume() {
-      if (get().gamePhase === 'paused') {
+      if (!get().graphicsLost && get().gamePhase === 'paused') {
         set({ gamePhase: 'playing', uiPanel: 'none' });
       }
     },

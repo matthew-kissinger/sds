@@ -5,7 +5,7 @@
  * that order, and nothing else. Post is seasoning, not the dish (spec/05). If a
  * frame only looks good with post on, the frame is not good.
  *
- * three's own TSL post stack (RenderPipeline + pass + bloom), not
+ * three's own TSL post stack (scene texture + RenderPipeline + bloom), not
  * @react-three/postprocessing: the effect graph is TSL like every other shader
  * in this project, so it crosses to the WebGL2 backend from the same source
  * with no fork (spec/01, hard rule 3). Both backends run this identical chain;
@@ -34,9 +34,9 @@ import {
   length,
   luminance,
   mix,
-  pass,
   screenUV,
   smoothstep,
+  texture,
   uniform,
   vec2,
   vec3,
@@ -51,6 +51,8 @@ import {
   smoothArrival,
 } from './juice/completionMotion';
 import { resolvedRenderTier } from '@app/quality/autoTier';
+import { SceneReadySignal } from './SceneReadySignal';
+import { renderHighScene } from './renderHighScene';
 
 /** After every other useFrame in the app. Also what disables R3F's own render. */
 const RENDER_PRIORITY = 1;
@@ -81,7 +83,7 @@ export function PostProcessing() {
   const quality = useGameStore((state) => state.quality);
   const autoTierReceipt = useGameStore((state) => state.autoTierReceipt);
   const renderTier = resolvedRenderTier(quality, autoTierReceipt);
-  return renderTier === 'high' ? <HighPostProcessing /> : null;
+  return renderTier === 'high' ? <HighPostProcessing /> : <SceneReadySignal />;
 }
 
 function HighPostProcessing() {
@@ -95,14 +97,23 @@ function HighPostProcessing() {
     // WebGPURenderer (scene/glFactory.ts), which is what RenderPipeline needs.
     const renderer = gl as unknown as THREE.Renderer;
 
-    const scenePass = pass(scene, camera);
-    const sceneColor: TSLNode = scenePass.getTextureNode('output');
+    const drawingSize = renderer.getDrawingBufferSize(new THREE.Vector2());
+    // An explicit scene pass shares compileAsync's top-level render context.
+    // A nested PassNode has a different context/cache and rebuilds first-use
+    // programs despite compiling the same materials into the same target.
+    const sceneTarget = new THREE.RenderTarget(drawingSize.x, drawingSize.y, {
+      samples: renderer.samples,
+      type: renderer.getOutputBufferType(),
+    });
+    sceneTarget.texture.name = 'output';
+    sceneTarget.depthTexture = new THREE.DepthTexture(drawingSize.x, drawingSize.y,
+      renderer.reversedDepthBuffer ? THREE.FloatType : THREE.UnsignedIntType);
+    const sceneColor: TSLNode = texture(sceneTarget.texture);
 
     const bloomStrength = uniform(BLOOM_STRENGTH);
     const completionWarmth = uniform(0);
-    const lit: TSLNode = sceneColor.add(
-      bloom(sceneColor, bloomStrength, BLOOM_RADIUS, BLOOM_THRESHOLD),
-    );
+    const bloomPass = bloom(sceneColor, bloomStrength, BLOOM_RADIUS, BLOOM_THRESHOLD);
+    const lit: TSLNode = sceneColor.add(bloomPass);
 
     // The grade: shadows drift cool, highlights drift warm, everything gains a
     // little saturation. One expression, no lookup table, no film grain.
@@ -123,10 +134,16 @@ function HighPostProcessing() {
 
     const built = new THREE.RenderPipeline(renderer);
     built.outputNode = vec4(graded.mul(vignette), float(1));
-    return { built, bloomStrength, completionWarmth, completion: 0 };
+    return { built, sceneTarget, drawingSize, bloomPass, bloomStrength, completionWarmth, completion: 0 };
   }, [gl, scene, camera]);
 
-  useEffect(() => () => pipeline.built.dispose(), [pipeline]);
+  useEffect(() => () => {
+    // RenderPipeline owns only the final quad material. Its input nodes own
+    // separate GPU targets which must be released when High is unmounted.
+    pipeline.built.dispose();
+    pipeline.bloomPass.dispose();
+    pipeline.sceneTarget.dispose();
+  }, [pipeline]);
 
   useFrame((_, delta) => {
     const active = useGameStore.getState().gamePhase === 'complete';
@@ -140,8 +157,10 @@ function HighPostProcessing() {
     const warmth = smoothArrival(pipeline.completion);
     pipeline.completionWarmth.value = warmth * (reducedMotion ? 0.25 : 1);
     pipeline.bloomStrength.value = BLOOM_STRENGTH + warmth * (reducedMotion ? 0.025 : 0.1);
+    renderHighScene(gl as unknown as THREE.WebGPURenderer, scene, camera,
+      pipeline.sceneTarget, pipeline.drawingSize);
     pipeline.built.render();
   }, RENDER_PRIORITY);
 
-  return null;
+  return <SceneReadySignal target={pipeline.sceneTarget} />;
 }

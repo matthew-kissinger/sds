@@ -26,7 +26,8 @@ import { useGameStore } from './state/store';
 import { useHeightfield } from './world/heightfield';
 import { AudioRoot, AudioScene } from './audio/AudioRoot';
 import { ScoresRoot } from './scores/ScoresRoot';
-import { compileMountedScene } from './scene/compileScene';
+import { GraphicsRecovery } from './ui/GraphicsRecovery';
+
 import {
   fallbackAutoTier,
   renderDprForTier,
@@ -94,54 +95,6 @@ function CapabilityProbe() {
   return null;
 }
 
-function SceneReadySignal() {
-  const { gl, scene, camera, setFrameloop } = useThree();
-  useLayoutEffect(() => {
-    let alive = true;
-    let compiled = false;
-    let readyFrame = 0;
-    let presentedFrame = 0;
-
-    // Stop before R3F submits the newly mounted field. Three's async compiler
-    // then asks the browser for every pipeline the honest title camera can
-    // submit without turning deferred driver work into a first-frame freeze.
-    setFrameloop('never');
-    useGameStore.getState().reportBootStep('scene', 1);
-    useGameStore.getState().reportBootStep('shaders', 0.05);
-    void compileMountedScene(gl as unknown as THREE.WebGPURenderer, scene, camera)
-      .then(() => {
-        compiled = true;
-        useGameStore.getState().reportBootStep('shaders', 1);
-      })
-      .catch((error: unknown) => {
-        console.error('scene_compile_failed', error);
-      })
-      .finally(() => {
-        if (!alive) return;
-        setFrameloop('always');
-        // A rejected compiler may still let Three attempt an ordinary frame,
-        // but Play must never become actionable on that unverified scene.
-        if (!compiled) return;
-        // One rAF lets R3F submit the compiled field; the second makes the Play
-        // button honest by publishing readiness only after that visible frame.
-        presentedFrame = window.requestAnimationFrame(() => {
-          useGameStore.getState().reportBootStep('presented', 0.5);
-          readyFrame = window.requestAnimationFrame(() => {
-            if (alive) useGameStore.getState().markSceneReady();
-          });
-        });
-      });
-
-    return () => {
-      alive = false;
-      window.cancelAnimationFrame(presentedFrame);
-      window.cancelAnimationFrame(readyFrame);
-      setFrameloop('always');
-    };
-  }, [camera, gl, scene, setFrameloop]);
-  return null;
-}
-
 function ColorblindDogMarker() {
   const field = useHeightfield();
   const marker = useRef<THREE.Mesh>(null);
@@ -168,6 +121,7 @@ function HerdApp() {
   const gamePhase = useGameStore((state) => state.gamePhase);
   const uiPanel = useGameStore((state) => state.uiPanel);
   const sceneReady = useGameStore((state) => state.sceneReady);
+  const graphicsLost = useGameStore((state) => state.graphicsLost);
   const quality = useGameStore((state) => state.quality);
   const autoTierReceipt = useGameStore((state) => state.autoTierReceipt);
   const colorblindMarker = useGameStore((state) => state.colorblindMarker);
@@ -176,6 +130,14 @@ function HerdApp() {
   const capabilityReady = autoTierReceipt !== null;
   const renderTier = resolvedRenderTier(quality, autoTierReceipt);
   const dpr = renderDprForTier(renderTier);
+
+  // Terminal recovery owns a plain DOM screen. Unmount audio as well as the
+  // renderer so a later gesture cannot unlock sound behind the recovery dialog.
+  if (graphicsLost) {
+    return <div className="herd-app" data-phase={gamePhase} data-ready="false">
+      <UiStyles /><GraphicsRecovery />
+    </div>;
+  }
 
   return (
     <AudioRoot>
@@ -210,7 +172,7 @@ function HerdApp() {
             <Suspense fallback={null}>
               <FieldScene />
               {colorblindMarker ? <ColorblindDogMarker /> : null}
-              <SceneReadySignal />
+
             </Suspense>
           ) : <CapabilityProbe />}
           <CameraRig />

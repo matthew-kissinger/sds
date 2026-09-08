@@ -4,6 +4,7 @@
 // The WebGL2 backend is forced via ?debug=webgl (one of the three sanctioned
 // URL params); WebGPURenderer otherwise falls back automatically.
 import * as THREE from 'three/webgpu';
+import { useGameStore } from '@app/state/store';
 import {
   chooseAutoTier,
   fallbackAutoTier,
@@ -155,6 +156,13 @@ export function glFactory(props: GlProps): Promise<THREE.WebGPURenderer> {
     const forceWebGL = debugFlags().has('webgl');
     rendererPromise = (async () => {
       const renderer = new THREE.WebGPURenderer({ ...props, forceWebGL, trackTimestamp: true });
+      const onDeviceLost = renderer.onDeviceLost.bind(renderer);
+      renderer.onDeviceLost = (info) => {
+        // Preserve Three's lost-device bookkeeping on both backends, then stop
+        // the game even if the renderer's diagnostic callback itself fails.
+        try { onDeviceLost(info); }
+        finally { useGameStore.getState().reportGraphicsLost(); }
+      };
       await renderer.init();
       // Authored toon ramps are already the lighting model. Neutral preserves
       // their hue/value relationships on both backends, including the low tier
