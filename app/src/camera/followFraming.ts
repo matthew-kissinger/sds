@@ -31,6 +31,7 @@ import {
   FOLLOW_AIM_TAU,
   FOLLOW_POSITION_TAU,
   FOLLOW_YAW_TAU,
+  MAX_RIG_SPEED,
   SPEED_NORM_TAU,
   approach,
   lerpAngle,
@@ -67,6 +68,9 @@ export function createFollowFraming(initialView: FollowViewProfile = DEFAULT_VIE
   const aim = new THREE.Vector3();
   const desiredPosition = new THREE.Vector3();
   const desiredAim = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  const desiredCenter = new THREE.Vector3();
+  let radius = initialView.distance;
   let yaw = 0;
   let aimYaw = 0;
   let speedNorm = 0;
@@ -96,6 +100,8 @@ export function createFollowFraming(initialView: FollowViewProfile = DEFAULT_VIE
         aimYaw = facing;
         speedNorm = rawSpeedNorm;
         seated = true;
+        center.set(dog.position.x, 0, dog.position.z);
+        radius = view.distance;
         const seatX = dog.position.x - Math.sin(yaw) * view.distance;
         const seatZ = dog.position.z - Math.cos(yaw) * view.distance;
         desiredPosition.set(seatX, groundY(seatX, seatZ) + view.height, seatZ);
@@ -120,10 +126,19 @@ export function createFollowFraming(initialView: FollowViewProfile = DEFAULT_VIE
       aimYaw = lerpAngle(aimYaw, facing, smoothing(dt, FOLLOW_AIM_TAU));
       speedNorm += (rawSpeedNorm - speedNorm) * smoothing(dt, SPEED_NORM_TAU);
 
-      const rigX = dog.position.x - Math.sin(yaw) * view.distance;
-      const rigZ = dog.position.z - Math.cos(yaw) * view.distance;
+      // Smooth translation separately from orbit. Blending the final eye in
+      // Cartesian space cuts across turns and can collapse the chase distance
+      // during sustained camera-relative input.
+      const positionK = positionSmoothing(dt, FOLLOW_POSITION_TAU);
+      desiredCenter.set(dog.position.x, 0, dog.position.z);
+      approach(center, desiredCenter, positionK, dt);
+      radius += (view.distance - radius) * positionK;
+      const rigX = center.x - Math.sin(yaw) * radius;
+      const rigZ = center.z - Math.cos(yaw) * radius;
       desiredPosition.set(rigX, groundY(rigX, rigZ) + view.height, rigZ);
-      approach(position, desiredPosition, positionSmoothing(dt, FOLLOW_POSITION_TAU), dt);
+      const heightStep = (desiredPosition.y - position.y) * positionK;
+      position.set(rigX, position.y + Math.max(-MAX_RIG_SPEED * dt,
+        Math.min(MAX_RIG_SPEED * dt, heightStep)), rigZ);
       // What keeps a ridge between the rig and the dog from swallowing the dog.
       position.y = ridge.clamp(
         position.y,

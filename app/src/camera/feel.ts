@@ -66,7 +66,9 @@ export const MODE_BLEND_SECONDS = 0.8;
 export const MAX_FRAME_DT = 0.1;
 
 /**
- * Ceiling on how fast a rig travels, m/s. An exponential smoother moves at a
+ * Ceiling on Cartesian tracking travel, m/s. Follow applies this to its
+ * translation center and aim; its orbit uses the separate yaw smoother.
+ * An exponential smoother moves at a
  * speed proportional to the gap, which is right for chasing and wrong for a
  * discontinuity: a run reset puts the dog back at the spawn up to 200 m away,
  * and uncapped that is a whip-pan. Chasing a 25 m/s dog the rig settles at

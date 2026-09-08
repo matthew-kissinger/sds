@@ -122,6 +122,45 @@ describe('Classic framing', () => {
 });
 
 describe('Follow framing', () => {
+  it('glides through a distant reset with a changed heading and settles', () => {
+    const follow = createFollowFraming();
+    const dog = makeDog(90, 90);
+    run(follow, dog, 2);
+    dog.position.x = -20;
+    dog.position.z = -60;
+    dog.heading.x = 0;
+    dog.heading.z = -1;
+    const previous = follow.position.clone();
+    let largestStep = 0;
+    for (let frame = 0; frame < 600; frame++) {
+      follow.update(DT, dog);
+      largestStep = Math.max(largestStep, follow.position.distanceTo(previous));
+      previous.copy(follow.position);
+    }
+    // Orbit and translation may combine, but a reset must never cut directly
+    // to the new dog position or move by a whole chase radius in one frame.
+    expect(largestStep).toBeLessThan(5);
+    expect(follow.position.x).toBeCloseTo(-20, 2);
+    expect(follow.position.z).toBeCloseTo(-40, 2);
+    expect(follow.aim.z).toBeCloseTo(-60, 2);
+  });
+
+  it('eases viewport changes after seating and reaches each framing', () => {
+    const follow = createFollowFraming();
+    const dog = makeDog(0, 0);
+    run(follow, dog, 2);
+    for (const aspect of [390 / 844, 16 / 9]) {
+      const view = cameraViewProfile(aspect).follow;
+      const previous = follow.position.clone();
+      follow.setView(view);
+      follow.update(DT, dog);
+      expect(follow.position.distanceTo(previous)).toBeLessThan(1);
+      run(follow, dog, 4);
+      expect(follow.position.z).toBeCloseTo(-view.distance, 2);
+      expect(follow.position.y).toBeCloseTo(view.height, 2);
+    }
+  });
+
   it('sits behind the dog, low, on the heading', () => {
     const follow = createFollowFraming();
     const dog = makeDog(0, 0);
