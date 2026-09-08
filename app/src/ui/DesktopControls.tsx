@@ -17,6 +17,7 @@ export function DesktopControls() {
       <span><kbd>{movement}</kbd> Move</span>
       <span><kbd>{keyLabel(bindings.bark)}</kbd> Bark</span>
       <span><kbd>{keyLabel(bindings.sprint)}</kbd> Sprint</span>
+      <span><kbd>{keyLabel(bindings.walk)}</kbd> Hold to walk</span>
       <span><kbd>{keyLabel(bindings.camera)}</kbd> Camera</span>
       <span><kbd>Esc</kbd> Pause</span>
     </div>

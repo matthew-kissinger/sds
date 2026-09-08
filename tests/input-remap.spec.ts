@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { bindingMove } from '@app/input/keyboard';
-import { DEFAULT_INPUT_BINDINGS } from '@app/state/store';
+import { DEFAULT_INPUT_BINDINGS, restoreInputBindings } from '@app/state/store';
 import {
   beginTouchStick,
   endAllTouch,
@@ -14,6 +14,11 @@ import {
 } from '@app/input/touch';
 
 describe('remapped keyboard input', () => {
+  it.each(['forward', 'sprint', 'bark', 'camera'] as const)('preserves an older E binding for %s when adding walk', action => {
+    const restored = restoreInputBindings({ [action]: 'KeyE' });
+    expect(restored[action]).toBe('KeyE');
+    expect(restored.walk).toBe('KeyQ');
+  });
   it('uses the selected physical key while arrows remain available', () => {
     const bindings = { ...DEFAULT_INPUT_BINDINGS, forward: 'KeyE' };
     expect(bindingMove('KeyE', bindings)).toEqual([0, 1]);

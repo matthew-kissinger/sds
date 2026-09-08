@@ -3,7 +3,7 @@
 /**
  * Keyboard as a device: two window listeners, one set of held keys, no state
  * machine. WASD and the arrow cluster move, Shift sprints, Space barks, C swaps
- * camera framing.
+ * camera framing. Hold E for a controlled walk.
  *
  * Keys are read by `event.code`, the PHYSICAL key, so the WASD cluster is the
  * WASD cluster on AZERTY and Dvorak too. That is also what a future remap panel
@@ -31,6 +31,7 @@ const ARROW_MOVE: ReadonlyMap<string, readonly [number, number]> = new Map([
 ]);
 
 const held = new Set<string>();
+const WALK_EFFORT = 0.3;
 
 /** Held movement keys, summed. Diagonals come out long; `worldFromAxis` clamps. */
 export function keyboardAxis(out: MoveAxis): MoveAxis {
@@ -42,10 +43,24 @@ export function keyboardAxis(out: MoveAxis): MoveAxis {
     out.right += move[0];
     out.forward += move[1];
   }
+  if (keyboardWalk()) {
+    const length = Math.hypot(out.right, out.forward);
+    if (length > 0) {
+      out.right *= WALK_EFFORT / length;
+      out.forward *= WALK_EFFORT / length;
+    }
+  }
   return out;
 }
 
+export function keyboardWalk(): boolean {
+  const bindings = useGameStore.getState().inputBindings;
+  // Preserve an older movement remap that already used the new default key.
+  return bindingMove(bindings.walk, bindings) === undefined && held.has(bindings.walk);
+}
+
 export function keyboardSprint(): boolean {
+  if (keyboardWalk()) return false;
   const sprint = useGameStore.getState().inputBindings.sprint;
   return held.has(sprint) || held.has('ShiftRight');
 }
@@ -102,6 +117,7 @@ function onKeyDown(event: KeyboardEvent): void {
   if (
     bindingMove(code, bindings) !== undefined ||
     code === bindings.sprint ||
+    code === bindings.walk ||
     code === 'ShiftRight'
   ) {
     held.add(code);

@@ -25,6 +25,31 @@ beforeEach(() => {
 afterEach(() => { detach(); clearIntent(); useGameStore.setState(original); vi.unstubAllGlobals(); });
 
 describe('keyboard focus ownership', () => {
+  it('holds a steady walking effort on straight and diagonal movement and restores running on release', () => {
+    key('KeyW'); key('KeyE'); key('ShiftLeft');
+    expect(keyboardAxis({ right: 0, forward: 0 }).forward).toBeCloseTo(.3);
+    expect(keyboardSprint()).toBe(false);
+    key('KeyD');
+    const axis = keyboardAxis({ right: 0, forward: 0 });
+    expect(Math.hypot(axis.right, axis.forward)).toBeCloseTo(.3);
+    key('KeyE', false, 'keyup');
+    expect(keyboardAxis({ right: 0, forward: 0 })).toEqual({ right: 1, forward: 1 });
+    expect(keyboardSprint()).toBe(true);
+  });
+  it('supports remapped walking, ignores typing, and clears walk on blur', () => {
+    useGameStore.setState({ inputBindings: { ...DEFAULT_INPUT_BINDINGS, walk: 'KeyQ' } });
+    key('KeyW'); key('KeyQ', true);
+    expect(keyboardAxis({ right: 0, forward: 0 }).forward).toBe(1);
+    key('KeyQ');
+    expect(keyboardAxis({ right: 0, forward: 0 }).forward).toBeCloseTo(.3);
+    keyboard.dispatchEvent(new Event('blur')); key('KeyW');
+    expect(keyboardAxis({ right: 0, forward: 0 }).forward).toBe(1);
+  });
+  it('does not turn a saved E movement binding into a walking modifier', () => {
+    useGameStore.setState({ inputBindings: { ...DEFAULT_INPUT_BINDINGS, forward: 'KeyE' } });
+    key('KeyE');
+    expect(keyboardAxis({ right: 0, forward: 0 }).forward).toBe(1);
+  });
   it('leaves typing and native controls to the focused element', () => {
     key('KeyC', true); key('KeyW', true); key('ShiftLeft', true);
     const space = key('Space', true);

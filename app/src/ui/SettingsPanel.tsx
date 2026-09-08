@@ -14,7 +14,7 @@ const AUDIO_LABELS: Readonly<Record<AudioBusPreference, string>> = {
 
 const BINDING_LABELS: Readonly<Record<InputAction, string>> = {
   forward: 'Move forward', backward: 'Move back', left: 'Move left',
-  right: 'Move right', sprint: 'Sprint', bark: 'Bark', camera: 'Camera',
+  right: 'Move right', sprint: 'Sprint', walk: 'Hold to walk', bark: 'Bark', camera: 'Camera',
 };
 
 const KEY_OPTIONS: readonly { readonly code: string; readonly label: string }[] = [

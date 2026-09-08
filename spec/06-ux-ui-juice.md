@@ -15,6 +15,7 @@ All new. Nothing from the sds UI layer carries over as code; a handful of tuned 
 - A design-token module (color, spacing, type scale, z-index, motion durations) is the ONLY styling authority, written before the first component. `useReducedMotion` respected from day one. Both were the only parts of sds's UI that converged correctly; start there.
 - In-game HUD is nearly nothing: sheep-penned count (fills as a soft pictogram row or radial), optional timer (off by default; the zen default is no clock on screen), stamina as a subtle ring around or under the dog, not a bar in a corner. Every HUD element must justify existing against the Calm pillar.
 - Touch-first layout: thumb-reachable controls, 44 px minimum targets, the same minimal HUD. Virtual stick + bark button on touch; keyboard/mouse and gamepad on desktop. Input produces one normalized intent shape consumed identically everywhere.
+- Desktop precision: hold E (remappable) with movement to walk at 30% effort; release to run normally. Walk takes precedence over keyboard sprint while held. Shift remains sprint. The desktop control reminder shows both. Partial joystick movement retains its own analog effort.
 - Typography and menus feel like the game: painterly, warm, unhurried. No stock component library look.
 
 ## Carried feel constants (numbers, not code)

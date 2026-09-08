@@ -35,6 +35,7 @@ export type InputAction =
   | 'left'
   | 'right'
   | 'sprint'
+  | 'walk'
   | 'bark'
   | 'camera';
 export type InputBindings = Readonly<Record<InputAction, string>>;
@@ -70,9 +71,21 @@ export const DEFAULT_INPUT_BINDINGS: InputBindings = {
   left: 'KeyA',
   right: 'KeyD',
   sprint: 'ShiftLeft',
+  walk: 'KeyE',
   bark: 'Space',
   camera: 'KeyC',
 };
+
+/** Add walking without stealing a key from an older saved control layout. */
+export function restoreInputBindings(stored: Partial<InputBindings> = {}): InputBindings {
+  const bindings = { ...DEFAULT_INPUT_BINDINGS, ...stored };
+  if (stored.walk === undefined) {
+    const used = new Set(Object.entries(bindings).filter(([action]) => action !== 'walk').map(([, code]) => code));
+    const free = ['KeyE', 'KeyQ', 'KeyF', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC'].find(code => !used.has(code));
+    if (free) bindings.walk = free;
+  }
+  return bindings;
+}
 export const DEFAULT_AUDIO_LEVELS: AudioLevels = {
   ambient: 0.34,
   flock: 0.72,
@@ -242,10 +255,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
   const flockSize: FlockSize = 25;
   const stored = loadJson<StoredSettings>(SETTINGS_KEY, {});
   const storedCustom = loadJson<StoredCustomization>(CUSTOMIZATION_KEY, {});
-  const bindings: InputBindings = {
-    ...DEFAULT_INPUT_BINDINGS,
-    ...stored.inputBindings,
-  };
+  const bindings = restoreInputBindings(stored.inputBindings);
   const bests = loadJson<PersonalBests>(BESTS_KEY, EMPTY_BESTS);
 
   function updateSetting(patch: Partial<GameStore>): void {
