@@ -16,6 +16,13 @@ export interface FrameBudgetReceipt {
   readonly slowFrames: number;
 }
 
+function resetSample(sample: { warmup: number; elapsed: number; samples: number; slowFrames: number }) {
+  sample.warmup = 0;
+  sample.elapsed = 0;
+  sample.samples = 0;
+  sample.slowFrames = 0;
+}
+
 export function missesFrameBudget(receipt: FrameBudgetReceipt): boolean {
   if (receipt.samples < 90 || receipt.elapsed < QUALITY_WINDOW_SECONDS) return false;
   return receipt.slowFrames / receipt.samples >= SLOW_FRAME_RATIO;
@@ -38,11 +45,11 @@ export function RuntimeQualityGovernor() {
       || receipt === null
       || receipt.tier === 'low'
     ) {
-      sample.current = { warmup: 0, elapsed: 0, samples: 0, slowFrames: 0 };
+      resetSample(sample.current);
       return;
     }
     if (document.visibilityState !== 'visible' || delta <= 0 || delta > 0.1) {
-      sample.current = { warmup: 0, elapsed: 0, samples: 0, slowFrames: 0 };
+      resetSample(sample.current);
       return;
     }
 
@@ -58,7 +65,7 @@ export function RuntimeQualityGovernor() {
     if (current.elapsed < QUALITY_WINDOW_SECONDS) return;
 
     if (missesFrameBudget(current)) state.demoteAutoTier();
-    sample.current = { warmup: 0, elapsed: 0, samples: 0, slowFrames: 0 };
+    resetSample(sample.current);
   });
 
   return null;
