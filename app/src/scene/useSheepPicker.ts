@@ -51,6 +51,7 @@ export function useSheepPicker(
   });
 
   const isPointerActiveRef = useRef<boolean>(false);
+  const mouseNdcRef = useRef(pointer.clone());
   const tempVec = useRef(new THREE.Vector3());
 
   // Listen for pointer gestures and mobile touch taps on the canvas
@@ -145,7 +146,22 @@ export function useSheepPicker(
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse') {
+      if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
+        const target = e.target as HTMLElement | null;
+        const rect = glDom.getBoundingClientRect();
+        if (target?.closest('button, input, select, textarea, a, .herd-modal, .herd-customize-dock, .herd-customize-hud')
+          || rect.width <= 0 || rect.height <= 0
+          || e.clientX < rect.left || e.clientX > rect.right
+          || e.clientY < rect.top || e.clientY > rect.bottom) {
+          isPointerActiveRef.current = false;
+          return;
+        }
+        // Studio's orbit overlay receives mouse events instead of the canvas.
+        // Project the real cursor locally so it cannot leave R3F's pointer stale.
+        mouseNdcRef.current.set(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          1 - ((e.clientY - rect.top) / rect.height) * 2,
+        );
         isPointerActiveRef.current = true;
       }
     };
@@ -200,8 +216,8 @@ export function useSheepPicker(
     let bestDist = HOVER_ACQUISITION_NDC;
 
     const v = tempVec.current;
-    const px = pointer.x;
-    const py = pointer.y;
+    const px = mouseNdcRef.current.x;
+    const py = mouseNdcRef.current.y;
 
     // Evaluate sheep distances
     for (let i = 0; i < count; i++) {
