@@ -1,5 +1,730 @@
 # Sheepdog Sim 3 release status
 
+## Bounded stabilization release candidate — 2026-09-07
+
+Owner requested closeout, commit, push and exact-version deployment rather than
+expanding the investigation. This section supersedes historical active-process
+and broad acceptance requirements below. The candidate improves first-bark
+warmup, High render-context reuse/disposal, follow-camera framing, desktop keycap
+hints, keyboard/touch interruption handling and graphics-loss recovery. Auto
+sampling resets reuse storage; the existing Auto-only policy is unchanged.
+
+Independent final runtime review found no blocking regressions or unfinished
+diagnostic hooks. Final local lint, client/worker typechecks, build and static
+release probe passed. Full local suite: 102 files / 746 tests (includes four
+unrelated discovery-verifier tests that are not part of these commits).
+Logs: captures/stability/final-{lint,typecheck,worker-typecheck,build,tests,release}.log.
+Runtime artifact remains index-V7kFoDsD.js, SHA256
+4701b6b5d936e201c5fc7f2b40cda12527e65e4698817bcf5e46a71d78589ad8.
+JS gzip 624385 bytes; estimated first transfer 6705256 bytes.
+
+Final quiet-hub smoke: first-use-1788838025523, one High/200 run per backend,
+unchanged artifact, zero page errors, both follow/classic and resize/return
+rendered. First bark maximum gap 16.7 ms on both; sampled interaction p95
+8.4 ms, largest movement gap 25.1 ms. This short smoke is regression evidence,
+not a replacement for the earlier performance receipts. Follow screenshots
+were visually reviewed; the dog is centered and keycaps remain distinct.
+Hub browser/server cleanup completed; postflight GPU 0%, 89 MiB.
+
+Known limitations carried forward: variable loading (including misses of the
+2-second desktop budget), isolated unexplained frame outliers, physical mobile
+and gamepad acceptance, real WebGPU-device-loss and slow-score-service coverage.
+The empty public 75 leaderboard still needs production read access; local
+completion/worker paths pass. Keep existing Auto adaptation while its spec/08
+boot-only mismatch awaits a product decision. No unsupported shader-extension
+override ships. These are visible limitations, not claims of full spec acceptance.
+
+Remaining release steps: coherent commits, push/CI, owner approval of the full
+commit SHA, manual Pages deployment and live identity/play verification. No
+worker/infrastructure changes or public synthetic score submissions are included.
+
+## Targeted 75/200 completion and scoring — 2026-09-07
+
+Owner-approved one-sheep-left fixtures pass on unchanged index-V7kFoDsD.js:
+75 success, 75 submission-503 after successful registration, and 200 success.
+Each starts with N-1 penned, completed=false, last sheep at (0,99.5) outside
+the pen and synthetic tick 6000. Normal simulation crosses the final gate and
+triggers completion in under one second. No completion state is injected.
+Captured requests carry soloClassic, field-v3 and the correct sheepCount.
+All cases replay at 0/N and preserve the 100400 ms local best through actual
+browser reload. Builds are stable, page errors absent, and all API traffic is
+mocked. Synthetic time/fixtures are explicitly not full-run or public-score proof.
+
+Receipts: captures/stability/completion-75-targeted/,
+completion-75-submit-failure/ and completion-200-targeted/. Sessions 38906 and
+59377 completed and cleanup ran. No long herding probes remain active.
+
+The same minimal client payload passes real SQLite worker persistence, anomaly
+filtering and count-specific leaderboard readback for 25/75/200, with isolation
+between boards (v3-completion-score.spec.ts; focused worker tests 6 passed).
+No count-specific bug found in current client/worker code. These tests do not
+establish the deployed worker's write-path behavior or deployment identity.
+
+An aggregate-only SELECT against production D1 was attempted to distinguish
+missing submissions from hidden anomaly records. Cloudflare rejected it with
+authentication error 10000; no database query result is available. Production
+75 remains responsive/empty on public reads, but why it is empty is unresolved
+until authorized Cloudflare access is restored. No public test score was written.
+
+## Stop long herding probes; target the 75-sheep score path — 2026-09-07
+
+Owner requested less probe ceremony and approved a tools-only one-sheep-left
+forcing fixture for completion checks. The 75-sheep run (session 9596) was
+intentionally interrupted by closing its verified child Chrome process; its
+terminal exit is test cancellation, not a game crash. Do not restart it. Replace
+long 75/200 automated herding with targeted final-gate/completion/score checks.
+
+Fresh read-only production queries returned HTTP 200 for all field-v3 boards:
+25 has 12 entries, 75 has 0, 200 has 2. Source explicitly permits [25,75,200].
+Thus the 75 read endpoint is responsive and empty, but write-path correctness
+is not yet established. No synthetic public score was submitted. Investigate
+the final-gate -> completion -> request payload -> worker validation/persistence
+path using local/mocked infrastructure and keep the result distinct from live
+production acceptance.
+
+## Completed run with score service unavailable — 2026-09-07
+
+The normal-input 25-sheep run on index-V7kFoDsD.js completed at tick 15569,
+259.434 seconds (display 4:19.4), with all 25 penned. The completion panel showed
+New personal best and the local-time-safe/unavailable-board message; Play Again
+returned to playing with 0/25. Source/build receipt hashes stayed stable and no
+page errors or probe exceptions occurred. Screenshot completed.png was reviewed.
+Receipt: captures/stability/production-herding-25-unavailable/report.json,
+completed.png and replayed.png. Exec session 92396 is terminal and cleanup ran.
+
+Both intercepted requests were POST /api/register with mock status 503; no
+public request was sent. This proves normal completion/replay while identity
+registration is unavailable, not a separate failure after successful score
+submission. It is desktop touch emulation and functional evidence only.
+
+Added offline-result-persistence.spec.ts verifies the best is stored before
+completion notification, remains after API failure and reloads into a fresh
+game store. This complements the browser flow; it does not claim a browser
+reload persistence check. Focused score tests pass (9); full suite now passes
+100 files / 740 tests. New-test lint passes; runtime artifact is unchanged from
+the prior build/typecheck/release checks. Quality-policy owner answer remains
+pending; 75/200 full completion and physical mobile acceptance remain open.
+
+## Boot-time loss and unavailable-score playthrough — 2026-09-07
+
+Current index-V7kFoDsD.js also passes forced loss during pending WebGL2 scene
+compilation. The probe triggers only on an actual false parallel-completion
+query after the scene boot mark, before shader readiness. Its receipt records
+loss at 904.6 ms, data-ready=false, no shader-ready mark and sim tick 0.
+Recovery stays paused with unchanged sim, zero canvases and closed audio;
+focus/Tab/Escape checks and Reload -> ready title pass with no page errors and
+stable hashes. No further runtime edit was needed. Receipt:
+captures/stability/context-loss-boot/report.json. This narrows the boot gate to
+the tested WebGL2 pending-pipeline case; physical/GPU-device-loss gates remain.
+
+A normal-input 25-sheep production playthrough with every API request mocked
+503 is active (exec session 92396, 600-second cap). It must complete through real
+herding, show the local-time-safe message and allow Play Again before acceptance.
+Do not infer completion or restart from this note: poll the live handle or
+inspect the process. Evidence writes to captures/stability/
+production-herding-25-unavailable/. Main dist must stay unchanged during it.
+
+The owner has been asked to resolve Auto quality policy (runtime downward
+adaptation versus boot-only selection). Current Auto behavior is retained while
+that answer is pending; manual quality remains fixed.
+
+## Graphics-loss recovery — 2026-09-07
+
+Forced WebGL2 context loss reproduced a frozen field with a continuing run:
+phase stayed playing and stamina drained 79 -> 55 -> 31 percent. The renderer's
+public onDeviceLost callback now retains Three's bookkeeping and marks terminal
+graphics loss in the store. The game pauses synchronously, removes rendering,
+input and audio, and presents a focused reload dialog. Ready/resume/start actions
+cannot restart the lost run. This is recovery to the title, not restoration of
+an in-progress run.
+
+Production index-V7kFoDsD.js passes desktop play, portrait touch emulation,
+pre-gesture title and open-Settings loss scenarios. Live sim tick/stamina remain
+unchanged after loss; Canvas is removed, AudioContexts close and remain closed
+after Tab, focus stays on Reload, Escape cannot resume, and Reload returns to a
+ready title. Receipts: captures/stability/context-loss*/report.json and lost.png,
+reloaded.png. The prior failure is retained in context-loss-before.log.
+
+Separate review caught and resolved an audio unlock edge and missing panel
+wrapper, then accepted the current desktop/portrait dialog. Lint, production
+build/client typecheck, 99 test files / 739 tests and static release probe pass.
+Gzip JS totals 624,385 bytes; estimated first transfer 6,705,256 bytes.
+
+Same-artifact hub WebGPU High/200 render smoke completed with stable hashes,
+nonblank field/camera/resize captures and no page errors. Receipt:
+captures/stability/hub-receipts/first-use-1788836222346/. This verifies ordinary
+WebGPU rendering, not forced WebGPU device-loss recovery. Session 57630 is
+terminal; hub cleaned to 0% GPU / 89 MiB. Physical phone loss, actual WebGPU
+device failure and loss during pending boot compilation remain open.
+
+## Parallel-compile diagnostic comparison — 2026-09-07
+
+Five alternating pairs on the quiet hub used the identical index-D7vhFZIt.js
+artifact with normal WebGL2 High/200 versus a tools-only unavailable
+KHR_parallel_shader_compile extension. Normal ready times were 4662.9, 3067.6,
+2780.1, 2002.1 and 2015.4 ms. Extension-unavailable times were 1634, 1508.1,
+1480.3, 1475.3 and 1428.4 ms. All ten rendered nonblank fields, retained stable
+hashes and recorded no page errors. First-bark maxima were 16.7–33.3 ms normal
+and 16.7–25.1 ms extension-unavailable. A raw movement 33.400000000000546 ms
+sample crosses the strict 33.4 comparison through floating-point rounding.
+
+The alternate path replaces asynchronous polling with blocking LINK_STATUS
+queries: cumulative measured calls rose from 65.8–72.8 ms to 275–295.2 ms,
+with individual calls at most 40.2 ms. Recorded boot Long Task maxima were
+305–459 ms normal versus 105–247 ms alternate. These are diagnostic timings,
+not proof across devices. The first normal 4662.9 ms result is retained.
+
+This strongly links the loading variability to the optional async compile path
+on this browser/GPU. It does not establish the underlying browser/driver fault.
+Three's installed backend stores a `parallel` field, but its published backend
+parameters/types offer no parallel-compile policy setting. The game has not
+been changed to mutate that field or override browser prototypes. A supported
+solution and cross-device evidence are still required before closing loading.
+
+Receipt: captures/stability/hub-receipts/first-use-1788835536473/.
+tools/summarize-shader-completion.mjs produces
+captures/stability/parallel-comparison-summary.jsonl. Session 94792 completed;
+hub postflight 0% GPU / 89 MiB, probe browsers/servers closed. No runtime build
+or production infrastructure changed in this comparison.
+
+## Shader-completion wait reproduced — 2026-09-07
+
+Five quiet-hub WebGL2 High/200 trials of unchanged index-D7vhFZIt.js now include
+normal WebGL2 compile/link/completion-query tracing. Two slow boots (2975.1 and
+2958.7 ms) each contain one program whose completion stays false until about
+820 ms after linking: 820.5/819.4 ms, 100 polls each, individual query calls at
+most 0.1 ms. The slow program differs (IDs 22 and 19; attached source lengths
+1422/1972 versus 2875/1885), so this does not identify one expensive material.
+The other three boots take 1960.6, 1890.3 and 1982.8 ms, with maximum individual
+link-to-observed-completion waits 38.1, 23.8 and 26.4 ms.
+
+Installed Three processes async compile work items sequentially and awaits
+each pipeline before advancing. This trace confirms browser-reported program
+completion waits extend that loading path. It does not establish whether shader
+compilation, driver scheduling, cache activity or another browser condition
+causes the wait. No renderer fork, forced synchronous query or runtime change
+was made. First-bark maxima remained 16.7–25 ms; the earlier hitch stays open.
+
+All five fields were nonblank, with stable build hashes and no page errors.
+Per-trial CPU/GPU idle checks passed; final hub 0% GPU / 89 MiB and no probe
+Chrome processes. Session 92632 is terminal. Receipt:
+captures/stability/hub-receipts/first-use-1788835317817/report.json.
+tools/shader-completion-trace.mjs records existing calls without extra GPU
+queries; --shader-trace enables it in hub-first-use-probe.mjs. Tool lint passes.
+Tracing overhead and retained OS/driver caches make this diagnostic evidence.
+
+## Current first-use and readiness timing — 2026-09-07
+
+Quiet-hub index-D7vhFZIt.js completed five CPU-profiled and five unprofiled
+WebGL2 High/200 trials. Both sets retain stable artifacts, five nonblank fields,
+zero page errors and per-trial two-sample CPU/GPU idle checks. First-bark maxima
+were 16.7–25.1 ms; early movement maxima 16.7–33.3 ms. This does not explain or
+erase the prior 66.7 ms outlier and is not the full backend/quality matrix.
+
+The first-use tool previously timestamped readiness after automation polling.
+It now observes the data-ready DOM change inside the browser and separately
+retains automationObservedReady. In the unprofiled set, that polling delay was
+109–331.7 ms. Actual readiness was 2963.8, 2013.8, 2793.6, 1895.3 and 2781.2 ms:
+four of five still miss the 2-second budget. Prior hub-presentation receipts
+already used a MutationObserver and are unaffected by this correction.
+
+CPU profiles isolate slower scene-to-shader stages: 1570.9/1586.8 ms versus
+743–771.6 ms. Sampled idle rises from 365–391 ms to 1155–1162 ms; additional
+JavaScript execution does not explain most of this difference. Installed Three
+WebGLBackend polls COMPLETION_STATUS_KHR via requestAnimationFrame in async
+compilation. That is a lead for browser/driver completion tracing, not proof
+of a specific driver fault. Final postprocess compile still consumes sampled
+_completeCompile time. No speculative runtime optimization was applied.
+
+Receipts: captures/stability/hub-receipts/first-use-1788834970631/ (profiles) and
+first-use-1788835114878/ (unprofiled readiness). tools/summarize-cpu-boot.mjs
+reproduces stage attribution; captures/stability/sprint-boot-cpu-summary.jsonl
+contains the results. Sessions 42861 and 31019 are terminal; browsers/servers
+closed, hub postflight 0% GPU / 89 MiB. Physical-device gates remain open.
+
+## Sprint keyboard and pointer ownership — 2026-09-07
+
+Focused touch Sprint now supports holding Space or Enter, releasing on keyup
+or focus loss. Keyboard keys and the captured pointer contribute independently;
+releasing one does not cancel another hold. Pointer release checks ownership,
+so lifting a second finger over Sprint cannot cancel the original finger.
+
+The production keyboard probe failed on index-D9FFqgY3.js and passes on
+index-D7vhFZIt.js. It covers repeats, overlapping keys, focus loss, mixed pointer
+and keyboard release in both orders, and secondary-finger release. Trusted CDP
+pointer traces confirm which finger ended; an initial probe mistake ended the
+owner finger and was corrected from that evidence. The touch pause/resume
+regression also passes: settled position remains fixed, stamina recovers and
+artifact hashes remain stable, with no page errors. This is desktop emulation,
+not physical-mobile or assistive click-only validation.
+
+Lint, build/client typecheck, 98 test files / 737 tests and release probe pass.
+Total gzip JavaScript is 623,965 bytes. Receipts: captures/stability/
+sprint-keyboard-before.log, sprint-keyboard-after.log, sprint-keyboard-tests.log,
+sprint-keyboard-release.log and touch-interruption/report.json. Separate review
+accepted the keyboard lifecycle; pointer ownership was added in response to its
+multi-touch finding. Runtime performance and physical-device gates remain open.
+
+## Touch interruption recovery — 2026-09-07
+
+Holding touch movement and sprint through pause reproduced stuck movement after
+resume: the dog kept advancing and stamina drained. Removed captured elements
+can lose their React pointer-release handlers. TouchControls now releases its
+touch state in a layout effect when controls leave active play or touch presence.
+Keyboard and gamepad state are unaffected.
+
+The same trusted two-touch production probe passes on isolated index-D9FFqgY3.js.
+Paused and immediate-resume positions match; after normal stopping inertia,
+two samples 800 ms apart remain at z=-42.041667 and stamina recovers to 1.
+Build hashes stayed stable, with no page errors. Evidence is in
+captures/stability/touch-interruption/ (before.json, report.json, resumed.png).
+This uses desktop touch emulation and Escape pause, not physical-device proof.
+Separate critical review accepted the narrow lifecycle change. Lint, client
+production build/typecheck and 98 test files / 737 tests pass. The isolated
+build was subsequently reproduced in main dist after the active playthrough
+ended. Typecheck and the static release probe also pass on index-D9FFqgY3.js.
+
+The bounded 75-sheep production robot run ended at its 30-minute cap with 70/75
+penned, stable index-C3zxvAzp.js hashes, no page errors and no exception.
+Session 63070 is terminal; its browser/server cleanup ran. This is incomplete
+automation coverage, not proof of a gameplay defect or accepted completion.
+Receipt: captures/stability/production-herding-75-wide/report.json.
+
+Desktop hints use outlined keycaps, muted labels and distinct group spacing;
+the hint strip is hidden for coarse pointers. Running desktop, remapped and
+touch screenshots are in captures/stability/desktop-controls/ and passed
+separate interaction review. Physical mobile review remains open.
+
+## Startup profile attribution — 2026-09-07
+
+One quiet-hub WebGL2 High profile of index-C3zxvAzp.js includes CPU-clock metrics
+for alignment with boot marks. Scene compile ended at 2,057.4 ms and presented
+readiness at 2,202 ms. Within that window, CPU samples attribute 61.4 ms to
+_completeCompile beneath BloomNode.updateBefore and another 3.2 ms beneath the
+final render path. This establishes first-frame postprocess compilation as a
+loading cost; it does not explain the separate intermittent first-bark outlier.
+The installed RenderPipeline exposes render but no public compile/prepare API.
+No private-renderer workaround or deferred readiness change was introduced.
+
+Receipt: captures/stability/hub-receipts/first-use-1788833579136/, including
+report.json and webgl2-high-0-candidate.cpuprofile. Exec session 7237 completed;
+the profile's first-bark maximum was 25.1 ms, so it did not reproduce the 66.7 ms
+outlier. Startup timings here are instrumented diagnostics. Production 75-sheep
+session 63070 remains active; latest observed progress was 1/75 at 813 s.
+
+## Current-build 1440p frame-budget receipts — 2026-09-07
+
+index-C3zxvAzp.js completed separate quiet-hub 60-second High/200-sheep Classic
+routes on genuine WebGPU and forced WebGL2. Both verified a 2560x1440 drawing
+buffer (1707x960 CSS, DPR 1.5) and a 1715x1045 browser window fitting the physical
+1920x1080 display. Two consecutive CPU/GPU idle samples passed before each run;
+builds stayed stable, fields were nonblank and no page errors were recorded.
+
+Both p95/p99 frame times were 8.4 ms; maxima were 33.4 ms WebGPU and 25 ms WebGL2.
+Both sampled 40 draws in the final 250 ms submission window; that is not proof
+of the maximum draw count throughout the route. Ready times were 1,978.5 ms
+WebGPU and 2,128.3 ms WebGL2. The WebGL2 aggregate correctly fails its startup
+budget. These pass the sampled steady frame-budget checks, not all first-use,
+loading, device, audio or long-session requirements. OS/driver caches retained.
+
+Receipts: captures/stability/hub-receipts/webgpu-hidpi-1788833133146/ and
+webgl2-hidpi-1788833260182/. Exec sessions 96363 and 94732 are terminal; probe
+browsers/servers closed, hub postflight 0% GPU / 89 MiB. Production 75-sheep run
+63070 is still active on the PC and is functional evidence only.
+
+## Thirty-minute hub soak completed — 2026-09-07
+
+The isolated index-CZ45C4un.js run finished in 1,802.7 s: 30 movement/bark/sprint,
+camera and Low/High/remount cycles, six restarts and 37 nonblank checkpoints.
+Build hashes stayed stable; no page errors were recorded. All sampled states
+were visible and playing, and final restart framing was inspected. Session
+5494 is terminal, browsers/server closed; postflight GPU was 0% / 107 MiB.
+
+Per-checkpoint p95 peaked at 8.4 ms and p99 at 8.5 ms. Five raw frame gaps were
+above 33.4 ms: three floating-point-edge 33.4 ms values, plus 49.9 ms in cycle 14
+and 41.7 ms in cycle 22. Retain those two clear outliers; no flawless-frame claim.
+Equivalent post-menu checkpoints ended at 821 DOM nodes / 215 listeners, matching
+cycle 1. Heap was 28.6 MB in cycle 1, 42.9 in cycle 10, 31.3 in cycle 20 and
+32.5 in cycle 30, with no sustained growth established by these observations.
+This is one WebGPU High 1440x900 soak, not GPU/audio leak proof, physical mobile,
+1440p acceptance or validation of the later allocation cleanup.
+
+Final report and captures: captures/stability/hub-receipts/first-use-1788831175580/.
+The current index-C3zxvAzp.js is now isolated separately for a 60-second 1440p
+drawing-buffer test. The probe requires a 2560x1440 canvas, a window inside the
+physical display, and two consecutive quiet CPU/GPU samples before launch.
+
+## Larger-flock robot limitation isolated — 2026-09-07
+
+The original robot failed the 75-sheep deterministic diagnostic at all three
+tested input cadences (1/2/6 ticks), with 0 penned after 72,000 ticks. The browser
+attempt in session 1252 was deliberately stopped by closing only its verified
+child Chrome process; it exited through cleanup. Its Target closed failure is
+an intentional test interruption, not a game crash. The receipt remains at
+captures/stability/production-herding-75/ and does not count as a playthrough.
+
+A test-only radius sweep (24/32/48 m collection cap and approach arc) improved
+75-sheep diagnostic penning to 0/19/72 respectively, still incomplete at 72,000
+ticks. Adaptive approach radius for the remaining flock is under investigation.
+No sim tuning, production behavior or deterministic fixture was changed.
+Meanwhile the live hub soak reached 23 minutes; p95 remains 8.4 ms, with a
+retained 41.7 ms cycle-22 maximum. Session 5494 remains the active soak handle.
+
+Follow-up: continuously shrinking the arc failed (2/75 and 0/75). Keeping the
+wider approach until 25 sheep remain, then restoring the proven small-flock
+settings, completed 75 at tick 70,806 with six-tick control cadence. Switching
+only at 10 sheep remained failed (72/75). The successful test-only policy is now
+in the production probe, while the original fixture driver stays unchanged.
+A fresh 75-sheep browser attempt has started under production-herding-75-wide,
+capped at 1,800 seconds (exec session 63070); no production completion acceptance
+is claimed yet. Session 1252 is terminal and must not be resumed or restarted.
+The hub soak passed restart 25 and reached cycle 26.
+
+## Real 25-sheep production completion — 2026-09-07
+
+The production herding route completed all 25 sheep at tick 19,323, about 322 s,
+and showed the normal 5:22.0 completion screen with a new personal best. No page
+errors were recorded. The driver read live sim state and used touch movement /
+keyboard sprint; no completion state or simulation tick was injected. Score
+requests were local mocks, so the displayed online status is not service proof.
+Receipt and screenshot: captures/stability/production-herding/{report.json,completed.png}.
+Exec session 70078 completed and its browser/server closed. This first receipt
+predates build-hash collection in the tool, so it is functional evidence rather
+than an exact-artifact release gate. It does not certify physical touch or audio.
+
+The follow-up 75-sheep route is active in exec session 1252, capped at 1,200 s,
+with build hashes and a normal Play again/reset check added. Receipt directory:
+captures/stability/production-herding-75/. The hub soak continues separately in
+session 5494; its fifteen-minute checkpoint and third restart passed.
+
+## Production herding route started — 2026-09-07
+
+tools/production-herding-probe.mjs bundles the existing test herding driver into
+tools-only browser code. It reads the live CpuDeterministicSim through committed
+React hooks and sends trusted CDP touch-stick input plus keyboard sprint. It
+does not mutate simulation state, advance ticks or inject completion. All score
+requests are intercepted locally. The local run uses the current production
+build, 25 sheep and forced WebGL2; timings on this busy PC are not performance
+evidence and touch emulation is not physical-mobile validation.
+
+Active exec session 70078, capped at 600 seconds; receipt directory
+captures/stability/production-herding/. The initial 60 seconds confirm live dog
+movement and normal simulation ticks, with no sheep completed yet. Do not claim
+a completed playthrough or restart the probe without inspecting the live handle.
+The separate hub soak, session 5494, reached cycle 11 and passed restart 10.
+
+Automation cadence check (tools/herding-cadence-check.mjs) reuses the unchanged
+sim and driver: control updates every 1/2/6 ticks complete 25 sheep at ticks
+14,112 / 26,422 / 33,156 respectively. Browser CDP updates approximately every
+100 ms are therefore not expected to match the per-tick fixture's finish time.
+The browser attempt is still incomplete at its latest observed 211 s; this is
+not evidence of a game completion defect. The hub soak separately reached
+cycle 13 with its process still live.
+
+## Quality-monitor allocation cleanup — 2026-09-07
+
+RuntimeQualityGovernor claimed allocation-free monitoring but replaced its
+counter object on every manual-quality/Low/paused frame. Reset now mutates the
+same four counters in place. Thresholds, warmup and quality policy are unchanged;
+this removes an observed allocation source, not an established cause of the
+first-bark hitch. The spec/runtime-governor policy discrepancy remains open.
+
+Current local index-C3zxvAzp.js passes lint, build/client typecheck, 98 files /
+737 tests and release probe. Initial JS gzip 623,846 bytes; estimated transfer
+6,704,718 bytes. The ongoing hub soak deliberately retains isolated
+index-CZ45C4un.js; it does not validate this later cleanup. First three soak
+cycles report 8.4 ms p95, maxima 33.3–33.4 ms and 821–822 DOM nodes / 215–216
+listeners after menu cycles. Heap values fluctuate; no leak conclusion follows.
+
+## Extended-session test underway — 2026-09-07
+
+The new tools/session-soak.mjs drives normal keyboard movement/sprint/bark,
+camera switching, pause, Settings Low/High remount and resume. A 60-second
+WebGPU production cycle passed on the hub (first-use-1788831053894). Its initial
+and post-remount field captures were nonblank. This is route validation only.
+
+A 1,800-second run is now active on index-CZ45C4un.js, WebGPU High, 200 sheep,
+with a restart every five cycles. It records per-cycle frame percentiles and
+heap/DOM/listener observations. Screenshot sampling is excluded from frame
+collection; pauses reset the frame clock. Counters are observations, not proof
+of a leak or release. Physical mobile, audio voice accounting and actual herding
+completion still require separate evidence.
+
+Active receipt on hub: /home/matthewk/perf/sds-keycap-20260907/receipts/
+first-use-1788831175580/; local exec session 5494. Initial checkpoint was observed
+live. Do not restart from this status note: poll the handle or inspect the hub
+process and receipt first. Completion and cleanup have not yet been verified.
+
+Latest live check: cycle 7 at 420 s, including restart 5. Restart returned to a
+visible playing field; DOM nodes dropped from 821 to 247, then later menu-cycle
+counts returned to 822–823. Active-cycle p95 stays 8.4 ms. Heap fluctuated
+27–48 MB and fell again; these partial observations do not establish acceptance.
+No Android device was attached when queried with adb; the newly started adb
+daemon was closed. Owner physical-device availability question is pending.
+
+Coverage audit: tools/scores-ui-probe.mjs injects completion state in a dev build.
+It validates score-screen behavior, not actual herding completion. The 25-sheep
+deterministic fixture likewise does not prove production 25/75/200 playthroughs.
+Those session-completion requirements remain explicitly open.
+
+## Current-build hub validation and remaining bark outlier — 2026-09-07
+
+Ten fresh headed High trials on the quiet hub validate index-CZ45C4un.js,
+five each genuine WebGPU and forced WebGL2. All 50 post-input/camera/resize
+captures pass the central-field nonblank check, with visible/focused sampled
+states; sampled Follow and Classic screenshots show the dog framed correctly.
+Every trial passed two consecutive CPU <=15% / GPU <=5% preflight samples.
+Build hashes remained stable, requested backends matched, and no page errors or
+failed requests were recorded. These are normal Playwright focus settings, not
+native focus-recovery proof, and do not establish first-frame or physical-mobile
+rendering acceptance. Receipt: captures/stability/hub-receipts/first-use-1788829329168/.
+
+The first WebGL2 trial reproduced a 66.7 ms first-bark frame; its four later
+trials were 16.7 ms. WebGPU first bark was 16.6–25.1 ms. Early movement reached
+33.4 ms. Ready time was 2,128–2,161 ms WebGPU and 2,063–2,098 ms WebGL2, still
+above the 2 s desktop requirement. The bark gate is open despite prior gains.
+
+Five subsequent WebGL2 CPU-profiled trials produced 16.7–33.3 ms first-bark
+maxima and no bark-window Long Task; the 66.7 ms outlier did not recur. Startup
+Long Tasks ranged 56–315 ms. These instrumented runs are diagnostic, not timing
+acceptance or proof of the outlier's cause. Profiles and report are retained in
+captures/stability/hub-receipts/first-use-1788830792531/. Both runs completed;
+test Chrome processes closed and the hub returned to 1% GPU / 89 MiB.
+
+## Desktop keycap readability — 2026-09-07
+
+Owner review found insufficient distinction between control keys and labels.
+The bottom-left strip now uses outlined, subtly raised keycaps with a separate
+tokened sans-serif face, quieter serif action labels, and wider spacing between
+action groups. It retains live remapping, menu hiding and coarse-pointer hiding.
+Production desktop/default/remapped and portrait touch checks pass; independent
+critical review accepts the sampled layouts. Physical mobile acceptance remains
+open. Screenshots: captures/stability/desktop-controls/{desktop,desktop-remapped,touch}.png.
+
+Current index-CZ45C4un.js: lint, build/client typecheck, 98 files / 737 tests and
+release probe pass. Initial JS gzip 623,819 bytes; estimated transfer 6,704,690
+bytes. This is a presentation correction, not a new performance result.
+
+Native Windows startup diagnosis also progressed: all six first-run images were
+nonblank, but later samples were hidden and camera transitions therefore cannot
+be accepted. The tightened second run rendered its initial WebGPU field, then
+correctly failed on lost visibility. The blank-rendering gate remains open;
+future native validation needs an uninterrupted foreground lane. The second
+run's temp-profile cleanup returned EPERM and was recorded without masking the
+primary visibility failure (sds-render-YB3hwb).
+
+## Keyboard focus and native recovery — 2026-09-07
+
+Gameplay shortcuts now respect text inputs, selects and native Space/Enter
+button activation. Escape still closes menus, keyup still releases held inputs,
+and movement/camera shortcuts work after a persistent touch button has focus.
+Touch Bark and Camera accept keyboard/assistive clicks without duplicating
+pointer actions. Independent code review supports this bounded change. Sprint's
+touch button remains pointer-only; full keyboard activation of that button is
+an open interaction item (the normal Shift binding remains available).
+
+The production recovery probe passes typing, Play/Pause/Resume, camera handoff
+and a real tab switch with lost movement/sprint keyup. Its receipt records actual
+blur and visibility events. Standard Playwright focus emulation hid those events;
+a separately launched visible Chrome attached with noDefaults provides the
+native test. Hidden-window failures are not game recovery failures. This finding
+does not yet resolve the separate intermittent blank-rendering gate.
+
+Evidence: captures/stability/keyboard-recovery/report.json and
+captures/stability/desktop-controls/touch-keyboard-{camera,return}.png.
+The latter show Follow and Classic visually on touch emulation, not physical
+mobile or exact action-count proof. Current index-Cvb_JT-9.js passes 98 files /
+737 tests, lint, build/client typecheck and release probe. Initial JS gzip is
+623,700 bytes; estimated first transfer is 6,704,572 bytes. These functional PC
+checks do not replace quiet-hub performance measurements or close release gates.
+
+Automatic approval review blocked cleanup of the closed test profile
+C:/Users/Mattm/AppData/Local/Temp/sds-recovery-7G7iqt with reason "blocked by
+policy". That directory was left untouched; subsequent probe cleanup succeeded.
+
+## Desktop controls and High first-use path — 2026-09-07
+
+The requested desktop HUD reminder now shows the current movement, bark, sprint,
+camera and pause bindings in one small bottom-left row. It subscribes to settings,
+does not update per frame, hides during menus and hides on coarse-pointer touch
+layouts. Production UI checks cover default labels, pause, Q/F remapping and
+touch controls. Independent visual review supports the sampled presentation.
+Screenshots: captures/stability/desktop-controls/.
+
+High now renders its scene explicitly into the owned target before the unchanged
+TSL bloom/grade chain. Compilation and scene rendering use the same top-level
+context. This removes the traced first-bark bird-program rebuild without an
+extra warmup draw; local WebGPU synchronous pipeline creations fall from 27 to
+12. Both backend five-cycle resource checks remain flat and all captures in
+those latest runs render. Independent code/visual review found no blocker.
+
+The owner reported another PC Chrome game and concurrent agents. PC timing
+results are diagnostic only. The hub comparison used two consecutive CPU <=15%
+and GPU <=5% samples before every trial, with no competing Chrome process at
+preflight. Twenty alternating High trials compare index-BIRd17K_.js against
+index-BTo1IfeC.js: WebGL2 first bark 25–41.7 -> 16.7–25.1 ms; WebGPU stays about
+16.7 ms. Startup still fails: candidate WebGPU ready 2,116–2,201 ms; WebGL2
+2,074–4,294 ms, including a worse first candidate trial. No loading regression
+clearance or whole-game acceptance is claimed. Receipt:
+captures/stability/hub-receipts/first-use-1788826866432/.
+
+Current validation: 97 files / 731 tests, lint, build/client typecheck and release
+probe pass. Initial JS gzip 623,591 bytes; estimated transfer 6,704,463 bytes.
+All completed probe browsers and servers are closed; hub returned to 0% GPU.
+Startup, intermittent rendering, physical mobile, full sessions and owner review
+remain open. Nothing was deployed or published.
+
+## Quality-switch GPU resource cleanup — 2026-09-07
+
+Confirmed recurring resource growth when High unmounted: each WebGL2 cycle
+retained 13 textures, 13 framebuffers and two renderbuffers; WebGPU retained 14
+textures per later cycle. High now disposes its owned bloom and scene passes
+in addition to RenderPipeline's final material. Five production Settings cycles
+after the fix return to identical Low counts on each backend. Independent code
+and sampled WebGL2/WebGPU remount visual review support the bounded fix.
+
+WebGPU's initial Low capture is blank both before and after, then all ten captures
+after quality switches render visibly. Its aggregate probe remains failed;
+this resource fix does not resolve the startup rendering gate. Evidence and
+counter tables: docs/performance-stabilization.md, captures/stability/
+quality-lifecycle-{before,after}-{gl,gpu}/. All probe browsers/servers closed.
+
+Latest candidate index-BIRd17K_.js: 96 files / 729 tests, lint, client/worker
+typechecks, build and release probe pass. Full initial JS gzip 623,267 bytes;
+estimated first transfer 6,704,140 bytes. No full stabilization gate is closed.
+
+## Loading keyboard fix and rejected warmup experiments — 2026-09-07
+
+Loading title controls are inert until ready, closing a keyboard-accessible
+Settings/quality-change race during compilation. A production browser probe
+holds the real heightfield request and confirms Tab/Enter cannot activate title
+controls, then Settings opens/closes after readiness. Readiness publication
+also ignores an unmounted component.
+
+An additional High loading-time render improved first bark in 20 paired hub
+trials but repeatedly produced a blank Windows WebGPU field. It was removed.
+The earlier target-only artifact rendered in one comparison, but the rebuilt
+candidate after removing extra warmup also rendered blank on Windows WebGPU
+(`restored-high-gpu`, `index-AFArC80o.js`). Therefore extra warmup is not an
+established cause, and rollback is not a verified rendering fix. Waiting for a
+frame and using R3F.advance did not cure blank rendering. Direct sync
+startup also produced a 2-second WebGL2 task and was rejected; the camera-layout
+initialization experiment was removed as well. Existing Follow framing and
+target-correct async compilation remain. None of these results closes startup,
+movement, physical-mobile or long-session gates. Full evidence and next leads:
+docs/performance-stabilization.md.
+
+Latest source checks pass: 96 files / 729 tests, lint, typecheck, production
+build and release probe. JS is 2,240.73 kB (622.83 kB gzip). The visible-rendering
+gate remains unresolved despite these checks; this candidate is not accepted.
+Four later sequential headed Chrome controls rendered visibly, including current
+and reference artifacts, GPU wrappers off/on, and current with probe GPU flags.
+This does not isolate the intermittent blank failure. Current normal Chrome
+screenshots show the field and normally framed dog; startup still contains large
+post-readiness gaps. Detailed labels and limits are in the investigation report.
+
+## High first-use follow-up — 2026-09-07
+
+The 60-run alternating hub comparison confirms Low/Auto WebGL2 bark improvement
+but exposes a remaining High first-bark gap up to 58.3 ms. The target-correct
+warmup candidate (`index-CgW7aIpk.js`) passes 729 tests, lint, typecheck, build and
+release probe; it reduces local WebGPU synchronous pipeline creations 47 -> 27.
+It is not accepted: startup still exceeds budget and the instanced-bird program
+still compiles at the first High bark. See docs/performance-stabilization.md for
+shader evidence and the next diagnostic. The 20-run High-only comparison with
+confirmed idle intervals completed: WebGPU 16.7–25 ms overlaps the prior build;
+WebGL2 first bark changed from 25–41.7 ms to 24.9–33.4 ms. All idle checks and
+build-stability checks passed. Receipt: captures/stability/hub-receipts/
+first-use-1788823188181. Both compared artifacts remain isolated on the hub.
+
+## Stabilization execution — camera candidate, 2026-09-07
+
+The quiet hub (GTX 1660 Ti, physical 1920x1080 at 120 Hz) now uses a
+1440x900 test viewport that fits its actual browser window. The earlier
+2560x1440 window exceeded the display. Production WebGPU uses no debug flag.
+Native Follow routes also reproduced a separate camera defect: sustained
+camera-relative turns collapse horizontal chase distance from 20 m to 3.43 m.
+Both backends show the oversized dog near a fence; it recovers after releasing
+input for two seconds. This is a gameplay framing issue, not a performance pass.
+
+A local camera candidate smooths the tracking center separately from its polar
+orbit, retaining the spec yaw/position/aim constants and terrain clearance.
+Independent design review supports this approach. Explicit interpretation:
+55 m/s limits Cartesian tracking/reset translation, not total orbital eye speed;
+spec/06 specifies smoothing constants but no total eye-speed ceiling. Running
+motion review is still required. The deterministic route and existing framing
+tests pass. Follow reset and live viewport-change tests were added as well.
+Current validation: 96 files / 727 tests; lint, typecheck, production build and
+release probe pass. The new 60-second simulation test uses a 20-second timeout
+because parallel suite contention exceeded the default 5 seconds; its framing
+assertions remain unchanged.
+
+Camera candidate index-KZQW9FUY.js: native hub WebGPU/WebGL2 routes both p95
+8.4 ms, maximum 25 ms; ready 2,028 / 2,282.5 ms (startup still fails).
+Build hashes remained stable and browser windows fit the physical display.
+Candidate active screenshots retain normal dog size and readable field framing;
+independent WebGPU screenshot review supports the sampled correction. Receipts:
+captures/stability/hub-receipts/webgpu-native-1788822173632 and
+webgl2-native-1788822283569. Full motion, portrait/physical-mobile acceptance,
+alternating first-use comparisons and extended recovery sessions remain open.
+
+Hub pre-camera-fix 60-second native High routes: WebGPU p95 8.4 ms,
+max 16.7 ms, ready 2,150.7 ms; WebGL2 p95 8.4 ms, max 25 ms,
+ready 3,425.4 ms. Both miss the 2-second desktop startup gate. Captures and
+receipts are under captures/stability/hub-receipts/. Screenshot-related gaps
+are timestamped separately; sampled runtime excludes startup and captures.
+Windows mobile-emulation blank rendering is intermittent and reproduced on the
+original build; a later identical-context candidate run and raw WebGPU control
+rendered visibly. Cause and physical-mobile acceptance remain open.
+
+Probe hardening now checks physical window bounds, build stability, browser and
+network failures. Automated color variation only checks nonblank content; it
+does not approve framing or scene animation. All performance and publication
+gates in docs/stabilization-plan.md remain open until their evidence is complete.
+
+## Stabilization plan — 2026-09-07
+
+Owner requested a plan to stabilize and polish the current game before public
+posts. See [stabilization and public playtest plan](docs/stabilization-plan.md).
+It sequences reliable rendering evidence, first-use/movement fixes, loading and
+steady performance, complete-session recovery, presentation review and a reviewed
+public build. Plan recorded; gates are not newly accepted. Future modes, larger
+flocks and multiplayer remain outside scope. No publication authorization added.
+
+## Performance stabilization investigation — local candidate, 2026-09-07
+
+First-Space investigation reproduced a hidden-effect compilation hitch. BarkRing
+and BirdLift now opt into startup compilation while the render loop is paused;
+visibility restores even if compilation fails. No simulation or audio change.
+Three fresh-browser trials per backend at 200 sheep measured Auto first-bark
+maxima falling from 35–42 ms to 7.0–7.1 ms. High retains 14 ms WebGPU / 28 ms
+WebGL2 first-use cost. Low portrait touch emulation measured 7.1 ms first-bark
+maxima on both backends; input was scripted Space, not physical touch.
+
+Three 60-second production runs pass p95/draw/error checks but NOT overall
+performance acceptance: High 1440p WebGPU/WebGL2 and throttled landscape Low
+WebGL2 readiness was 2,509 / 4,967 / 6,744 ms. Frame p95 was 7 / 7 / 14 ms;
+maximum gaps were 83.4 / 76.2 / 76.3 ms. Peak API draws 53 / 54 / 42. The older
+100 ms freeze gate is insufficient to call these runs hitch-free. Timings are
+local desktop comparisons, not isolated physical-device certification.
+
+Validation: 95 files / 724 tests, lint, typecheck, build and release probe pass.
+Candidate index-s2uqeSsi.js; gzip JS 622,906 bytes, estimated transfer 6,703,776
+bytes. Independent code review found no blocker; high-target pipeline warmup
+remains a measured limitation. Running build screenshots and receipts:
+captures/profiling/first-bark-warmup-mobile/ and stability-warmup/.
+See docs/performance-stabilization.md for reproduction, limitations and follow-up
+priorities. Spec/08's boot-only quality policy still conflicts with the shipped
+runtime governor; preserved pending a product decision. Startup, residual
+outliers, long-session memory/lifecycle and physical mobile acceptance remain
+open. No commit, push or deployment in this investigation.
+Follow-up: the 10-second gap trace reproduces 83.2 / 76.5 ms outliers around
+sample frames 106 / 113, without reported Long Tasks. All eleven audio lifecycle
+checks pass (captures/audio/stability-audio/). Independent screenshot review
+rejects the initial mobile WebGPU capture: HUD appears but the field is blank.
+Mobile WebGL2 and desktop scenes render. Mobile WebGPU visual acceptance remains
+open; the bark probe now records and rejects blank initial/follow-up captures.
+
 ## Footsteps - owner approved for release, 2026-09-07
 
 Owner found the generated footsteps too high pitched and requested correction
@@ -76,6 +801,19 @@ viewport, not a physical-device input or listening receipt. Lifecycle evidence:
 captures/audio/leaves-removed-lifecycle/. Probe browsers and servers closed.
 Owner listening to the resulting mix and physical-device review remain open;
 no new performance or renderer gate is claimed. Not committed or deployed.
+
+## Search indexing investigation — 2026-09-06
+
+Authenticated Search Console confirms the HTTPS homepage is indexed, fetched
+successfully September 6, and selected as canonical by Google. The four reported
+redirects are the HTTP homepage and retired scene URLs; preserve those redirects.
+Resubmitted the existing sitemap successfully; Google's refreshed read remains
+pending. See `docs/search-indexing-audit.md` for exact URLs and Analytics findings.
+Local discovery-verifier guardrails now reject canonical redirects, HTTP noindex
+headers and sitemap aliases. These tooling changes are not committed or deployed.
+Validation: lint, typecheck, all 95 test files / 723 tests, production build,
+release probe and source/built/live discovery pass. Unchanged runtime bundle:
+623,633 gzip JS bytes; estimated transfer 5,773,849 bytes.
 
 ## Studio release authorization — 2026-09-05
 
