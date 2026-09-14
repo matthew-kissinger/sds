@@ -10,7 +10,7 @@ and aggregate site analytics. It does not authorize a production deployment.
 - Support: `https://sheepdogsim.com/support`
 - Privacy: `https://sheepdogsim.com/privacy`
 - Sitemap: `https://sheepdogsim.com/sitemap.xml`
-- Social image: `https://sheepdogsim.com/og/sheepdog-sim.png`
+- Social image: `https://sheepdogsim.com/og/sheepdog-sim-v2.png`
 
 The secondary pages are flat HTML files so Cloudflare Pages keeps the same
 extensionless, no-trailing-slash URLs already used in production. Redirects,

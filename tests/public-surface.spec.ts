@@ -13,7 +13,7 @@ describe('public version 3 surface', () => {
     expect(html).toContain('rel="canonical" href="https://sheepdogsim.com/"');
     expect(html).toContain('rel="manifest" href="/site.webmanifest"');
     expect(html).toContain('property="og:image"');
-    expect(html).toContain('og/sheepdog-sim.png');
+    expect(html).toContain('og/sheepdog-sim-v2.png');
     expect(html).toContain('name="twitter:card" content="summary_large_image"');
     expect(html).toContain('name="robots" content="index, follow');
     expect(html).toContain('type="application/ld+json"');

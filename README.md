@@ -8,7 +8,7 @@ well-timed bark to bring stragglers home.
 [Controls and help](https://sheepdogsim.com/support) ·
 [Report a bug](https://github.com/matthew-kissinger/sds/issues)
 
-![Sheepdog Sim field and title](app/public/og/sheepdog-sim.png)
+![Sheepdog Sim field and title](app/public/og/sheepdog-sim-v2.png)
 
 ## In the field
 

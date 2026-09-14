@@ -41,16 +41,11 @@ seed, viewport, device scale factor, renderer and capture command beside them.
 
 ## Open Graph card
 
-Create `app/public/og/sheepdog-sim.png` at 1200 by 630 from the accepted title
-or gate-approach frame. Keep the dog, flock and open gate in the centre-safe
-area. Use only this copy:
-
-> Sheepdog Sim
->
-> Every sheep through the gate
-
-The source must be a committed SVG or HTML composition plus the real game
-capture. The exported image is a build artifact with a reproducible command.
+Create `app/public/og/sheepdog-sim-v2.png` at 1200 by 630 from the accepted
+flock-split frame. Keep the dog and reacting flock in the centre-safe area,
+with the farmhouse, barn and sky readable behind them. The card uses the real
+game frame without an added text overlay. The exported image is a build
+artifact with a reproducible command.
 Verify it at 600 by 315 and as a small link preview before release.
 
 Create `docs/launch/media/sheepdog-sim-github.jpg` at 1280 by 640 from the same

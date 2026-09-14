@@ -18,15 +18,21 @@ const sourceFiles = args.includes('--source');
 assert(!(baseUrl && sourceFiles), '--source and --url cannot be combined.');
 const retries = Number(option('retries', '1'));
 const requireAnalytics = args.includes('--require-analytics');
+const socialImageUrl = 'https://raw.githubusercontent.com/matthew-kissinger/sds/main/app/public/og/sheepdog-sim-v2.png';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function pngDimensions(bytes) {
-  assert(bytes.length >= 24, 'Social image is not a complete PNG.');
+function pngProperties(bytes) {
+  assert(bytes.length >= 26, 'Social image is not a complete PNG.');
   assert(bytes.subarray(1, 4).toString('ascii') === 'PNG', 'Social image must be PNG.');
-  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+  return {
+    width: bytes.readUInt32BE(16),
+    height: bytes.readUInt32BE(20),
+    bitDepth: bytes[24],
+    colorType: bytes[25],
+  };
 }
 
 function verifyPages(files) {
@@ -34,7 +40,11 @@ function verifyPages(files) {
   assert(/<title>Sheepdog Sim - Free Sheep Herding Browser Game<\/title>/.test(root), 'Root title does not describe the free browser game.');
   assert(!root.includes('Sheepdog Sim 3'), 'Release number leaked into the public brand.');
   assert(root.includes('name="robots" content="index, follow'), 'Root robots metadata is missing.');
-  assert(root.includes('property="og:image" content="https://sheepdogsim.com/og/sheepdog-sim.png"'), 'Open Graph image is missing.');
+  assert(root.includes(`property="og:image" content="${socialImageUrl}"`), 'Open Graph image is missing.');
+  assert(root.includes(`property="og:image:secure_url" content="${socialImageUrl}"`), 'Secure Open Graph image is missing.');
+  assert(root.includes('property="og:title" content="Sheepdog Sim | Open-source browser herding game"'), 'Open Graph title does not identify the open-source game.');
+  assert(root.includes('name="twitter:image" content="https://raw.githubusercontent.com/matthew-kissinger/sds/main/app/public/og/sheepdog-sim-v2.png"'), 'Twitter image is missing.');
+  assert(root.includes('property="og:image:type" content="image/png"'), 'Open Graph image type is missing.');
   assert(root.includes('name="twitter:card" content="summary_large_image"'), 'Twitter card metadata is missing.');
 
   const jsonLdMatch = root.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
@@ -70,6 +80,9 @@ function verifyPages(files) {
     assert(title && description, `${route} needs a title and description.`);
     titles.add(title); descriptions.add(description);
     assert(files[route].includes(`property="og:url" content="${expected}"`), `${route} social URL differs from canonical.`);
+    assert(files[route].includes('property="og:image:width" content="1200"'), `${route} lacks the social image width.`);
+    assert(files[route].includes('property="og:image:height" content="630"'), `${route} lacks the social image height.`);
+    assert(files[route].includes('property="og:image:type" content="image/png"'), `${route} lacks the social image type.`);
     assert(files[route].includes('name="twitter:card" content="summary_large_image"'), `${route} lacks its social card.`);
   }
   assert(titles.size === Object.keys(canonical).length, 'Page titles must be distinct.');
@@ -82,16 +95,17 @@ function verifyPages(files) {
   for (const expected of Object.values(canonical)) {
     assert(files['/sitemap.xml'].includes(`<loc>${expected}</loc>`), `Sitemap is missing ${expected}.`);
   }
-  assert(files['/sitemap.xml'].includes('https://sheepdogsim.com/og/sheepdog-sim.png'), 'Sitemap is missing the launch image.');
+  assert(files['/sitemap.xml'].includes('https://sheepdogsim.com/og/sheepdog-sim-v2.png'), 'Sitemap is missing the launch image.');
 
-  const dimensions = pngDimensions(files['/og/sheepdog-sim.png']);
-  assert(dimensions.width === 1200 && dimensions.height === 630, 'Social image must be 1200 by 630 pixels.');
+  const image = pngProperties(files['/og/sheepdog-sim-v2.png']);
+  assert(image.width === 1200 && image.height === 630, 'Social image must be 1200 by 630 pixels.');
+  assert(image.bitDepth === 8 && image.colorType === 2, 'Social image must be an 8-bit truecolor RGB PNG.');
 
   if (requireAnalytics) {
     assert(root.includes('static.cloudflareinsights.com/beacon.min.js'), 'Cloudflare Web Analytics is not enabled on the deployed page.');
   }
 
-  return { routes: Object.keys(canonical).length, image: dimensions, analytics: requireAnalytics };
+  return { routes: Object.keys(canonical).length, image, analytics: requireAnalytics };
 }
 
 function readLocal() {
@@ -103,7 +117,7 @@ function readLocal() {
     '/privacy': 'privacy.html',
     '/robots.txt': 'robots.txt',
     '/sitemap.xml': 'sitemap.xml',
-    '/og/sheepdog-sim.png': 'og/sheepdog-sim.png',
+    '/og/sheepdog-sim-v2.png': 'og/sheepdog-sim-v2.png',
   };
   const files = {};
   for (const [route, relative] of Object.entries(paths)) {
@@ -119,7 +133,7 @@ function readLocal() {
 
 async function readRemote() {
   const origin = new URL(baseUrl);
-  const routes = ['/', '/about', '/support', '/privacy', '/robots.txt', '/sitemap.xml', '/og/sheepdog-sim.png'];
+  const routes = ['/', '/about', '/support', '/privacy', '/robots.txt', '/sitemap.xml', '/og/sheepdog-sim-v2.png'];
   const files = {};
   for (const route of routes) {
     const response = await fetch(new URL(route, origin), {
