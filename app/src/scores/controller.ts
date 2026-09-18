@@ -13,6 +13,7 @@ export interface ScoresController {
   ensureIdentity(): Promise<ScoreIdentity | null>;
   rename(displayName: string): Promise<boolean>;
   loadBoard(flockSize: FlockSize): Promise<void>;
+  loadMyRuns(): Promise<void>;
   submit(run: CompletedRun): Promise<void>;
 }
 
@@ -24,6 +25,7 @@ export function createScoresController(
   let identityPromise: Promise<ScoreIdentity | null> | null = null;
   let lastRunKey = '';
   let boardRequest = 0;
+  let runsRequest = 0;
 
   const register = async (fresh = false): Promise<ScoreIdentity> => {
     const stored = fresh ? null : storage.load();
@@ -196,6 +198,34 @@ export function createScoresController(
           boardFlockSize: flockSize,
           boardEntries: [],
           boardMessage: 'Online times are unavailable. Play still works.',
+        });
+      }
+    },
+
+    async loadMyRuns() {
+      const request = ++runsRequest;
+      useScoreStore.getState().patch({
+        runsStatus: 'loading', runs: [], runsMessage: 'Loading your times.',
+      });
+      try {
+        // Needs an identity before it can ask for one player's own history,
+        // and the identity call is the same one the rest of the panel uses,
+        // so this costs nothing extra once a player has played at all.
+        const identity = await ensureIdentity();
+        if (identity === null || token === null) throw new ScoreApiError(503, 'identity unavailable');
+        const runs = await api.myRuns(token);
+        if (request !== runsRequest) return;
+        useScoreStore.getState().patch({
+          runsStatus: 'ready',
+          runs,
+          runsMessage: runs.length === 0 ? 'No finished runs yet.' : '',
+        });
+      } catch {
+        if (request !== runsRequest) return;
+        useScoreStore.getState().patch({
+          runsStatus: 'offline',
+          runs: [],
+          runsMessage: 'Your times are unavailable. Play still works.',
         });
       }
     },

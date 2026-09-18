@@ -1097,6 +1097,60 @@ export function formatScore(mode: GameMode | 'solo', score: number | null): stri
   return String(score);
 }
 
+/**
+ * One of a player's own runs, newest first.
+ *
+ * The leaderboard aggregates: `getLeaderboard` is `GROUP BY persistent_id` with
+ * a best-score aggregate, so a player's second and slower run is stored and
+ * then summarised away. Players read that as the run not having been recorded
+ * at all, and reported it as such. Every submission has always been its own row
+ * in `score_submissions`; there was simply no way to read your own back. This is
+ * that read, and it adds no writes and no schema.
+ */
+export interface PlayerScoreRow {
+  sheepCount: number;
+  score: number;
+  submittedAt: number;
+}
+
+/**
+ * A player's own solo runs for one score scene, newest first.
+ *
+ * Scoped to the ranked counts for the scene rather than returning whatever is
+ * in the table, so a row written under a count that scene never ranked cannot
+ * surface in a player's history as though it were comparable. Reads only; the
+ * caller is responsible for having authenticated the persistent id, because
+ * this returns one player's entire record on request.
+ */
+export async function getPlayerScores(
+  db: D1Database,
+  persistentId: string,
+  sceneId: string,
+  limit = 200,
+): Promise<PlayerScoreRow[]> {
+  const counts = rankedCountsForScoreScene(sceneId);
+  if (counts.length === 0) return [];
+  const slots = counts.map(() => '?').join(', ');
+  const { results } = await db
+    .prepare(
+      `SELECT sheep_count, score, submitted_at
+         FROM score_submissions
+        WHERE persistent_id = ?
+          AND game_mode = 'soloClassic'
+          AND scene_id = ?
+          AND sheep_count IN (${slots})
+        ORDER BY submitted_at DESC
+        LIMIT ?`,
+    )
+    .bind(persistentId, sceneId, ...counts, limit)
+    .all<{ sheep_count: number; score: number; submitted_at: number }>();
+  return (results || []).map((row) => ({
+    sheepCount: row.sheep_count,
+    score: row.score,
+    submittedAt: row.submitted_at,
+  }));
+}
+
 export interface LeaderboardEntry {
   rank: number;
   displayName: string;

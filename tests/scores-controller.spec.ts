@@ -39,6 +39,7 @@ describe('scores controller', () => {
       },
       async rename() { return freshReceipt.playerProfile; },
       async submit() {},
+      async myRuns() { return []; },
       async leaderboard() { return []; },
     };
 
@@ -75,6 +76,7 @@ describe('scores controller', () => {
         expect(seconds).toBe(123.4);
         if (token === 'token-1') throw new ScoreApiError(401, 'expired');
       },
+      async myRuns() { return []; },
       async leaderboard() {
         return [{
           rank: 7, persistentId: 'pid-1', displayName: 'GentleGuide',
@@ -107,6 +109,7 @@ describe('scores controller', () => {
       },
       async rename() { return freshReceipt.playerProfile; },
       async submit() {},
+      async myRuns() { return []; },
       async leaderboard() {
         return [{
           rank: 4, persistentId: 'pid-new', displayName: 'CalmKeeper',
@@ -129,6 +132,7 @@ describe('scores controller', () => {
       async register() { throw new TypeError('offline'); },
       async rename() { throw new TypeError('offline'); },
       async submit() { throw new TypeError('offline'); },
+      async myRuns() { return []; },
       async leaderboard() { throw new TypeError('offline'); },
     };
     const controller = createScoresController(api, memoryStorage());
@@ -141,12 +145,65 @@ describe('scores controller', () => {
     });
   });
 
+  it('loads every run a player has finished, not just their best', async () => {
+    // The defect this covers is a reporting one: a player's slower second run
+    // was recorded and then aggregated out of the board, which reads as the
+    // run not having counted. Two runs at the same flock size, one slower,
+    // must BOTH survive the round trip - a board query would return one.
+    const storage = memoryStorage({
+      persistentId: 'pid-1', authSecret: 'secret-1',
+      displayName: 'GentleGuide', fullName: 'GentleGuide#0001',
+    });
+    let seenToken = '';
+    const api: ScoreApi = {
+      async register() { return freshReceipt; },
+      async rename() { return freshReceipt.playerProfile; },
+      async submit() {},
+      async myRuns(token) {
+        seenToken = token;
+        return [
+          { flockSize: 75, scoreSeconds: 91.5, submittedAt: 200 },
+          { flockSize: 75, scoreSeconds: 64.25, submittedAt: 100 },
+          { flockSize: 25, scoreSeconds: 30, submittedAt: 50 },
+        ];
+      },
+      async leaderboard() { return []; },
+    };
+
+    await createScoresController(api, storage).loadMyRuns();
+
+    expect(seenToken).toBe('token-new');
+    expect(useScoreStore.getState().runsStatus).toBe('ready');
+    expect(useScoreStore.getState().runs).toHaveLength(3);
+    // The slower 75 run is present alongside the faster one, across sizes.
+    expect(useScoreStore.getState().runs.map((run) => run.scoreSeconds))
+      .toEqual([91.5, 64.25, 30]);
+  });
+
+  it('keeps a player history read fail-soft when the service is unavailable', async () => {
+    const api: ScoreApi = {
+      async register() { throw new TypeError('offline'); },
+      async rename() { throw new TypeError('offline'); },
+      async submit() {},
+      async myRuns() { throw new TypeError('offline'); },
+      async leaderboard() { return []; },
+    };
+
+    await createScoresController(api, memoryStorage()).loadMyRuns();
+
+    expect(useScoreStore.getState()).toMatchObject({
+      runsStatus: 'offline', runs: [],
+      runsMessage: 'Your times are unavailable. Play still works.',
+    });
+  });
+
   it('loads a public board without requiring a player identity', async () => {
     let registered = false;
     const api: ScoreApi = {
       async register() { registered = true; return freshReceipt; },
       async rename() { return freshReceipt.playerProfile; },
       async submit() {},
+      async myRuns() { return []; },
       async leaderboard(flockSize) {
         expect(flockSize).toBe(75);
         return [{

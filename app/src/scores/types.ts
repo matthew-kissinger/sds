@@ -34,3 +34,16 @@ export interface CompletedRun {
   readonly completionTimeMs: number;
   readonly completionTick: number;
 }
+
+/**
+ * One of the player's own completed runs.
+ *
+ * The board shows one row per player, so a second and slower run is recorded
+ * and then aggregated out of the display. Players read that as the run not
+ * having been saved. This is the same submission read back unaggregated.
+ */
+export interface PlayerRun {
+  readonly flockSize: FlockSize;
+  readonly scoreSeconds: number;
+  readonly submittedAt: number;
+}
