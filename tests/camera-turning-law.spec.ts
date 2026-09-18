@@ -33,8 +33,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Dog } from '@sim/types';
 import {
+  REDUCED_MOTION_TURNING,
   createFollowFraming,
   followBearing,
+  slowerTurning,
   type FollowFraming,
   type FollowTurning,
 } from '@app/camera/followFraming';
@@ -332,5 +334,58 @@ describe('Follow reseat', () => {
     travel(dog, 1.9);
     framing.update(DT, dog);
     expect(framing.bearing).toBeCloseTo(1.9, 12);
+  });
+});
+
+describe('what Reduce motion does to the bearing', () => {
+  /**
+   * Reduce motion must SLOW the camera, not stop it following.
+   *
+   * It used to clamp the turning to the `off` end stop, where the bearing is
+   * pinned to wherever it was armed. As something a player can ASK for that is
+   * fine, and it is still available. As the thing Reduce motion hands out it
+   * was a defect, and a quiet one, because hardly anyone chooses this setting:
+   * it follows the operating system's `prefers-reduced-motion` until the player
+   * touches the toggle, and phones ship with that on far more often than
+   * desktops do. Those players got a camera that never turned at all.
+   *
+   * It was not only a camera preference either. The movement basis tracks this
+   * bearing, so pinning the bearing pinned the basis, and a held thumb turned
+   * the dog through one corner and then ran it in a straight line. Measured on
+   * a phone viewport: 88.5 degrees of total turn against 281.7 for the same
+   * hold, with the settled turn rate at exactly zero.
+   */
+  it('clamps to a profile that still tracks, not to the end stop', () => {
+    expect(REDUCED_MOTION_TURNING).not.toBe('off');
+    // And the profile it picks is one the rig actually turns on. Ninety degrees
+    // of standing error, held: the end stop takes none of it.
+    const { framing, dog } = seat(REDUCED_MOTION_TURNING);
+    const before = framing.bearing;
+    for (let frame = 0; frame < 240; frame++) {
+      travel(dog, Math.PI / 2);
+      framing.update(DT, dog);
+    }
+    expect(Math.abs(framing.bearing - before)).toBeGreaterThan(0.5);
+  });
+
+  it('pins the bearing at the end stop, which is why it is the wrong default', () => {
+    // The behaviour Reduce motion used to inherit, stated so the reason it was
+    // wrong for an unchosen setting is visible rather than implied.
+    const { framing, dog } = seat('off');
+    const before = framing.bearing;
+    for (let frame = 0; frame < 240; frame++) {
+      travel(dog, Math.PI / 2);
+      framing.update(DT, dog);
+    }
+    expect(framing.bearing).toBeCloseTo(before, 12);
+  });
+
+  it('can only ever lower the profile, never raise it', () => {
+    // Reduce motion still means less motion. A player already at the end stop
+    // keeps it; one on a faster profile is brought down rather than up.
+    expect(slowerTurning('off', REDUCED_MOTION_TURNING)).toBe('off');
+    expect(slowerTurning('quick', REDUCED_MOTION_TURNING)).toBe(REDUCED_MOTION_TURNING);
+    expect(slowerTurning('gentle', 'quick')).toBe('gentle');
+    expect(slowerTurning(REDUCED_MOTION_TURNING, 'off')).toBe('off');
   });
 });

@@ -7,7 +7,11 @@ import {
   type InputAction,
   type QualityPreference,
 } from '@app/state/store';
-import type { FollowTurning } from '@app/camera/followFraming';
+import {
+  REDUCED_MOTION_TURNING,
+  slowerTurning,
+  type FollowTurning,
+} from '@app/camera/followFraming';
 
 const AUDIO_LABELS: Readonly<Record<AudioBusPreference, string>> = {
   ambient: 'Meadow', flock: 'Sheep', dog: 'Dog', world: 'Field', ui: 'Interface',
@@ -91,7 +95,9 @@ export function SettingsPanel() {
   const state = useGameStore();
   const actions = Object.keys(BINDING_LABELS) as InputAction[];
   // What the camera is actually doing, which is the clamp and not the store.
-  const turning: FollowTurning = state.reduceMotion ? 'off' : state.followTurning;
+  const turning: FollowTurning = state.reduceMotion
+    ? slowerTurning(state.followTurning, REDUCED_MOTION_TURNING)
+    : state.followTurning;
 
   return (
     <div className="herd-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -142,19 +148,22 @@ export function SettingsPanel() {
             <select
               className="herd-select"
               aria-label="Follow camera turning"
-              value={turning}
-              disabled={state.reduceMotion}
+              value={state.followTurning}
               onChange={(event) => state.setFollowTurning(event.target.value as FollowTurning)}
             >
               {(Object.keys(TURNING_LABELS) as FollowTurning[]).map((value) => (
                 <option key={value} value={value}>{TURNING_LABELS[value]}</option>
               ))}
             </select>
-            {/* The camera is clamped, not rewritten, so the row says what it is
-                doing instead of disagreeing silently with the stored value. */}
+            {/* The camera is clamped, not rewritten, so the select keeps
+                showing the player's own choice and this line says what the
+                clamp is doing to it. The control stays enabled on purpose:
+                Reduce motion lowers the profile but never raises it, so Off is
+                still reachable, and this is the row where taking an
+                accessibility option away would cost the most. */}
             <span className="herd-setting__label">
-              {state.reduceMotion
-                ? 'Reduce motion is holding this at Off.'
+              {state.reduceMotion && turning !== state.followTurning
+                ? `Reduce motion is limiting this to ${TURNING_LABELS[turning]}.`
                 : TURNING_NOTES[turning]}
             </span>
           </div>

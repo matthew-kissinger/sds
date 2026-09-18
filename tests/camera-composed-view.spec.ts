@@ -148,22 +148,37 @@ const ROLL_SLACK = 1e-9;
  *
  * The two runs are separate rigs over separate float paths, so a law resolved
  * twice agrees to a few ulps rather than exactly. That alone would justify
- * 1e-6. This is larger, and the reason is a real asymmetry rather than
- * rounding: Reduce motion pins Follow's bearing at the `off` end stop, so a
- * re-arm hands the carry a bigger step, and the carry unwinds it at the same
- * capped rate for LONGER. The two runs therefore settle at different moments,
- * and in the settling tail one is briefly turning while the other has stopped.
+ * 1e-6. Both terms below are larger, and what they are sized for CHANGED when
+ * Reduce motion stopped clamping the turning to the `off` end stop.
  *
- * Measured over the full sweep after the completion fix, that tail is the only
- * thing left: 1.23e-4 deg/s on gentle and 1.74e-4 on quick, on `sim replaced
- * under a settled Follow`, with BOTH runs' rates rounding to 0.000 deg/s. The
- * same cases measured +0.317 deg/s before. This value is six above the largest
- * residual and five orders of magnitude below the frame's own 90 deg/s ceiling,
- * so it cannot absorb anything a player could see: the breach this assertion
- * was written against was 22.3 deg/s, and a slack that hid that would have to
- * be 100,000 times wider.
+ * It used to pin Follow's bearing, which made the two runs structurally
+ * different: a re-arm handed the carry a bigger step, the carry unwound it at
+ * the same capped rate for longer, and somewhere in the settling tail one run
+ * was still turning after the other had stopped. Every residual was therefore
+ * near zero, both runs' rates rounded to 0.000 deg/s, and an ABSOLUTE floor was
+ * the right shape for it.
+ *
+ * Reduce motion now clamps to the slowest profile that still TRACKS, because
+ * pinning the bearing also pinned the movement basis and took held-thumb
+ * steering away from players who never chose the setting. The consequence here
+ * is that on `gentle` and `off` the two runs now resolve the SAME turning
+ * profile, differing only in blend length and budget scale, so the comparison
+ * is between two live trajectories both turning at around 14.83 deg/s rather
+ * than between one that turns and one that does not. Float divergence between
+ * two long, nearly-identical curves scales with the rate they are running at,
+ * so an absolute-only floor is the wrong shape: measured worst residual is
+ * 4.36e-3 deg/s against rates of 14.826 and 14.831, which is 2.9e-4 of the
+ * rate and invisible - one degree of accumulated difference every four minutes.
+ *
+ * Hence both terms. The floor still covers the near-zero tail the old mechanism
+ * left. The relative term covers divergence proportional to the rate, at 1e-3,
+ * which is three times the largest measured residual and still 0.015 deg/s at a
+ * full 14.83. Neither can absorb anything a player could see: the breach this
+ * assertion was written against was 22.3 deg/s, and the relative term would
+ * have to be 1.5 rather than 1e-3 to hide it.
  */
 const MONOTONE_SLACK = 2e-5;
+const MONOTONE_RELATIVE = 1e-3;
 
 function makeDog(x: number, z: number): Dog {
   return {
@@ -927,24 +942,33 @@ describe('composed view rotation', () => {
       // dog straight through the results screen, and the exit holds nothing
       // because there is no step to recover from. `off` passes clean.
       //
-      // The second mechanism is not a defect and cannot be removed, because it
-      // IS the setting: Reduce motion clamps the turning to the `off` end stop,
-      // so Follow's bearing does not track, and a re-arm therefore hands the
-      // carry a larger step which it unwinds at the same capped rate for
-      // longer. The two runs settle at different moments, so somewhere in the
-      // tail one is still turning after the other has stopped. What survives of
-      // it on the VIEW is that tail and only that tail: 4 comparisons on gentle
-      // and 5 on quick, all in `sim replaced under a settled Follow`, worst
-      // margin 1.23e-4 and 1.74e-4 deg/s, with BOTH runs' rates rounding to
-      // 0.000 deg/s. The same cases measured +0.317 deg/s before the completion
-      // fix. The larger face of this mechanism was on the horizon, and it is
-      // the pose term described above rather than rotation.
+      // The second mechanism USED to be the setting itself. Reduce motion
+      // clamped the turning to the `off` end stop, Follow's bearing did not
+      // track, and a re-arm handed the carry a larger step which it unwound at
+      // the same capped rate for longer. The two runs settled at different
+      // moments, so somewhere in the tail one was still turning after the other
+      // had stopped: 4 comparisons on gentle and 5 on quick, worst margin
+      // 1.23e-4 and 1.74e-4 deg/s, both runs' rates rounding to 0.000.
       //
-      // MONOTONE_SLACK is sized for that tail and is documented where it is
-      // defined. It is 1.1e-3 deg/s. It would have absorbed none of the numbers
-      // in the table above - the smallest of them is 9,000 times wider - so a
-      // green run here is still a receipt that the phase-scale breaches are
-      // gone, which is the whole reason this test exists.
+      // That mechanism is gone, and not because it was hidden. Pinning the
+      // bearing also pinned the movement basis that tracks it, so a held thumb
+      // turned the dog through one corner and then ran it straight - measured
+      // at 88.5 degrees of total turn against 281.7 for the same hold. Players
+      // mostly do not choose this setting; it follows the operating system, and
+      // phones ship with it on. So Reduce motion now clamps to the slowest
+      // profile that still TRACKS, and `off` remains available to anyone who
+      // actually wants the bearing pinned.
+      //
+      // What that leaves here is a different shape of residual. On `gentle` and
+      // `off` the two runs now resolve the SAME turning profile and differ only
+      // in blend length and budget scale, so this compares two live curves both
+      // running near 14.83 deg/s rather than one that turns against one that
+      // does not. The divergence scales with the rate, which is why the slack
+      // now has a relative term alongside the floor. Both are documented where
+      // they are defined, and neither would have absorbed any number in the
+      // table above: the smallest of those is still 1,700 times the largest
+      // measured residual, so a green run here remains a receipt that the
+      // phase-scale breaches are gone, which is the whole reason this exists.
       interface Breach {
         excess: number;
         line: string;
@@ -955,7 +979,7 @@ describe('composed view rotation', () => {
       const note = (
         worst: Breach, excess: number, plain: number, reduced: number, where: string,
       ): void => {
-        if (excess <= MONOTONE_SLACK) return;
+        if (excess <= MONOTONE_SLACK + Math.abs(plain) * MONOTONE_RELATIVE) return;
         breaches += 1;
         if (excess <= worst.excess) return;
         worst.excess = excess;
