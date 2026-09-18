@@ -20,6 +20,7 @@ it('persists a completed best before online submission and reloads it after an o
     async register() { throw new ScoreApiError(503, 'unavailable'); },
     async rename() { throw new ScoreApiError(503, 'unavailable'); },
     async submit() { throw new ScoreApiError(503, 'unavailable'); },
+    async myRuns() { throw new ScoreApiError(503, 'unavailable'); },
     async leaderboard() { throw new ScoreApiError(503, 'unavailable'); },
   }, { load: () => null, save: () => {}, clear: () => {} });
   unsubscribe = controller.start();

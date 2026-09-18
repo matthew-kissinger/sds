@@ -14,6 +14,7 @@ import {
   submitScore,
   getLeaderboard,
   getAllLeaderboards,
+  getPlayerScores,
   isValidGameMode,
   isDailyMode,
   validateDailySubmission,
@@ -300,6 +301,7 @@ export default {
       path === '/api/event' ||
       path === '/api/leaderboard' ||
       path === '/api/leaderboards' ||
+      path === '/api/my-scores' ||
       path.startsWith('/api/rooms');
     if (rateLimited) {
       const clientIp = request.headers.get('cf-connecting-ip');
@@ -720,6 +722,25 @@ export default {
           200,
           cors,
         );
+      }
+
+      if (path === '/api/my-scores' && method === 'GET') {
+        // A player's own runs. The leaderboard aggregates to one row per
+        // player, so a slower second run is recorded and then summarised out
+        // of the display; players read that as the run not having counted.
+        // Every submission has always been its own row - this is the missing
+        // read, not a new write, and there is no schema change behind it.
+        //
+        // Authenticated, and deliberately: this returns one player's whole
+        // record, and the persistent id comes from the verified token rather
+        // than from a query parameter, so the endpoint cannot be pointed at
+        // somebody else by editing a URL.
+        const payload = await extractToken(request, env, null);
+        if (!payload) return err('missing or invalid token', 401, cors);
+        const scene = url.searchParams.get('scene') || '';
+        if (!isKnownScoreScene(scene)) return err('unknown scene', 400, cors);
+        const entries = await getPlayerScores(env.DB, payload.persistent_id, scene);
+        return json({ entries }, 200, cors);
       }
 
       if (path === '/api/leaderboard' && method === 'GET') {

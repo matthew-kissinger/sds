@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import type { FlockSize } from '@app/state/store';
+import { FLOCK_SIZES, type FlockSize } from '@app/state/store';
 import { SCORE_SCENE_ID } from './config';
-import type { LeaderboardEntry, PlayerProfile, RegisterReceipt } from './types';
+import type { LeaderboardEntry, PlayerProfile, PlayerRun, RegisterReceipt } from './types';
 
 type Fetcher = typeof fetch;
 
@@ -56,6 +56,7 @@ export interface ScoreApi {
   rename(token: string, displayName: string): Promise<PlayerProfile>;
   submit(token: string, flockSize: FlockSize, seconds: number): Promise<void>;
   leaderboard(flockSize: FlockSize): Promise<LeaderboardEntry[]>;
+  myRuns(token: string): Promise<PlayerRun[]>;
 }
 
 export function createScoreApi(base: string, fetcher: Fetcher = fetch, requestTimeoutMs = 8_000): ScoreApi {
@@ -103,6 +104,32 @@ export function createScoreApi(base: string, fetcher: Fetcher = fetch, requestTi
         score: seconds,
         additionalData: { sceneId: SCORE_SCENE_ID, sheepCount: flockSize },
       }, token);
+    },
+
+    async myRuns(token) {
+      // Authenticated on the server against the token's own persistent id, so
+      // there is no player identifier in this URL to tamper with.
+      const query = new URLSearchParams({ scene: SCORE_SCENE_ID });
+      const receipt = await request(`${base}/api/my-scores?${query}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!Array.isArray(receipt.entries)) throw new ScoreApiError(502, 'run entries absent');
+      return receipt.entries.flatMap((value): PlayerRun[] => {
+        const raw = (value ?? {}) as Record<string, unknown>;
+        // A count the client does not offer is dropped rather than shown: the
+        // ranked set is the contract, and a stale row under some other count
+        // is not a time the player can compare against anything.
+        if (
+          typeof raw.score !== 'number'
+          || typeof raw.submittedAt !== 'number'
+          || !FLOCK_SIZES.includes(raw.sheepCount as FlockSize)
+        ) return [];
+        return [{
+          flockSize: raw.sheepCount as FlockSize,
+          scoreSeconds: raw.score,
+          submittedAt: raw.submittedAt,
+        }];
+      });
     },
 
     async leaderboard(flockSize) {

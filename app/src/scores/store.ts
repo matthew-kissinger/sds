@@ -3,7 +3,7 @@
 
 import { create } from 'zustand';
 import type { FlockSize } from '@app/state/store';
-import type { LeaderboardEntry, ScoreIdentity } from './types';
+import type { LeaderboardEntry, PlayerRun, ScoreIdentity } from './types';
 
 export type IdentityStatus = 'idle' | 'connecting' | 'ready' | 'offline';
 export type SubmissionStatus = 'idle' | 'submitting' | 'ready' | 'offline';
@@ -24,6 +24,9 @@ export interface ScoreStore {
   readonly boardFlockSize: FlockSize;
   readonly boardEntries: readonly LeaderboardEntry[];
   readonly boardMessage: string;
+  readonly runsStatus: BoardStatus;
+  readonly runs: readonly PlayerRun[];
+  readonly runsMessage: string;
   patch(patch: Partial<Omit<ScoreStore, 'patch'>>): void;
 }
 const INITIAL = {
@@ -41,6 +44,9 @@ const INITIAL = {
   boardFlockSize: 25 as FlockSize,
   boardEntries: [] as readonly LeaderboardEntry[],
   boardMessage: '',
+  runsStatus: 'idle' as const,
+  runs: [] as readonly PlayerRun[],
+  runsMessage: '',
 };
 
 export const useScoreStore = create<ScoreStore>()((set) => ({
