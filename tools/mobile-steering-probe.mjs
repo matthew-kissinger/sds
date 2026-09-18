@@ -32,6 +32,11 @@ const urlArg = process.argv.find((arg) => arg.startsWith('--url='));
 const url = urlArg?.slice('--url='.length) ?? 'http://localhost:4173/';
 const turningArg = process.argv.find((arg) => arg.startsWith('--turning='));
 const turning = turningArg?.slice('--turning='.length) ?? 'gentle';
+// Emulates the OS-level setting, not the in-game toggle. A phone with Reduce
+// motion on reaches the rig through `prefers-reduced-motion`, and seeding the
+// stored value cannot stand in for it: the store only honours a stored value
+// once the player has CHOSEN one, and falls back to the query otherwise.
+const reduced = process.argv.includes('--reduced');
 
 const outputDir = join(repo, 'captures', 'mobile-steering');
 mkdirSync(outputDir, { recursive: true });
@@ -40,6 +45,7 @@ const DEG = 180 / Math.PI;
 
 const report = {
   turning,
+  reduced,
   viewport: { width: 390, height: 844 },
   errors: [],
   limitation: 'Trusted CDP touch on desktop Chromium at a phone viewport.'
@@ -52,6 +58,7 @@ let context;
 try {
   browser = await launchBrowser(profile);
   context = await browser.newContext({
+    ...(reduced ? { reducedMotion: 'reduce' } : {}),
     viewport: report.viewport,
     deviceScaleFactor: 3,
     hasTouch: true,

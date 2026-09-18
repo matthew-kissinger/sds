@@ -57,7 +57,12 @@ import {
   createCustomizeFraming,
   type DogCameraAngle,
 } from './customizeFraming';
-import { createFollowFraming, type FollowTurning } from './followFraming';
+import {
+  REDUCED_MOTION_TURNING,
+  createFollowFraming,
+  slowerTurning,
+  type FollowTurning,
+} from './followFraming';
 import { createRidgeClamp } from './ridgeClamp';
 import type { FollowViewProfile } from './viewProfile';
 import {
@@ -263,7 +268,26 @@ export function createComposedRig(options: ComposedRigOptions): ComposedRig {
 
       // Reduce motion clamps the turning rather than writing to the setting, so
       // the player's own choice is still there when they switch it back off.
-      follow.setTurning(reducedMotion ? 'off' : input.turning);
+      //
+      // It clamps to the slowest TRACKING profile, and deliberately not to
+      // `off`. `off` pins the bearing where it was armed, which is a reasonable
+      // thing for a player to ASK for and the wrong thing to hand someone who
+      // never asked. Most of them never did: the setting follows the operating
+      // system's `prefers-reduced-motion` until the player touches the toggle,
+      // and phones ship with that on far more often than desktops do.
+      //
+      // It also stopped being only a camera preference. The movement basis
+      // tracks this bearing, so a pinned bearing pins the basis too, and a held
+      // thumb turns the dog through one corner and then runs it straight. That
+      // is the defect this replaces, measured at 88.5 degrees of total turn
+      // against 281.7 with the same hold and the same profile.
+      //
+      // Reduce motion still means less motion: the clamp can only ever lower
+      // the profile, so a player on `quick` gets `gentle` and a player who
+      // chose `off` keeps it.
+      follow.setTurning(reducedMotion
+        ? slowerTurning(input.turning, REDUCED_MOTION_TURNING)
+        : input.turning);
 
       // ONE SCALE FOR EVERY ROTATION ALLOWANCE THIS FILE OWNS. Reduce motion
       // lengthens the swap, and the same factor is applied to the frame's

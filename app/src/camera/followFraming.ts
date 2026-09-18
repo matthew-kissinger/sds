@@ -126,6 +126,27 @@ const MIN_HEADING = 1e-4;
  */
 export type FollowTurning = 'off' | 'gentle' | 'quick';
 
+/**
+ * The profiles in order of how much the camera moves, least first.
+ *
+ * `off` is the end stop: the bearing stays where it was armed and never tracks
+ * the dog at all. The two above it track, at different rates.
+ */
+const TURNING_ORDER: readonly FollowTurning[] = ['off', 'gentle', 'quick'];
+
+/**
+ * What Reduce motion clamps the turning DOWN to. Deliberately the slowest
+ * profile that still tracks rather than `off`, because the setting follows the
+ * operating system until a player touches it, so most of the people who get it
+ * did not ask for it, and `off` takes the camera's tracking away entirely.
+ */
+export const REDUCED_MOTION_TURNING: FollowTurning = 'gentle';
+
+/** Whichever of the two profiles moves the camera less. */
+export function slowerTurning(a: FollowTurning, b: FollowTurning): FollowTurning {
+  return TURNING_ORDER.indexOf(a) <= TURNING_ORDER.indexOf(b) ? a : b;
+}
+
 interface TurningLaw {
   /** Rate ceiling, rad/s. Zero pins the bearing. */
   readonly rate: number;
