@@ -26,14 +26,20 @@ afterEach(() => { detach(); clearIntent(); useGameStore.setState(original); vi.u
 
 describe('keyboard focus ownership', () => {
   it('holds a steady walking effort on straight and diagonal movement and restores running on release', () => {
-    key('KeyW'); key('KeyE'); key('ShiftLeft');
+    key('KeyW'); key(DEFAULT_INPUT_BINDINGS.walk); key('ShiftLeft');
     expect(keyboardAxis({ right: 0, forward: 0 }).forward).toBeCloseTo(.3);
     expect(keyboardSprint()).toBe(false);
     key('KeyD');
     const axis = keyboardAxis({ right: 0, forward: 0 });
     expect(Math.hypot(axis.right, axis.forward)).toBeCloseTo(.3);
-    key('KeyE', false, 'keyup');
-    expect(keyboardAxis({ right: 0, forward: 0 })).toEqual({ right: 1, forward: 1 });
+    key(DEFAULT_INPUT_BINDINGS.walk, false, 'keyup');
+    // A digital diagonal is one direction at full effort. The device normalizes
+    // rather than leaving the clamp in `worldFromAxis` to shorten it, because
+    // the conditioner downstream is handed the effort instead of recovering it
+    // from the length of the vector.
+    const running = keyboardAxis({ right: 0, forward: 0 });
+    expect(Math.hypot(running.right, running.forward)).toBeCloseTo(1, 12);
+    expect(running.right).toBeCloseTo(running.forward, 12);
     expect(keyboardSprint()).toBe(true);
   });
   it('supports remapped walking, ignores typing, and clears walk on blur', () => {

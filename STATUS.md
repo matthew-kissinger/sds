@@ -1,5 +1,296 @@
 # Sheepdog Sim 3 release status
 
+## Camera and movement comfort — local candidate, 2026-09-18
+
+Issue #90 reported motion sickness in the Follow camera. This change adds a
+movement conditioning layer between the devices and the sim, rebuilds Follow on
+a bearing rather than a separately smoothed aim, re-frames the rig higher and
+further per orientation, moves the eye-and-aim pairs into polar form about the
+aim - every one of them but the completion pull-back, which is bounded where it
+stands instead - adds a Follow camera turning row to Settings and lets Reduce
+motion reach the camera for the first time. Audio reference distances, sheep picking radii
+and the grass preset's justification move with it because all three were derived
+from the old rig, and the flock's displayed turn rate moves with it because 200
+animals turning is much of the same optic flow. Reasoning and measurements are in
+`docs/camera-and-movement-comfort.md`.
+
+Owner playtesting then found two control defects downstream of that work, and
+both are fixed here.
+
+The first was turning. A held direction turned the dog roughly 90 degrees and
+then ran it straight, because the movement basis was FROZEN for the length of a
+hold. It now tracks the camera bearing on a 0.2 s time constant, and the settled
+rate a held thumb produces is the Follow turning ceiling itself - measured at
+24.974 deg/s on a 390x844 touch viewport against a 25 deg/s cap, so the loop is
+bounded by the camera rather than by a second brake. The walk key moved from E
+to V for the same round of feedback; saved layouts keep whatever they had.
+
+The second was that the dog could not turn on a dime, in BOTH camera modes,
+which ruled out the basis change and pointed at the conditioning law. The cause
+was one constant and the way it had been justified. `A_LAT` was 28 m/s^2, giving
+a turning radius of `v^2 / A_LAT` = 8.0 m at a full run, against a
+`SHEEP_FLEE_RADIUS` of 8 m: the dog's turning circle was the sheep pressure zone
+exactly, so no correction near a sheep could be made without leaving the zone
+that was making it. The original note justified that number against the size of
+the FIELD - an 8 m circle being 4% of it - which is the wrong yardstick, and
+picking the wrong yardstick is how a number that unbalances the game survives
+review. `A_LAT` is now 65, the most that can be spent while `A_LAT / v` still
+governs at a full run, since the 270 deg/s ceiling takes over at 70.7. A run
+turns in 3.46 m, inside the 5 m perception radius; a sprint turns in 9.62 m,
+outside the flee radius, so sprint stays a travel gear rather than a way to
+corner inside the flock. Both relationships are asserted against the sim
+constants BY NAME in `tests/input-conditioning.spec.ts`.
+
+Relaxing the conditioning that far is only available because the camera is now
+bounded independently by its own bearing rate cap and view budget. The
+conditioning had been paying twice for a protection the rig now provides for
+itself, and the turning was the payment.
+
+Banking was decoupled from the turn crossover on the way. It had been gated to
+reach full lean where `A_LAT / v` takes over from the rate ceiling; at `A_LAT`
+65 that moves to 13.79 m/s, and gating there would have suppressed the lean
+through the middle of the speed range - exactly where the dog carries the most
+lateral acceleration, 47 m/s^2 at 10 m/s against 36 at a full run.
+
+THE SIMULATION IS NO LONGER UNTOUCHED, and that is a deliberate gameplay
+decision rather than drift. Playtesting reported sheep banking off the gate
+cheeks instead of funnelling in with the flock. The cause is that the gate is
+purely permissive: the fence force is suppressed inside the passage slot, full
+strength a metre outside it, and directed ALONG the fence, so nothing in the sim
+ever pointed a sheep at the opening. sds had a gate attraction that v3's
+clean-room rewrite dropped; it is restored here at sds's own numbers, a seek
+toward the gate at 0.5 within 30 m, armed only while a dog is inside 1.5x the
+flee radius AND on the far side of the sheep from the gate. That last condition
+is a dot product and it is the whole design: push from the correct side and the
+flock funnels, push from the wrong side and nothing helps, so it rewards a flank
+the player already had to perform rather than replacing it.
+
+Four of the five trace fixtures re-record BYTE-IDENTICAL - `flock-drift`,
+`dog-rotation`, `stamina-curve` and `bark-scatter` - which is the evidence that
+the force is inert away from the gate under pressure. `completion-run` moves,
+from 14112 ticks to 3260, and was re-recorded under tripwire 9 as an accepted
+gameplay change with the owner's approval on a local playtest, not to make a
+test pass. One seed with one scripted dog is a direction, not a balance
+measurement: the range sweep behind it is 30 m / 3260, 20 m / 3760, 15 m / 5086,
+10 m / 8211 and 6 m / 6147, and that last non-monotonic row is the noise
+showing.
+
+This candidate is not a handoff. The AGENTS.md gate is not completed and no part
+of this entry should be read as acceptance. Local `tsc --noEmit -p tsconfig.json`
+is clean, as is `eslint`. Local vitest: 107 files / 850 tests, with
+106 files / 849 tests passing and one failure.
+
+That failure is `tests/audio-manifest.spec.ts`, which is pre-existing and has
+nothing to do with this work. `assets/audio/licensed/` is gitignored at
+`.gitignore:26` while `assets/audio/manifest.json` lists two files inside it,
+`licensed/birds-loop.flac` and `licensed/pant-loop.flac`, so the ledger test
+opens a path a clean checkout does not have and fails on ENOENT rather than on a
+digest. It is the condition recorded further down this file. Every other file in
+the suite passes, including the whole of `tests/camera-composed-view.spec.ts`.
+
+The Reduce motion assertion that was red in the entry this replaces is resolved,
+and how it resolved is worth recording because half of it was the test being
+wrong rather than the rig. It compared two quantities, the view and the horizon,
+and asserted both monotone under the setting.
+
+The VIEW half was a real defect and is fixed in `composedRig`. The completion
+pull-back's translation was zero under Reduce motion while the phase still ran,
+so the camera held the pose it entered on for the phase's whole length as the
+dog ran on, and paid the accumulated gap back in one transition at the exit -
+a freeze followed by a lurch, on the commonest transition in the game, for the
+one player who asked for less motion. It measured 109, 522 and 535 breaching
+comparisons on the three turning profiles at up to +22.328 deg/s. The phase now
+arms only when the move will actually be made, so under Reduce motion the rig
+tracks the dog straight through the results screen and the exit has no step to
+recover from. What is left of that mechanism on the view is 4 and 5 comparisons
+out of 8,028 at 1.23e-4 and 1.74e-4 deg/s, with both runs' rates rounding to
+0.000, which is the settling tail of a carry and is inside the documented slack.
+
+The HORIZON half was not a defect and the assertion was wrong to ask for it.
+Under yaw the right vector and the view turn about the same axis, so the horizon
+is `view / sin(theta)` for a view `theta` off vertical - the view's rate and the
+framing's elevation multiplied together. Reduce motion runs the rig at the `off`
+end stop, which is a different framing rather than a slower one, so it may sit
+steeper and carry a smaller view rotation further round. Measured at the
+configuration that failed last, it turns the view SLOWER, 14.7704 against
+14.8167 deg/s, and carries the horizon 0.406 deg/s faster, purely because it
+sits 3.70 degrees steeper: 115.4976 degrees off world up against 111.8014. The
+identity closes to four decimals on both runs. The comparison was charging the
+setting for the pose it is supposed to choose, so the horizon now has its
+absolute ceiling asserted over the Reduce motion sweep instead - which, while
+the comparison lived there, it never had at all. Removing a failing comparison
+is the move that most deserves suspicion in this file, so the arithmetic behind
+it is in the test beside the assertion and in `feel.ts`.
+
+One more test defect surfaced on the way and is fixed: the two quantities were
+separate `expect` calls with the view first, so a view breach threw before the
+horizon was ever evaluated, and a horizon breach sat unreported behind it for a
+whole round.
+
+The defect this entry used to name as red - a sim replaced part-way through a
+Classic <-> Follow swap turning the composed view 130.3 and 142.9 deg/s - is
+fixed. The budget assertion it belonged to now passes on all three turning
+profiles, as does the assertion that Reduce motion lengthens every transition.
+
+Lint passes. The production build succeeds: `dist/assets/index-pjfxWHRE.js`,
+2,259.50 kB raw and 629.95 kB gzip, against the 2,245.92 kB / 624.22 kB gzip
+recorded for the September 8 entry below - so the conditioning layer, the one
+euro filter, the composed rig and the view budget cost 5.73 kB gzip between
+them. No renderer receipt and no frame-time percentile is claimed here.
+
+`npm run probe:release` does NOT pass, and it fails before it measures
+anything: `audio source absent: licensed/birds-loop.flac`, the same
+pre-existing condition as the ledger test. So no renderer receipt and no
+frame-time percentile is claimed here either.
+
+The shape of that condition, recorded once so it is not re-discovered as new.
+`assets/audio/licensed/` does not exist in this working tree at all, while
+`assets/audio/manifest.json` lists two files inside it,
+`licensed/birds-loop.flac` (385,053 bytes) and `licensed/pant-loop.flac`
+(1,527,871 bytes). The ledger test and the release probe both stop on it, which
+is them working. The production build does not: it succeeds, and neither sound
+appears in `dist/assets/`, so a build taken from a checkout in this state is
+missing the bird ambience and the panting loop with a green build log. Nothing
+in this candidate caused it and nothing in this candidate can fix it - the files
+are gitignored at `.gitignore:26` and so were never in the repository.
+
+**The owner reviewed this on 2026-09-18 and set it aside as not a concern for
+this work.** It is therefore not a blocker on this candidate and is not a
+question for the local pass. It is left written down because the asymmetry
+behind it is durable and is not about audio: two gates catch a missing asset and
+the build does not, so the build is the one that would carry it to players.
+
+spec/09's rule that no phase closes with failing tests is not met, and that
+accepted audio condition is the only thing holding it out.
+
+No human has evaluated how any of this feels. It is a presentation and
+interaction change, which AGENTS.md judges in motion on the running production
+build, desktop and mobile, with genuine WebGPU and forced WebGL2 receipts. None
+of those four receipts exists for this tree. The reporter on issue #90 has not
+been offered a build and nothing was posted to the thread.
+`docs/camera-comfort-local-test.md` is the procedure for the owner's local pass,
+ordered by risk, and it carries the list of numbers in this change that are
+arithmetic or judgement rather than tuned.
+
+What does exist is that the production build of this tree runs. Built and served
+with `npm run preview`, it reaches the title screen with no console errors, and
+the Settings panel carries the new row as specified: Follow camera turning,
+off / gentle / quick, defaulted to gentle, its helper line quoting the rate
+ceiling - "turning at up to 25 degrees a second" - rather than a duration, with
+Reduce motion reading "Steadier camera, softer effects. Following your system
+setting." That is a boot and a UI receipt on this bundle. It is not a motion
+review and does not stand in for one.
+
+FIRST OWNER PLAY, 2026-09-18. The camera no longer makes the owner ill, which
+is the result the whole change exists for and the first evidence for it from a
+person rather than a sweep. Two findings came back with it and both are fixed
+here.
+
+The first is the one section 2 of the local test plan was written to catch, and
+it is the risk this work created rather than the one it fixed: hold a turn and
+the dog rounded roughly a right angle and then ran straight. That was the input
+basis behaving exactly as designed - world-locked, sampled on the press and
+frozen for the hold, so "left" kept meaning the compass direction left meant at
+the moment it was pressed. The freeze was there to cut the feedback loop in
+camera-relative steering, and it was the correct call against a camera that
+could whip around: it took a held key from a widening spiral to a straight line
+and 3,828 degrees of camera yaw over a run down to 542. It is not that camera
+any more. The Follow bearing now turns at the profile's own ceiling behind a
+dead zone, so the loop has a bounded gain, and freezing the basis on top of that
+was a second brake on a loop that already had one - paid for entirely in
+steering. The basis now TRACKS the bearing on a 0.2 s time constant, which makes
+the ceiling on how fast a held direction curves the Follow turning rate itself
+and nothing else: one number, and at the `off` end stop the camera does not turn
+so a held key is world-locked exactly as before. The mode swap is the one motion
+of the basis that is not the player's, so the sample is still held for the length
+of that blend. spec/06's camera-basis bullet is amended to match.
+
+The second is that hold-to-walk on E did not work well. The logic was sound; the
+key was not. Walk is a hold used WHILE steering, so the finger on it cannot be
+one WASD needs, and E takes the ring finger off W and D mid-corner. The default
+moves to V, which is reachable without breaking the grip on the movement
+cluster, and V is added to the remap options. Existing saved layouts keep
+whatever they have - `restoreInputBindings` only fills an absent walk binding -
+so a player who has already stored E keeps E and can change it in Settings.
+
+Two tests were pinning the old defaults by spelling them out rather than by
+asserting the property, and both were rewritten to key off
+`DEFAULT_INPUT_BINDINGS.walk`. Suite after both changes: 848 of 849 passing, the
+one failure being the accepted audio condition above. Lint clean, typecheck
+clean, build succeeds at 630.05 kB gzip.
+
+The scripted acceptance driver cannot stand in for that, and its report now
+records why. `tests/helpers/herding-driver.ts` regulates the dog's speed by
+cutting the stick back to centre, so against the probe's command rate the stick
+is switched on and off rather than held at a deflection. The 25-sheep run in
+`captures/stability/production-herding-touchfix/report.json` issued 986 commands
+in about 121 s, 8.13 a second, 324 of them centred, with 487 transitions between
+centred and deflected, 4.01 a second. No ramp in `app/src/input/conditioning.ts`
+and no filter in `app/src/input/oneEuro.ts` reaches a steady state under that
+input, so nothing in that receipt is a verdict on the controls.
+
+The running-build evidence that does exist was captured mid-round from local
+build `assets/index-DAZzo4i-.js` and predates camera and input edits that landed
+after it, so it is not a receipt for this tree. On that build a 25-sheep
+production run completed in 2:01.4 with zero page errors, submitted its score,
+kept the personal best across a reload and reset the replay to 0 / 25; touch
+pause and resume left position and stamina unchanged
+(`captures/stability/touch-interruption/`); one portrait sprint frame from the
+mobile controls probe is in `captures/mobile-controls/`. All three are desktop
+Chromium with CDP touch emulation, not a physical phone.
+
+Several shipped constants are arithmetic or judgement with no motion review
+behind them, and are listed rather than presented as tuned. The 90 deg/s ceiling
+on a camera-mode swap is chosen, not measured, and its own docblock says so. The
+touch stick's 48 px radius is derived from panel pixel pitch; no thumb has been
+measured against it, and only a deflection histogram from a live build settles
+it. Its 0.06 dead zone is about 0.49 mm of travel against a general figure for
+finger tremor. The conditioner's ramps, the turn-authority window and the
+25 deg/s bearing ceiling were fitted against scripted routes and closed-form
+rotation totals, not against a player. Gentle is the default turning value by
+judgement: `off` measures 119 degrees of total rotation over a two-minute run
+against 5,204 on the rig it replaces, and frames the dog better.
+
+The turning row's helper line no longer quotes a time, and the reason is worth
+recording because it is the same class of error as the false comments this round
+keeps finding. It read "a quarter turn takes about four seconds" at gentle and
+"about two" at quick, which is 90 degrees divided by the profile's rate cap: the
+one term of the bearing law that is a duration, with the dead zone and the 1.0 s
+lag ahead of it ignored. Driven through the shipped rig at 05:00 today, a dog at
+a full run round a 90 degree corner turns the view's bearing 75.0 degrees at
+gentle and 71.2 at quick rather than 90, because the bearing settles inside the
+dead zone instead of closing it, and takes 4.17 s and 3.60 s to reach 95% of
+that; a full 90 degrees of view needs a 135 degree course change and takes
+3.87 s and 2.72 s. So the panel promised a quarter turn neither value performs
+on a quarter-turn corner, and quoted two seconds for something nearer three. The
+line now gives the rate ceiling, 25 and 40 degrees a second, which the same runs
+measure at exactly 25.00 and 40.00 deg/s of bearing at 30, 60 and 144 Hz in both
+orientations.
+
+`spec/` was swept against the shipped modules between 04:51 and 05:02 and five
+disagreements were corrected in it rather than in the code: the Settings
+inventory, which had neither the run-timer toggle, the mute control nor the
+`medium` quality tier and claimed "nothing else" (also corrected in spec/08); a
+Studio blend ceiling of 150 deg/s that no longer exists, the composed budget
+having replaced every per-stage ceiling; the claim that every eye-and-aim pair
+moves in polar form, when the completion pull-back is deliberately still a pair
+on straight lines made safe by bounding the term of its aim swing that closes on
+the eye; a mode-swap pitch range given as 22.5 to 44.9 degrees when the `quick`
+profile reaches 21.8; and a half-turn re-aim given as about 7 s against 6.5 s
+measured. The flock and dog heading rates and the completion behaviour under
+Reduce motion were absent and are now stated. Two further gaps are recorded and
+not filled: the Customize panel is a shipped UI surface with no specification
+beyond incidental mentions in the camera bullets, and
+`docs/camera-and-movement-comfort.md:1484` still argues the settings row should
+quote a quarter turn in seconds.
+
+This supersedes the follow-camera framing claims in the September 7 stabilization
+sections below, including that candidate's explicit interpretation of the 55 m/s
+ceiling as a limit on Cartesian tracking translation applied to the pose. Each
+blend now resolves its own weight against that ceiling, measured from the
+camera's own position, before committing it. Not committed, not pushed, not
+deployed, and no owner authorization is claimed.
+
 ## Walking, Studio selection and launch trailer — 2026-09-08
 
 Owner approved commit, push and deployment of the performance/HUD work and
@@ -1402,3 +1693,15 @@ commit identity.
 
 - None for the production cutover. Physical-device and final launch-media
   receipts remain follow-up evidence.
+- Follow camera turning ships at Gentle by default. Off rotates 119 degrees over
+  a two-minute run against 5,204 on the rig it replaces and frames the dog
+  better; its only cost is that the player cannot see around a corner they are
+  turning toward. Gentle is a judgement, not a measurement, and is the owner's
+  call.
+- Is the 25 m/s sprint still wanted now the commanded speed has weight? Lowering
+  it, or scaling dog and sheep speeds together, moves the trace fixtures and
+  makes existing `field-v3` times incomparable, which is why nothing in the
+  camera work depends on it.
+- Should the player have any manual camera authority? At the Off end stop the
+  whole of it is the documented camera key twice, which re-arms the bearing. A
+  real nudge would need a control surface neither screen has to spare.

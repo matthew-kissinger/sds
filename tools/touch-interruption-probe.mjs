@@ -4,6 +4,7 @@ import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { repo, startPreviewServer, stopServer } from './probe-lib.mjs';
+import { STICK_RADIUS, createStick } from './touch-stick.mjs';
 import { collectBuiltFiles } from './playtest-profile-receipt.mjs';
 const buildDir = resolve(process.argv.find(x => x.startsWith('--dist='))?.slice(7) ?? join(repo, 'dist'));
 const out = join(repo, 'captures/stability/touch-interruption');
@@ -48,9 +49,14 @@ try {
   report.samples.push(await dog());
   const sprint = page.getByRole('button', { name: 'Hold to sprint' });
   const bounds = await sprint.boundingBox(); assert.ok(bounds);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 80, y: 660, id: 1 }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 80, y: 604, id: 1 }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 80, y: 604, id: 1 }, { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2, id: 2 }] });
+  // Full deflection straight up the screen, taken from the app's own radius
+  // rather than a pixel literal: this probe is about what a second pointer does
+  // to a held stick, so the held stick has to be at the value the app calls held.
+  const stick = createStick(80, 660);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: stick.origin.x, y: stick.origin.y, id: 1 }] });
+  const full = stick.push(0, -STICK_RADIUS);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...full, id: 1 }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...full, id: 1 }, { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2, id: 2 }] });
   await page.waitForTimeout(700);
   assert.equal(await sprint.getAttribute('aria-pressed'), 'true');
   report.samples.push(await dog());

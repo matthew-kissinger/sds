@@ -57,23 +57,43 @@ export function CustomizePanel() {
   }, []);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef(0);
+  /**
+   * The one pointer the orbit is following, or null. The drag is a DIFFERENCE
+   * against `dragStartX`, and that only means anything while one pointer owns
+   * it: a second finger on the preview reseats it to its own x, and the next
+   * event from the first finger then measures its delta against where the
+   * SECOND one is. Two fingers held still 700 px apart, moving nothing, swung
+   * the orbit target 281 degrees back and forth every frame and turned the
+   * Studio framing at 343 deg/s, for as long as both were down - measured this
+   * round on the handlers below. A pinch on a phone is enough to do it.
+   *
+   * The id also replaces `isDragging` as the guard. That was React state set in
+   * the same handler, so it was still false for the first move events of every
+   * drag and those were dropped; a ref is set before the next event arrives.
+   * `isDragging` is left to the class name, which is the one thing it is for.
+   */
+  const dragPointer = useRef<number | null>(null);
 
   const currentName = getSheepName(selectedSheep, customSheepNames);
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (dragPointer.current !== null) return;
+    dragPointer.current = e.pointerId;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setIsDragging(true);
     dragStartX.current = e.clientX;
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
+    if (e.pointerId !== dragPointer.current) return;
     const deltaX = e.clientX - dragStartX.current;
     dragStartX.current = e.clientX;
     setOrbitAngle((prev) => prev - deltaX * 0.007);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (e.pointerId !== dragPointer.current) return;
+    dragPointer.current = null;
     try {
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     } catch {

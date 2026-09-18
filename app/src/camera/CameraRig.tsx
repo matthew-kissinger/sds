@@ -1,27 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * The camera. One system, once a frame: run both framings, blend between them
- * by the mode the store is in, write the result to the camera.
+ * The camera, as a component: turn the store into one frame of input, run
+ * `composedRig`, and write what comes back to the camera.
  *
- * NOTHING SNAPS, ANYWHERE. That is the whole design brief and it is why this
- * component holds a blend value instead of a mode:
- *
- *  - Mode toggle. Both rigs are live every frame, so neither is ever stale.
- *    The swap moves a 0..1 blend at 1 / MODE_BLEND_SECONDS and shapes it with a
- *    smoothstep, so the camera leaves and arrives at zero velocity and a second
- *    toggle mid-swap turns around instead of jumping.
- *  - Game start and reset. Both replace the sim, so the dog can move
- *    discontinuously - a reset from the gate puts it back at the spawn 160 m
- *    away. Every rig output is exponentially smoothed against the dog and held
- *    under MAX_RIG_SPEED, so that reads as a glide back rather than a whip-pan.
- *    Only the very first frame of the page seats instantly, when there is
- *    nothing to glide from.
- *  - A long frame. Position blends are capped at MAX_POSITION_K and dt is
- *    capped at MAX_FRAME_DT, so a backgrounded tab resumes without a lurch.
+ * Everything the picture is made of lives in `composedRig`, which is a plain
+ * module with no React, no store and no camera in it, so a node test can drive
+ * the pipeline the player actually looks through instead of a copy of it. What
+ * is left here is the three things only a component can do: read the store
+ * transiently, follow the canvas size, and own the projection.
  *
  * Reads are transient: `getState()` inside the frame callback, never React
- * state per frame (spec/01). This component renders once and never re-renders.
+ * state per frame (spec/01). Renders are rare and discrete rather than absent:
+ * `useReducedMotion` is a store subscription, and `useThree`'s size changes on
+ * a resize or an orientation change. Neither can happen per frame, and the rig
+ * itself is memoized across both, so no state it holds is lost to one.
  *
  * Ordering: this leaves priority at 0, so it runs after `useGameLoop` (-1) and
  * `IntentResolver` (-2) and reads a dog the sim has already stepped this frame.
@@ -35,23 +28,35 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
 import { debugFlags } from '@app/scene/glFactory';
 import { useGameStore } from '@app/state/store';
-import { createClassicFraming } from './classicFraming';
-import { createFollowFraming } from './followFraming';
-import { createCustomizeFraming } from './customizeFraming';
 import { studioLayout } from './studioLayout';
-import { MAX_FRAME_DT, MODE_BLEND_SECONDS, easeInOut } from './feel';
+import { createComposedRig, type ComposedRigInput } from './composedRig';
 import { useReducedMotion } from '@app/ui/useReducedMotion';
 import { cameraViewProfile } from './viewProfile';
 import { createCameraSubject } from './subject';
-import { createRidgeClamp } from './ridgeClamp';
-import {
-  COMPLETION_CAMERA_SECONDS,
-  advanceCompletion,
-  smoothArrival,
-} from '@app/scene/juice/completionMotion';
 
 const DEBUG = import.meta.env.DEV ? debugFlags() : new Set<string>();
 const FORCE_FOLLOW = DEBUG.has('follow');
+
+/**
+ * How far through a Classic -> Follow swap the camera is, published at module
+ * scope. 0 is fully Classic, 1 fully Follow, and it is the eased weight the
+ * picture is actually framed at rather than the linear ramp behind it.
+ *
+ * MODULE-SCOPE MUTABLE, and the same sanctioned exception `followFraming`
+ * documents for the rig bearing, for the same reason and with the same cost.
+ * The input layer has to move its movement basis across the same interval the
+ * camera does, or the player's controls change meaning in one frame while the
+ * view is still half-way between two framings. A per-frame value cannot go
+ * through the store, and a window global or a bridge singleton is not allowed,
+ * so a named module-scope value behind an accessor is what is left. The app
+ * renders exactly one CameraRig; if a second existed they would fight over it.
+ */
+let publishedModeBlend = 0;
+
+/** The eased Classic <-> Follow blend weight. 0 is Classic, 1 is Follow. */
+export function cameraModeBlend(): number {
+  return publishedModeBlend;
+}
 
 export function CameraRig() {
   const camera = useThree((state) => state.camera);
@@ -63,34 +68,47 @@ export function CameraRig() {
     [size.height, size.width],
   );
 
-  const rig = useMemo(
-    () => ({
-      classic: createClassicFraming(),
+  const rig = useMemo(() => {
+    const state = useGameStore.getState();
+    // Seated from the mode the page loaded in and the sim it was built against,
+    // so the first frame is the framing the player asked for rather than a
+    // transition into it, and a rig built on this sim has not had it replaced.
+    const follow = FORCE_FOLLOW || state.cameraMode === 'follow';
+    const input: ComposedRigInput = {
+      sim: state.sim,
+      follow,
+      reducedMotion: false,
+      turning: state.followTurning,
+      complete: false,
+      customize: false,
+      customizeTab: state.customizeTab,
+      customizeDogAngle: state.customizeDogAngle,
+      customizeOrbitAngle: state.customizeOrbitAngle,
+      customizeSelectedSheep: state.customizeSelectedSheep,
+      sheep: state.sim.state.sheep,
+    };
+    // Built once and told about the canvas through the effect below, which
+    // runs before the first frame; rebuilding it on a resize would throw away
+    // every blend in flight.
+    return {
       subject: createCameraSubject(),
-      transitionFloor: createRidgeClamp(),
-      follow: createFollowFraming(),
-      customize: createCustomizeFraming(),
-      studioEye: new THREE.Vector3(),
-      // Seated from the mode the page loaded in, so the first frame is the
-      // framing the player asked for rather than a transition into it.
-      blend: FORCE_FOLLOW || useGameStore.getState().cameraMode === 'follow' ? 1 : 0,
-      customizeBlend: 0,
-      position: new THREE.Vector3(),
-      aim: new THREE.Vector3(),
-      completionPosition: new THREE.Vector3(),
-      completionAim: new THREE.Vector3(),
-      completionTargetPosition: new THREE.Vector3(),
-      completionTargetAim: new THREE.Vector3(),
-      completionDirection: new THREE.Vector3(),
-      completion: 0,
-      wasComplete: false,
-    }),
-    [],
-  );
+      pipeline: createComposedRig({ follow, sim: state.sim }),
+      input,
+    };
+  }, []);
 
   useLayoutEffect(() => {
-    rig.follow.setView(view.follow);
-  }, [rig, view]);
+    rig.pipeline.setFollowView(view.follow);
+    rig.pipeline.setStudioDistance(studio.distanceScale);
+  }, [rig, studio, view]);
+
+  // The resolver reads the published weight at priority -2, ahead of this rig,
+  // so a page that loads in Follow would spend its first frame being told it
+  // was in Classic. Seating it here rather than in the frame callback costs a
+  // line and removes that frame.
+  useLayoutEffect(() => {
+    publishedModeBlend = rig.pipeline.modeWeight;
+  }, [rig]);
 
   useFrame((_, delta) => {
     const {
@@ -98,6 +116,7 @@ export function CameraRig() {
       cameraMode,
       gamePhase,
       uiPanel,
+      followTurning,
       customizeTab,
       customizeDogAngle,
       customizeOrbitAngle,
@@ -106,33 +125,26 @@ export function CameraRig() {
 
     const dog = rig.subject.sample(sim, delta);
     if (!dog) return;
-    const dt = Math.min(delta, MAX_FRAME_DT);
 
-    rig.classic.update(dt, dog);
-    rig.follow.update(dt, dog);
-    rig.customize.update(
-      dt,
-      customizeTab,
-      customizeDogAngle,
-      customizeOrbitAngle,
-      customizeSelectedSheep,
-      dog,
-      sim.state.sheep,
-    );
+    // One object, written in place: a fresh one per frame would allocate.
+    const input = rig.input;
+    input.sim = sim;
+    input.follow = FORCE_FOLLOW || cameraMode === 'follow';
+    input.reducedMotion = reducedMotion;
+    input.turning = followTurning;
+    input.complete = gamePhase === 'complete';
+    input.customize = uiPanel === 'customize';
+    input.customizeTab = customizeTab;
+    input.customizeDogAngle = customizeDogAngle;
+    input.customizeOrbitAngle = customizeOrbitAngle;
+    input.customizeSelectedSheep = customizeSelectedSheep;
+    input.sheep = sim.state.sheep;
 
-    const target = FORCE_FOLLOW || cameraMode === 'follow' ? 1 : 0;
-    const step = dt / (reducedMotion ? 0.15 : MODE_BLEND_SECONDS);
-    const remaining = target - rig.blend;
-    rig.blend += Math.max(-step, Math.min(step, remaining));
+    rig.pipeline.frame(delta, dog, input);
 
-    const isCustomize = uiPanel === 'customize';
-    const customizeTarget = isCustomize ? 1 : 0;
-    const customizeStep = dt / 0.4;
-    const customizeRemaining = customizeTarget - rig.customizeBlend;
-    rig.customizeBlend += Math.max(-customizeStep, Math.min(customizeStep, customizeRemaining));
-
-    const weight = easeInOut(rig.blend);
-    const cWeight = easeInOut(rig.customizeBlend);
+    const weight = rig.pipeline.modeWeight;
+    const cWeight = rig.pipeline.customizeWeight;
+    publishedModeBlend = weight;
 
     if (camera instanceof THREE.PerspectiveCamera) {
       const baseFov = 45 + (view.fov - 45) * weight;
@@ -149,61 +161,9 @@ export function CameraRig() {
         }
       } else if (camera.view?.enabled) camera.clearViewOffset();
     }
-    rig.position.lerpVectors(rig.classic.position, rig.follow.position, weight);
-    rig.aim.lerpVectors(rig.classic.aim, rig.follow.aim, weight);
 
-    if (cWeight > 0) {
-      rig.studioEye.copy(rig.customize.position).sub(rig.customize.aim)
-        .multiplyScalar(studio.distanceScale).add(rig.customize.aim);
-      rig.position.lerpVectors(rig.position, rig.studioEye, cWeight);
-      rig.aim.lerpVectors(rig.aim, rig.customize.aim, cWeight);
-    }
-
-    const complete = gamePhase === 'complete';
-    if (complete && !rig.wasComplete) {
-      rig.completionPosition.copy(rig.position);
-      rig.completionAim.copy(rig.aim);
-      rig.completionDirection
-        .subVectors(rig.completionPosition, rig.completionAim)
-        .normalize();
-      const pull = reducedMotion ? 0 : 11;
-      rig.completionTargetPosition
-        .copy(rig.completionPosition)
-        .addScaledVector(rig.completionDirection, pull);
-      rig.completionTargetPosition.y += reducedMotion ? 0 : 3.5;
-      rig.completionTargetAim.copy(rig.completionAim);
-      if (!reducedMotion) {
-        rig.completionTargetAim.x += (0 - rig.completionTargetAim.x) * 0.2;
-        rig.completionTargetAim.z += (106 - rig.completionTargetAim.z) * 0.2;
-      }
-    }
-    if (!complete && rig.wasComplete) rig.completion = 0;
-    rig.wasComplete = complete;
-
-    if (complete) {
-      rig.completion = advanceCompletion(
-        rig.completion,
-        true,
-        dt,
-        COMPLETION_CAMERA_SECONDS,
-        reducedMotion,
-      );
-      const settle = smoothArrival(rig.completion);
-      rig.position.lerpVectors(
-        rig.completionPosition,
-        rig.completionTargetPosition,
-        settle,
-      );
-      rig.aim.lerpVectors(rig.completionAim, rig.completionTargetAim, settle);
-    }
-
-    // Safe endpoints do not imply a safe path between camera modes.
-    if (weight > 0 && weight < 1 && cWeight === 0) {
-      rig.position.y = rig.transitionFloor.clamp(rig.position.y, rig.position.x,
-        rig.position.z, dog.position.x, dog.position.z, dt);
-    }
-    camera.position.copy(rig.position);
-    camera.lookAt(rig.aim);
+    camera.position.copy(rig.pipeline.position);
+    camera.lookAt(rig.pipeline.aim);
   });
 
   return null;

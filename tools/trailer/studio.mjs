@@ -45,10 +45,10 @@ try {
   await page.evaluate(()=>__trailer.find());
   await page.keyboard.down('KeyW');await page.waitForTimeout(900);
   const run=await page.evaluate(()=>__trailer.sim.state.dogs[0].velocity.magnitude());
-  await page.keyboard.down('KeyE');await page.waitForTimeout(900);
+  await page.keyboard.down('KeyV');await page.waitForTimeout(900);
   const walk=await page.evaluate(()=>__trailer.sim.state.dogs[0].velocity.magnitude());
   await page.screenshot({path:join(out,`walk-${label}.png`)});
-  await page.keyboard.up('KeyE');await page.waitForTimeout(900);
+  await page.keyboard.up('KeyV');await page.waitForTimeout(900);
   const resumed=await page.evaluate(()=>__trailer.sim.state.dogs[0].velocity.magnitude());
   await page.keyboard.up('KeyW');
   report.receipts.push({label,run,walk,resumed});

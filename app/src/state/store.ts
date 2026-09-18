@@ -22,6 +22,7 @@ import {
   type FlockVarietyId,
 } from '@app/scene/flock/sheepVariety';
 import type { DogCameraAngle } from '@app/camera/customizeFraming';
+import type { FollowTurning } from '@app/camera/followFraming';
 
 export type GamePhase = 'title' | 'playing' | 'paused' | 'complete';
 export type UiPanel = 'none' | 'pause' | 'settings' | 'customize';
@@ -71,7 +72,12 @@ export const DEFAULT_INPUT_BINDINGS: InputBindings = {
   left: 'KeyA',
   right: 'KeyD',
   sprint: 'ShiftLeft',
-  walk: 'KeyE',
+  // V rather than E, and the reason is the hand rather than the code. Walk is
+  // a HOLD used while steering, so the finger on it cannot be one that WASD
+  // needs: E takes the ring finger off W and D, which is exactly the finger
+  // mid-corner steering wants. V sits under the same hand without breaking the
+  // grip on the movement cluster.
+  walk: 'KeyV',
   bark: 'Space',
   camera: 'KeyC',
 };
@@ -81,7 +87,7 @@ export function restoreInputBindings(stored: Partial<InputBindings> = {}): Input
   const bindings = { ...DEFAULT_INPUT_BINDINGS, ...stored };
   if (stored.walk === undefined) {
     const used = new Set(Object.entries(bindings).filter(([action]) => action !== 'walk').map(([, code]) => code));
-    const free = ['KeyE', 'KeyQ', 'KeyF', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC'].find(code => !used.has(code));
+    const free = ['KeyV', 'KeyE', 'KeyQ', 'KeyF', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC'].find(code => !used.has(code));
     if (free) bindings.walk = free;
   }
   return bindings;
@@ -107,6 +113,9 @@ export interface AcceptedBark {
 interface StoredSettings {
   readonly quality?: QualityPreference;
   readonly reduceMotion?: boolean;
+  /** Absent in everything written before the toggle reached the camera. */
+  readonly reduceMotionChosen?: boolean;
+  readonly followTurning?: FollowTurning;
   readonly colorblindMarker?: boolean;
   readonly showTimer?: boolean;
   readonly inputBindings?: Partial<Record<InputAction, string>>;
@@ -135,6 +144,10 @@ export interface GameStore {
   /** One measured boot capability receipt, held for the browser session. */
   readonly autoTierReceipt: AutoTierReceipt | null;
   readonly reduceMotion: boolean;
+  /** True once the player has set the toggle themselves, false while it follows the system. */
+  readonly reduceMotionChosen: boolean;
+  /** How hard Follow may turn. Reduce motion holds the rig at `off` over this. */
+  readonly followTurning: FollowTurning;
   readonly colorblindMarker: boolean;
   readonly showTimer: boolean;
   readonly inputBindings: InputBindings;
@@ -182,6 +195,7 @@ export interface GameStore {
   recordAutoTier(receipt: AutoTierReceipt): void;
   demoteAutoTier(): void;
   setReduceMotion(reduceMotion: boolean): void;
+  setFollowTurning(followTurning: FollowTurning): void;
   setColorblindMarker(colorblindMarker: boolean): void;
   setShowTimer(showTimer: boolean): void;
   setInputBinding(action: InputAction, code: string): void;
@@ -221,6 +235,21 @@ function saveJson(key: string, value: unknown): void {
   }
 }
 
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
+/**
+ * The operating system's reduced-motion preference, or false where there is no
+ * window to ask it. It supplies the setting until the player sets the toggle
+ * themselves, from which point their value wins; reading the live query
+ * alongside a chosen value would leave a player whose system says reduce unable
+ * to turn it off. Guarded the same way `loadJson` guards storage, because the
+ * test environment is node and this runs at module load.
+ */
+function systemReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
 function initialSeed(): number {
   const raw =
     typeof window === 'undefined'
@@ -242,6 +271,8 @@ function settingsSnapshot(state: GameStore): StoredSettings {
   return {
     quality: state.quality,
     reduceMotion: state.reduceMotion,
+    reduceMotionChosen: state.reduceMotionChosen,
+    followTurning: state.followTurning,
     colorblindMarker: state.colorblindMarker,
     showTimer: state.showTimer,
     inputBindings: state.inputBindings,
@@ -257,6 +288,17 @@ export const useGameStore = create<GameStore>()((set, get) => {
   const storedCustom = loadJson<StoredCustomization>(CUSTOMIZATION_KEY, {});
   const bindings = restoreInputBindings(stored.inputBindings);
   const bests = loadJson<PersonalBests>(BESTS_KEY, EMPTY_BESTS);
+  // Once the flag is on disk it is the answer, including when it is false,
+  // because an inherited value is persisted alongside every other setting and
+  // must not become a choice by being written down. Settings written before
+  // this change carry no flag: a stored true there is the player's own opt-in,
+  // since the toggle was the only thing that could write one, while a stored
+  // false is snapshot residue from any other row and counts as unset, so the
+  // system preference keeps applying to the players this setting is for.
+  const reduceMotionChosen =
+    typeof stored.reduceMotionChosen === 'boolean'
+      ? stored.reduceMotionChosen
+      : stored.reduceMotion === true;
 
   function updateSetting(patch: Partial<GameStore>): void {
     set(patch);
@@ -296,7 +338,12 @@ export const useGameStore = create<GameStore>()((set, get) => {
         ? stored.quality
         : 'auto',
     autoTierReceipt: null,
-    reduceMotion: stored.reduceMotion === true,
+    reduceMotion: reduceMotionChosen ? stored.reduceMotion === true : systemReducedMotion(),
+    reduceMotionChosen,
+    followTurning:
+      stored.followTurning === 'off' || stored.followTurning === 'quick'
+        ? stored.followTurning
+        : 'gentle',
     colorblindMarker: stored.colorblindMarker === true,
     showTimer: stored.showTimer === true,
     inputBindings: bindings,
@@ -534,7 +581,14 @@ export const useGameStore = create<GameStore>()((set, get) => {
     },
 
     setReduceMotion(reduceMotion) {
-      updateSetting({ reduceMotion });
+      // The toggle is the only writer that makes the value the player's own.
+      // Every other settings row persists this one alongside its own and must
+      // leave an inherited value inherited.
+      updateSetting({ reduceMotion, reduceMotionChosen: true });
+    },
+
+    setFollowTurning(followTurning) {
+      updateSetting({ followTurning });
     },
 
     setColorblindMarker(colorblindMarker) {
@@ -572,3 +626,14 @@ export const useGameStore = create<GameStore>()((set, get) => {
     },
   };
 });
+
+// Turning the system preference on mid-session used to take effect at once,
+// because the hook read the query live. Keep that for a value that is still the
+// system's, and leave a chosen one alone. Nothing is stored: an unchosen value
+// is read from the system again on the next load.
+if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+  window.matchMedia(REDUCED_MOTION_QUERY).addEventListener('change', (event) => {
+    if (useGameStore.getState().reduceMotionChosen) return;
+    useGameStore.setState({ reduceMotion: event.matches });
+  });
+}

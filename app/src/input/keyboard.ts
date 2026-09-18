@@ -3,7 +3,7 @@
 /**
  * Keyboard as a device: two window listeners, one set of held keys, no state
  * machine. WASD and the arrow cluster move, Shift sprints, Space barks, C swaps
- * camera framing. Hold E for a controlled walk.
+ * camera framing. Hold the walk key (V by default) for a controlled walk.
  *
  * Keys are read by `event.code`, the PHYSICAL key, so the WASD cluster is the
  * WASD cluster on AZERTY and Dvorak too. That is also what a future remap panel
@@ -33,7 +33,19 @@ const ARROW_MOVE: ReadonlyMap<string, readonly [number, number]> = new Map([
 const held = new Set<string>();
 const WALK_EFFORT = 0.3;
 
-/** Held movement keys, summed. Diagonals come out long; `worldFromAxis` clamps. */
+/**
+ * Held movement keys, summed and then normalized to the effort they carry.
+ *
+ * The sum is normalized here rather than left for `worldFromAxis` to clamp,
+ * even though the two agree on every value a keyboard can produce today. A
+ * digital key is a step command at one effort or the other, and the conditioner
+ * downstream rate-limits a direction and a speed as separate quantities: it
+ * needs the effort handed to it, not recovered from the length of a vector that
+ * a clamp happened to shorten.
+ *
+ * Digital input never touches the analogue response curve. `WALK_EFFORT` is a
+ * spec/06 contract at 0.3, and the curve would deliver 0.136 instead.
+ */
 export function keyboardAxis(out: MoveAxis): MoveAxis {
   clearAxis(out);
   const bindings = useGameStore.getState().inputBindings;
@@ -43,12 +55,11 @@ export function keyboardAxis(out: MoveAxis): MoveAxis {
     out.right += move[0];
     out.forward += move[1];
   }
-  if (keyboardWalk()) {
-    const length = Math.hypot(out.right, out.forward);
-    if (length > 0) {
-      out.right *= WALK_EFFORT / length;
-      out.forward *= WALK_EFFORT / length;
-    }
+  const length = Math.hypot(out.right, out.forward);
+  if (length > 0) {
+    const effort = keyboardWalk() ? WALK_EFFORT : 1;
+    out.right *= effort / length;
+    out.forward *= effort / length;
   }
   return out;
 }

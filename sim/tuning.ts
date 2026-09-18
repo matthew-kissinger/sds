@@ -134,6 +134,32 @@ export const HARD_BOUNDARY_MARGIN = 0.5;
 /** Half-depth of the gate passage slot in which the fence force is skipped, m. */
 export const GATE_PASSAGE_DEPTH = 2;
 
+// --- Gate attraction --------------------------------------------------------
+// Restored from sds's `OptimizedSheep.updateBehavior`, which v3's clean-room
+// rewrite dropped. The fence force near a gate is purely permissive: it is
+// SUPPRESSED in the passage slot and full strength a metre outside it, and it
+// runs ALONG the fence, so nothing ever points a sheep at the opening. A sheep
+// arriving wide of the mouth is deflected rather than funnelled, which is the
+// bank-off at the gate cheeks that playtesting reported.
+//
+// The range is generous and the arming condition is strict, which is the shape
+// sds had and the reason it does not read as an autopilot. The attraction needs
+// a dog close enough to be applying pressure AND standing on the far side of
+// the sheep from the gate. Push from the correct side and the flock funnels;
+// push from the wrong side and nothing helps. It rewards the flank the player
+// already had to perform rather than substituting for it.
+
+/** Seek toward the gate as a fraction of a full seek force. sds's value. */
+export const GATE_ATTRACTION = 0.5;
+/** Range from the gate centre within which the attraction can act, m. */
+export const GATE_ATTRACTION_RANGE = 30;
+/**
+ * Dog proximity that arms the attraction, as a multiple of `SHEEP_FLEE_RADIUS`.
+ * Ties the trigger to the distance at which the sheep is already reacting to
+ * the dog, so the cue cannot fire off a dog the sheep is ignoring.
+ */
+export const GATE_ATTRACTION_DOG_REACH = 1.5;
+
 // --- Collision (spec/02: radius dog 1.2 / sheep 0.78, push cap 0.42 / 0.14) --
 // Owned by EntityCollision.ts, re-exported so tuning is one import.
 

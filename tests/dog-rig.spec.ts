@@ -8,7 +8,7 @@ import { makeDogMaterial } from '@app/scene/dog/dogMaterial';
 import { DogRig } from '@app/scene/dog/dogRig';
 import { SPINE, FORE_LEG } from '@app/scene/dog/dogParts';
 import { DOG_JOINTS } from '@app/scene/dog/dogRigDefinition';
-import { createDogMotion, advanceDogMotion, resetDogMotion } from '@app/scene/dog/dogMotion';
+import { createDogMotion, advanceDogMotion, resetDogMotion, DOG_MAX_BANK } from '@app/scene/dog/dogMotion';
 import { dogGaitRate, dogStanceShare, sampleDogPaw, DOG_GAIT_TAU } from '@app/scene/dog/dogGait';
 import { dogOutlineWidth } from '@app/scene/dog/outlineWidth';
 
@@ -106,7 +106,7 @@ describe('owned collie skeleton', () => {
           const motion = createDogMotion();
           advanceDogMotion(motion, 1 / 60, speed, 0, 1);
           motion.gaitPhase = phase * DOG_GAIT_TAU;
-          motion.roll = Math.sin(phase * DOG_GAIT_TAU) * 0.12;
+          motion.bank = Math.sin(phase * DOG_GAIT_TAU) * DOG_MAX_BANK;
           const yaw = phase - 0.5;
           group.rotation.y = yaw; group.updateMatrixWorld(true);
           rig.reset();
@@ -255,6 +255,52 @@ describe('dog animation timing', () => {
     expect(reduced.locomotionSpeed).toBe(normal.locomotionSpeed);
     expect(Math.abs(reduced.bob)).toBeCloseTo(Math.abs(normal.bob) * 0.25, 6);
   });
+  it('banks into a turn, at the lean angle the lateral acceleration asks for', () => {
+    // The rig this replaces took `turn * 0.02 * effort` and applied it with the
+    // opposite sign, so the dog leaned OUT of its corners. Bank is now the lean
+    // angle of a body carrying that corner's lateral acceleration, and a turn
+    // toward the dog's local +x leans it toward local +x.
+    const rate = 0.4;
+    const speed = 10;
+    const motion = createDogMotion();
+    advanceDogMotion(motion, 1 / 60, speed, 0, 1);
+    for (let frame = 1; frame <= 180; frame++) {
+      const angle = frame * rate / 60;
+      advanceDogMotion(motion, 1 / 60, speed, Math.sin(angle), Math.cos(angle));
+    }
+    expect(motion.bank).toBeCloseTo(Math.atan(rate * speed / 9.81), 2);
+
+    // And the same turn taken slowly is a flat pivot: below the crossover where
+    // a commanded turn becomes a constant radius there is no lean to show.
+    const walking = createDogMotion();
+    advanceDogMotion(walking, 1 / 60, 3, 0, 1);
+    for (let frame = 1; frame <= 180; frame++) {
+      const angle = frame * rate / 60;
+      advanceDogMotion(walking, 1 / 60, 3, Math.sin(angle), Math.cos(angle));
+    }
+    expect(walking.bank).toBe(0);
+  });
+
+  it('tips the trunk toward the inside of the turn, not the outside', () => {
+    const { rig, dispose } = fixture();
+    try {
+      const motion = createDogMotion();
+      advanceDogMotion(motion, 1 / 60, 10, 0, 1);
+      for (let frame = 1; frame <= 180; frame++) {
+        const angle = frame * 0.4 / 60;
+        advanceDogMotion(motion, 1 / 60, 10, Math.sin(angle), Math.cos(angle));
+      }
+      expect(motion.bank).toBeGreaterThan(0.2);
+      rig.reset();
+      rig.pose(motion, { groundY: () => 0 }, 0, 0, 0, 0, 1);
+      // The chest bone's own up axis, in the dog's frame. Leaning into a turn
+      // toward +x carries the top of the trunk the same way.
+      const up = new THREE.Vector3(0, 1, 0)
+        .applyQuaternion(rig.bones[3]!.getWorldQuaternion(new THREE.Quaternion()));
+      expect(up.x).toBeGreaterThan(0.1);
+    } finally { dispose(); }
+  });
+
   it('adapts outline metres to the current lens', () => {
     const narrow = 1 / Math.tan(38 * Math.PI / 360);
     const wide = 1 / Math.tan(76 * Math.PI / 360);

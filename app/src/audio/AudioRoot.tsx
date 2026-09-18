@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
+import { cameraModeBlend } from '@app/camera/CameraRig';
 import { useGameStore, type GameStore } from '@app/state/store';
 import { HerdAudioGraph } from './graph';
 import {
@@ -176,6 +177,44 @@ export function AudioRoot({ children }: PropsWithChildren) {
   );
 }
 
+/** A position or a direction, structurally. The pose check needs nothing else. */
+interface Triple {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/**
+ * Below this `|forward x up|` the basis has no right vector left to give.
+ *
+ * A well-formed camera quaternion rotates two orthogonal local axes, so the
+ * cross is 1 wherever the camera aims. Measured over a camera walking into the
+ * pole - horizontal offsets of 1 m down to 1e-9 m and then exactly 0 - it reads
+ * 1.000000000000 at every one, including the frame `lookAt` resolves with its
+ * own nudge. So this threshold has an enormous margin against any legitimate
+ * framing and fires only on a basis that has already gone wrong.
+ */
+const MIN_LISTENER_CROSS = 1e-3;
+
+/**
+ * Whether a camera pose is safe to hand to the Web Audio listener.
+ *
+ * Reads nine numbers and allocates nothing; called once a frame.
+ */
+function usablePose(position: Triple, forward: Triple, up: Triple): boolean {
+  const crossX = forward.y * up.z - forward.z * up.y;
+  const crossY = forward.z * up.x - forward.x * up.z;
+  const crossZ = forward.x * up.y - forward.y * up.x;
+  const cross = crossX * crossX + crossY * crossY + crossZ * crossZ;
+  return (
+    Number.isFinite(cross) &&
+    cross >= MIN_LISTENER_CROSS * MIN_LISTENER_CROSS &&
+    Number.isFinite(position.x) &&
+    Number.isFinite(position.y) &&
+    Number.isFinite(position.z)
+  );
+}
+
 /** Mounted inside Canvas: listener and flock scheduling stay outside React state. */
 export function AudioScene() {
   const graph = useContext(AudioGraphContext);
@@ -188,29 +227,86 @@ export function AudioScene() {
   const frame = useMemo(createSoundscapeFrame, [scheduler]);
   const commands = useMemo<AudioCommand[]>(() => [], [scheduler]);
   const listener = useMemo(() => ({
+    // Scratch for this frame's camera read.
     forward: new THREE.Vector3(),
     up: new THREE.Vector3(),
+    // The last pose that passed `usablePose`. Every read of the camera
+    // TRANSFORM below goes through these fields - the listener write and the
+    // scheduler's distance term both - so there is no second path by which a
+    // collapsed basis could reach the audio graph. Seeded to the field origin
+    // and the rest orientation `graph.setListener` itself defaults to, so even
+    // a first frame under a bad camera is a sane image rather than a silent or
+    // inverted one.
+    held: {
+      x: 0,
+      y: 3,
+      z: 0,
+      forwardX: 0,
+      forwardY: 0,
+      forwardZ: -1,
+      upX: 0,
+      upY: 1,
+      upZ: 0,
+    },
   }), []);
 
   useFrame(({ camera }) => {
     if (graph === null) return;
+    // The listener is the camera, and the camera is two rigs whose eyes stand
+    // 53 m and 29 to 36 m from the dog, with a blend between them. The
+    // reference distances in `graph.ts` and `soundscape.ts` and the selection
+    // weight in `scheduler.ts` are therefore per rig and ride that same weight:
+    // Classic never moved and keeps the mix it shipped with, and only Follow is
+    // compensated for the eye it moved to. Scaling all three to Follow alone
+    // made Classic 2.3 to 2.7 dB louder and changed which sheep it gives a
+    // voice. Moving the listener off the camera would make all three
+    // unnecessary rather than merely wrong, and that is an audio-spec decision.
+    const rigBlend = cameraModeBlend();
+    graph.setCameraBlend(rigBlend);
+    scheduler.setCameraBlend(rigBlend);
     camera.getWorldDirection(listener.forward);
     listener.up.copy(camera.up).applyQuaternion(camera.quaternion).normalize();
+    // The listener copies the camera basis, and the Web Audio panner builds its
+    // right vector from cross(forward, up) exactly as the camera does. So a
+    // degenerate camera is not only a visual problem: the same frame that flips
+    // the horizon inverts or collapses the stereo image with it. Taking the
+    // pose only when it is usable holds the mix where it was for those frames -
+    // stale rather than inverted - and keeps non-finite values out of the
+    // listener's AudioParams, which are not values a panner can interpolate
+    // from.
+    //
+    // This catches a collapsed or non-finite basis. It does NOT catch the pole
+    // crossing itself: three's `lookAt` nudges its way out of the singularity
+    // and returns a basis that is finite and orthonormal but rotated about the
+    // view axis, which no single-frame test can distinguish from a real turn.
+    // Only the camera paths that keep the aim away from the pole prevent that.
+    const held = listener.held;
+    if (usablePose(camera.position, listener.forward, listener.up)) {
+      held.x = camera.position.x;
+      held.y = camera.position.y;
+      held.z = camera.position.z;
+      held.forwardX = listener.forward.x;
+      held.forwardY = listener.forward.y;
+      held.forwardZ = listener.forward.z;
+      held.upX = listener.up.x;
+      held.upY = listener.up.y;
+      held.upZ = listener.up.z;
+    }
     graph.setListener(
-      camera.position.x,
-      camera.position.z,
-      camera.position.y,
-      listener.forward.x,
-      listener.forward.y,
-      listener.forward.z,
-      listener.up.x,
-      listener.up.y,
-      listener.up.z,
+      held.x,
+      held.z,
+      held.y,
+      held.forwardX,
+      held.forwardY,
+      held.forwardZ,
+      held.upX,
+      held.upY,
+      held.upZ,
     );
     measureSoundscape(frame, sim);
     applySoundscape(graph, frame, sim);
     commands.length = 0;
-    scheduler.scheduleFrame(sim, sim.tick, camera.position.x, camera.position.z, commands);
+    scheduler.scheduleFrame(sim, sim.tick, held.x, held.z, commands);
     for (let i = 0; i < commands.length; i++) graph.execute(commands[i]!);
   });
 

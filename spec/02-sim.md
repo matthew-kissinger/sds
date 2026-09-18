@@ -25,6 +25,19 @@ Win condition: every sheep is penned. One predicate, no stage machine, no timers
 
 **Geometry (Home Field layout, playtested numbers):** 200 x 200 m field, perimeter fence, north gate at x=0, z=100, 8 m wide, pen (pasture) rect behind it spanning x [-30, 30], z [102, 130]. Flock spawns clustered near (-20, -20) with spread radius 25. These numbers are the starting point; retune freely in playtesting, but start here.
 
+**Gate attraction (restored from sds, cycle: camera-movement-comfort):** the
+fence force near the gate is purely permissive - suppressed inside the passage
+slot, full strength just outside it, and directed ALONG the fence - so nothing
+ever points a sheep at the opening and one arriving wide of the mouth banks off
+the cheek instead of funnelling in. Players reported exactly that. sds solved it
+with a seek toward the gate at half strength, and the arming condition is the
+design rather than the radius: the dog must be close enough to be pressing and
+standing on the far side of the sheep from the gate. Push correctly and the
+flock funnels; push from the wrong side and nothing helps, so this rewards a
+flank the player already had to perform instead of substituting for it. It moves
+the 25-sheep completion trace from 14112 ticks to 3260, accepted as a deliberate
+gameplay change under tripwire 9.
+
 **Mechanism (PenBarrier, the newer and better sds design):** the fence is real collision with one passable gate gap, so "sheep is inside the pen" geometrically implies "herded through the gate." Retirement is calm: a penned sheep walks to a seeded settle spot and grazes. No teleport, no despawn, no flag ceremony. The older sds gate-passage-flag flow (checkGatePassage, hasPassedGate) is reference-only; do not implement both (sds carried three parallel retirement paths).
 
 **Sheep lifecycle is one enum:** `active | retiring | penned`. Single source of truth for "is this sheep in play." No boolean accretion (sds failure mode: five flags conjoined to answer that question).
@@ -42,6 +55,9 @@ Movement:   dampingFactor 0.98, velocitySmoothing 0.85,
             maxSpeed sheep 1.5 / dog 15, accel 40, decel 30
 Stamina:    drain 30/s sprinting, regen 20/s
 Boundary:   margin 10, forceMultiplier 1.5
+Gate:       passage slot half-depth 2, attraction 0.5 seek within 30 m of the
+            gate, armed only while a dog is inside 1.5x the flee radius AND on
+            the far side of the sheep from the gate (dot(toGate, toDog) < 0)
 Collision:  body radius dog 1.2 / sheep 0.78, push cap per tick 0.42 / 0.14
 Bark:       range 24, cone cos(50 deg), decay 36 ticks
 Tick:       60 Hz fixed

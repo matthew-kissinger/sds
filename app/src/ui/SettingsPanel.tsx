@@ -7,6 +7,7 @@ import {
   type InputAction,
   type QualityPreference,
 } from '@app/state/store';
+import type { FollowTurning } from '@app/camera/followFraming';
 
 const AUDIO_LABELS: Readonly<Record<AudioBusPreference, string>> = {
   ambient: 'Meadow', flock: 'Sheep', dog: 'Dog', world: 'Field', ui: 'Interface',
@@ -17,11 +18,48 @@ const BINDING_LABELS: Readonly<Record<InputAction, string>> = {
   right: 'Move right', sprint: 'Sprint', walk: 'Hold to walk', bark: 'Bark', camera: 'Camera',
 };
 
+const TURNING_LABELS: Readonly<Record<FollowTurning, string>> = {
+  off: 'Off', gentle: 'Gentle', quick: 'Quick',
+};
+
+/**
+ * One line for the selected value, so the row costs one line and not three.
+ *
+ * A RATE RATHER THAN A DURATION, and the durations these replace are why. "A
+ * quarter turn takes about two seconds" was 90 degrees divided by the profile's
+ * rate cap, which is the only term of the bearing law that is a duration. Two
+ * things sit ahead of that cap - a dead zone taken off the bearing error, 20
+ * degrees at gentle and 25 at quick, and a 1.0 s lag - so the quotient is a
+ * floor, and the row presented it as typical.
+ *
+ * Measured this round through the shipped rig, dog at a full run around a 90
+ * degree corner, at 30, 60 and 144 Hz in landscape and portrait: the view's
+ * bearing turns 75.0 degrees at gentle and 71.2 at quick, not 90, because it
+ * settles inside the dead zone rather than closing it, and it reaches 95% of
+ * that in 4.17 s and 3.60 s. Turning the view a full 90 degrees needs a 135
+ * degree course change, and takes 3.87 s and 2.72 s. So the panel quoted two
+ * seconds for something nearer three, and promised a quarter turn that a
+ * quarter-turn corner does not produce at either value.
+ *
+ * The ceilings below are exact rather than approximate: the view's bearing
+ * peaks at 25.00 and 40.00 deg/s in every one of those runs, which is the
+ * turning profile's own `rate` in `followFraming.ts`. The view direction is
+ * pitched down, so it turns slightly slower still, 23.1 and 37.1 deg/s. The
+ * numbers are restated here as prose because that table is private to the rig;
+ * a profile whose rate moves moves this line with it.
+ */
+const TURNING_NOTES: Readonly<Record<FollowTurning, string>> = {
+  off: 'The camera follows the dog without turning.',
+  gentle: 'The camera follows the dog, turning at up to 25 degrees a second.',
+  quick: 'The camera follows the dog, turning at up to 40 degrees a second.',
+};
+
 const KEY_OPTIONS: readonly { readonly code: string; readonly label: string }[] = [
   { code: 'KeyW', label: 'W' }, { code: 'KeyA', label: 'A' },
   { code: 'KeyS', label: 'S' }, { code: 'KeyD', label: 'D' },
   { code: 'KeyQ', label: 'Q' }, { code: 'KeyE', label: 'E' },
   { code: 'KeyC', label: 'C' }, { code: 'KeyF', label: 'F' },
+  { code: 'KeyV', label: 'V' },
   { code: 'Space', label: 'Space' }, { code: 'ShiftLeft', label: 'Left Shift' },
 ];
 
@@ -52,6 +90,8 @@ function Toggle({
 export function SettingsPanel() {
   const state = useGameStore();
   const actions = Object.keys(BINDING_LABELS) as InputAction[];
+  // What the camera is actually doing, which is the clamp and not the store.
+  const turning: FollowTurning = state.reduceMotion ? 'off' : state.followTurning;
 
   return (
     <div className="herd-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -81,7 +121,43 @@ export function SettingsPanel() {
               <option value="low">Low</option>
             </select>
           </label>
-          <Toggle label="Reduce motion" checked={state.reduceMotion} onChange={state.setReduceMotion} />
+          <div className="herd-setting">
+            <Toggle label="Reduce motion" checked={state.reduceMotion} onChange={state.setReduceMotion} />
+            {/* Until the player sets it, the value is the system's, and the row
+                says so rather than presenting an inherited state as a choice. */}
+            <span className="herd-setting__label">
+              {state.reduceMotionChosen
+                ? 'Steadier camera, softer effects.'
+                : 'Steadier camera, softer effects. Following your system setting.'}
+            </span>
+          </div>
+          {/* One .herd-setting for the row, as the Sound and Keyboard rows
+              below do it: the row is the grid, and the heading, the control and
+              the status line are its three children on one gap. The select
+              carries its own aria-label rather than being wrapped in a <label>,
+              which is how the Studio's selects are labelled, and which keeps
+              the status line underneath out of its accessible name. */}
+          <div className="herd-setting">
+            <span className="herd-setting__label">Follow camera turning</span>
+            <select
+              className="herd-select"
+              aria-label="Follow camera turning"
+              value={turning}
+              disabled={state.reduceMotion}
+              onChange={(event) => state.setFollowTurning(event.target.value as FollowTurning)}
+            >
+              {(Object.keys(TURNING_LABELS) as FollowTurning[]).map((value) => (
+                <option key={value} value={value}>{TURNING_LABELS[value]}</option>
+              ))}
+            </select>
+            {/* The camera is clamped, not rewritten, so the row says what it is
+                doing instead of disagreeing silently with the stored value. */}
+            <span className="herd-setting__label">
+              {state.reduceMotion
+                ? 'Reduce motion is holding this at Off.'
+                : TURNING_NOTES[turning]}
+            </span>
+          </div>
           <Toggle label="Blue dog marker" checked={state.colorblindMarker} onChange={state.setColorblindMarker} />
           <Toggle label="Show run timer" checked={state.showTimer} onChange={state.setShowTimer} />
           <div className="herd-setting">

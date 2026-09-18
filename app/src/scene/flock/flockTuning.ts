@@ -19,8 +19,19 @@ export const SHEEP_MAX_SPEED_MPS = SHEEP_MAX_SPEED_PER_TICK * TICK_HZ;
 export const AGITATION_TAU = 0.14;
 /** Visual facing response. Sim headings remain untouched and authoritative. */
 export const SHEEP_HEADING_TAU = 0.1;
-/** Largest heading catch-up shown in one rendered frame. A long mobile frame
- *  falls behind briefly instead of snapping an animal by more than 16 degrees. */
+/**
+ * The fastest sustained turn the flock's presentation may show, in radians per
+ * second. This is the 0.28 rad per rendered frame the flock shipped with, read
+ * at the 60 Hz it was tuned on: 0.28 * 60 = 16.8. So 60 Hz and below are
+ * unchanged, and above it the sustained turn no longer scales with the refresh:
+ * a full reversal measured 1738 deg/s at 144 Hz before and 963 deg/s after.
+ * The flock fills much of the frame, so its turning is much of the optic flow
+ * the comfort work is about, on 200 animals rather than one.
+ */
+export const SHEEP_HEADING_STEP_RATE = 16.8;
+/** The anti-snap guard, which stays per frame on purpose. A long mobile frame
+ *  falls behind briefly instead of snapping an animal by more than 16 degrees:
+ *  a rate times a long delta does not bound that. See headingSmoothing. */
 export const SHEEP_HEADING_STEP_LIMIT = 0.28;
 
 export const TAU = Math.PI * 2;

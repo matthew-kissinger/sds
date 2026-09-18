@@ -48,10 +48,10 @@ try {
   await page.evaluate(()=>__trailer.find());
   await page.keyboard.down('KeyW');await page.waitForTimeout(650);
   const run=await page.evaluate(()=>__trailer.sim.state.dogs[0].velocity.magnitude());
-  await page.keyboard.down('KeyE');await page.waitForTimeout(650);
+  await page.keyboard.down('KeyV');await page.waitForTimeout(650);
   const walk=await page.evaluate(()=>__trailer.sim.state.dogs[0].velocity.magnitude());
   await page.screenshot({path:`captures/trailer/${prefix}-${label}-walk.png`});
-  await page.keyboard.up('KeyE');await page.waitForTimeout(650);
+  await page.keyboard.up('KeyV');await page.waitForTimeout(650);
   const resumed=await page.evaluate(()=>__trailer.sim.state.dogs[0].velocity.magnitude());
   await page.keyboard.up('KeyW');
   if(Math.abs(walk/run-.3)>.05||resumed/run<.95)throw new Error('Walk failed');

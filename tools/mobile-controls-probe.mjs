@@ -4,6 +4,7 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchBrowser, removeDir, repo, scratchDir } from './probe-lib.mjs';
+import { STICK_RADIUS, createStick } from './touch-stick.mjs';
 
 const urlArg = process.argv.find((arg) => arg.startsWith('--url='));
 const url = urlArg?.slice('--url='.length) ?? 'http://127.0.0.1:5317/';
@@ -32,11 +33,16 @@ try {
   await page.waitForSelector('[data-testid="sprint-button"]', { state: 'visible' });
 
   const before = await page.locator('.herd-stamina').getAttribute('aria-valuenow');
+  // Full deflection up the screen, from the app's own radius rather than a
+  // pixel literal. This case is a sprint drain check, so the stick has to be
+  // held at a deflection the sim counts as moving.
+  const stick = createStick(80, 690);
+  const full = stick.push(0, -STICK_RADIUS);
   await page.dispatchEvent('[data-testid="touch-stick-zone"]', 'pointerdown', {
-    pointerId: 11, pointerType: 'touch', clientX: 80, clientY: 690, isPrimary: true,
+    pointerId: 11, pointerType: 'touch', clientX: stick.origin.x, clientY: stick.origin.y, isPrimary: true,
   });
   await page.dispatchEvent('[data-testid="touch-stick-zone"]', 'pointermove', {
-    pointerId: 11, pointerType: 'touch', clientX: 80, clientY: 625, isPrimary: true,
+    pointerId: 11, pointerType: 'touch', clientX: full.x, clientY: full.y, isPrimary: true,
   });
   const sprint = page.locator('[data-testid="sprint-button"]');
   const sprintBox = await sprint.boundingBox();
