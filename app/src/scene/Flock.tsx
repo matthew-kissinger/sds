@@ -67,7 +67,8 @@ import { advanceSheepResponse } from './flock/sheepResponse';
 import {
   AGITATION_TAU,
   OUTLINE_FAR_METRES, OUTLINE_FAR_PIXELS, OUTLINE_MAX, OUTLINE_MIN, OUTLINE_NEAR_METRES,
-  OUTLINE_NEAR_PIXELS, SHAPE_STRIDE, SHEEP_HEADING_STEP_LIMIT, SHEEP_HEADING_TAU,
+  OUTLINE_NEAR_PIXELS, SHAPE_STRIDE, SHEEP_HEADING_STEP_LIMIT, SHEEP_HEADING_STEP_RATE,
+  SHEEP_HEADING_TAU,
   SHEEP_MAX_SPEED_MPS, TAU, sheepGaitRateForAgitation, sheepLegPose,
   sheepStrideForAgitation,
 } from './flock/flockTuning';
@@ -291,6 +292,7 @@ export function Flock() {
         delta,
         SHEEP_HEADING_TAU,
         SHEEP_HEADING_STEP_LIMIT,
+        SHEEP_HEADING_STEP_RATE,
       );
       if (REPORT_PRESENTATION) {
         diagnostics.turnStepMax = Math.max(diagnostics.turnStepMax, Math.abs(headingStep));

@@ -13,6 +13,27 @@ const FOOTFALLS: readonly AudioAssetId[] = ['footfall-01', 'footfall-02'];
 const BAA_SEARCH_SPACING_TICKS = 60;
 const DOG_IDLE_HUFF_TICKS = 300;
 
+/**
+ * Weight on the listener's distance when a baa picks which sheep gets a voice,
+ * for each rig the listener can be sitting on.
+ *
+ * This term reads a ground-plane distance, not the panner's 3D one, so it takes
+ * the rig's ground stand-off rather than its eye-to-dog. Classic did not move
+ * and keeps the 0.015 it ships with at its 34.71 m stand-off. Follow's went
+ * from 20 m to 26 m, a factor of 1.3, and 1 / (1 + c * d^2) is unchanged when c
+ * is divided by the square of it: 0.015 / 1.69 = 0.00888.
+ *
+ * Measured over 20,000 seeded clustered flocks at 25, 75 and 200 sheep, against
+ * the sheep the shipped mix picks: 100% agreement in Classic and 95.0 to 96.0%
+ * in Follow. Blending changes only the Classic end, and that is the whole point
+ * of it - one constant for both rigs picks the shipped sheep 98.3% of the time
+ * there. Portrait's stand-off factor is 32.5 / 24 = 1.354 and would want
+ * 0.00818; one constant cannot hold both orientations and landscape is the
+ * majority of play.
+ */
+const CLASSIC_DISTANCE_FALLOFF = 0.015;
+const FOLLOW_DISTANCE_FALLOFF = 0.00888;
+
 export interface AudioStoreSnapshot {
   readonly gamePhase: GamePhase;
   readonly uiPanel: UiPanel;
@@ -153,6 +174,8 @@ export class FlockAudioScheduler {
   private idleStartTick = -1;
   private huffedThisIdle = false;
   private lastTick = -1;
+  /** Where the camera stands between its two rigs: 0 Classic, 1 Follow. */
+  private cameraBlend = 0;
 
   constructor(
     private readonly seed: number,
@@ -164,6 +187,11 @@ export class FlockAudioScheduler {
     for (let i = 0; i < flockSize; i++) {
       this.nextBaaTick[i] = 180 + (hash32(seed ^ i) % 540);
     }
+  }
+
+  /** Which rig the listener is on, from the camera's own published blend. */
+  setCameraBlend(weight: number): void {
+    this.cameraBlend = Math.max(0, Math.min(1, weight));
   }
 
   scheduleFrame(
@@ -193,6 +221,8 @@ export class FlockAudioScheduler {
   ): AudioCommand | null {
     if (tick < this.nextGlobalTick) return null;
     const count = Math.min(this.nextBaaTick.length, sim.stateFlags.length);
+    const falloff = CLASSIC_DISTANCE_FALLOFF
+      + (FOLLOW_DISTANCE_FALLOFF - CLASSIC_DISTANCE_FALLOFF) * this.cameraBlend;
     const dogX = sim.dogPositions[0] ?? 0;
     const dogZ = sim.dogPositions[1] ?? 0;
     let chosen = -1;
@@ -211,7 +241,9 @@ export class FlockAudioScheduler {
       const dogDistance = Math.sqrt(dogDx * dogDx + dogDz * dogDz);
       const agitation = Math.max(0, Math.min(1, 1 - dogDistance / 34));
       const cameraDistanceSq = cameraDx * cameraDx + cameraDz * cameraDz;
-      const score = agitation * 3 + 1 / (1 + cameraDistanceSq * 0.015) + unitHash(this.seed ^ i) * 0.08;
+      const score = agitation * 3
+        + 1 / (1 + cameraDistanceSq * falloff)
+        + unitHash(this.seed ^ i) * 0.08;
       if (score > chosenScore) {
         chosen = i;
         chosenScore = score;

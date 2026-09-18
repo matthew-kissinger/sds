@@ -39,7 +39,12 @@
  */
 
 import { Vector2D } from './Vector2D';
-import { calculateFlockingForce, calculateFlee, getNeighbors } from './FlockingAlgorithms';
+import {
+  calculateFlockingForce,
+  calculateFlee,
+  calculateSeek,
+  getNeighbors,
+} from './FlockingAlgorithms';
 import { updateMovement, applyAcceleration, updateStamina, validateEntityState } from './MovementPhysics';
 import { startBarkSteering, tickBarkSteering } from './BarkImpulse';
 import { calculateBoundaryAvoidanceWithGate, applyHardBoundaryConstraints } from './boundary';
@@ -57,6 +62,9 @@ import {
   DOG_SPRINT_SPEED,
   DOG_STAMINA,
   FIXED_DT,
+  GATE_ATTRACTION,
+  GATE_ATTRACTION_DOG_REACH,
+  GATE_ATTRACTION_RANGE,
   GATE_PASSAGE_DEPTH,
   HARD_BOUNDARY,
   SHEEP_BARK,
@@ -80,6 +88,7 @@ import type { Dog, PlayerInputs, Sheep, SimState } from './types';
  */
 const _active: Sheep[] = [];
 const _dogTarget = new Vector2D(0, 0);
+const _gateTarget = new Vector2D(0, 0);
 const _fallback = new Vector2D(0, 0);
 /** Only `maxSpeed` varies (sprint), so the config object is reused, not rebuilt. */
 const _dogAccel = { ...DOG_MOVEMENT };
@@ -221,15 +230,58 @@ export function step(state: SimState, inputs: readonly PlayerInputs[], rng: Rng)
     s.acceleration.add(calculateFlockingForce(s, neighbors, SHEEP_FLOCKING));
 
     // Co-op rule (spec/02): sheep flee all dogs equally. No owner, no weight.
+    // The nearest dog is tracked in the same pass because the gate attraction
+    // below is armed off it, and a second loop over the dogs would be the same
+    // comparisons done twice.
+    let nearestDog: Dog | null = null;
+    let nearestDogSq = Infinity;
     for (let d = 0; d < dogs.length; d++) {
+      const dogAt = dogs[d]!;
+      const gapX = dogAt.position.x - s.position.x;
+      const gapZ = dogAt.position.z - s.position.z;
+      const gapSq = gapX * gapX + gapZ * gapZ;
+      if (gapSq < nearestDogSq) {
+        nearestDogSq = gapSq;
+        nearestDog = dogAt;
+      }
       const flee = calculateFlee(
         s,
-        dogs[d]!.position,
+        dogAt.position,
         SHEEP_FLEE_RADIUS,
         SHEEP_MAX_SPEED_PER_TICK,
         SHEEP_MAX_FORCE,
       );
       if (flee.magnitude() > 0) s.acceleration.add(flee);
+    }
+
+    // Gate attraction, restored from sds. Three conditions, all of which have
+    // to hold: a dog near enough to be pressing, a gate near enough to be the
+    // thing being worked toward, and the dog on the FAR side of the sheep from
+    // that gate. The last one is the whole design - it is a dot product, so it
+    // is positive exactly when the dog and the gate lie the same way and the
+    // pull would be helping a player who is pushing the flock away from the
+    // opening. Distances compare squared, which is the same predicate without
+    // the square root.
+    const toGateX = gateX - s.position.x;
+    const toGateZ = gateZ - s.position.z;
+    const dogReach = SHEEP_FLEE_RADIUS * GATE_ATTRACTION_DOG_REACH;
+    const armed = nearestDog !== null
+      && nearestDogSq < dogReach * dogReach
+      && toGateX * toGateX + toGateZ * toGateZ
+        < GATE_ATTRACTION_RANGE * GATE_ATTRACTION_RANGE;
+    if (armed && nearestDog !== null) {
+      const toDogX = nearestDog.position.x - s.position.x;
+      const toDogZ = nearestDog.position.z - s.position.z;
+      if (toGateX * toDogX + toGateZ * toDogZ < 0) {
+        const pull = calculateSeek(
+          s,
+          _gateTarget.set(gateX, gateZ),
+          SHEEP_MAX_SPEED_PER_TICK,
+          SHEEP_MAX_FORCE,
+        );
+        pull.multiply(GATE_ATTRACTION);
+        s.acceleration.add(pull);
+      }
     }
 
     tickBarkSteering(s);

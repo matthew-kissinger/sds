@@ -7,10 +7,10 @@ import {
   beginTouchStick,
   endAllTouch,
   endTouchStick,
+  setTouchOffset,
   setTouchSprint,
-  setTouchStick,
-  DEADZONE,
   STICK_RADIUS,
+  touchStickPixels,
 } from './touch';
 import { debugFlags } from '@app/scene/glFactory';
 import { useGameStore } from '@app/state/store';
@@ -42,18 +42,31 @@ export function TouchControls() {
   const sprintPointerId = useRef<number | null>(null);
   const sprintKeys = useRef(new Set<string>());
   const sprintRef = useRef<HTMLButtonElement>(null);
-  const origin = useRef({ x: 0, y: 0 });
+  // Where the thumb landed. Everything the stick knows is measured from here;
+  // the base it drifts to belongs to `touch.ts` and is read back to draw.
+  const landed = useRef({ x: 0, y: 0 });
+
+  // The one place the stick is drawn, from the device's own numbers. Called
+  // once after a coalesced batch, so the cost is three style writes per batch
+  // rather than growing with the sample count the way a per-sample draw did.
+  const drawStick = useCallback(() => {
+    const stick = touchStickPixels();
+    const ring = ringRef.current;
+    const knob = knobRef.current;
+    if (ring) {
+      ring.style.left = `${landed.current.x + stick.baseX}px`;
+      ring.style.top = `${landed.current.y + stick.baseY}px`;
+    }
+    if (knob) knob.style.transform = `translate(${stick.knobX}px, ${stick.knobY}px)`;
+  }, []);
 
   const releaseStick = useCallback(() => {
     pointerId.current = null;
     endTouchStick();
+    drawStick();
     const ring = ringRef.current;
-    const knob = knobRef.current;
-    if (ring) {
-      ring.style.opacity = '0';
-    }
-    if (knob) knob.style.transform = 'translate(0px, 0px)';
-  }, []);
+    if (ring) ring.style.opacity = '0';
+  }, [drawStick]);
 
   const syncSprint = useCallback(() => {
     const active = sprintPointerId.current !== null || sprintKeys.current.size > 0;
@@ -112,34 +125,53 @@ export function TouchControls() {
     } catch {
       // A synthetic probe can provide an already-released pointer.
     }
-    origin.current = { x: event.clientX, y: event.clientY };
+    landed.current.x = event.clientX;
+    landed.current.y = event.clientY;
     beginTouchStick();
+    drawStick();
     const ring = ringRef.current;
-    const knob = knobRef.current;
-    if (ring) {
-      ring.style.left = `${event.clientX}px`;
-      ring.style.top = `${event.clientY}px`;
-      ring.style.opacity = '1';
-    }
-    if (knob) knob.style.transform = 'translate(0px, 0px)';
+    if (ring) ring.style.opacity = '1';
+  };
+
+  // The stick belongs to the pointer that started it, and no other pointer's
+  // lifecycle may end it. A second finger anywhere in the left half - a resting
+  // palm edge, a thumb crossing to Sprint or Bark - raises its own up or cancel
+  // on this same zone, and an unconditional release there ended a stick the
+  // player was still holding, with no way back until that thumb lifted and
+  // pressed again. On a phone that reads as the dog stopping dead mid-run.
+  const onPointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerId.current !== event.pointerId) return;
+    releaseStick();
+  };
+
+  // The device is handed the offset from where the thumb LANDED, unclamped: it
+  // owns the rim, and it has to see the thumb's own speed to choose a cutoff.
+  // See the ordering note in `touch.ts`.
+  const sample = (clientX: number, clientY: number, timeMs: number) => {
+    setTouchOffset(clientX - landed.current.x, clientY - landed.current.y, timeMs);
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (pointerId.current !== event.pointerId) return;
-    const dx = event.clientX - origin.current.x;
-    const dy = event.clientY - origin.current.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const deflection = Math.min(distance / STICK_RADIUS, 1);
-    const unitX = distance > 0 ? dx / distance : 0;
-    const unitY = distance > 0 ? dy / distance : 0;
-    if (deflection < DEADZONE) setTouchStick(0, 0);
-    else setTouchStick(unitX * deflection, -unitY * deflection);
-
-    const travel = deflection * STICK_RADIUS;
-    if (knobRef.current) {
-      knobRef.current.style.transform =
-        `translate(${unitX * travel}px, ${unitY * travel}px)`;
+    const native = event.nativeEvent;
+    // Every coalesced sample, in order, each with its own timestamp. Reading
+    // only the last one and discarding the rest would be free if the filter
+    // were fixed, but its cutoff is a function of an estimated speed and that
+    // estimate needs the intermediate samples. It costs two extra multiplies
+    // per dropped frame. Older engines report no coalescing at all.
+    const coalesced = typeof native.getCoalescedEvents === 'function'
+      ? native.getCoalescedEvents()
+      : null;
+    if (coalesced !== null && coalesced.length > 0) {
+      for (let i = 0; i < coalesced.length; i++) {
+        const point = coalesced[i]!;
+        sample(point.clientX, point.clientY, point.timeStamp);
+      }
+    } else {
+      sample(native.clientX, native.clientY, native.timeStamp);
     }
+
+    drawStick();
   };
 
   const onSprintDown = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -160,9 +192,9 @@ export function TouchControls() {
         data-testid="touch-stick-zone"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={releaseStick}
-        onPointerCancel={releaseStick}
-        onLostPointerCapture={releaseStick}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+        onLostPointerCapture={onPointerEnd}
       >
         <div
           ref={ringRef}

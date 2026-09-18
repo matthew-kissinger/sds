@@ -18,6 +18,26 @@ const SPATIAL_LOOPS = new Set<AudioLoopId>([
   'pant-loop',
 ]);
 
+/**
+ * Pant reference distance, m, for each rig the listener can be sitting on.
+ *
+ * The pant is the only spatial loop and it is bolted to the dog, so unlike the
+ * one-shots in `graph.ts` there is exactly one distance to hold and the fit is
+ * exact rather than a compromise across a 200 m field. Classic did not move and
+ * keeps the 20 m the mix was approved at. The Follow eye went from 21.05 m to
+ * 29.10 m from the dog in landscape, which costs the pant 1.96 dB at 20 m;
+ * 27.65 m restores it to 0.00 dB, and portrait to -0.13 dB. Blended on the live
+ * rig weight for the reason `graph.ts` gives: one constant for both rigs made
+ * the pant 2.27 dB louder in Classic, the mode the game loads in.
+ *
+ * The maxima ride the same pair. The inverse model's gain does not read
+ * maxDistance, so they are kept in step rather than being part of the fit.
+ */
+const CLASSIC_REF_DISTANCE = 20;
+const FOLLOW_REF_DISTANCE = 27.65;
+const CLASSIC_MAX_DISTANCE = 190;
+const FOLLOW_MAX_DISTANCE = 263;
+
 /** Preserve the approved recordings at their natural pitch and tempo. */
 export const LOOP_PLAYBACK_RATES: Readonly<Record<AudioLoopId, number>> = {
   'birds-loop': 1,
@@ -31,6 +51,8 @@ export const LOOP_PLAYBACK_RATES: Readonly<Record<AudioLoopId, number>> = {
  */
 export class SoundscapeLoops {
   private readonly voices = new Map<AudioLoopId, LoopVoice>();
+  /** Where the camera stands between its two rigs: 0 Classic, 1 Follow. */
+  private cameraBlend = 0;
 
   constructor(
     private readonly context: AudioContext,
@@ -85,6 +107,17 @@ export class SoundscapeLoops {
     for (const voice of this.voices.values()) voice.element.pause();
   }
 
+  /**
+   * Which rig the listener is on. A loop outlives any number of camera swaps,
+   * so its panner is retuned in place rather than only at construction.
+   */
+  setCameraBlend(weight: number): void {
+    this.cameraBlend = Math.max(0, Math.min(1, weight));
+    for (const voice of this.voices.values()) {
+      if (voice.panner !== null) this.applyRig(voice.panner);
+    }
+  }
+
   set(id: AudioLoopId, level: number, x?: number, z?: number): void {
     const voice = this.voices.get(id);
     if (voice === undefined) return;
@@ -123,10 +156,16 @@ export class SoundscapeLoops {
     const panner = this.context.createPanner();
     panner.panningModel = 'HRTF';
     panner.distanceModel = 'inverse';
-    panner.refDistance = 20;
-    panner.maxDistance = 190;
     panner.rolloffFactor = 0.65;
     panner.positionY.value = 1;
+    this.applyRig(panner);
     return panner;
+  }
+
+  private applyRig(panner: PannerNode): void {
+    panner.refDistance = CLASSIC_REF_DISTANCE
+      + (FOLLOW_REF_DISTANCE - CLASSIC_REF_DISTANCE) * this.cameraBlend;
+    panner.maxDistance = CLASSIC_MAX_DISTANCE
+      + (FOLLOW_MAX_DISTANCE - CLASSIC_MAX_DISTANCE) * this.cameraBlend;
   }
 }

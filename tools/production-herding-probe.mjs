@@ -1,11 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Read the production sim via React's tools hook; send ordinary touch/keyboard
-// input. Never mutate sim, advance its clock, or inject completion state.
+/**
+ * Read the production sim via React's tools hook; send ordinary touch/keyboard
+ * input. Never mutate sim, advance its clock, or inject completion state.
+ *
+ * THIS PROBE IS NOT A VERDICT ON FEEL
+ * -----------------------------------
+ * The scripted driver in `tests/helpers/herding-driver.ts` has no throttle of
+ * its own. It regulates the dog's speed by cutting the stick back to centre
+ * whenever the dog is already travelling faster than its approach wants, which
+ * is a decision documented there and pinned by every committed trace fixture.
+ * Against this probe's command rate that arrives as a stick switched on and off
+ * several times a second rather than one held at a deflection: measured at
+ * about 8 stops and starts a second on a 25-sheep run. `report.stick` records
+ * the command rate, how many of those commands were centred, and how many
+ * transitions between centred and deflected the run in hand actually took.
+ *
+ * So no ramp in `app/src/input/conditioning.ts` and no filter in
+ * `app/src/input/oneEuro.ts` ever reaches a steady state here. Completion, page
+ * errors, the stored bests and the API traffic below are real results. How the
+ * controls feel is not measured by this file and cannot be read out of it.
+ *
+ * `--deflection=` (0 to 1, default 1) sets how far the thumb is pushed while
+ * the driver is asking for movement. It is stick travel, not effort: the app's
+ * dead zone, saturation and response curve sit between the two, so 0.5 travel
+ * commands 0.32 of full effort. Below full deflection the dog is slower than
+ * the driver's own speed regulation assumes and a run may not finish inside
+ * `--seconds`.
+ */
 import { chromium } from 'playwright';
 import { buildSync } from 'esbuild';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { repo, startPreviewServer, stopServer } from './probe-lib.mjs';
+import { STICK_RADIUS, createStick, stickEffort } from './touch-stick.mjs';
 import { collectBuildReceipt, sameBuildReceipt } from './playtest-profile-receipt.mjs';
 const flock = Number(process.argv.find(x => x.startsWith('--flock='))?.slice(8) ?? 25);
 const scoreUnavailable = process.argv.includes('--score-unavailable');
@@ -20,8 +47,12 @@ mkdirSync(out, { recursive: true });
 const driver = buildSync({ entryPoints: [join(repo, 'tests/helpers/herding-driver.ts')], bundle: true, write: false, format: 'iife', globalName: 'herdingDriver' }).outputFiles[0].text;
 const cap = Number(process.argv.find(x => x.startsWith('--seconds='))?.slice(10) ?? 600);
 if (!Number.isFinite(cap) || cap <= 0) throw new Error('Invalid duration');
+const deflection = Number(process.argv.find(x => x.startsWith('--deflection='))?.slice(13) ?? 1);
+if (!Number.isFinite(deflection) || deflection <= 0 || deflection > 1) throw new Error('Invalid deflection');
+const travel = STICK_RADIUS * deflection;
+const effort = stickEffort(deflection);
 let server; let browser; let failure; let cdp;
-const report = { before: collectBuildReceipt(repo), flock, scoreUnavailable, submissionUnavailable, apiRequests: [], samples: [], errors: [], completed: false, limitation: 'Production functional herding, read-only sim observation, automated touch movement plus keyboard sprint. Not a physical-mobile or performance receipt.' };
+const report = { before: collectBuildReceipt(repo), flock, scoreUnavailable, submissionUnavailable, apiRequests: [], samples: [], errors: [], completed: false, limitation: 'Production functional herding, read-only sim observation, automated touch movement plus keyboard sprint. The scripted driver switches the stick on and off rather than holding a deflection, so nothing here measures how the controls feel. Not a physical-mobile or performance receipt.' };
 try {
   server = await startPreviewServer(5364);
   browser = await chromium.launch({ channel: 'chrome', headless: false });
@@ -93,9 +124,16 @@ try {
     });
   }
   cdp = await page.context().newCDPSession(page);
-  const origin = { x: 110, y: 660 };
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...origin, id: 1 }] });
+  const stick = createStick(110, 660);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: stick.origin.x, y: stick.origin.y, id: 1 }] });
   const start = Date.now(); let sprint = false; let nextSample = 0;
+  // The duty cycle of the stick, so the limitation above is a measurement in
+  // the report rather than a claim in a comment. `edges` counts transitions
+  // between centred and deflected, so an on/off cycle is two of them.
+  let commands = 0; let centred = 0; let edges = 0; let asking = false;
+  const stickReport = () => { const seconds = Math.max(0.001, (Date.now() - start) / 1000);
+    return { radiusPx: STICK_RADIUS, deflection, effort, commands, centred, edges,
+      commandsPerSecond: commands / seconds, edgesPerSecond: edges / seconds }; };
   while (Date.now() - start < cap * 1000) {
     const value = await page.evaluate(() => {
       const state = globalThis.__herdingSim.state;
@@ -108,10 +146,21 @@ try {
       nextSample = Date.now() + 15000;
     }
     if (value.completed && value.phase === 'complete') { report.completed = true; break; }
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: origin.x - value.input.direction.x * 56, y: origin.y - value.input.direction.z * 56, id: 1 }] });
+    const moving = value.input.direction.x !== 0 || value.input.direction.z !== 0;
+    if (moving !== asking) { asking = moving; edges++; }
+    commands++; if (!moving) centred++;
+    report.stick = stickReport();
+    // Classic's basis is world-axis: screen right is world -x, screen up is
+    // world +z, and client y grows downward, so both components invert (see
+    // app/src/input/axis.ts). The offset is asked for in radius units, so the
+    // overlay never re-anchors and the mirrored origin stays the one the app
+    // is measuring against.
+    const point = stick.push(-value.input.direction.x * travel, -value.input.direction.z * travel);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x, y: point.y, id: 1 }] });
     if (sprint !== value.input.sprint) { sprint = value.input.sprint; await page.keyboard[sprint ? 'down' : 'up']('ShiftLeft'); }
     await page.waitForTimeout(100);
   }
+  report.stick = stickReport();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await page.keyboard.up('ShiftLeft');
   await page.screenshot({ path: join(out, report.completed ? 'completed.png' : 'unfinished.png') });

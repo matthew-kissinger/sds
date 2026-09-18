@@ -22,7 +22,7 @@ All-cold: everything built before first interaction.
 
 ## Quality tiering
 
-One small auto-tier: a measured capability probe at boot (renderer backend chosen, a quick offscreen fill test), mapping to high/low presets for grass density, shadow resolution, post toggles. Manual override in settings (auto / high / low). No UA sniffing (sds failure mode), no per-frame quality governor in v1; the scene is small enough to pick once and hold.
+One small auto-tier: a measured capability probe at boot (renderer backend chosen, a quick offscreen fill test), mapping to high/medium/low presets for grass density, shadow resolution, post toggles. Manual override in settings (auto / high / medium / low). No UA sniffing (sds failure mode), no per-frame quality governor in v1; the scene is small enough to pick once and hold.
 
 ## GPU-scale mode (the GpuComputeSim toggle)
 

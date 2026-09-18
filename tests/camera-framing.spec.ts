@@ -6,10 +6,12 @@
  *
  * What is worth pinning is not the framing numbers (those are art direction and
  * will move) but the properties the rest of the game leans on: Classic never
- * rotates, Follow sits behind the dog and leads with speed, the smoothing is
- * frame-rate independent, and nothing the camera does can cover ground faster
- * than MAX_RIG_SPEED - which is the "never jumps" promise in a form a test can
- * check.
+ * rotates, Follow stands one chase radius back along a single bearing and aims
+ * along that same bearing, the smoothing is frame-rate independent, and nothing
+ * the camera does can cover ground faster than MAX_RIG_SPEED - which is the
+ * "never jumps" promise in a form a test can check.
+ *
+ * The ceiling on the bearing itself has a file of its own, camera-rotation-cap.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -19,6 +21,7 @@ import { createClassicFraming } from '@app/camera/classicFraming';
 import { createFollowFraming } from '@app/camera/followFraming';
 import { cameraViewProfile } from '@app/camera/viewProfile';
 import {
+  MAX_FOLLOW_YAW_RATE,
   MAX_POSITION_K,
   MAX_RIG_SPEED,
   approach,
@@ -29,6 +32,17 @@ import {
 } from '@app/camera/feel';
 
 const DT = 1 / 60;
+const DEG = Math.PI / 180;
+
+/** The landscape profile the rig is built with before a size is known. */
+const VIEW = cameraViewProfile(16 / 9).follow;
+
+/**
+ * The resting dead zone on the bearing error, at the default turning profile.
+ * The bearing settles inside this of the direction of travel rather than on it,
+ * so nothing here may assert that the rig arrives dead astern.
+ */
+const DEAD_ZONE = 20 * DEG;
 
 /** The three fields a framing reads. The rest of Dog is not its business. */
 function makeDog(x: number, z: number): Dog {
@@ -122,13 +136,18 @@ describe('Classic framing', () => {
 });
 
 describe('Follow framing', () => {
-  it('glides through a distant reset with a changed heading and settles', () => {
+  it('glides through a distant reset and settles behind the new travel', () => {
+    // This case used to turn the dog's HEADING around and assert where the rig
+    // ended up. The bearing is driven by the dog's VELOCITY now, so a heading
+    // change on a motionless dog is not a camera event at all and the old
+    // assertion described a law that no longer exists. Drive the velocity.
     const follow = createFollowFraming();
     const dog = makeDog(90, 90);
+    dog.velocity.z = 10;
     run(follow, dog, 2);
     dog.position.x = -20;
     dog.position.z = -60;
-    dog.heading.x = 0;
+    dog.velocity.z = -10;
     dog.heading.z = -1;
     const previous = follow.position.clone();
     let largestStep = 0;
@@ -140,15 +159,22 @@ describe('Follow framing', () => {
     // Orbit and translation may combine, but a reset must never cut directly
     // to the new dog position or move by a whole chase radius in one frame.
     expect(largestStep).toBeLessThan(5);
-    expect(follow.position.x).toBeCloseTo(-20, 2);
-    expect(follow.position.z).toBeCloseTo(-40, 2);
-    expect(follow.aim.z).toBeCloseTo(-60, 2);
+
+    run(follow, dog, 20);
+    // The rig ends one chase radius back along its own bearing, and that
+    // bearing has come round to within the dead zone of the way the dog runs.
+    expect(Math.abs(follow.bearing - Math.PI)).toBeLessThan(DEAD_ZONE);
+    expect(follow.position.x)
+      .toBeCloseTo(dog.position.x - Math.sin(follow.bearing) * VIEW.distance, 3);
+    expect(follow.position.z)
+      .toBeCloseTo(dog.position.z - Math.cos(follow.bearing) * VIEW.distance, 3);
   });
 
   it('eases viewport changes after seating and reaches each framing', () => {
     const follow = createFollowFraming();
     const dog = makeDog(0, 0);
     run(follow, dog, 2);
+    const datum: number[] = [];
     for (const aspect of [390 / 844, 16 / 9]) {
       const view = cameraViewProfile(aspect).follow;
       const previous = follow.position.clone();
@@ -157,8 +183,13 @@ describe('Follow framing', () => {
       expect(follow.position.distanceTo(previous)).toBeLessThan(1);
       run(follow, dog, 4);
       expect(follow.position.z).toBeCloseTo(-view.distance, 2);
-      expect(follow.position.y).toBeCloseTo(view.height, 2);
+      datum.push(follow.position.y - view.height);
     }
+    // The elevation is measured from ONE world datum rather than from ground
+    // sampled under the rig, so what is left over is the same number in both
+    // orientations and it is the field's mean ground rather than a local one.
+    expect(datum[0]!).toBeCloseTo(datum[1]!, 6);
+    expect(Math.abs(datum[0]!)).toBeLessThan(0.1);
   });
 
   it('sits behind the dog, low, on the heading', () => {
@@ -174,49 +205,59 @@ describe('Follow framing', () => {
     // Heading is +z, so the rig is at -z: dot with the heading is negative.
     expect(behind.z).toBeLessThan(0);
     expect(behind.x).toBeCloseTo(0, 6);
-    // Low and cinematic, not the Classic height.
-    expect(follow.position.y).toBeGreaterThan(3);
-    expect(follow.position.y).toBeLessThan(12);
+    // Elevated, but nothing like the Classic overhead. The height is what buys
+    // the drop in ground optic flow; going further costs the horizon.
+    expect(follow.position.y).toBeGreaterThan(12);
+    expect(follow.position.y).toBeLessThan(18);
   });
 
-  it('lags the yaw: a turn arcs the rig around rather than snapping it', () => {
+  it('arcs the rig around a turn at its cap rather than snapping it', () => {
     const follow = createFollowFraming();
     const dog = makeDog(0, 0);
+    dog.velocity.z = 15;
     run(follow, dog, 3);
     const beforeTurn = follow.position.clone();
 
-    dog.heading.x = 1;
-    dog.heading.z = 0;
-    const settledDistance = beforeTurn.distanceTo(
-      new THREE.Vector3(dog.position.x, beforeTurn.y, dog.position.z),
-    );
+    // A right-angle turn, as a change of the direction the dog is TRAVELLING.
+    dog.velocity.x = 15;
+    dog.velocity.z = 0;
 
-    // One yaw tau in: well off the old position, still short of the new one.
+    // One yaw tau in: well off the old position, and nowhere near the new
+    // bearing, because across a 90 degree error it is the cap that binds rather
+    // than the lag. 0.35 s of cap, exactly.
     run(follow, dog, 0.35);
     expect(follow.position.distanceTo(beforeTurn)).toBeGreaterThan(1);
-    expect(follow.position.x).toBeGreaterThan(-settledDistance + 1);
+    expect(follow.bearing).toBeCloseTo(MAX_FOLLOW_YAW_RATE * 0.35, 6);
 
-    // Given time it does come round behind the dog on the new heading.
-    run(follow, dog, 4);
-    expect(follow.position.x).toBeCloseTo(dog.position.x - settledDistance, 1);
-    expect(follow.position.z).toBeCloseTo(dog.position.z, 1);
+    // Given time it comes round behind the dog, stopping inside the dead zone
+    // of dead astern rather than arriving on it.
+    run(follow, dog, 20);
+    expect(Math.abs(follow.bearing - Math.PI / 2)).toBeLessThan(DEAD_ZONE);
+    expect(follow.position.x)
+      .toBeCloseTo(dog.position.x - Math.sin(follow.bearing) * VIEW.distance, 3);
+    expect(follow.position.z)
+      .toBeCloseTo(dog.position.z - Math.cos(follow.bearing) * VIEW.distance, 3);
   });
 
-  it('leads the aim with speed and drops the lead when the dog stops', () => {
+  it('holds the look-ahead at a fixed distance instead of scaling it by speed', () => {
+    // The look-ahead used to be scaled by a smoothed speed, which made it a
+    // second rotating quantity stacked on the orbit. It is a fixed framing
+    // offset along the rig's own bearing now, so it costs no rotation at all
+    // and does not move when the dog starts or stops.
     const follow = createFollowFraming();
     const dog = makeDog(0, 0);
     run(follow, dog, 3);
-    expect(follow.aim.z).toBeCloseTo(dog.position.z, 1);
+    const ahead = VIEW.distance + VIEW.lookAhead;
+    expect(follow.aim.z - follow.position.z).toBeCloseTo(ahead, 6);
+    expect(follow.aim.x - follow.position.x).toBeCloseTo(0, 6);
 
     dog.velocity.z = 25;
     run(follow, dog, 3);
-    const sprinting = follow.aim.z;
-    expect(sprinting).toBeGreaterThan(dog.position.z + 3);
+    expect(follow.aim.z - follow.position.z).toBeCloseTo(ahead, 6);
 
     dog.velocity.z = 0;
     run(follow, dog, 3);
-    expect(follow.aim.z).toBeLessThan(sprinting);
-    expect(follow.aim.z).toBeCloseTo(dog.position.z, 1);
+    expect(follow.aim.z - follow.position.z).toBeCloseTo(ahead, 6);
   });
 
   it('uses a wider, higher follow view only in portrait', () => {
@@ -225,12 +266,17 @@ describe('Follow framing', () => {
     expect(landscape).toMatchObject({
       fov: 45,
       portraitBlend: 0,
-      follow: { distance: 20, height: 7.5, lookAhead: 7 },
+      follow: { distance: 26, height: 14, lookAhead: 4 },
     });
     expect(portrait.fov).toBeGreaterThan(74);
-    expect(portrait.follow.distance).toBeGreaterThan(23.5);
-    expect(portrait.follow.height).toBeGreaterThan(10);
-    expect(portrait.follow.lookAhead).toBeLessThan(5);
+    expect(portrait.follow.distance).toBeGreaterThan(landscape.follow.distance);
+    expect(portrait.follow.height).toBeGreaterThan(landscape.follow.height);
+    // Both orientations share a pitch, so distance and height scale together.
+    expect(portrait.follow.distance / portrait.follow.height)
+      .toBeCloseTo(landscape.follow.distance / landscape.follow.height, 9);
+    // A tall frame needs less downward bias, so the look-ahead is set shorter
+    // rather than scaled with the pair above.
+    expect(portrait.follow.lookAhead).toBeLessThan(landscape.follow.lookAhead);
   });
 
   it('keeps the dog inside portrait framing through a fast right-angle turn', () => {

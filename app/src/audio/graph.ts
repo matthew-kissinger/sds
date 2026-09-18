@@ -10,6 +10,45 @@ import { SoundscapeLoops } from './soundscape';
 
 const AMBIENT_DUCK_GAIN = 10 ** (-2.5 / 20);
 
+/**
+ * One-shot reference distance, m, for each rig the listener can be sitting on.
+ *
+ * The listener is the camera, so a rig change is a mix change - but only for
+ * the rig that moved. Classic did not move: its eye stands 53.24 m from a
+ * source at the dog, exactly where it was when the mix was approved, so 18 m is
+ * still its reference. The Follow eye went from 21.05 m to 29.10 m in
+ * landscape, which costs a source at the dog 2.14 dB at 18 m. Inverse distance
+ * is scale-free, so 24.88 m puts it back; 24.9 holds landscape to 0.005 dB and
+ * portrait, whose eye went 25.83 -> 36.48 m, to -0.14 dB.
+ *
+ * One constant serving both rigs is what the round before this shipped, and it
+ * made every diegetic source 2.30 to 2.68 dB LOUDER in Classic, 2.41 at the
+ * dog, in the mode the game loads in. Interpolating on the live rig weight is
+ * what holds both. Aiming the fit at the near field is deliberate: running the
+ * scheduler's own selection rule over clustered flocks, 98.4% of chosen baas
+ * fall inside the 34 m agitation radius, and weighting the one-shot classes by
+ * their cadences and command gains puts about three quarters of the flow at the
+ * dog itself.
+ *
+ * It is a near-field fit and not a listener move, and only a listener move is
+ * exact. In Follow, sources past 34 m from the dog come out up to 3.06 dB
+ * louder than they were, 3.32 dB in portrait, which is roughly 7% of the flow
+ * under that same weighting. A second fitted parameter narrows it - 25.8 m at
+ * rolloff 0.92 halves the field-wide mean, 2.35 dB to 1.11 dB - but moves the
+ * weighted residual only from 0.33 to 0.12 dB in landscape while taking
+ * portrait from 0.37 to 0.39 dB, so one constant per rig is what is kept.
+ */
+const CLASSIC_REF_DISTANCE = 18;
+const FOLLOW_REF_DISTANCE = 24.9;
+
+/**
+ * The maxima, on the same pair. The inverse model's gain does not read
+ * maxDistance - only the linear model does - so these are kept in step with the
+ * references rather than being any part of the fit above.
+ */
+const CLASSIC_MAX_DISTANCE = 180;
+const FOLLOW_MAX_DISTANCE = 249;
+
 export interface AudioGraphOptions {
   readonly context?: AudioContext;
   readonly fetchAsset?: (url: string) => Promise<ArrayBuffer>;
@@ -33,6 +72,8 @@ export class HerdAudioGraph {
   private muted = false;
   private masterLevel = 0.8;
   private reduceTransients = false;
+  /** Where the camera stands between its two rigs: 0 Classic, 1 Follow. */
+  private cameraBlend = 0;
   private disposed = false;
 
   constructor(options: AudioGraphOptions = {}) {
@@ -123,6 +164,18 @@ export class HerdAudioGraph {
     this.oneShots.setReduceTransients(reduce);
   }
 
+  /**
+   * Which rig the listener is on, 0 Classic to 1 Follow, from the camera's own
+   * published blend. Panners built after this read it; the pant loop is already
+   * playing, so the soundscape retunes its one live panner instead.
+   */
+  setCameraBlend(weight: number): void {
+    const value = clamp01(weight);
+    if (value === this.cameraBlend) return;
+    this.cameraBlend = value;
+    this.soundscape.setCameraBlend(value);
+  }
+
   setListener(
     x: number,
     z: number,
@@ -190,12 +243,19 @@ export class HerdAudioGraph {
     return true;
   }
 
+  /**
+   * Inverse-distance attenuation against the rig the listener is on right now.
+   * A one-shot is short, so it keeps the reference it was built with rather
+   * than tracking a swap it cannot outlive.
+   */
   private makePanner(point: SpatialPoint): PannerNode {
     const panner = this.context.createPanner();
     panner.panningModel = 'HRTF';
     panner.distanceModel = 'inverse';
-    panner.refDistance = 18;
-    panner.maxDistance = 180;
+    panner.refDistance = CLASSIC_REF_DISTANCE
+      + (FOLLOW_REF_DISTANCE - CLASSIC_REF_DISTANCE) * this.cameraBlend;
+    panner.maxDistance = CLASSIC_MAX_DISTANCE
+      + (FOLLOW_MAX_DISTANCE - CLASSIC_MAX_DISTANCE) * this.cameraBlend;
     panner.rolloffFactor = 0.7;
     panner.positionX.setValueAtTime(point.x, this.context.currentTime);
     panner.positionY.setValueAtTime(1, this.context.currentTime);

@@ -8,7 +8,20 @@ import { DOG_JOINTS, DOG_LEG_ROOTS } from './dogRigDefinition';
 import { sampleDogPaw, type DogPawPose } from './dogGait';
 import { DogLegSolver } from './dogLegSolver';
 import type { DogMaterial } from './dogMaterial';
-import type { DogMotion } from './dogMotion';
+import { DOG_MAX_BANK, type DogMotion } from './dogMotion';
+
+// At full bank the inside fore-limb runs out of reach, and a real animal buys
+// the same reach back the same way, by dropping its chest.
+const BANK_ROOT_DROP = 0.1;
+// Launching and braking both drop the centre of mass, about 11% of the 1.05 m
+// rest pelvis height. Without it the fastest acceleration in the game is free.
+const CROUCH_DROP = 0.12;
+// Trunk length modulation at gait frequency, half of a 5% swing across the
+// 1.79 m the rig spans from tail base to nose.
+const TRUNK_STRETCH = 0.045;
+// The scapula travels over the ribcage with the limb it carries, which is where
+// a real dog gets stance length that leg length cannot supply.
+const SCAPULA_SHARE = 0.25;
 
 export class DogRig {
   readonly bones: THREE.Bone[];
@@ -65,20 +78,48 @@ export class DogRig {
     this.resetBones();
     const bones = this.bones;
     const moving = Math.min(1, motion.locomotionSpeed / 1.5);
+    const upright = 1 - motion.sit;
+    // A positive rotation.z tilts the top of a bone toward local -x, and
+    // motion.bank is positive for a lean toward +x, so every bank term is
+    // negated here. The rig shipped with them positive, which leaned the dog
+    // out of its turns and yawed the chest and head out of them as well.
+    const bank = motion.bank * upright;
+    for (let foot = 0; foot < 4; foot++) {
+      sampleDogPaw(motion.gaitPhase, motion.locomotionSpeed, foot, this.paws[foot]!);
+    }
     // Bend the body into its stride envelope so fixed-length limbs can reach,
     // instead of stretching a paw to compensate for a rigid high torso.
-    bones[0]!.position.y = -0.17 * moving * (1 - motion.sit) + motion.bob;
+    bones[0]!.position.y = -0.17 * moving * upright + motion.bob
+      - BANK_ROOT_DROP * Math.abs(bank) / DOG_MAX_BANK
+      - CROUCH_DROP * motion.crouch * moving * upright;
     bones[1]!.position.y -= motion.sit * 0.3;
     bones[1]!.position.z -= motion.sit * 0.06;
-    bones[1]!.rotation.set(-motion.sit * 0.35, 0, motion.roll * 0.35);
+    bones[1]!.rotation.set(-motion.sit * 0.35, motion.leadPelvis * upright, -bank * 0.4);
     bones[2]!.rotation.x = motion.sit * 0.22;
-    bones[3]!.rotation.set(motion.lean, motion.roll * -0.22, motion.roll * 0.6);
+    // The trunk is longest once per stride, where the fore feet are reaching and
+    // the hind feet are still behind, which is stance length legs cannot supply.
+    bones[3]!.position.z += TRUNK_STRETCH * Math.cos(motion.gaitPhase)
+      * motion.effort * moving * upright * secondaryMotion;
+    // Yaw lead composes down the chain, so each bone carries only what the one
+    // before it has not already supplied and the differences are the spine bend.
+    bones[3]!.rotation.set(motion.lean, (motion.leadChest - motion.leadPelvis) * upright, -bank * 0.6);
     bones[4]!.rotation.x = -motion.bark * 0.12 - motion.sit * 0.09;
-    bones[5]!.rotation.set(motion.effort * 0.035 - motion.bark * 0.11, motion.roll * -0.4, motion.headTilt);
-    bones[6]!.rotation.z = Math.sin(motion.clock * 0.7) * 0.035 * secondaryMotion;
-    bones[7]!.rotation.z = Math.sin(motion.clock * 0.7 + 1.7) * 0.035 * secondaryMotion;
-    bones[8]!.rotation.set(motion.effort * 0.06, Math.sin(motion.clock * 2.1) * 0.10 * secondaryMotion, 0);
-    bones[9]!.rotation.y = Math.sin(motion.clock * 2.1 - 0.6) * 0.1 * secondaryMotion;
+    // The head counter-rolls to half the trunk bank, because a running animal
+    // keeps its eyes level, and it reaches the yaw lead before the trunk does.
+    bones[5]!.rotation.set(motion.effort * 0.035 - motion.bark * 0.11,
+      (motion.leadHead - motion.leadChest) * upright, motion.headTilt + bank * 0.5);
+    const earSwing = (motion.bank - motion.earLag) * 0.5 * upright;
+    bones[6]!.rotation.z = Math.sin(motion.clock * 0.7) * 0.035 * secondaryMotion + earSwing;
+    bones[7]!.rotation.z = Math.sin(motion.clock * 0.7 + 1.7) * 0.035 * secondaryMotion + earSwing;
+    // The tail hangs off the pelvis and trails the lean rather than following
+    // it, with the tip carrying the end of the swing.
+    bones[8]!.rotation.set(motion.effort * 0.06, Math.sin(motion.clock * 2.1) * 0.10 * secondaryMotion,
+      bank * 0.4 - motion.tailSwing * upright);
+    bones[9]!.rotation.set(0, Math.sin(motion.clock * 2.1 - 0.6) * 0.1 * secondaryMotion,
+      -motion.tailSwing * 0.4 * upright);
+    const scapula = SCAPULA_SHARE * moving * upright;
+    bones[10]!.position.z += this.paws[0]!.travel * scapula;
+    bones[13]!.position.z += this.paws[1]!.travel * scapula;
     this.coat.updateWorldMatrix(true, true);
     this.inverse.copy(this.coat.matrixWorld).invert();
     this.coat.getWorldQuaternion(this.rotationInverse).invert();
@@ -86,7 +127,6 @@ export class DogRig {
     const s = Math.sin(yaw);
     for (let foot = 0; foot < 4; foot++) {
       const paw = this.paws[foot]!;
-      sampleDogPaw(motion.gaitPhase, motion.locomotionSpeed, foot, paw);
       const rest = DOG_PAW_CONTACTS[foot]!;
       const travel = paw.travel * (1 - motion.sit);
       const seatedAdvance = foot >= 2 ? motion.sit * 0.16 : 0;

@@ -18,7 +18,8 @@ import {
 } from '@app/scene/dog/dogGeometry';
 import { FORE_LEG, PAW, SPINE, THIGH } from '@app/scene/dog/dogParts';
 import {
-  DOG_HEADING_STEP_LIMIT,
+  DOG_HEADING_SNAP_CEILING,
+  DOG_HEADING_STEP_RATE,
   advanceDogMotion,
   createDogMotion,
 } from '@app/scene/dog/dogMotion';
@@ -329,9 +330,30 @@ describe('animal heading presentation', () => {
     );
     expect(Math.abs(sheepStep)).toBeCloseTo(SHEEP_HEADING_STEP_LIMIT, 6);
 
+    // The dog now carries two separate limits and only one of them binds here.
+    // A quarter second of the sustained rate is 2.1 rad, so what holds the
+    // displayed step down across a stalled frame is the per-frame snap ceiling.
     const dog = createDogMotion();
     advanceDogMotion(dog, 1 / 60, 4, 0, 1);
     const dogStep = advanceDogMotion(dog, 0.25, 4, 0, -1);
-    expect(Math.abs(dogStep)).toBeCloseTo(DOG_HEADING_STEP_LIMIT, 6);
+    expect(Math.abs(dogStep)).toBeCloseTo(DOG_HEADING_SNAP_CEILING, 6);
+  });
+
+  it('turns the dog at a rate per second rather than a step per frame', () => {
+    // The limit this replaces was 0.14 rad per FRAME, so the same reversal
+    // turned the dog - and the camera tracking it - at 481 deg/s on a desktop
+    // and 962 deg/s on a 120 Hz phone. Read as a rate, 60 Hz is unchanged and
+    // the step halves when the refresh doubles.
+    function reversalStep(hz: number): number {
+      const dog = createDogMotion();
+      advanceDogMotion(dog, 1 / hz, 12, 0, 1);
+      return Math.abs(advanceDogMotion(dog, 1 / hz, 12, 0, -1));
+    }
+    const at60 = reversalStep(60);
+    const at120 = reversalStep(120);
+    expect(at60 * 60).toBeCloseTo(DOG_HEADING_STEP_RATE, 6);
+    expect(at120 * 120).toBeCloseTo(DOG_HEADING_STEP_RATE, 6);
+    expect(reversalStep(144) * 144).toBeCloseTo(DOG_HEADING_STEP_RATE, 6);
+    expect(at120).toBeCloseTo(at60 / 2, 9);
   });
 });

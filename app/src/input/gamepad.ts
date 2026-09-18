@@ -18,10 +18,21 @@
  * which rule 10 (no unreachable feature) would not forgive.
  */
 
-import { axisMagnitude, clearAxis, type MoveAxis } from './axis';
+import { clearAxis, shapeAxis, type MoveAxis } from './axis';
 
-/** Radial deadzone. Rescaled above it so the first degree of tilt is not a jump. */
-const DEADZONE = 0.22;
+/**
+ * Radial deadzone. Rescaled above it so the first degree of tilt is not a jump.
+ *
+ * 0.18 rather than the 0.22 it replaces: published guidance is 0.1 to 0.2 for a
+ * physical stick and up to 0.25 for a worn one, and 0.18 still rejects the 0.1
+ * resting drift `gamepad-input.spec.ts` pins, with a 1.8x margin, while
+ * returning 4% of travel to the player. It does NOT go to the touch value: a
+ * physical stick has spring return, wear and recentring error, and a
+ * touchscreen has none of them.
+ */
+const DEADZONE = 0.18;
+/** Full effort short of the rim: a worn stick often cannot reach it diagonally. */
+const SATURATION = 0.95;
 /** A trigger past this counts as held. Below it a resting finger does not sprint. */
 const TRIGGER_THRESHOLD = 0.35;
 
@@ -86,14 +97,9 @@ export function pollGamepad(out: MoveAxis): Readonly<GamepadReading> {
   // Screen forward is stick up, which the API reports as negative y.
   out.right = pad.axes[0] ?? 0;
   out.forward = -(pad.axes[1] ?? 0);
-  const magnitude = axisMagnitude(out);
-  if (magnitude <= DEADZONE) {
-    clearAxis(out);
-  } else {
-    const scale = ((magnitude - DEADZONE) / (1 - DEADZONE)) / magnitude;
-    out.right *= scale;
-    out.forward *= scale;
-  }
+  // The shaping lives in `axis.ts`, not here. Two devices should not feel
+  // different because their dead-zone code was written at different times.
+  shapeAxis(out, DEADZONE, SATURATION);
 
   const trigger = pad.buttons[BUTTON_RIGHT_TRIGGER]?.value ?? 0;
   const barkDown = held(pad, BUTTON_B) || held(pad, BUTTON_X);
