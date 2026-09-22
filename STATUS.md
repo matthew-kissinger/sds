@@ -42,6 +42,19 @@ direction in the camera's own basis is exact: 0.0000 degrees over those poses,
 0.005 end to end in the running build, and no fov, aspect or pitch in the
 function, which is why the two camera modes need no case between them.
 
+Measuring that turned up a second reading of the same complaint, and it is worth
+separating because the needle can be exact while the instrument still reads
+wrong: a cue riding a perimeter at the target's angle overshoots a target inside
+that perimeter, so with the opening in shot, sighting along the needle from the
+dial missed. That was 32,734 of 391,539 bright on-screen poses across six
+viewports, worst on wide ones whose ellipse is inset only 30 px. The ellipse is
+now a ceiling on the reach rather than the reach, which takes it to 0 while
+moving the worst visible step from 28.5 to 30.0 px per degree of turn against a
+146.9 budget. What survives is bounded by construction - the clamp matches the
+radius from the ring's centre, which sits up to 48 px off the frame's where the
+insets are asymmetric - so the tests hold the rule rather than a number: either
+the needle points at the opening or the dial is sitting on it.
+
 **The camera** was a separate defect with the same reporter. `YAW_ENGAGE_SPEED`
 was the only hard boolean in `followFraming.ts`, and one metre per second is
 6.7% of commanded effort - 3.2 px on a 48 px stick, which is exactly the
@@ -98,17 +111,6 @@ each, described in `spec/12-my-times.md`.
   left alone, but it is dead weight on this field and the cue's presence is
   entirely the fade's doing. Worth deleting or earning its keep on a field with
   real relief; not decided here.
-- A cue that rides a perimeter at the target's angle overshoots a target inside
-  that perimeter, so with the opening on screen, sighting along the needle from
-  the dial misses even though the needle itself is exact. Counting only poses
-  with the token above half strength and dial and opening more than 80 px
-  apart, that reads as wrong in 0 of 85,247 landscape poses, 388 of 41,250
-  upright (0.9%) and 5,084 of 67,769 on a 1440x900 desktop (7.5%) - the desktop
-  ellipse is inset only 30 px, so it runs nearly to the frame edge. Fading the
-  token out before the opening is inside the ellipse would remove it, but that
-  ramp is 0.03 wide upright and would read as a pop. The alternative not tried
-  is clamping the token's reach to the opening's own radius while it is in
-  shot, which is continuous at the crossing by construction.
 - The client has one 2.3 MB chunk and Vite warns about it. Unchanged by this
   candidate and untouched by it.
 

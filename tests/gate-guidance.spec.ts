@@ -275,6 +275,68 @@ describe('the needle and the opening', () => {
     }
   });
 
+  /*
+   * A token that rides a perimeter at the target's angle overshoots a target
+   * INSIDE that perimeter: the needle stays exact, but the token has gone past
+   * the opening on its way out to the ellipse, so sighting along the needle
+   * from the dial misses. Before the reach was clamped that read as wrong in
+   * 32,734 of 391,539 bright on-screen poses across these six viewports, worst
+   * on the wide ones, whose ellipse is inset only 30 px and so runs nearly to
+   * the frame edge. It is the same complaint as the ground bearing wearing a
+   * different hat, and it is worth a test of its own because the needle can be
+   * exact while the instrument still reads wrong.
+   */
+  it('does not overshoot an opening that is inside the ring', () => {
+    for (const [width, height, name] of VIEWPORTS) {
+      for (const metres of [8, 16, 32, 64, 128, 200]) {
+        for (let i = 0; i < 360; i++) {
+          const shot = shotFromRig((i * Math.PI) / 180, width, height, metres);
+          // Only where a player could read one against the other.
+          if (!shot.aim.onScreen || shot.aim.presence <= 0.5) continue;
+          const gap = Math.hypot(shot.px - shot.aim.x, shot.py - shot.aim.y);
+          const sighted = Math.atan2(shot.px - shot.aim.x, -(shot.py - shot.aim.y));
+          if (apart(shot.aim.angle, sighted) < 45) continue;
+          /*
+           * Either the needle points at the opening or the dial is sitting on
+           * it, and there is no third case. The clamp matches the token's
+           * RADIUS from the ring's centre rather than its ray, and the ring's
+           * centre is off the frame's by up to 48 px where the HUD insets are
+           * asymmetric, so a little residual is left by construction: measured
+           * at 58.3 px upright, 42.2 landscape and 22.5 on a wide desktop, all
+           * inside the 44 px token plus that offset. At those separations the
+           * dial and the opening are one thing on the screen.
+           */
+          expect(
+            gap,
+            `${name} at ${metres} m, heading ${i}: the needle misses the`
+            + ` opening and the dial is ${gap.toFixed(0)} px away from it`,
+          ).toBeLessThan(60);
+        }
+      }
+    }
+  });
+
+  it('keeps the clamped token inside its budget at every range', () => {
+    // The shipped no-jump test sweeps one distance. The clamp is the only
+    // thing that can move the token for a reason other than turning, so it
+    // gets the same budget asked across the range a run actually covers.
+    for (const [width, height, name] of VIEWPORTS) {
+      const budget = Math.hypot(width, height) * 0.05;
+      for (const metres of [8, 16, 32, 64, 128, 200]) {
+        let previous: GateAim | null = null;
+        for (let i = 0; i <= 1440; i++) {
+          const aim = aimFromRig((i * Math.PI) / 720, width, height, metres);
+          if (previous && (aim.presence > 0.02 || previous.presence > 0.02)) {
+            const step = Math.hypot(aim.x - previous.x, aim.y - previous.y) / 0.25;
+            expect(step, `${name} at ${metres} m: the token moved`
+              + ` ${step.toFixed(1)} px for a degree of turn`).toBeLessThan(budget);
+          }
+          previous = aim;
+        }
+      }
+    }
+  });
+
   it('stays calm everywhere the token can be seen', () => {
     /*
      * The needle is undefined with the opening exactly at frame centre, where

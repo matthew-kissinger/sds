@@ -80,18 +80,33 @@ of a run; the fade has the token at nothing by 0.22; and the terrain occlusion
 that would override the fade fires in 0 of 800,790 swept poses. Outside 0.22 the
 needle never exceeds 3.9 degrees per degree of turn.
 
-One property is inherent rather than fixed, and is recorded here so it is not
-rediscovered as a bug. A cue that rides a perimeter at the target's angle
-**overshoots a target that is inside that perimeter**: sighting along the needle
-from the dial then misses, because the dial has gone past the opening on the way
-to the ellipse. Measured over every on-screen pose with the token at more than
-half strength and dial and opening more than 80 px apart, that reads as wrong in
-0 of 85,247 landscape poses, 388 of 41,250 upright ones (0.9%) and 5,084 of
-67,769 on a 1440x900 desktop (7.5%), the last because a desktop ellipse is
-inset only 30 px and so runs nearly to the frame edge. The escape is to fade the
-token out before the opening is inside the ellipse, which on an upright phone
-would be a 0.03-wide ramp and so a pop; the current fade trades that pop for the
-overshoot.
+**The ellipse is a ceiling on the reach, not the reach.** A cue that rides a
+perimeter at the target's angle *overshoots a target inside that perimeter*: the
+needle stays exact, but the dial has gone past the opening on its way out to the
+ellipse, so sighting along the needle from the dial misses. That is the same
+complaint as the ground bearing wearing a different hat, and it was worth
+catching separately, because the needle can be exact while the instrument still
+reads wrong. Across six viewports it read as wrong in **32,734 of 391,539**
+bright on-screen poses - worst on the wide ones, whose ellipse is inset only
+30 px and so runs nearly to the frame edge.
+
+Pulling the reach in to the opening's own radius while the opening is in shot
+takes that to **0**, and costs almost nothing: it can only ever shorten the
+reach, and only when the opening is already inside the ring, so the token cannot
+leave the safe rectangle the insets bought. It is continuous at the crossing by
+construction, the two radii being equal exactly where it engages, and it cannot
+engage while the opening is off screen - the 85% of a turn the token exists for
+- because every inset is at least 30 px and `EDGE_MARGIN` is 24. Worst movement
+while the token is visible went from 28.5 to 30.0 px per degree of turn against
+a budget of 146.9.
+
+What is left is bounded and by construction. The clamp matches the token's
+radius from the *ring's* centre rather than its ray, and where the HUD insets
+are asymmetric that centre is up to 48 px off the frame's, so a small residual
+survives: measured at 58.3 px upright, 42.2 landscape, 22.5 on a wide desktop.
+At those separations the dial is sitting on the opening. So the rule the tests
+hold is that either the needle points at the opening or the dial is on it, and
+there is no third case.
 
 The metres are gone with the words. Distance is an arc closing round the rim,
 empty at 150 m and shut at the opening - a quantity to glance at rather than

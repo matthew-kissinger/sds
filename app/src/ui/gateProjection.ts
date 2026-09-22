@@ -20,8 +20,10 @@
  * the angle between where the camera looks and where the opening is, and that
  * one is continuous through every heading including straight behind.
  *
- * So the cue rides an ellipse inscribed in the safe area at that angle. Ahead
- * is up and right is right; that is the whole of the mapping. Measured over
+ * So the cue rides an ellipse inscribed in the safe area at that angle - or
+ * nearer, while the opening is in shot and inside the ring; see the clamp on
+ * `reach`. Ahead is up and right is right; that is the whole of the mapping.
+ * Measured over
  * the same sweep: 5.8 to 10.8 px per 2 degrees of turn rather than 1.5 to 245,
  * 77 distinct x positions rather than 23, no discontinuity anywhere, and no
  * special case left in the function at all.
@@ -166,7 +168,7 @@ export function aimAtGate(
   const cx = (left + right) / 2, cy = (top + bottom) / 2;
   const rx = (right - left) / 2, ry = (bottom - top) / 2;
   const dx = Math.sin(angle), dy = -Math.cos(angle);
-  const reach = 1 / Math.hypot(dx / rx, dy / ry);
+  const ring = 1 / Math.hypot(dx / rx, dy / ry);
 
   // Visibility still belongs to the world opening, not to the ring: a gate the
   // player can see near the frame edge must not acquire a floating token.
@@ -175,6 +177,28 @@ export function aimAtGate(
   const onScreen = clip.w > 0
     && px >= EDGE_MARGIN && px <= width - EDGE_MARGIN
     && py >= EDGE_MARGIN && py <= height - EDGE_MARGIN;
+
+  /*
+   * The ring is a ceiling on the reach rather than the reach itself, because a
+   * token that rides a perimeter at the target's angle OVERSHOOTS a target
+   * inside that perimeter: the needle stays exact, but the token has gone past
+   * the opening on its way out to the ellipse, so sighting along the needle
+   * from the dial misses. On a 1440x900 desktop, whose ellipse is inset only
+   * 30 px and so runs nearly to the frame edge, that read as wrong in 5,084 of
+   * 67,769 on-screen poses.
+   *
+   * Pulling the reach in to the opening's own radius costs nothing anywhere
+   * else. It can only ever SHORTEN the reach, and it shortens it only when the
+   * opening is already inside the ellipse, so the token cannot leave the safe
+   * rectangle the insets bought and no furniture becomes reachable. It is
+   * continuous at the crossing by construction - the two radii are equal
+   * exactly where the clamp engages - and it cannot engage while the opening
+   * is off screen, which is the 85% of a turn the token exists for.
+   *
+   * A clip w of exactly zero makes both radii NaN. Nothing downstream sees it:
+   * the clamp is behind onScreen, and a NaN comparison cannot pass it.
+   */
+  const reach = onScreen ? Math.min(ring, Math.hypot(px - cx, py - cy)) : ring;
 
   // Both ramps run on the clip point rather than the pixel one, so they are
   // measured in the lens rather than in the layout: a wider frame sees further

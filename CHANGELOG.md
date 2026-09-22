@@ -39,7 +39,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   which is what makes it agree with the picture: a rig that looks down
   foreshortens the forward axis in the image and not the sideways one, and a
   ground bearing missed the opening by up to 39.7 degrees, or 180 within five
-  metres of the gate. Both camera modes share the one reading.
+  metres of the gate. Both camera modes share the one reading. The ellipse is a
+  ceiling on the token's reach rather than the reach itself, so a token whose
+  opening is already inside the ring stops on the opening instead of riding
+  past it out to the perimeter.
 - "My times" groups a player's runs by flock size, ranks each against the
   public board for that size, and collapses groups that run long.
 - The touch stick has a visible resting home that teaches itself once and then
