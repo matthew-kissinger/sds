@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 
 import { create } from 'zustand';
-import type { GateIndicator } from '@app/ui/gateProjection';
+import type { GateCue } from '@app/ui/gateProjection';
 import { CpuDeterministicSim } from '@sim/FlockSim';
 import { HOME_FIELD } from '@sim/field';
 import type { AutoTierReceipt } from '@app/quality/autoTier';
@@ -124,7 +124,7 @@ interface StoredSettings {
 }
 
 export interface GameStore {
-  readonly gateIndicator: GateIndicator | null;
+  readonly gateIndicator: GateCue | null;
   readonly gamePhase: GamePhase;
   readonly uiPanel: UiPanel;
   readonly sceneReady: boolean;
