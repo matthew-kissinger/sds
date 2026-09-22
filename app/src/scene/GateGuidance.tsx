@@ -5,7 +5,7 @@ import { Vector3, Vector4 } from 'three/webgpu';
 import { HOME_FIELD } from '@sim/field';
 import { useGameStore } from '@app/state/store';
 import { useHeightfield } from '@app/world/heightfield';
-import { aimAtGate, gateBearing } from '@app/ui/gateProjection';
+import { aimAtGate, gateScreenAngle } from '@app/ui/gateProjection';
 import { GateOpeningMarker } from './GateOpeningMarker';
 import { GATE_OPENING_LIFT } from './gateOpeningGeometry';
 
@@ -76,14 +76,21 @@ export function GateGuidance() {
     camera.updateMatrixWorld();
     scratch.clip.set(target.x, target.y, target.z, 1)
       .applyMatrix4(camera.matrixWorldInverse).applyMatrix4(camera.projectionMatrix);
-    // The bearing is taken from the CAMERA rather than the dog, because the
-    // needle is read against the screen and the screen's "up" is where the
-    // camera looks. The two agree while the rig trails the dog's heading, and
-    // where they differ - mid-turn, with the follow lag - the camera is right.
+    // Measured off the CAMERA rather than the dog, and off all three of its
+    // axes rather than a ground bearing. The needle is read against the screen,
+    // so the screen's own basis is the frame it has to be measured in: a rig
+    // that looks down foreshortens the forward axis in the image and leaves the
+    // sideways one alone, and a ground bearing written straight to a screen
+    // angle misses by up to 39.7 degrees. This is also the line that costs the
+    // two camera modes nothing - the basis is whatever the live camera is
+    // doing, so Follow at 22.5 degrees and Classic at 44.9 both come out right
+    // with no case between them.
     const forward = camera.getWorldDirection(scratch.forward);
-    const bearing = gateBearing(forward.x, forward.z,
-      x - camera.position.x, z - camera.position.z);
-    const cue = aimAtGate(scratch.clip, bearing, size.width, size.height,
+    const angle = gateScreenAngle(
+      forward.x, forward.y, forward.z,
+      x - camera.position.x, target.y - camera.position.y, z - camera.position.z,
+    );
+    const cue = aimAtGate(scratch.clip, angle, size.width, size.height,
       Math.hypot(dog.position.x - x, dog.position.z - z), obscured.current);
 
     if (!anchorEl.current) anchorEl.current = document.querySelector('.herd-gate-cue');
