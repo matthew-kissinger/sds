@@ -77,10 +77,65 @@ const FIELD_DATUM_Y = 0.06;
 const AIM_HEIGHT = 1.6;
 
 /**
- * Ground speed below which the velocity direction is noise rather than intent,
- * m/s. The bearing holds where it is instead of chasing it.
+ * Ground speed at which the velocity direction is half trusted as intent, m/s,
+ * and the half-width of the band it fades across.
+ *
+ * WHY A BAND AND NOT A SPEED. This was a hard boolean - below 1 m/s the bearing
+ * held, at or above it the bearing chased - and it was the only threshold in
+ * this file that turned on with a corner. Every other one is shaped: the dead
+ * zone is subtracted from the error so what survives it falls continuously to
+ * zero, the approach hold ramps its gain through `easeInOut`, and the turn
+ * authority in `input/conditioning.ts` is continuous in the angle for the
+ * stated reason that a threshold has something to chatter against.
+ *
+ * A corner here is reachable, and only from a touch stick. Against
+ * `DOG_MAX_SPEED` of 15, one metre per second is 6.7% of commanded effort, or
+ * 3.2 px of thumb offset on the 48 px `STICK_RADIUS`. A thumb resting on glass
+ * does not hold 3.2 px - `input/oneEuro.ts` exists because it does not - and
+ * that filter's own settled trailing distance against a moving input is 3.2 px,
+ * so it cannot keep a player out of a band narrower than its own tolerance. A
+ * keyboard commands effort 0 or 1 and cannot reach the band at all, which is
+ * why this never appeared on a desktop.
+ *
+ * Measured on a steady turn with commanded effort breathing +/-15%, the way a
+ * thumb does, at the effort that puts the dog at 0.90 m/s: 23.7% of frames at
+ * 33 fps REVERSED the camera's rotation direction, mean yaw acceleration 23.9
+ * deg/s^2 against 3.1 either side of the band, worst frame 965 deg/s^2 against
+ * 180. A reversal is what the eye reads as shake; a rough turn that holds its
+ * direction does not.
+ *
+ * The band is centred on the old constant, so this removes the corner without
+ * moving the tuning: at 1 m/s exactly, half the bearing demand is acted on,
+ * which is what the boolean already claimed was the changeover.
  */
 const YAW_ENGAGE_SPEED = 1;
+const YAW_ENGAGE_BAND = 0.4;
+
+/**
+ * How long the acted-on share of the demand takes to follow the instantaneous
+ * one, seconds.
+ *
+ * THE BAND ALONE IS NOT ENOUGH, and measuring it is what showed that. A ramp
+ * with no memory is still a memoryless function of a signal that oscillates, so
+ * it converts thumb breathing into demand breathing at reduced amplitude and
+ * relocates the chatter to its own lower edge: the band alone took reversals in
+ * the 0.90 m/s case to 0.0% and produced 26.4% at 0.60 m/s instead.
+ *
+ * Lagging it is not a second patch on the first. The two quantities answer
+ * different questions and are read in different places. Whether there is a
+ * travel direction AT ALL is a fact about this instant, and the seat and the
+ * `spinning` bit read it that way. How far to TRUST a direction is a claim
+ * about recent history, and a claim built from one frame of a signal known to
+ * be noisy is not worth making. `held` already takes this shape, integrating
+ * speed over time rather than reading the dog's displacement, for the same
+ * reason.
+ *
+ * 0.3 s puts the corner at 0.53 Hz. Thumb tremor runs well above that and is
+ * attenuated hard; a genuine start or stop is a step and completes inside a
+ * second, under a bearing lag of `FOLLOW_YAW_TAU` that is already 1.0 s, so
+ * nothing a player does deliberately waits on this.
+ */
+const YAW_ENGAGE_TAU = 0.3;
 
 /**
  * Hysteresis, as fractions of the turning profile's resting dead zone. At the
@@ -223,6 +278,8 @@ export function createFollowFraming(
   let yaw = 0;
   /** Which way the bearing is currently turning: -1, 0 or 1. See the step. */
   let spinning = 0;
+  /** Lagged share of the bearing demand to act on, 0 to 1. See YAW_ENGAGE_TAU. */
+  let engage = 0;
   /** Metres travelled since the dog's direction entered the hold cone. */
   let held = 0;
   let seated = false;
@@ -243,7 +300,9 @@ export function createFollowFraming(
       if (mode === turning) return;
       turning = mode;
       // The law changed underneath the hysteresis bit and the hold, so what
-      // they recorded is no longer a fact about the law now in force.
+      // they recorded is no longer a fact about the law now in force. `engage`
+      // survives: it records how well the DOG's travel direction is defined,
+      // and no turning profile has any bearing on that.
       spinning = 0;
       held = 0;
     },
@@ -255,11 +314,26 @@ export function createFollowFraming(
       seated = false;
       spinning = 0;
       held = 0;
+      // `engage` is not cleared: the seat sets it from the dog it seats on, so
+      // re-entering Follow on a dog already at a run tracks from the first
+      // frame rather than easing in over the first third of a second.
     },
     update(dt: number, dog: Dog): void {
       const law = TURNING[turning];
       const speed = Math.hypot(dog.velocity.x, dog.velocity.z);
-      const moving = speed >= YAW_ENGAGE_SPEED;
+      // How well defined the dog's travel direction is this instant, 0 to 1.
+      // Smoothstepped rather than linear so it arrives at both ends with zero
+      // slope - the property `easeInOut` documents itself for, that nothing
+      // should turn on or off with a corner. Zero means there is no direction
+      // to read at all, and that is the only sense in which a moving bit is
+      // still a boolean anywhere in this law.
+      const confidence = easeInOut(
+        Math.min(
+          1,
+          Math.max(0, (speed - YAW_ENGAGE_SPEED + YAW_ENGAGE_BAND) / (2 * YAW_ENGAGE_BAND)),
+        ),
+      );
+      const moving = confidence > 0;
       const leadTarget = view.lookAhead * law.leadScale;
       // Yaw is measured the three.js way (0 = +z) everywhere below, so the
       // forward is (sin yaw, cos yaw) and "behind" is the negative of that.
@@ -274,6 +348,10 @@ export function createFollowFraming(
             ? Math.atan2(dog.heading.x, dog.heading.z)
             : 0;
         publishedBearing = yaw;
+        // A dog seated at a run tracks from the first frame; a dog seated at a
+        // standstill earns its authority as it gets going, which is the ramp
+        // every other start goes through.
+        engage = confidence;
         seated = true;
         center.set(dog.position.x, 0, dog.position.z);
         radius = view.distance;
@@ -343,10 +421,15 @@ export function createFollowFraming(
         held = Math.max(0, held - speed * dt);
       }
 
+      // Authority follows confidence at its own time constant, so a thumb
+      // breathing across the band moves this hardly at all, while a genuine
+      // start or stop moves it all the way.
+      engage += (confidence - engage) * smoothing(dt, YAW_ENGAGE_TAU);
+
       // The cap goes on last. Clamping before the smoothing would leak the
       // ceiling into the time constant, and clamping to a fixed step per frame
       // would make the sustained rate scale with the display.
-      const step = demand * gain * smoothing(dt, FOLLOW_YAW_TAU);
+      const step = demand * gain * engage * smoothing(dt, FOLLOW_YAW_TAU);
       const limit = law.rate * dt;
       const capped = step > limit ? limit : step < -limit ? -limit : step;
       yaw += capped;
