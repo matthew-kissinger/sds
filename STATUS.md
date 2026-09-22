@@ -1,5 +1,86 @@
 # Sheepdog Sim 3 release status
 
+## Typography, label jitter and the screen-anchored cue - local candidate, 2026-09-22
+
+Owner playtesting on a phone reported text jitter on the gate label and the
+sheep nameplates, and a Follow camera that shook while turning. Both were
+measured before anything was changed, and neither cause was the one the
+symptom suggested.
+
+**Type.** The candidate fix was `@pmndrs/glyph`, a runtime text renderer. It
+was in `package.json` and no shipped code read it, so the first question was
+whether to adopt or drop it. Dropping it, because it would have made the
+reported defect worse: `app/src/scene/autoTier.ts` caps the canvas device
+pixel ratio between 0.8 and 1.5, while DOM composites at the device's own
+ratio of 3 on the phone that complained, so moving these labels into the canvas
+would render them at roughly a third of their current resolution. The interface
+now runs on one self-hosted variable family, Piazzolla, subsetted from an
+in-repository `fonttools` recipe to a 26 KB woff2 with provenance, licence and
+digest recorded in `assets/fonts/README.md`. Reasoning in `spec/11-typography.md`.
+
+**The jitter itself** was sampling and rounding, not rasterisation. The gate cue
+projected at 20 Hz against a camera that moves every frame, rounded its
+transform to whole pixels - three device pixels at a ratio of 3 - and carried a
+150 ms CSS transition on a transform rewritten every frame, which trails the
+camera and rubber-bands rather than ever landing. All three are fixed and the
+rules are written down where the next label will find them.
+
+**The camera** was a separate defect with the same reporter. `YAW_ENGAGE_SPEED`
+was the only hard boolean in `followFraming.ts`, and one metre per second is
+6.7% of commanded effort - 3.2 px on a 48 px stick, which is exactly the
+settled trailing distance of the one-euro filter that exists because a thumb
+cannot hold still. Measured on a steady turn with effort breathing +/-15% at 33
+fps: 23.7% of frames reversed the camera's rotation direction, mean yaw
+acceleration 23.9 deg/s^2 against 3.1 either side of the band, worst frame 965
+against 180. A band alone relocates the chatter to its own lower edge - 0.0% at
+0.90 m/s and 26.4% at 0.60 - so the acted-on share is also lagged. Both
+constants are asserted by name in `tests/camera-follow-jitter.spec.ts`.
+
+**The gate cue** was then rebuilt, because the same work exposed that it was
+placed from the wrong quantity. Swept through a full turn on a 390x844 phone,
+the old pill sat on one of exactly two x values at 29 of the 31 bearings it
+appeared at, and threw itself 245 px across the screen for one degree of turn
+with the gate directly behind. Placing it from the true bearing on an inscribed
+ellipse gives 5.8 to 10.8 px per 2 degrees rather than 1.5 to 245, 77 distinct
+x positions rather than 23, no discontinuity, and no special case left in the
+function. The safe-area insets are solved rather than chosen: every HUD
+rectangle is in the spec, the 44 px token is swept against them at a quarter of
+a degree, and all 22 probed viewports from 320x568 to 2560x1440 clear. Rationale
+in `spec/06-ux-ui-juice.md`.
+
+**Also in this candidate**, from the same round of owner feedback: the touch
+stick gains a visible resting home that teaches once and retires on evidence of
+real travel; the touch controls become sheer enough to see the field through
+while keeping a full border so their extent stays legible; and "My times"
+groups a player's runs by flock size with a rank against the public board for
+each, described in `spec/12-my-times.md`.
+
+### Evidence
+
+- `npm test` 893 passed, 111 files. `npm run lint`, `npm run typecheck`,
+  `npm run typecheck:worker`, `npm run check:discovery` clean.
+- `npm run build` succeeds. First load 32 files, 6,497,688 raw bytes,
+  4,250,613 estimated transfer against an 8,388,608 budget. Client bundle
+  2,276.64 kB raw, 634.51 kB gzip.
+- `npm run probe:release` passes: 23 character sources verified, 14 audio
+  assets verified, 4 recipe manifests, 0 external models, client secret scan
+  clean, page params still exactly `debug` and `seed`.
+- Gate cue verified in the running dev build in both orientations. Landscape
+  750x417 the token travels 316,80 to 198,116 and portrait 390x844 it travels
+  171,146 to 99,187, both continuous, with opacity ramping 0.41 to 1 as the
+  opening leaves the frame.
+
+### Open
+
+- The terrain-occlusion approximation reports the opening blocked for roughly
+  the first 100 m of a run on Home Field, so the cue is present for the early
+  approach. That is arguably correct - the opening is not visible - but the
+  20 Hz 11-sample walk interpolates its ray height linearly from the camera
+  down to 1.2 m, which biases it toward reporting a block at long range. Not
+  changed here; it predates this work and is its own measurement.
+- The client has one 2.3 MB chunk and Vite warns about it. Unchanged by this
+  candidate and untouched by it.
+
 ## Camera and movement comfort — local candidate, 2026-09-18
 
 Issue #90 reported motion sickness in the Follow camera. This change adds a

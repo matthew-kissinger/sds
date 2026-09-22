@@ -27,12 +27,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   flock sizes 25, 75 and 200. It does not import the version 2 network client.
 - Release workflows build and verify an exact commit, keep preview scores away
   from production, and retain an explicit version 2 rollback branch and tag.
+- Interface type is one self-hosted variable family, Piazzolla, subsetted to a
+  26 KB woff2 from an in-repository `fonttools` recipe with its own provenance
+  and digest record. No webfont CDN and no runtime text renderer.
+- The way to the gate is a compass token rather than a distance label. It is
+  placed from the true bearing to the opening on an ellipse inscribed in the
+  safe area, so it answers "which way" continuously through a whole turn
+  instead of pinning to the frame edge the gate happened to leave through.
+  Range is an arc closing round its rim; the metres and the word are gone.
+- "My times" groups a player's runs by flock size, ranks each against the
+  public board for that size, and collapses groups that run long.
+- The touch stick has a visible resting home that teaches itself once and then
+  retires on evidence of real stick travel. Touch controls are sheer enough to
+  see the field through and keep a full border so their extent stays legible.
+
+### Fixed
+
+- Screen-anchored labels no longer jitter on mobile. They are projected every
+  frame rather than at 20 Hz, written at sub-pixel precision rather than
+  rounded, and carry no CSS transition on a transform that is rewritten each
+  frame.
+- The Follow camera no longer shakes while turning slowly on a touch stick.
+  The yaw-engage threshold was the one hard boolean in the rig, and a thumb
+  cannot hold still inside the 3.2 px band around it; at 0.90 m/s it reversed
+  the camera's rotation on 23.7% of frames. It is now a band with a lagged
+  trust term, and both quantities are asserted against the sim constants.
 
 ### Removed
 
 - The version 2 client, including multiplayer UI, room flows, scene and mode
   rosters, compatibility layers, browser-global bridges, duplicated renderer
   materials and the public 5,000-sheep path.
+- The `@pmndrs/glyph` dependency and its `@react-three/fiber` override. No
+  shipped code read it, and the label jitter it would have been reached for is
+  a sampling and rounding defect that in-canvas text does not fix - the canvas
+  is capped at a device pixel ratio of 1.5, so it would have rendered text at
+  roughly a third of the resolution of the phone that reported the problem.
 
 The complete version 2 source remains available from `v2.6.4` and
 `release/2.x`.
