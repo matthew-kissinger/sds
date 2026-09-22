@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { useTouchPresent } from '@app/input/touchPresent';
 import { useGameStore } from '@app/state/store';
 
 function keyLabel(code: string): string {
@@ -9,9 +10,15 @@ function keyLabel(code: string): string {
 
 /** A quiet reminder; binding changes render once, never on the frame loop. */
 export function DesktopControls() {
+  // Complementary to the touch stick, from the same answer rather than from a
+  // stylesheet rule that has to be kept in step with it by hand. A phone has
+  // no keys to be reminded of, and the reminder sits exactly where the stick's
+  // resting position is.
+  const touch = useTouchPresent();
   const bindings = useGameStore((state) => state.inputBindings);
   const movement = [bindings.forward, bindings.left, bindings.backward, bindings.right]
     .map(keyLabel).join(' ');
+  if (touch) return null;
   return (
     <div className="herd-desktop-controls" role="group" aria-label="Keyboard controls">
       <span><kbd>{movement}</kbd> Move</span>
