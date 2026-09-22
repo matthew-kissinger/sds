@@ -1,4 +1,4 @@
-Copyright 2011 The Alice Project Authors (https://github.com/cyrealtype/Alice)
+Copyright 2018 The Piazzolla Project Authors (https://github.com/huertatipografica/piazzolla)
 
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

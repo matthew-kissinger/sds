@@ -12,32 +12,29 @@ import {
   STICK_RADIUS,
   touchStickPixels,
 } from './touch';
-import { debugFlags } from '@app/scene/glFactory';
+import { markMoveHintLearned, moveHintLearned } from './moveHint';
+import { useTouchPresent } from './touchPresent';
 import { useGameStore } from '@app/state/store';
 
-const TOUCH_QUERY = '(pointer: coarse)';
-
-function touchPresent(): boolean {
-  return window.matchMedia(TOUCH_QUERY).matches
-    || (import.meta.env.DEV && debugFlags().has('touch'));
-}
-
-function useTouchPresent(): boolean {
-  const [present, setPresent] = useState(touchPresent);
-  useEffect(() => {
-    const query = window.matchMedia(TOUCH_QUERY);
-    const onChange = () => setPresent(touchPresent());
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
-  return present;
-}
+/**
+ * Stick travel that counts as having found the control, as a fraction of
+ * `STICK_RADIUS`. At 0.3 it is 14 px and roughly a third of full effort, which
+ * is a deliberate push rather than the wander of a thumb resting on glass. The
+ * 1 euro filter settles 3.2 px behind a moving input and a resting thumb wanders
+ * about that far, so anything much tighter would retire the hint for a player
+ * who only ever brushed the screen.
+ */
+const LEARNED_TRAVEL = 0.3;
 
 export function TouchControls() {
   const present = useTouchPresent();
   const gamePhase = useGameStore((state) => state.gamePhase);
   const ringRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
+  const restRef = useRef<HTMLDivElement>(null);
+  // Read once on mount. A player who learned this in an earlier session gets
+  // the quiet resting stick and no caption, and never sees the lesson again.
+  const [teaching, setTeaching] = useState(() => !moveHintLearned());
   const pointerId = useRef<number | null>(null);
   const sprintPointerId = useRef<number | null>(null);
   const sprintKeys = useRef(new Set<string>());
@@ -66,6 +63,11 @@ export function TouchControls() {
     drawStick();
     const ring = ringRef.current;
     if (ring) ring.style.opacity = '0';
+    // The resting stick is a statement about where movement lives. While a
+    // thumb is down the live stick is making that statement better, and two
+    // rings on screen at once read as a bug.
+    const rest = restRef.current;
+    if (rest) rest.dataset.holding = 'false';
   }, [drawStick]);
 
   const syncSprint = useCallback(() => {
@@ -131,6 +133,8 @@ export function TouchControls() {
     drawStick();
     const ring = ringRef.current;
     if (ring) ring.style.opacity = '1';
+    const rest = restRef.current;
+    if (rest) rest.dataset.holding = 'true';
   };
 
   // The stick belongs to the pointer that started it, and no other pointer's
@@ -172,6 +176,19 @@ export function TouchControls() {
     }
 
     drawStick();
+
+    // Measured from where the thumb landed rather than from the device's
+    // filtered offset: this is asking whether the player moved their thumb,
+    // which is a fact about the thumb, and the filter is allowed to disagree
+    // about exactly where it is.
+    if (teaching) {
+      const dx = event.clientX - landed.current.x;
+      const dy = event.clientY - landed.current.y;
+      if (Math.hypot(dx, dy) >= STICK_RADIUS * LEARNED_TRAVEL) {
+        markMoveHintLearned();
+        setTeaching(false);
+      }
+    }
   };
 
   const onSprintDown = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -204,6 +221,16 @@ export function TouchControls() {
         >
           <div ref={knobRef} className="herd-touch-knob" />
         </div>
+      </div>
+      <div
+        ref={restRef}
+        className="herd-touch-rest"
+        data-teaching={String(teaching)}
+        data-holding="false"
+        data-testid="touch-stick-rest"
+        aria-hidden="true"
+      >
+        <div className="herd-touch-rest__knob" />
       </div>
       <button
         ref={sprintRef}

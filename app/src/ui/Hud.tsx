@@ -176,7 +176,20 @@ export function Hud() {
       {showTimer && (gamePhase === 'playing' || gamePhase === 'paused') ? <RunTimer /> : null}
       {gamePhase === 'playing' || gamePhase === 'paused' ? <DogStamina /> : null}
       {gamePhase === 'playing' ? (
-        <button type="button" className="herd-icon-button herd-pause-button" aria-label="Pause" onClick={pause}>II</button>
+        <button type="button" className="herd-icon-button herd-pause-button" aria-label="Pause" onClick={pause}>
+          {/* Drawn rather than typed. "II" is two glyphs of the UI serif, so it
+              came out with the face's own stroke contrast and serifs and read as
+              a Roman two. Drawn as two strokes rather than two filled bars: the
+              rest of this interface is a light serif on paper, and a pair of
+              solid slabs is heavier than anything else on the field. Round caps
+              and a gap a little wider than the stroke keep it quiet. */}
+          <svg viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+            <line x1="5" y1="2.4" x2="5" y2="11.6" stroke="currentColor"
+              strokeWidth="1.7" strokeLinecap="round" />
+            <line x1="9" y1="2.4" x2="9" y2="11.6" stroke="currentColor"
+              strokeWidth="1.7" strokeLinecap="round" />
+          </svg>
+        </button>
       ) : null}
       {gamePhase === 'paused' && uiPanel === 'pause' ? <PausePanel /> : null}
       {gamePhase === 'complete' ? <CompletionPanel /> : null}

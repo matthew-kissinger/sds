@@ -1151,6 +1151,82 @@ export async function getPlayerScores(
   }));
 }
 
+/**
+ * How many distinct times per count are ranked in one request.
+ *
+ * `getPlayerScores` already caps a player's history at 200 rows; this caps the
+ * ranking work behind it, because each distinct time costs one scan of the
+ * board's aggregate. A player with more than this many distinct times at one
+ * count gets ranks on their fastest 100 and none on the rest, and a run with
+ * no rank is drawn without one rather than with a wrong one.
+ */
+const MAX_RANKED_SCORES_PER_COUNT = 100;
+
+/** Where one of a player's own times would sit on a flock size's public board. */
+export interface PlayerScoreStanding {
+  sheepCount: number;
+  score: number;
+  rank: number;
+  players: number;
+}
+
+/**
+ * Board standing for each distinct time a player has run, per ranked count.
+ *
+ * The public board ranks PLAYERS by their best, so this counts the players
+ * whose best beats the given time. A player's own best therefore comes back
+ * carrying exactly their board position, and a slower run of theirs comes back
+ * carrying the position that run would have held - with their own faster self
+ * among the players ahead of it, which is what "this one would have placed
+ * 41st" means and is the only reading that stays consistent with the board.
+ *
+ * Membership matches `getLeaderboard` exactly: all four solo slugs at the
+ * count, on the requested scene, flagged submissions excluded. A rank measured
+ * against a different population from the one the board displays would be a
+ * different number wearing the board's name.
+ *
+ * The counting stays in SQLite rather than pulling every player's best into
+ * the worker, so what crosses the wire is the player's own distinct times and
+ * not the size of the board.
+ */
+export async function getPlayerScoreStandings(
+  db: D1Database,
+  sceneId: string,
+  runs: readonly { sheepCount: number; score: number }[],
+): Promise<PlayerScoreStanding[]> {
+  const out: PlayerScoreStanding[] = [];
+  for (const sheepCount of rankedCountsForScoreScene(sceneId)) {
+    const scores = [...new Set(
+      runs.filter((run) => run.sheepCount === sheepCount).map((run) => run.score),
+    )].sort((a, b) => a - b).slice(0, MAX_RANKED_SCORES_PER_COUNT);
+    if (scores.length === 0) continue;
+    const slots = scores.map(() => '(?)').join(', ');
+    const { results } = await db
+      .prepare(
+        `WITH bests AS (
+           SELECT persistent_id, MIN(score) AS best
+             FROM score_submissions
+            WHERE game_mode IN ('soloClassic', 'soloExtreme', 'soloInsane', 'soloChaos')
+              AND scene_id = ?
+              AND sheep_count = ?
+              AND score_anomalies IS NULL
+            GROUP BY persistent_id
+         ),
+         mine(score) AS (VALUES ${slots})
+         SELECT mine.score AS score,
+                (SELECT COUNT(*) FROM bests) AS players,
+                (SELECT COUNT(*) FROM bests b WHERE b.best < mine.score) + 1 AS rank
+           FROM mine`,
+      )
+      .bind(sceneId, sheepCount, ...scores)
+      .all<{ score: number; players: number; rank: number }>();
+    for (const row of results || []) {
+      out.push({ sheepCount, score: row.score, rank: row.rank, players: row.players });
+    }
+  }
+  return out;
+}
+
 export interface LeaderboardEntry {
   rank: number;
   displayName: string;

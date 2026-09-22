@@ -124,10 +124,18 @@ export function createScoreApi(base: string, fetcher: Fetcher = fetch, requestTi
           || typeof raw.submittedAt !== 'number'
           || !FLOCK_SIZES.includes(raw.sheepCount as FlockSize)
         ) return [];
+        // Standing is optional on the wire. A worker that predates it sends
+        // neither field, and a run without a rank is shown without one rather
+        // than with a wrong one.
+        const standing = typeof raw.boardRank === 'number' && raw.boardRank > 0
+          && typeof raw.boardPlayers === 'number' && raw.boardPlayers > 0
+          ? { boardRank: raw.boardRank, boardPlayers: raw.boardPlayers }
+          : {};
         return [{
           flockSize: raw.sheepCount as FlockSize,
           scoreSeconds: raw.score,
           submittedAt: raw.submittedAt,
+          ...standing,
         }];
       });
     },

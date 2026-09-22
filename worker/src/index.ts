@@ -15,6 +15,7 @@ import {
   getLeaderboard,
   getAllLeaderboards,
   getPlayerScores,
+  getPlayerScoreStandings,
   isValidGameMode,
   isDailyMode,
   validateDailySubmission,
@@ -740,7 +741,19 @@ export default {
         const scene = url.searchParams.get('scene') || '';
         if (!isKnownScoreScene(scene)) return err('unknown scene', 400, cors);
         const entries = await getPlayerScores(env.DB, payload.persistent_id, scene);
-        return json({ entries }, 200, cors);
+        // Each run also carries where it would sit on that count public board.
+        // A rank the player cannot place against a field size is just a
+        // number, so the two travel together or not at all.
+        const standings = await getPlayerScoreStandings(env.DB, scene, entries);
+        const placed = new Map(standings.map((s) => [`${s.sheepCount}:${s.score}`, s]));
+        return json({
+          entries: entries.map((entry) => {
+            const standing = placed.get(`${entry.sheepCount}:${entry.score}`);
+            return standing
+              ? { ...entry, boardRank: standing.rank, boardPlayers: standing.players }
+              : entry;
+          }),
+        }, 200, cors);
       }
 
       if (path === '/api/leaderboard' && method === 'GET') {

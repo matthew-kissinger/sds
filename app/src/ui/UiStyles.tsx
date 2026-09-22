@@ -7,14 +7,19 @@ const CSS = `
 :root { ${uiTokenVariables()} }
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; }
-body { background: var(--herd-paper-solid); color: var(--herd-ink); font-family: var(--herd-font); }
+body { background: var(--herd-paper-solid); color: var(--herd-ink); font-family: var(--herd-font); word-spacing: var(--herd-word-space); }
 button, select, input { font: inherit; color: inherit; }
 canvas { display: block; touch-action: none; }
 .herd-app { position: relative; width: 100%; height: 100%; isolation: isolate; }
-.herd-gate-cue { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: var(--herd-s2); padding: var(--herd-s1) var(--herd-s2); border: 1px solid var(--herd-line); border-radius: var(--herd-control); background: var(--herd-paper-glass); color: var(--herd-ink); font-size: var(--herd-small); white-space: nowrap; pointer-events: none; }
+.herd-gate-cue { --gate-angle: 0rad; --gate-range: 0; position: absolute; left: 0; top: 0; width: 44px; height: 44px; pointer-events: none; }
+.herd-gate-cue svg { display: block; width: 44px; height: 44px; filter: var(--herd-field-lift); }
 .herd-gate-cue[hidden] { display: none; }
-.herd-title-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; font-size: var(--herd-small); }
-.herd-title-links a { color: var(--herd-ink-soft); text-underline-offset: 3px; }
+.herd-title-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; font-size: var(--herd-small); text-shadow: var(--herd-halo); }
+/* Full ink, not soft. Measured over the field these links actually sit on,
+   --herd-ink-soft runs 4.19:1 on light grass down to 2.73:1 in a cloud
+   shadow, so it failed AA everywhere and failed the 3:1 large-text floor in
+   shade; --herd-ink holds 5.61:1 at its worst. */
+.herd-title-links a { color: var(--herd-ink); text-underline-offset: 3px; }
 .herd-title-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 @media (max-height: 500px) {
   .herd-boot .herd-title-card { gap: var(--herd-s2); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 4px; }
@@ -22,10 +27,26 @@ canvas { display: block; touch-action: none; }
   .herd-title-card .herd-title { font-size: 44px; }
   .herd-title-card .herd-title-links { margin-top: 0; }
 }
-.herd-gate-cue { max-width: 148px; min-height: 30px; transition: transform var(--herd-quick) linear; }
+/* No transform transition. The cue is now written every frame, and a 150ms
+   interpolation retargeted each frame never lands - it trails the camera and
+   rubber-bands. Opacity still eases, because that changes only on state. */
+/* Opacity is driven per frame now and already eases in the law, so a CSS
+   transition on top of it would fight the ramp. It is kept only for the one
+   step that is not ramped: a ridge cutting in front of the opening. */
+.herd-gate-cue { transition: opacity var(--herd-quick) linear; }
 .herd-app[data-reduced-motion=true] .herd-gate-cue { transition: none; }
-.herd-gate-cue__distance { color: var(--herd-ink-soft); font-size: var(--herd-small); font-variant-numeric: tabular-nums; }
-.herd-gate-cue__arrow { flex: 0 0 18px; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transform: rotate(var(--gate-angle)); }
+/* Sheerer than the thumb controls, on purpose: those park at the edge of the
+   field and this one travels across it. See paperDrift in tokens.ts. */
+.herd-gate-cue__dial { fill: var(--herd-paper-drift); stroke: var(--herd-line-strong); stroke-width: 1; }
+.herd-gate-cue__marks { fill: none; stroke: var(--herd-line-strong); stroke-width: .95; stroke-linecap: round; }
+/* pathLength="1" on the rim, so the dash IS the closeness and the stylesheet
+   never has to restate a circumference that the radius already decides. */
+.herd-gate-cue__range { fill: none; stroke: var(--herd-ink); stroke-width: 1.4; stroke-linecap: round; opacity: .7; stroke-dasharray: var(--gate-range) 1; }
+/* view-box, not fill-box: the origin must be the dial's centre, not the
+   needle's own bounding box, or the needle orbits instead of turning. */
+.herd-gate-cue__needle { fill: var(--herd-ink); stroke: var(--herd-ink); stroke-width: .9; stroke-linejoin: round; transform: rotate(var(--gate-angle)); transform-origin: 22px 22px; transform-box: view-box; }
+.herd-gate-cue__pin { fill: var(--herd-paper); stroke: var(--herd-line-strong); stroke-width: .9; }
+.herd-gate-cue__hub { fill: var(--herd-ink); }
 .herd-button, .herd-icon-button, .herd-size, .herd-select {
   min-height: var(--herd-target); border: 1px solid var(--herd-line); color: var(--herd-ink);
   background: var(--herd-paper-glass); transition: transform var(--herd-quick) var(--herd-ease),
@@ -47,24 +68,40 @@ canvas { display: block; touch-action: none; }
 .herd-boot[data-ready=true] .herd-boot__wash { opacity: 0; }
 .herd-loading-card { position: relative; z-index: 1; grid-area: 1 / 1; width: min(88vw, 440px); display: grid; gap: var(--herd-s5); padding: clamp(24px, 5vw, 38px); border: 1px solid rgba(78,65,46,.2); border-radius: var(--herd-panel); background: rgba(244,234,215,.72); box-shadow: 0 18px 70px rgba(65,51,34,.12); color: var(--herd-ink); text-align: center; }
 .herd-loading-card__lockup { display: grid; gap: var(--herd-s2); }
-.herd-loading-card__lockup h1 { margin: 0; font-size: clamp(38px, 7vw, 56px); font-weight: 400; line-height: 1; letter-spacing: .035em; }
+.herd-loading-card__lockup h1 { margin: 0; font-family: var(--herd-display-font); font-size: clamp(38px, 7vw, 56px); font-weight: 400; line-height: 1; letter-spacing: .035em; }
 .herd-loading-card__lockup p { margin: 0; color: var(--herd-ink-soft); font-size: var(--herd-small); letter-spacing: var(--herd-track-wide); text-transform: uppercase; }
 .herd-loading-track { height: 9px; overflow: hidden; border: 1px solid rgba(78,65,46,.24); border-radius: var(--herd-round); background: rgba(116,90,58,.12); }
 .herd-loading-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #718b5b, #9aa968); transition: width 120ms linear; }
-.herd-loading-status { display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); min-height: 22px; margin: 0; color: var(--herd-ink-soft); font-size: var(--herd-small); font-variant-numeric: tabular-nums; letter-spacing: .04em; text-align: left; }
+.herd-loading-status { display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); min-height: 22px; margin: 0; color: var(--herd-ink-soft); font-size: var(--herd-small); font-variant-numeric: tabular-nums lining-nums; letter-spacing: .04em; text-align: left; }
 .herd-title-card { position: relative; grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; gap: var(--herd-s6); max-width: min(92vw, 660px); opacity: 0; transform: translateY(10px); pointer-events: none; text-align: center; text-shadow: 0 2px 18px rgba(244,234,215,.78); transition: opacity var(--herd-slow) var(--herd-ease), transform var(--herd-slow) var(--herd-ease); }
 .herd-boot[data-ready=true] .herd-title-card { opacity: 1; transform: none; pointer-events: auto; }
 .herd-boot[data-leaving=true] .herd-title-card { opacity: 0; transform: translateY(-8px); pointer-events: none; }
 .herd-title-lockup { display: grid; justify-items: center; gap: var(--herd-s3); }
-.herd-title { margin: 0; font-size: clamp(44px, 8.5vw, 88px); font-weight: 400; line-height: 1; letter-spacing: .035em; white-space: nowrap; }
+.herd-title { margin: 0; font-family: var(--herd-display-font); font-size: clamp(44px, 8.5vw, 88px); font-weight: 400; line-height: 1; letter-spacing: .035em; white-space: nowrap; }
 .herd-kicker { margin: 0; padding: 5px 10px; border-radius: var(--herd-round); color: var(--herd-ink); background: rgba(244,234,215,.38); font-size: var(--herd-small); letter-spacing: var(--herd-track-wide); text-shadow: 0 1px 10px rgba(244,234,215,.92); text-transform: uppercase; }
 .herd-size-row { display: flex; gap: var(--herd-s3); padding: var(--herd-s2); border-radius: var(--herd-round); background: rgba(244,234,215,.28); }
-.herd-size { min-width: 68px; padding: 8px 15px; border-radius: var(--herd-round); cursor: pointer; font-variant-numeric: tabular-nums; }
+.herd-size { min-width: 68px; padding: 8px 15px; border-radius: var(--herd-round); cursor: pointer; font-variant-numeric: tabular-nums lining-nums; }
 .herd-size[aria-pressed=true] { background: rgba(116,90,58,.2); border-color: var(--herd-line-strong); }
 .herd-title-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--herd-s3); }
-.herd-identity { min-height: 26px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--herd-s2); color: var(--herd-ink-soft); font-size: var(--herd-small); text-shadow: 0 1px 10px var(--herd-paper); }
-.herd-identity strong { color: var(--herd-ink); font-weight: 600; }
-.herd-text-button { min-width: var(--herd-target); min-height: var(--herd-target); border: 0; padding: 6px 8px; color: var(--herd-ink); background: transparent; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+/* An 18px halo is too diffuse to lift small text off moving grass. These two
+   rows are the only text on the title that sits on the field with no paper
+   under it, so they carry a tight halo of their own. */
+.herd-identity { min-height: 26px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--herd-s2); color: var(--herd-ink); font-size: var(--herd-small); text-shadow: var(--herd-halo); }
+/* One ink, one weight, and the underline on Edit is the only marking left.
+   The line used to carry three treatments in thirteen pixels - soft grey
+   label, 600 name, full-ink underlined control - and Piazzolla's 600 is a
+   heavier step off 400 than the system serif this replaced, so it read as a
+   slab dropped into a sentence.
+   Emphasis by lightening the label is not available here. Over the field,
+   the lightest ink that still clears 4.5:1 against grass in a cloud shadow
+   is #40372c, which is 68 percent of the way to --herd-ink and indis-
+   tinguishable from it; anything softer fails. So this line is legible
+   first, and the strong element stays for the screen reader, not the eye. */
+.herd-identity strong { color: inherit; font-weight: inherit; }
+/* The halo is set here rather than inherited: the user-agent stylesheet
+   resets text-shadow on <button>, so this was the one word on the identity
+   row standing on bare grass while everything beside it had a ground. */
+.herd-text-button { min-width: var(--herd-target); min-height: var(--herd-target); border: 0; padding: 6px 8px; color: var(--herd-ink); background: transparent; text-shadow: var(--herd-halo); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .herd-text-button:focus-visible, .herd-name-input:focus-visible { outline: 3px solid rgba(47,105,183,.55); outline-offset: 2px; }
 .herd-bark-button:focus-visible, .herd-camera-button:focus-visible, .herd-sprint-button:focus-visible { outline: 3px solid rgba(47,105,183,.55); outline-offset: 3px; }
 .herd-text-button:disabled { opacity: .5; cursor: default; }
@@ -81,35 +118,69 @@ canvas { display: block; touch-action: none; }
 .herd-progress::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--herd-paper-glass); border: 1px solid var(--herd-line); }
 .herd-progress__content { position: relative; display: grid; justify-items: center; line-height: 1; }
 .herd-progress__icon { width: 25px; height: 20px; color: var(--herd-ink-soft); }
-.herd-progress__count { margin-top: 2px; min-width: 48px; font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: .04em; text-align: center; }
+.herd-progress__count { margin-top: 2px; min-width: 48px; font-size: 13px; font-variant-numeric: tabular-nums lining-nums; letter-spacing: .04em; text-align: center; }
 .herd-progress[data-flock-size="200"] .herd-progress__count { font-size: 11px; letter-spacing: .01em; }
-.herd-timer { position: absolute; top: max(100px, calc(env(safe-area-inset-top) + 98px)); left: max(var(--herd-s5), env(safe-area-inset-left)); min-width: 82px; font-size: 15px; font-variant-numeric: tabular-nums; letter-spacing: var(--herd-track); text-shadow: 0 1px 10px var(--herd-paper); }
+.herd-timer { position: absolute; top: max(100px, calc(env(safe-area-inset-top) + 98px)); left: max(var(--herd-s5), env(safe-area-inset-left)); min-width: 82px; font-size: 15px; font-variant-numeric: tabular-nums lining-nums; letter-spacing: var(--herd-track); text-shadow: 0 1px 10px var(--herd-paper); }
 .herd-stamina { position: absolute; top: max(var(--herd-s5), env(safe-area-inset-top)); left: 50%; width: clamp(112px, 16vw, 156px); display: grid; gap: 4px; transform: translateX(-50%); filter: drop-shadow(0 2px 8px rgba(65,51,34,.18)); }
 .herd-stamina__label { color: rgba(44,56,40,.76); font-size: 10px; line-height: 1; letter-spacing: .14em; text-align: center; text-transform: uppercase; text-shadow: 0 1px 5px var(--herd-paper); }
 .herd-stamina__track { height: 7px; overflow: hidden; border: 1px solid rgba(78,65,46,.42); border-radius: var(--herd-round); background: rgba(244,234,215,.58); }
 .herd-stamina__fill { display: block; width: 100%; height: 100%; border-radius: inherit; background: #718b5b; transition: background var(--herd-normal) var(--herd-ease); }
 .herd-stamina[data-sprinting=true] .herd-stamina__fill { background: #9a7a47; }
 .herd-stamina[data-low=true] .herd-stamina__fill { background: #9f5e45; }
-.herd-pause-button { position: absolute; top: max(var(--herd-s5), env(safe-area-inset-top)); right: max(var(--herd-s5), env(safe-area-inset-right)); pointer-events: auto; }
+.herd-pause-button { position: absolute; top: max(var(--herd-s5), env(safe-area-inset-top)); right: max(var(--herd-s5), env(safe-area-inset-right)); display: grid; place-items: center; border-color: var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); pointer-events: auto; }
+.herd-pause-button svg { display: block; width: 15px; height: 15px; }
 .herd-modal { position: fixed; inset: 0; z-index: var(--herd-z-modal); display: grid; place-items: center; padding: max(var(--herd-s5), env(safe-area-inset-top)) max(var(--herd-s5), env(safe-area-inset-right)) max(var(--herd-s5), env(safe-area-inset-bottom)) max(var(--herd-s5), env(safe-area-inset-left)); background: rgba(64,48,31,.14); backdrop-filter: blur(5px); pointer-events: auto; }
 .herd-panel { width: min(92vw, 430px); max-height: min(88vh, 720px); overflow: auto; padding: var(--herd-s7); border: 1px solid var(--herd-line); border-radius: var(--herd-panel); background: var(--herd-paper-glass); box-shadow: 0 18px 70px var(--herd-shadow); }
 .herd-panel--completion { text-align: center; overflow: visible; }
 .herd-panel__header { display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); margin-bottom: var(--herd-s6); }
-.herd-panel__title { margin: 0; font-size: 28px; font-weight: 400; letter-spacing: var(--herd-track); }
+.herd-panel__title { margin: 0; font-family: var(--herd-display-font); font-size: 28px; font-weight: 400; letter-spacing: var(--herd-track); }
 .herd-panel__kicker { margin: 0 0 var(--herd-s3); color: var(--herd-ink-soft); font-size: var(--herd-small); letter-spacing: var(--herd-track-wide); text-transform: uppercase; }
-.herd-completion-time { margin: 0 0 var(--herd-s4); font-size: var(--herd-display); font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; }
-.herd-best { min-height: 24px; margin: 0 0 var(--herd-s6); color: var(--herd-ink-soft); font-variant-numeric: tabular-nums; }
+.herd-completion-time { margin: 0 0 var(--herd-s4); font-size: var(--herd-display); font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums lining-nums; }
+.herd-best { min-height: 24px; margin: 0 0 var(--herd-s6); color: var(--herd-ink-soft); font-variant-numeric: tabular-nums lining-nums; }
 .herd-online-times { margin: calc(var(--herd-s4) * -1) 0 var(--herd-s5); color: var(--herd-ink-soft); font-size: var(--herd-small); }
 .herd-online-times p { margin: 0 0 var(--herd-s3); }
 .herd-online-times ol { width: 100%; display: grid; gap: var(--herd-s1); margin: 0; padding: var(--herd-s3) 0 0; border-top: 1px solid var(--herd-line); list-style: none; }
-.herd-online-times li { display: flex; justify-content: space-between; gap: var(--herd-s4); font-variant-numeric: tabular-nums; text-align: left; }
+.herd-online-times li { display: flex; justify-content: space-between; gap: var(--herd-s4); font-variant-numeric: tabular-nums lining-nums; text-align: left; }
 .herd-board-panel { width: min(92vw, 520px); }
 .herd-board-tabs { display: flex; justify-content: center; gap: var(--herd-s3); margin-bottom: var(--herd-s4); }
 .herd-board-caption { margin: 0 0 var(--herd-s4); color: var(--herd-ink-soft); text-align: center; }
 .herd-board-message { min-height: 120px; display: grid; place-items: center; margin: 0; color: var(--herd-ink-soft); text-align: center; }
 .herd-board-list { display: grid; gap: var(--herd-s2); margin: 0; padding: var(--herd-s4) 0 0; border-top: 1px solid var(--herd-line); list-style: none; }
-.herd-board-list li { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); font-variant-numeric: tabular-nums; }
+.herd-board-list li { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); font-variant-numeric: tabular-nums lining-nums; }
 .herd-board-rank { color: var(--herd-ink-soft); }
+/* The "My times" tab. One section per flock size, because the flat list this
+   replaced put a 200-sheep run directly above a 25-sheep one and invited a
+   comparison that means nothing. spec/12-my-times.md records the contract. */
+.herd-mine { display: grid; gap: var(--herd-s6); }
+.herd-mine__summary { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--herd-s2) var(--herd-s5); margin: 0; padding: 0 0 var(--herd-s5); border-bottom: 1px solid var(--herd-line); color: var(--herd-ink-soft); font-size: var(--herd-small); text-align: center; }
+.herd-mine__summary b { color: var(--herd-ink); font-weight: 400; font-variant-numeric: tabular-nums lining-nums; }
+.herd-mine-group { display: grid; gap: var(--herd-s3); }
+.herd-mine-group__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--herd-s3); }
+.herd-mine-group__size { margin: 0; font-family: var(--herd-display-font); font-size: 19px; font-weight: 400; letter-spacing: var(--herd-track); font-variant-numeric: lining-nums; }
+.herd-mine-group__count { margin: 0; color: var(--herd-ink-soft); font-size: var(--herd-small); font-variant-numeric: tabular-nums lining-nums; }
+.herd-mine-best { display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s3); margin: 0; padding: var(--herd-s3) var(--herd-s4); border: 1px solid var(--herd-line-strong); border-radius: var(--herd-control); background: rgba(198,155,88,.16); }
+.herd-mine-best__label { color: var(--herd-ink-soft); font-size: var(--herd-small); letter-spacing: var(--herd-track-wide); text-transform: uppercase; }
+.herd-mine-best__time { display: grid; justify-items: end; gap: 3px; font-family: var(--herd-display-font); font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums lining-nums; }
+.herd-mine-best__standing { font-family: var(--herd-font); font-size: var(--herd-small); color: var(--herd-ink-soft); }
+.herd-mine-runs { display: grid; gap: var(--herd-s1); margin: 0; padding: 0; list-style: none; }
+/* Four columns: position, bar, time, and a stack of the gap to the player's
+   own best over where the run sits on the public board. */
+.herd-mine-runs li { min-height: 34px; display: grid; align-items: center; gap: var(--herd-s3); grid-template-columns: 2.2ch minmax(56px, 1fr) auto 7.5ch; font-variant-numeric: tabular-nums lining-nums; }
+.herd-mine-runs li + li { border-top: 1px solid rgba(92,72,47,.16); }
+.herd-mine-runs--single .herd-run__bar { visibility: hidden; }
+.herd-run__rank { color: var(--herd-ink-soft); font-size: var(--herd-small); text-align: right; }
+.herd-run__bar { position: relative; height: 6px; border-radius: var(--herd-round); background: rgba(92,72,47,.14); }
+.herd-run__bar i { position: absolute; inset: 0 auto 0 0; width: calc(var(--fill) * 100%); min-width: 6px; border-radius: var(--herd-round); background: var(--herd-sage); }
+.herd-mine-runs li[data-best=true] .herd-run__bar i { background: var(--herd-line-strong); }
+.herd-run__time { font-variant-numeric: tabular-nums lining-nums; }
+.herd-run__meta { display: grid; gap: 1px; justify-items: end; color: var(--herd-ink-soft); font-size: var(--herd-small); line-height: 1.15; text-align: right; }
+.herd-run__meta b { font-weight: 400; }
+.herd-run__meta em { font-style: normal; font-size: 11px; letter-spacing: .04em; opacity: .82; }
+.herd-run__meta[data-best=true] b { color: var(--herd-line-strong); letter-spacing: var(--herd-track); text-transform: uppercase; font-size: 11px; }
+.herd-mine-empty { margin: 0; padding: var(--herd-s4); border: 1px dashed var(--herd-line); border-radius: var(--herd-control); color: var(--herd-ink-soft); font-size: var(--herd-small); text-align: center; }
+.herd-mine-more { width: 100%; min-height: var(--herd-target); border: 1px solid var(--herd-line); border-radius: var(--herd-control); color: var(--herd-ink-soft); background: var(--herd-paper-quiet); font: inherit; font-size: var(--herd-small); cursor: pointer; transition: background var(--herd-normal) var(--herd-ease), border-color var(--herd-normal) var(--herd-ease), color var(--herd-normal) var(--herd-ease); -webkit-tap-highlight-color: transparent; }
+.herd-mine-more:hover { color: var(--herd-ink); background: var(--herd-paper); border-color: var(--herd-line-strong); }
+.herd-mine-more:focus-visible { outline: 3px solid rgba(47,105,183,.55); outline-offset: 3px; }
 .herd-panel-actions { display: flex; flex-direction: column; align-items: stretch; gap: var(--herd-s3); margin-top: var(--herd-s5); }
 .herd-settings-list { display: grid; gap: var(--herd-s5); }
 .herd-setting { display: grid; gap: var(--herd-s2); }
@@ -133,10 +204,14 @@ canvas { display: block; touch-action: none; }
 .herd-touch-zone { position: fixed; inset: 0 50% 0 0; z-index: var(--herd-z-controls); touch-action: none; }
 .herd-touch-ring { position: fixed; width: calc(var(--herd-stick-radius) * 2); height: calc(var(--herd-stick-radius) * 2); margin: calc(var(--herd-stick-radius) * -1) 0 0 calc(var(--herd-stick-radius) * -1); border: 1px solid var(--herd-line); border-radius: 50%; background: rgba(244,234,215,.18); opacity: 0; pointer-events: none; transition: opacity var(--herd-quick) var(--herd-ease), border-color var(--herd-quick) var(--herd-ease); }
 .herd-touch-knob { position: absolute; left: 50%; top: 50%; width: var(--herd-target); height: var(--herd-target); margin: calc(var(--herd-target) / -2); border: 1px solid var(--herd-line); border-radius: 50%; background: var(--herd-paper-quiet); }
-.herd-bark-button { position: fixed; right: max(var(--herd-s6), env(safe-area-inset-right)); bottom: max(var(--herd-s7), env(safe-area-inset-bottom)); z-index: var(--herd-z-controls); width: 92px; height: 92px; border-radius: 50%; border: 1px solid var(--herd-line-strong); background: var(--herd-paper-glass); letter-spacing: var(--herd-track); touch-action: none; }
-.herd-sprint-button { position: fixed; right: max(126px, calc(env(safe-area-inset-right) + 126px)); bottom: max(40px, calc(env(safe-area-inset-bottom) + 40px)); z-index: var(--herd-z-controls); width: 76px; height: 76px; border-radius: 50%; border: 1px solid var(--herd-line); background: var(--herd-paper-glass); font-size: var(--herd-small); letter-spacing: .04em; touch-action: none; -webkit-tap-highlight-color: transparent; }
-.herd-sprint-button[data-active=true] { border-color: var(--herd-line-strong); background: rgba(218,199,158,.9); transform: scale(.97); }
-.herd-camera-button { position: fixed; right: max(var(--herd-s7), calc(env(safe-area-inset-right) + var(--herd-s1))); bottom: max(142px, calc(env(safe-area-inset-bottom) + 142px)); z-index: var(--herd-z-controls); width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--herd-line); background: var(--herd-paper-glass); font-size: var(--herd-small); letter-spacing: .04em; touch-action: none; }
+.herd-touch-rest { position: fixed; left: max(var(--herd-s6), env(safe-area-inset-left)); bottom: max(var(--herd-s7), env(safe-area-inset-bottom)); z-index: var(--herd-z-controls); width: 96px; height: 96px; display: grid; place-items: center; border: 1px solid var(--herd-line-strong); border-radius: 50%; background: rgba(244,234,215,.2); opacity: .6; pointer-events: none; transition: opacity var(--herd-quick) var(--herd-ease), background var(--herd-normal) var(--herd-ease); }
+.herd-touch-rest[data-teaching=true] { opacity: .88; background: rgba(244,234,215,.28); }
+.herd-touch-rest[data-holding=true] { opacity: 0; }
+.herd-touch-rest__knob { width: var(--herd-target); height: var(--herd-target); border: 1px solid var(--herd-line-strong); border-radius: 50%; background: var(--herd-paper-quiet); }
+.herd-bark-button { position: fixed; right: max(var(--herd-s6), env(safe-area-inset-right)); bottom: max(var(--herd-s7), env(safe-area-inset-bottom)); z-index: var(--herd-z-controls); width: 92px; height: 92px; border-radius: 50%; border: 1px solid var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); text-shadow: var(--herd-halo); font-size: 17px; font-weight: 500; letter-spacing: var(--herd-track); touch-action: none; }
+.herd-sprint-button { position: fixed; right: max(126px, calc(env(safe-area-inset-right) + 126px)); bottom: max(40px, calc(env(safe-area-inset-bottom) + 40px)); z-index: var(--herd-z-controls); width: 76px; height: 76px; border-radius: 50%; border: 1px solid var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); text-shadow: var(--herd-halo); font-size: 15px; font-weight: 500; letter-spacing: .03em; touch-action: none; -webkit-tap-highlight-color: transparent; }
+.herd-sprint-button[data-active=true] { border-color: var(--herd-line-strong); background: rgba(218,199,158,.9); text-shadow: none; transform: scale(.97); }
+.herd-camera-button { position: fixed; right: max(var(--herd-s7), calc(env(safe-area-inset-right) + var(--herd-s1))); bottom: max(142px, calc(env(safe-area-inset-bottom) + 142px)); z-index: var(--herd-z-controls); width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); text-shadow: var(--herd-halo); font-size: 15px; font-weight: 500; letter-spacing: .03em; touch-action: none; }
 .herd-customize-dock { box-sizing: border-box; position: fixed; left: 0; top: 0; bottom: 0; width: min(440px, 92vw); max-width: 440px; z-index: var(--herd-z-modal); display: flex; flex-direction: column; padding: max(var(--herd-s5), env(safe-area-inset-top)) max(var(--herd-s4), env(safe-area-inset-left)) max(var(--herd-s5), env(safe-area-inset-bottom)); background: rgba(246,238,222,.94); backdrop-filter: blur(16px); border-right: 1px solid var(--herd-line-strong); box-shadow: 6px 0 28px rgba(0,0,0,.15); overflow-y: auto; overflow-x: hidden; pointer-events: auto; }
 .herd-customize-dock * { box-sizing: border-box; }
 .herd-customize-drag-zone { position: fixed; left: 440px; right: 0; top: 0; bottom: 0; z-index: calc(var(--herd-z-modal) - 1); touch-action: none; cursor: grab; user-select: none; }
@@ -218,7 +293,7 @@ canvas { display: block; touch-action: none; }
 .herd-sheep-stepper { display: flex; align-items: center; gap: 6px; }
 .herd-stepper-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--herd-line); background: var(--herd-paper-glass); font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer; color: var(--herd-ink); transition: background var(--herd-quick) var(--herd-ease); }
 .herd-stepper-btn:hover { background: var(--herd-paper); border-color: var(--herd-line-strong); }
-.herd-sheep-num { font-weight: 700; font-size: 15px; color: var(--herd-ink); font-variant-numeric: tabular-nums; }
+.herd-sheep-num { font-weight: 700; font-size: 15px; color: var(--herd-ink); font-variant-numeric: tabular-nums lining-nums; }
 .herd-breed-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: var(--herd-round); background: rgba(244,234,215,.7); border: 1px solid var(--herd-line); font-size: 12px; color: var(--herd-ink); font-weight: 500; }
 .herd-mini-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(78,65,46,.3); display: inline-block; flex-shrink: 0; }
 .herd-rename-row { display: flex; gap: 6px; align-items: center; width: 100%; }
@@ -234,18 +309,18 @@ canvas { display: block; touch-action: none; }
 .herd-search-field:focus-visible { outline: 2px solid rgba(47,105,183,.55); outline-offset: 1px; }
 .herd-breed-dropdown { width: 142px; min-width: 0; min-height: 32px; border: 1px solid var(--herd-line); border-radius: var(--herd-round); padding: 4px 6px; background: var(--herd-paper-glass); font-size: 12px; color: var(--herd-ink); cursor: pointer; flex-shrink: 0; text-overflow: ellipsis; }
 .herd-batch-pages { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0; scrollbar-width: none; width: 100%; }
-.herd-page-btn { padding: 2px 7px; border-radius: var(--herd-round); border: 1px solid var(--herd-line); background: var(--herd-paper-glass); font-size: 10px; cursor: pointer; font-variant-numeric: tabular-nums; color: var(--herd-ink-soft); }
+.herd-page-btn { padding: 2px 7px; border-radius: var(--herd-round); border: 1px solid var(--herd-line); background: var(--herd-paper-glass); font-size: 10px; cursor: pointer; font-variant-numeric: tabular-nums lining-nums; color: var(--herd-ink-soft); }
 .herd-page-btn:hover { background: var(--herd-paper); color: var(--herd-ink); }
 .herd-page-btn--active { background: var(--herd-paper); border-color: var(--herd-line-strong); color: var(--herd-ink); font-weight: 700; }
 .herd-registry-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--herd-ink-soft); width: 100%; }
-.herd-status-count { font-variant-numeric: tabular-nums; font-weight: 500; }
+.herd-status-count { font-variant-numeric: tabular-nums lining-nums; font-weight: 500; }
 .herd-status-actions { display: flex; gap: 8px; align-items: center; }
 .herd-link-btn { background: transparent; border: none; padding: 2px 4px; font-size: 11px; color: var(--herd-ink); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .herd-link-btn:hover { color: var(--herd-line-strong); }
 .herd-link-btn--reset { color: var(--herd-ink-soft); }
 .herd-empty-hint { font-size: var(--herd-small); color: var(--herd-ink-soft); text-align: center; padding: var(--herd-s3); width: 100%; margin: 0; }
 .herd-sheep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 6px; max-height: 200px; overflow-y: auto; padding: 6px; border: 1px solid var(--herd-line); border-radius: var(--herd-control); background: rgba(244,234,215,.2); width: 100%; }
-.herd-sheep-chip { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 30px; padding: 2px 4px; border-radius: var(--herd-round); border: 1px solid var(--herd-line); background: var(--herd-paper-glass); cursor: pointer; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--herd-ink); transition: all var(--herd-quick) var(--herd-ease); }
+.herd-sheep-chip { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 30px; padding: 2px 4px; border-radius: var(--herd-round); border: 1px solid var(--herd-line); background: var(--herd-paper-glass); cursor: pointer; font-size: 11px; font-variant-numeric: tabular-nums lining-nums; color: var(--herd-ink); transition: all var(--herd-quick) var(--herd-ease); }
 .herd-sheep-chip:hover { background: var(--herd-paper); }
 .herd-sheep-chip--active { background: rgba(116,90,58,.25); border-color: var(--herd-line-strong); font-weight: 700; box-shadow: inset 0 0 0 1px var(--herd-line-strong); }
 .herd-sheep-chip--custom { box-shadow: inset 0 0 0 1px var(--herd-gold); font-weight: 600; }
@@ -274,7 +349,7 @@ canvas { display: block; touch-action: none; }
     0 4px 14px rgba(18,14,10,.38),
     0 1px 3px rgba(18,14,10,.25);
   color: #221b14;
-  font-family: 'Alice', Georgia, serif;
+  font-family: var(--herd-font);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -329,6 +404,11 @@ canvas { display: block; touch-action: none; }
   .herd-title { font-size: clamp(36px, 11vw, 46px); white-space: nowrap; }
   .herd-title-lockup { gap: var(--herd-s2); }
   .herd-panel { padding: var(--herd-s5); border-radius: 24px; }
+  .herd-mine-runs li { grid-template-columns: 2.2ch auto 7.5ch; }
+  .herd-run__bar { display: none; }
+  .herd-run__time { text-align: right; }
+  .herd-board-tabs { flex-wrap: wrap; }
+  .herd-board-tabs .herd-size { min-width: 0; padding: 8px 13px; white-space: nowrap; }
   .herd-bindings { grid-template-columns: 1fr; }
   .herd-progress { width: 66px; height: 66px; }
   .herd-progress[data-flock-size="200"] .herd-progress__count { font-size: 10px; }

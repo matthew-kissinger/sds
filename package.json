@@ -49,8 +49,8 @@
     "bake:placement": "node tools/bake-world-placement.mjs",
     "bake:audio": "node tools/bake-audio.mjs",
     "check:audio-bake": "node tools/bake-audio.mjs --check",
-    "bake:font": "node tools/bake-font.mjs",
-    "check:font-bake": "node tools/bake-font.mjs --check"
+    "bake:font": "uv run --quiet --with fonttools[woff] --with brotli python tools/subset-font.py",
+    "check:font-bake": "uv run --quiet --with fonttools[woff] --with brotli python tools/subset-font.py --check"
   },
   "dependencies": {
     "kdbush": "^4.0.2",
@@ -58,13 +58,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "three": "0.185.1",
-    "zustand": "5.0.15",
-    "@pmndrs/glyph": "^0.0.0"
-  },
-  "overrides": {
-    "@pmndrs/glyph": {
-      "@react-three/fiber": "$@react-three/fiber"
-    }
+    "zustand": "5.0.15"
   },
   "devDependencies": {
     "@msgpack/msgpack": "^3.1.3",
