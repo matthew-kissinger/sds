@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { getSheepName, getTotalSheepNames } from '@app/game/sheepNames';
@@ -30,10 +30,15 @@ describe('sheep naming system', () => {
     expect(getSheepName(-1)).toBe('Sheep #0');
   });
 
-  it('verifies the baked font asset exists and has valid size', () => {
-    const fontPath = resolve(process.cwd(), 'app/public/fonts/sheep-font.font.glb');
+  // Names are drawn as DOM text in the interface face, not as a baked glyph
+  // mesh; this used to assert a 1.4 MB .glb that nothing loaded. The contract
+  // worth holding now is that the face ships and stays small, because it sits
+  // on the critical path in front of the field.
+  it('ships the interface face the nameplate draws with', () => {
+    const fontPath = resolve(process.cwd(), 'app/public/fonts/piazzolla-ui.woff2');
     expect(existsSync(fontPath)).toBe(true);
-    const size = statSync(fontPath).size;
-    expect(size).toBeGreaterThan(100_000);
+    expect(statSync(fontPath).size).toBeLessThan(48_000);
+    // 'wOF2'. A TTF renamed to .woff2 would still be served, and served wrong.
+    expect(readFileSync(fontPath).subarray(0, 4).toString('latin1')).toBe('wOF2');
   });
 });

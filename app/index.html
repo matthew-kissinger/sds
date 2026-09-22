@@ -28,6 +28,13 @@
     <link rel="canonical" href="https://sheepdogsim.com/" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- The interface face loads from here, not from UiStyles, because the
+         static shell below paints before any JavaScript runs and must not
+         disagree with the React shell that replaces it. crossorigin is
+         mandatory even same-origin: a font preload without it is fetched in a
+         different CORS mode from the @font-face request and downloads twice. -->
+    <link rel="preload" href="/fonts/piazzolla-ui.woff2" as="font" type="font/woff2" crossorigin
+          media="not all and (prefers-reduced-data: reduce)" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -60,12 +67,77 @@
       }
     </script>
     <style>
+      /* One declaration site for the interface face. It lives here rather than
+         in UiStyles because UiStyles only exists once the bundle has parsed,
+         and the static shell below paints before that. A font is fetched only
+         when something asks to draw a glyph in it, so the reduced-data rule
+         further down suppresses the download by never naming the family. */
+      @font-face {
+        font-family: 'Piazzolla';
+        src: url('/fonts/piazzolla-ui.woff2') format('woff2-variations'),
+             url('/fonts/piazzolla-ui.woff2') format('woff2');
+        font-weight: 400 700;
+        font-style: normal;
+        font-display: swap;
+      }
+      /* Piazzolla carries a live optical-size axis, so its letters are wider
+         at 10px than at 48px - about seven percent across the shipped range.
+         A fallback can only be metric-matched to one point on that axis, so
+         the display face gets the matched fallback and running text keeps
+         plain Georgia. Matching display is the side that matters: the static
+         shell headline below is the only text that paints before the bundle
+         exists, and a three percent error on one 48px line is visible in a way
+         that the same error on an 11px label is not.
+
+         local('Georgia') deliberately fails on Android, where no Georgia is
+         installed; the stack then falls through to the unadjusted entry and
+         the system's own serif, which is right, because the adjustment was
+         measured against Georgia and means nothing without it. */
+      @font-face {
+        font-family: 'Piazzolla Display Fallback';
+        src: local('Georgia');
+        size-adjust: 96.68%;
+        ascent-override: 114.82%;
+        descent-override: 32.07%;
+        line-gap-override: 0%;
+      }
+      :root {
+        --herd-font: 'Piazzolla', Georgia, 'Times New Roman', serif;
+        --herd-display-font: 'Piazzolla', 'Piazzolla Display Fallback', Georgia, 'Times New Roman', serif;
+        /* Piazzolla sets a tight word space by design - 0.188 em at the small
+           end of the optical axis falling to 0.153 em at the display end,
+           against Georgia's 0.241 em and Times' 0.250 em. That suits running
+           prose and does not suit this interface, where most of the type is
+           two- and three-word labels sitting alone: "About the game" closed up
+           into one word at 13px. The correction is em-based, so it tracks the
+           size, and it is deliberately smaller than the full difference
+           because the optical axis is already opening the space at the sizes
+           where it is needed most. Fitting belongs in the stylesheet; the
+           alternative was editing the space glyph's advance in the bake, which
+           hides a typographic decision inside a binary and leaves us shipping
+           a Piazzolla nobody can reproduce from upstream. */
+        --herd-word-space: .065em;
+      }
       /* Pre-React first paint. UiStyles owns the same paper tone after mount. */
       html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #eadfca; }
       canvas { display: block; touch-action: none; }
       .static-shell { box-sizing: border-box; width: 100%; height: 100%; display: grid; place-items: center; padding: 24px; color: #2c3828; font: 14px/1.5 system-ui, sans-serif; text-align: center; }
       .static-shell__card { width: min(88vw, 440px); box-sizing: border-box; padding: 32px; border: 1px solid rgba(78,65,46,.2); border-radius: 32px; background: rgba(244,234,215,.72); box-shadow: 0 18px 70px rgba(65,51,34,.12); }
-      .static-shell h1 { margin: 0 0 10px; font: 400 48px/1 Georgia, serif; letter-spacing: .035em; }
+      .static-shell h1 { margin: 0 0 10px; font: 400 48px/1 var(--herd-display-font); letter-spacing: .035em; word-spacing: var(--herd-word-space); }
+      /* A reader who has asked for less data keeps the system stack. Nothing
+         then names 'Piazzolla', so the browser never fetches it, and the
+         matching media on the preload above stops that request too. */
+      @media (prefers-reduced-data: reduce) {
+        :root {
+          --herd-font: Georgia, 'Times New Roman', serif;
+          /* No size-adjust here. Nothing is going to swap, so the reader would
+             simply be reading Georgia three percent small, for ever. */
+          --herd-display-font: Georgia, 'Times New Roman', serif;
+          /* And no word-space correction: it corrects Piazzolla's fit, and
+             Georgia's own space needs no help. */
+          --herd-word-space: normal;
+        }
+      }
       .static-shell p { margin: 0; color: #596052; letter-spacing: .12em; text-transform: uppercase; }
       .static-shell .static-shell__description { margin: 16px 0; letter-spacing: normal; text-transform: none; }
       .static-shell nav { display: flex; justify-content: center; gap: 20px; }
