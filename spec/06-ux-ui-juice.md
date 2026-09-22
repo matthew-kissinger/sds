@@ -24,7 +24,8 @@ All new. Nothing from the sds UI layer carries over as code; a handful of tuned 
 ### The gate cue
 
 The way to the gate is a 44 px compass on a sheer paper dial, riding an ellipse
-inscribed in the safe area at the true bearing to the opening. It is the only
+inscribed in the safe area at the angle the opening subtends ON SCREEN. It is
+the only
 piece of the HUD that moves, so it is the only piece that can collide with the
 rest, and it clears all of it at every bearing by construction rather than by
 inspection: `tests/gate-guidance.spec.ts` carries the HUD's own rectangles and
@@ -46,11 +47,66 @@ three are properties of the quantity rather than of the tuning:
   time, was the largest permanent thing on a phone screen.
 
 A projected point answers "where did the gate leave the frame". The question a
-player asks is "which way is it", and the answer to that is the BEARING, which
-is continuous through every heading including straight behind. Swept over the
-same turn the ellipse gives 5.8 to 10.8 px per 2 degrees rather than 1.5 to 245,
-77 distinct x positions rather than 23, no discontinuity, and no special case
-left in the function.
+player asks is "which way is it", and that answer is continuous through every
+heading including straight behind. Swept over the same turn the ellipse gives
+5.8 to 10.8 px per 2 degrees rather than 1.5 to 245, 77 distinct x positions
+rather than 23, no discontinuity, and no special case left in the function.
+
+**The angle is the screen's, not the ground's.** The first pass read the ground
+bearing and wrote it straight to a screen angle, and those are different
+quantities. Follow looks down 22.5 degrees and Classic 44.9, which foreshortens
+the forward axis in the image and leaves the sideways one alone, so ten degrees
+of turn walks the opening 26.7 degrees round a landscape frame while a ground
+bearing moves the needle seven. Swept over 84,377 poses of the two rigs across
+the whole field the needle pointed up to **39.7 degrees** away from the opening,
+and a full **180 degrees** away inside five metres of the gate, where the camera
+axis has already passed over the opening so it sits below frame centre while the
+needle still says ahead.
+
+Reading the same direction in the camera's own basis is exact rather than
+better: for a camera-space offset `v`, `atan2(v . right, v . up)` IS the pixel
+angle from frame centre, because the two half-axis scalings differ by the aspect
+and the projection divides the same aspect back out. Measured error over those
+84,377 poses: **0.0000 degrees**, and 0.005 degrees end to end in the running
+build. No fov, aspect or pitch appears in the function - it reads the live
+basis - which is why Follow and Classic share it with no case between them and a
+third rig would need none either.
+
+The quantity is undefined at exactly one place, the opening dead centre frame,
+where which-way has no answer: 274 degrees of needle per degree of turn inside
+0.01 of centre. Nothing reaches it. The camera axis crosses the opening's height
+about 31 m out, so the opening only comes inside 0.22 of centre in the last 2 m
+of a run; the fade has the token at nothing by 0.22; and the terrain occlusion
+that would override the fade fires in 0 of 800,790 swept poses. Outside 0.22 the
+needle never exceeds 3.9 degrees per degree of turn.
+
+**The ellipse is a ceiling on the reach, not the reach.** A cue that rides a
+perimeter at the target's angle *overshoots a target inside that perimeter*: the
+needle stays exact, but the dial has gone past the opening on its way out to the
+ellipse, so sighting along the needle from the dial misses. That is the same
+complaint as the ground bearing wearing a different hat, and it was worth
+catching separately, because the needle can be exact while the instrument still
+reads wrong. Across six viewports it read as wrong in **32,734 of 391,539**
+bright on-screen poses - worst on the wide ones, whose ellipse is inset only
+30 px and so runs nearly to the frame edge.
+
+Pulling the reach in to the opening's own radius while the opening is in shot
+takes that to **0**, and costs almost nothing: it can only ever shorten the
+reach, and only when the opening is already inside the ring, so the token cannot
+leave the safe rectangle the insets bought. It is continuous at the crossing by
+construction, the two radii being equal exactly where it engages, and it cannot
+engage while the opening is off screen - the 85% of a turn the token exists for
+- because every inset is at least 30 px and `EDGE_MARGIN` is 24. Worst movement
+while the token is visible went from 28.5 to 30.0 px per degree of turn against
+a budget of 146.9.
+
+What is left is bounded and by construction. The clamp matches the token's
+radius from the *ring's* centre rather than its ray, and where the HUD insets
+are asymmetric that centre is up to 48 px off the frame's, so a small residual
+survives: measured at 58.3 px upright, 42.2 landscape, 22.5 on a wide desktop.
+At those separations the dial is sitting on the opening. So the rule the tests
+hold is that either the needle points at the opening or the dial is on it, and
+there is no third case.
 
 The metres are gone with the words. Distance is an arc closing round the rim,
 empty at 150 m and shut at the opening - a quantity to glance at rather than

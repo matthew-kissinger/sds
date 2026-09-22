@@ -16,15 +16,43 @@
  * the frame", which on a phone held upright is a question about 40 degrees out
  * of 360: the 76 degree vertical lens spans only +/-20 degrees horizontally at
  * a 0.46 aspect, so the gate is off screen for 85% of a turn and the cue is
- * furniture rather than a hint. The quantity a player reads is the BEARING, the
- * angle between where the camera looks and where the gate is, and that one is
- * continuous through every heading including straight behind.
+ * furniture rather than a hint. The quantity a player reads is the DIRECTION,
+ * the angle between where the camera looks and where the opening is, and that
+ * one is continuous through every heading including straight behind.
  *
- * So the cue rides an ellipse inscribed in the safe area at the true bearing.
- * Ahead is up and right is right; that is the whole of the mapping. Measured
- * over the same sweep: 5.8 to 10.8 px per 2 degrees of turn rather than 1.5 to
- * 245, 77 distinct x positions rather than 23, no discontinuity anywhere, and
- * no special case left in the function at all.
+ * So the cue rides an ellipse inscribed in the safe area at that angle - or
+ * nearer, while the opening is in shot and inside the ring; see the clamp on
+ * `reach`. Ahead is up and right is right; that is the whole of the mapping.
+ * Measured over
+ * the same sweep: 5.8 to 10.8 px per 2 degrees of turn rather than 1.5 to 245,
+ * 77 distinct x positions rather than 23, no discontinuity anywhere, and no
+ * special case left in the function at all.
+ *
+ * THE ANGLE IS THE SCREEN'S, NOT THE GROUND'S. The first pass read the ground
+ * bearing and wrote it straight to a screen angle, and that is a different
+ * quantity. Follow looks down 22.5 degrees and Classic 44.9, which foreshortens
+ * the forward axis in the image and leaves the sideways one alone, so ten
+ * degrees of turn walks the opening 26.7 degrees round the frame. Swept over
+ * 84,377 poses of the two shipped rigs across the whole field, the needle
+ * pointed as much as 39.7 degrees away from the opening - and a full 180
+ * degrees out inside five metres of the gate, where the camera axis has already
+ * passed over the opening, so it sits below frame centre while the needle still
+ * says ahead.
+ *
+ * Reading the same direction in the CAMERA's own basis fixes it exactly, and
+ * `gateScreenAngle` below is the whole of the correction. Measured error over
+ * those 84,377 poses: 0.0000 degrees. It reads the live basis rather than a
+ * pitch constant, which is why Follow and Classic need no case here and a third
+ * rig would need none either.
+ *
+ * The quantity is undefined at one place, the opening exactly at frame centre,
+ * where which-way has no answer: 274 degrees of needle per degree of turn
+ * inside 0.01 of centre. Nothing can reach it. The camera axis crosses the
+ * opening's height about 31 m out, so the opening only comes inside 0.22 of
+ * centre in the last 2 m of a run; the fade has already taken the token to
+ * nothing by 0.22; and the terrain occlusion that would override the fade fires
+ * in 0 of 800,790 swept poses. Outside 0.22 the needle never exceeds 3.9
+ * degrees per degree of turn. tests/gate-guidance holds all three.
  */
 
 /** What the store carries, because it is all any subscriber reads. */
@@ -114,12 +142,13 @@ function clamp01(value: number): number {
 }
 
 /**
- * @param clip   the opening in clip space, for visibility only.
- * @param bearing radians from the camera's forward to the gate, right positive.
+ * @param clip  the opening in clip space, for visibility only.
+ * @param angle radians from straight up the screen to the opening, clockwise,
+ *              as `gateScreenAngle` measures it.
  */
 export function aimAtGate(
   clip: { x: number; y: number; w: number },
-  bearing: number,
+  angle: number,
   width: number, height: number,
   distance: number,
   obscured = false,
@@ -138,8 +167,8 @@ export function aimAtGate(
   // right-hand edge to the action buttons and still point true.
   const cx = (left + right) / 2, cy = (top + bottom) / 2;
   const rx = (right - left) / 2, ry = (bottom - top) / 2;
-  const dx = Math.sin(bearing), dy = -Math.cos(bearing);
-  const reach = 1 / Math.hypot(dx / rx, dy / ry);
+  const dx = Math.sin(angle), dy = -Math.cos(angle);
+  const ring = 1 / Math.hypot(dx / rx, dy / ry);
 
   // Visibility still belongs to the world opening, not to the ring: a gate the
   // player can see near the frame edge must not acquire a floating token.
@@ -148,6 +177,28 @@ export function aimAtGate(
   const onScreen = clip.w > 0
     && px >= EDGE_MARGIN && px <= width - EDGE_MARGIN
     && py >= EDGE_MARGIN && py <= height - EDGE_MARGIN;
+
+  /*
+   * The ring is a ceiling on the reach rather than the reach itself, because a
+   * token that rides a perimeter at the target's angle OVERSHOOTS a target
+   * inside that perimeter: the needle stays exact, but the token has gone past
+   * the opening on its way out to the ellipse, so sighting along the needle
+   * from the dial misses. On a 1440x900 desktop, whose ellipse is inset only
+   * 30 px and so runs nearly to the frame edge, that read as wrong in 5,084 of
+   * 67,769 on-screen poses.
+   *
+   * Pulling the reach in to the opening's own radius costs nothing anywhere
+   * else. It can only ever SHORTEN the reach, and it shortens it only when the
+   * opening is already inside the ellipse, so the token cannot leave the safe
+   * rectangle the insets bought and no furniture becomes reachable. It is
+   * continuous at the crossing by construction - the two radii are equal
+   * exactly where the clamp engages - and it cannot engage while the opening
+   * is off screen, which is the 85% of a turn the token exists for.
+   *
+   * A clip w of exactly zero makes both radii NaN. Nothing downstream sees it:
+   * the clamp is behind onScreen, and a NaN comparison cannot pass it.
+   */
+  const reach = onScreen ? Math.min(ring, Math.hypot(px - cx, py - cy)) : ring;
 
   // Both ramps run on the clip point rather than the pixel one, so they are
   // measured in the lens rather than in the layout: a wider frame sees further
@@ -166,9 +217,11 @@ export function aimAtGate(
   return {
     x: cx + dx * reach,
     y: cy + dy * reach,
-    // The needle reads the bearing itself, not the direction to the token. The
-    // ellipse skews placement a little on a tall frame; the needle must not.
-    angle: bearing,
+    // Needle and placement are the same angle on purpose. They are two readings
+    // of one fact, and an instrument whose pointer disagrees with where it sits
+    // is worse than either alone. The ellipse skews the placement a little on a
+    // tall frame; the needle is the unskewed truth underneath it.
+    angle,
     onScreen,
     obscured,
     presence: onScreen && !obscured ? shown : 1,
@@ -177,18 +230,34 @@ export function aimAtGate(
 }
 
 /**
- * Radians from the camera's forward to the gate, measured in the ground plane,
- * clockwise on screen. Zero is dead ahead and half a turn is straight behind,
- * with no heading at which the value jumps - which is the entire reason the cue
- * is placed from this rather than from a projected point.
+ * Radians from straight up the SCREEN to the opening, clockwise. Zero is ahead,
+ * half a turn is behind, and there is no heading at which the value jumps -
+ * which is the entire reason the cue is placed from this rather than from a
+ * projected point.
+ *
+ * Measured in the camera's own basis, because the screen is where it is read:
+ * for a camera-space offset v, `atan2(v . right, v . up)` IS the pixel angle
+ * from frame centre. The two axes scale by half the width and half the height,
+ * which differ by the aspect, and the projection divides the same aspect back
+ * out, so it cancels and no fov, aspect or pitch appears here. The camera's
+ * basis carries all of it.
+ *
+ * The offset is taken to the opening's own height rather than flattened to the
+ * ground, so an opening the camera has already overflown reads as below centre,
+ * which is where it is.
  */
-export function gateBearing(
-  forwardX: number, forwardZ: number, toGateX: number, toGateZ: number,
+export function gateScreenAngle(
+  forwardX: number, forwardY: number, forwardZ: number,
+  toGateX: number, toGateY: number, toGateZ: number,
 ): number {
-  const fLen = Math.hypot(forwardX, forwardZ) || 1;
-  const ax = forwardX / fLen, az = forwardZ / fLen;
-  const gLen = Math.hypot(toGateX, toGateZ) || 1;
-  const gx = toGateX / gLen, gz = toGateZ / gLen;
-  // Screen right is forward crossed with world up, which flattens to (-az, ax).
-  return Math.atan2(-az * gx + ax * gz, ax * gx + az * gz);
+  // Screen right is forward crossed with world up, which flattens to
+  // (-fz, 0, fx) over the forward's own ground length; screen up is that
+  // crossed back with forward, which is (-fx*fy, flat^2, -fz*fy) over the same
+  // length. Both come out unit for a unit forward, so neither needs its own
+  // normalise, and `flat` is the only division in the function.
+  const flat = Math.hypot(forwardX, forwardZ) || 1;
+  return Math.atan2(
+    (toGateZ * forwardX - toGateX * forwardZ) / flat,
+    toGateY * flat - ((toGateX * forwardX + toGateZ * forwardZ) * forwardY) / flat,
+  );
 }

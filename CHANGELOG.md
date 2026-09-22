@@ -31,10 +31,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   26 KB woff2 from an in-repository `fonttools` recipe with its own provenance
   and digest record. No webfont CDN and no runtime text renderer.
 - The way to the gate is a compass token rather than a distance label. It is
-  placed from the true bearing to the opening on an ellipse inscribed in the
-  safe area, so it answers "which way" continuously through a whole turn
-  instead of pinning to the frame edge the gate happened to leave through.
+  placed on an ellipse inscribed in the safe area at the angle the opening
+  subtends on screen, so it answers "which way" continuously through a whole
+  turn instead of pinning to the frame edge the gate happened to leave through.
   Range is an arc closing round its rim; the metres and the word are gone.
+  The angle is read in the camera's own basis rather than in the ground plane,
+  which is what makes it agree with the picture: a rig that looks down
+  foreshortens the forward axis in the image and not the sideways one, and a
+  ground bearing missed the opening by up to 39.7 degrees, or 180 within five
+  metres of the gate. Both camera modes share the one reading. The ellipse is a
+  ceiling on the token's reach rather than the reach itself, so a token whose
+  opening is already inside the ring stops on the opening instead of riding
+  past it out to the perimeter.
 - "My times" groups a player's runs by flock size, ranks each against the
   public board for that size, and collapses groups that run long.
 - The touch stick has a visible resting home that teaches itself once and then

@@ -25,6 +25,36 @@ transform to whole pixels - three device pixels at a ratio of 3 - and carried a
 camera and rubber-bands rather than ever landing. All three are fixed and the
 rules are written down where the next label will find them.
 
+**The gate cue** was rebuilt twice, and the second time from a screenshot. The
+first pass replaced a "Gate / 161 m" pill placed from the gate's projected point
+- which over a full turn on a phone sat on one of two x values at 29 of the 31
+bearings it appeared at, and jumped 245 px for one degree of turn with the gate
+behind - with a 44 px compass riding an ellipse inscribed in the safe area.
+Owner review of that then caught the reading itself: the cue was placed from the
+GROUND bearing, which is not the angle the opening subtends on screen. Follow
+looks down 22.5 degrees and Classic 44.9, which foreshortens the forward axis in
+the image and leaves the sideways one alone, so ten degrees of turn walks the
+opening 26.7 degrees round the frame while the needle moved seven. Over 84,377
+poses of the two rigs across the whole field the needle pointed up to 39.7
+degrees away from the opening, and a full 180 degrees away inside five metres of
+the gate, where the camera axis has already passed over it. Reading the same
+direction in the camera's own basis is exact: 0.0000 degrees over those poses,
+0.005 end to end in the running build, and no fov, aspect or pitch in the
+function, which is why the two camera modes need no case between them.
+
+Measuring that turned up a second reading of the same complaint, and it is worth
+separating because the needle can be exact while the instrument still reads
+wrong: a cue riding a perimeter at the target's angle overshoots a target inside
+that perimeter, so with the opening in shot, sighting along the needle from the
+dial missed. That was 32,734 of 391,539 bright on-screen poses across six
+viewports, worst on wide ones whose ellipse is inset only 30 px. The ellipse is
+now a ceiling on the reach rather than the reach, which takes it to 0 while
+moving the worst visible step from 28.5 to 30.0 px per degree of turn against a
+146.9 budget. What survives is bounded by construction - the clamp matches the
+radius from the ring's centre, which sits up to 48 px off the frame's where the
+insets are asymmetric - so the tests hold the rule rather than a number: either
+the needle points at the opening or the dial is sitting on it.
+
 **The camera** was a separate defect with the same reporter. `YAW_ENGAGE_SPEED`
 was the only hard boolean in `followFraming.ts`, and one metre per second is
 6.7% of commanded effort - 3.2 px on a 48 px stick, which is exactly the
@@ -72,12 +102,15 @@ each, described in `spec/12-my-times.md`.
 
 ### Open
 
-- The terrain-occlusion approximation reports the opening blocked for roughly
-  the first 100 m of a run on Home Field, so the cue is present for the early
-  approach. That is arguably correct - the opening is not visible - but the
-  20 Hz 11-sample walk interpolates its ray height linearly from the camera
-  down to 1.2 m, which biases it toward reporting a block at long range. Not
-  changed here; it predates this work and is its own measurement.
+- The terrain-occlusion walk never fires on Home Field. Swept against the real
+  baked heightfield over both rigs, both orientations and the whole 200 m
+  field, `obscured` came back true in 0 of 800,790 poses: relief runs -2.16 to
+  +2.02 m, the opening sits at -0.54 m, and a rig 14 to 17.5 m up looks over
+  all of it. An earlier note here said the opposite - that it reported a block
+  through the early approach - and that was wrong. The code is harmless and is
+  left alone, but it is dead weight on this field and the cue's presence is
+  entirely the fade's doing. Worth deleting or earning its keep on a field with
+  real relief; not decided here.
 - The client has one 2.3 MB chunk and Vite warns about it. Unchanged by this
   candidate and untouched by it.
 
