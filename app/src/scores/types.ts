@@ -46,4 +46,17 @@ export interface PlayerRun {
   readonly flockSize: FlockSize;
   readonly scoreSeconds: number;
   readonly submittedAt: number;
+  /**
+   * Where this time would sit on that flock size's public board, and how many
+   * players are on it. The board ranks players by their best, so a player's
+   * own best carries their board position exactly, and a slower run of theirs
+   * carries the position that run would have held.
+   *
+   * Both are optional because they are a later addition to the same endpoint:
+   * a client running against a worker that has not been deployed yet reads
+   * runs without them and simply does not draw a standing. A rank that is
+   * absent is not a rank of zero.
+   */
+  readonly boardRank?: number;
+  readonly boardPlayers?: number;
 }

@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FLOCK_SIZES, type FlockSize } from '@app/state/store';
 import { formatRunTime } from '@app/ui/time';
+import { MyTimes } from './MyTimes';
 import { scoresController } from './controller';
 import { useScoreStore } from './store';
 
@@ -104,18 +105,11 @@ export function LeaderboardPanel({
         </div>
         {tab === 'mine' ? (
           <>
-            <p className="herd-board-caption">Every run you have finished, newest first.</p>
+            <p className="herd-board-caption">Every run you have finished, by flock size.</p>
             {runsStatus !== 'ready' || runs.length === 0 ? (
               <p className="herd-board-message" role="status">{runsMessage}</p>
             ) : (
-              <ol className="herd-board-list" aria-label="Your solo times">
-                {runs.map((run) => (
-                  <li key={`${run.submittedAt}-${run.flockSize}-${run.scoreSeconds}`}>
-                    <span><span className="herd-board-rank">{run.flockSize}</span> sheep</span>
-                    <span>{formatRunTime(run.scoreSeconds * 1000)}</span>
-                  </li>
-                ))}
-              </ol>
+              <MyTimes runs={runs} />
             )}
           </>
         ) : (
