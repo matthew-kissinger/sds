@@ -7,9 +7,9 @@ import { buildDogGeometry, DOG_PAW_CONTACTS } from '@app/scene/dog/dogGeometry';
 import { makeDogMaterial } from '@app/scene/dog/dogMaterial';
 import { DogRig } from '@app/scene/dog/dogRig';
 import { SPINE, FORE_LEG } from '@app/scene/dog/dogParts';
-import { DOG_JOINTS } from '@app/scene/dog/dogRigDefinition';
+import { DOG_JOINTS, DOG_LEG_ROOTS } from '@app/scene/dog/dogRigDefinition';
 import { createDogMotion, advanceDogMotion, resetDogMotion, DOG_MAX_BANK } from '@app/scene/dog/dogMotion';
-import { dogGaitRate, dogStanceShare, sampleDogPaw, DOG_GAIT_TAU } from '@app/scene/dog/dogGait';
+import { dogGaitRate, dogStanceShare, dogStride, sampleDogPaw, DOG_GAIT_TAU } from '@app/scene/dog/dogGait';
 import { dogOutlineWidth } from '@app/scene/dog/outlineWidth';
 
 function fixture() {
@@ -173,7 +173,7 @@ describe('owned collie skeleton', () => {
       });
       const field = { groundY: (x: number, z: number) => x * 0.018 + z * 0.009 };
       const motion = createDogMotion();
-      const paw = { travel: 0, lift: 0, planted: false, recovery: 0 };
+      const paw = { travel: 0, lift: 0, planted: false, recovery: 0, stanceTravel: 0 };
       const vertex = new THREE.Vector3();
       let contactError = 0;
       let slide = 0;
@@ -208,11 +208,122 @@ describe('owned collie skeleton', () => {
   });
 });
 
+describe('dog leg reach', () => {
+  /** Both chains, measured off the bind joints rather than authored beside them. */
+  const CHAINS = DOG_LEG_ROOTS.map((index) => {
+    const a = DOG_JOINTS[index]!.position;
+    const b = DOG_JOINTS[index + 1]!.position;
+    const c = DOG_JOINTS[index + 2]!.position;
+    const length = (p: readonly number[], q: readonly number[]) =>
+      Math.hypot(q[0]! - p[0]!, q[1]! - p[1]!, q[2]! - p[2]!);
+    return {
+      index,
+      name: DOG_JOINTS[index]!.name.replace('-upper', ''),
+      chain: length(a, b) + length(b, c),
+    };
+  });
+
+  /** Both pairs are bound all but straight - 0.77% of slack in front and 0.17%
+   *  behind - so a pose that asks for the last 2% of the chain is asking for
+   *  the cusp where a two-bone bend has infinite slope. Every number below is
+   *  about keeping the pose away from it. */
+  const SPEEDS = [1, 2, 4, 6, 8, 11, 15, 20, 25];
+
+  function walk(
+    speed: number,
+    visit: (leg: number, hip: THREE.Vector3, paw: THREE.Vector3, pose: {
+      readonly travel: number; readonly lift: number; readonly planted: boolean;
+    }) => void,
+  ): void {
+    const { rig, group, dispose } = fixture();
+    try {
+      group.updateMatrixWorld(true);
+      const motion = createDogMotion();
+      for (let i = 0; i < 240; i++) advanceDogMotion(motion, 1 / 60, speed, 0, 1);
+      const pose = { travel: 0, lift: 0, planted: true, recovery: 0, stanceTravel: 0 };
+      const hip = new THREE.Vector3();
+      const paw = new THREE.Vector3();
+      const inverse = new THREE.Matrix4();
+      let travelled = 0;
+      // Four seconds, after two gait cycles of posing to settle the foot locks.
+      const settle = Math.round(2 / Math.max(dogGaitRate(speed), 0.5) * 60);
+      for (let i = 0; i < settle + 240; i++) {
+        advanceDogMotion(motion, 1 / 60, speed, 0, 1);
+        travelled += speed / 60;
+        rig.pose(motion, { groundY: () => 0 }, 0, travelled, 0, 0, 1);
+        if (i < settle) continue;
+        inverse.copy(rig.coat.matrixWorld).invert();
+        for (let leg = 0; leg < 4; leg++) {
+          sampleDogPaw(motion.gaitPhase, motion.locomotionSpeed, leg, pose);
+          rig.bones[CHAINS[leg]!.index]!.getWorldPosition(hip).applyMatrix4(inverse);
+          rig.bones[CHAINS[leg]!.index + 2]!.getWorldPosition(paw).applyMatrix4(inverse);
+          visit(leg, hip, paw, pose);
+        }
+      }
+    } finally { dispose(); }
+  }
+
+  it('puts every paw exactly where the gait asked for it, at every speed', () => {
+    // THE DEFECT THIS HOLDS: the swing's foot-drift offset used to be measured
+    // against the swing curve on the first airborne frame, which lands a
+    // fraction of a frame past the handover. Over that fraction a world-locked
+    // foot keeps travelling back under the body while the curve has it standing
+    // still, and the gap - 93 mm at DOG_MAX_SPEED - was banked as drift and held
+    // through the start of the swing, at the one moment the hind limb is already
+    // at full stretch. The limb could not reach it, so the solver clamped and
+    // the paw came out up to 133 mm off its commanded arc.
+    //
+    // On flat ground the commanded height is 0.2 plus the gait's own lift, with
+    // nothing else in it, so this needs no second copy of the rig's lock logic.
+    let worst = 0;
+    for (const speed of SPEEDS) {
+      walk(speed, (_leg, _hip, paw, pose) => {
+        worst = Math.max(worst, Math.abs(paw.y - (0.2 + pose.lift)));
+      });
+    }
+    expect(worst).toBeLessThan(0.001);
+  });
+
+  it('never asks a limb for the last of its reach', () => {
+    // Measured worst across the range is 0.954, at 6 m/s on a hind limb. The
+    // gallop crouch is what holds the fast end: without it the hind limb runs to
+    // 0.98 at DOG_MAX_SPEED and 1.00 before the drift fix above.
+    let worst = 0;
+    let where = '';
+    for (const speed of SPEEDS) {
+      walk(speed, (leg, hip, paw) => {
+        const reach = hip.distanceTo(paw) / CHAINS[leg]!.chain;
+        if (reach > worst) { worst = reach; where = `${CHAINS[leg]!.name} at ${speed} m/s`; }
+      });
+    }
+    expect(worst, where).toBeLessThan(0.96);
+  });
+
+  it('hands the foot from the stance ramp to the swing without a step in it', () => {
+    // Why measuring the drift against `stanceTravel` is the same measurement at
+    // the boundary and a different one a fraction of a frame later: the two
+    // curves meet exactly where stance ends, so a foot that is where the ramp
+    // says it is has no drift to carry, and only a real turn leaves any.
+    const out = { travel: 0, lift: 0, planted: false, recovery: 0, stanceTravel: 0 };
+    for (const speed of SPEEDS) {
+      const stance = dogStanceShare(speed);
+      sampleDogPaw(stance * DOG_GAIT_TAU, speed, 0, out);
+      expect(out.stanceTravel).toBeCloseTo(-dogStride(speed), 9);
+      expect(out.travel).toBeCloseTo(out.stanceTravel, 9);
+      // And it keeps going where the swing curve stops, which is the whole of
+      // what the fix reads.
+      sampleDogPaw((stance + 0.02) * DOG_GAIT_TAU, speed, 0, out);
+      expect(out.planted).toBe(false);
+      expect(out.stanceTravel).toBeLessThan(-dogStride(speed));
+    }
+  });
+});
+
 describe('dog animation timing', () => {
   it('plants backward, recovers forward in air and gives sprint its own cadence', () => {
     for (const speed of [2, 8, 15, 25]) {
       const stance = dogStanceShare(speed);
-      const out = { travel: 0, lift: 0, planted: false, recovery: 0 };
+      const out = { travel: 0, lift: 0, planted: false, recovery: 0, stanceTravel: 0 };
       sampleDogPaw(0, speed, 0, out);
       const strike = out.travel;
       sampleDogPaw((stance - 1e-5) * DOG_GAIT_TAU, speed, 0, out);

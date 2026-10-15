@@ -8,11 +8,28 @@ import { DOG_JOINTS, DOG_LEG_ROOTS } from './dogRigDefinition';
 import { sampleDogPaw, type DogPawPose } from './dogGait';
 import { DogLegSolver } from './dogLegSolver';
 import type { DogMaterial } from './dogMaterial';
+import { DOG_SPRINT_SPEED } from '@sim/tuning';
 import { DOG_MAX_BANK, type DogMotion } from './dogMotion';
 
 // At full bank the inside fore-limb runs out of reach, and a real animal buys
 // the same reach back the same way, by dropping its chest.
 const BANK_ROOT_DROP = 0.1;
+// And past a trot the STRIDE runs the hind limb out of reach, for the same
+// reason and with the same answer. The hind paw rests 0.08 m behind its hip, so
+// at the end of a 0.4 m drive it is 0.55 m aft of the hip and 0.76 below it:
+// 0.94 m of demand on 0.935 m of bone, and the body bob is near its peak at
+// exactly that moment, which is what tips it over. Measured, the hind limb hits
+// full extension from 8 m/s and is drawn up to 72 mm above the ground it is
+// supposed to be driving against at DOG_MAX_SPEED, 133 at a sprint.
+//
+// A galloping dog is lower than a trotting one, so the chest comes down and
+// buys the reach back. 0.085 m is what closes the gap at sprint with the bob at
+// its worst, and it leaves 0.29 m of belly clearance at the deepest rib.
+const GALLOP_DROP = 0.085;
+// Where the trot ends. Below this the hind limb has reach to spare - 0.96 of
+// the chain at 4 m/s - so there is nothing to buy and a crouch would only make
+// the dog look furtive at a walk.
+const GALLOP_GATE_SPEED = 5;
 // Launching and braking both drop the centre of mass, about 11% of the 1.05 m
 // rest pelvis height. Without it the fastest acceleration in the game is free.
 const CROUCH_DROP = 0.12;
@@ -33,7 +50,7 @@ export class DogRig {
   private readonly target = new THREE.Vector3();
   private readonly inverse = new THREE.Matrix4();
   private readonly rotationInverse = new THREE.Quaternion();
-  private readonly paws: DogPawPose[] = Array.from({ length: 4 }, () => ({ travel: 0, lift: 0, planted: true, recovery: 0 }));
+  private readonly paws: DogPawPose[] = Array.from({ length: 4 }, () => ({ travel: 0, lift: 0, planted: true, recovery: 0, stanceTravel: 0 }));
   private readonly locks = new Float64Array(8);
   private readonly recoveryOffsets = new Float64Array(8);
   private readonly planted = [false, false, false, false];
@@ -89,7 +106,10 @@ export class DogRig {
     }
     // Bend the body into its stride envelope so fixed-length limbs can reach,
     // instead of stretching a paw to compensate for a rigid high torso.
+    const gallop = Math.min(1, Math.max(0,
+      (motion.locomotionSpeed - GALLOP_GATE_SPEED) / (DOG_SPRINT_SPEED - GALLOP_GATE_SPEED)));
     bones[0]!.position.y = -0.17 * moving * upright + motion.bob
+      - GALLOP_DROP * gallop * upright
       - BANK_ROOT_DROP * Math.abs(bank) / DOG_MAX_BANK
       - CROUCH_DROP * motion.crouch * moving * upright;
     bones[1]!.position.y -= motion.sit * 0.3;
@@ -130,7 +150,8 @@ export class DogRig {
       const rest = DOG_PAW_CONTACTS[foot]!;
       const travel = paw.travel * (1 - motion.sit);
       const seatedAdvance = foot >= 2 ? motion.sit * 0.16 : 0;
-      let localX = rest.x;
+      const nominalX = rest.x;
+      let localX = nominalX;
       let localZ = rest.z + travel + seatedAdvance;
       let worldX = x + localX * c + localZ * s;
       let worldZ = z - localX * s + localZ * c;
@@ -149,11 +170,25 @@ export class DogRig {
       if (!paw.planted) {
         // A turning stance ends away from the straight-ahead foot line. Preserve
         // that actual lift-off target, then return smoothly over the swing.
+        //
+        // MEASURED AGAINST THE STANCE RAMP CARRIED ON, not against the swing
+        // curve this frame has already switched to. The first airborne frame
+        // lands a fraction of a frame past the handover, and over that fraction
+        // a world-locked foot keeps travelling backward under the body while the
+        // swing curve has it standing still at -stride. Against `travel` that
+        // gap reads as drift: 93 mm of it at DOG_MAX_SPEED, held through the
+        // start of the swing by `remaining`, applied at the one moment in the
+        // cycle when the hind limb is already at full stretch. The paw was drawn
+        // up to 133 mm off its commanded arc because the leg could not reach
+        // what that asked for. Against `stanceTravel` the same gap reads as
+        // zero, because a planted foot is exactly where the stance ramp says it
+        // is, and a real turn's drift survives untouched.
         if (this.planted[foot]) {
           const dx = this.locks[foot * 2]! - x;
           const dz = this.locks[foot * 2 + 1]! - z;
-          this.recoveryOffsets[foot * 2] = dx * c - dz * s - localX;
-          this.recoveryOffsets[foot * 2 + 1] = dx * s + dz * c - localZ;
+          const rampZ = rest.z + paw.stanceTravel * (1 - motion.sit) + seatedAdvance;
+          this.recoveryOffsets[foot * 2] = dx * c - dz * s - nominalX;
+          this.recoveryOffsets[foot * 2 + 1] = dx * s + dz * c - rampZ;
         }
         const remaining = 1 - paw.recovery * paw.recovery * (3 - 2 * paw.recovery);
         localX += this.recoveryOffsets[foot * 2]! * remaining;

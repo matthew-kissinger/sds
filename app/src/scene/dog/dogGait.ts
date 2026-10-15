@@ -14,7 +14,25 @@ export function dogStanceShare(speed: number): number {
 export function dogStride(speed: number): number {
   return Math.min(DOG_MAX_PAW_REACH, Math.max(speed, 0) * dogStanceShare(speed) / (2 * dogGaitRate(speed)));
 }
-export interface DogPawPose { travel: number; lift: number; planted: boolean; recovery: number }
+export interface DogPawPose {
+  travel: number;
+  lift: number;
+  planted: boolean;
+  recovery: number;
+  /**
+   * Where the STANCE ramp would put this paw at this instant, carried on past
+   * the end of stance instead of handing over to the swing curve.
+   *
+   * The two curves meet exactly at the boundary, but a frame almost never lands
+   * on it: the first airborne frame sits some fraction of a frame past, and over
+   * that fraction a planted foot has gone on travelling backward under the body
+   * while the swing curve has it already standing still at -stride. The gap is
+   * speed times that fraction - 93 mm at DOG_MAX_SPEED - and `dogRig` measures a
+   * turn's foot drift against this rather than against `travel` so that the gap
+   * is not banked as drift and held through the whole swing.
+   */
+  stanceTravel: number;
+}
 export function sampleDogPaw(phase: number, speed: number, foot: number, out: DogPawPose): void {
   const sprint = Math.max(0, Math.min(1, (speed - DOG_MAX_SPEED) / (DOG_SPRINT_SPEED - DOG_MAX_SPEED)));
   // Diagonal trot becomes a separated fore/hind gallop as sprint opens.
@@ -25,6 +43,7 @@ export function sampleDogPaw(phase: number, speed: number, foot: number, out: Do
   const stride = dogStride(speed);
   out.planted = cycle < stance || speed < 0.08;
   out.recovery = out.planted ? 0 : (cycle - stance) / (1 - stance);
+  out.stanceTravel = (1 - 2 * cycle / stance) * stride;
   if (cycle < stance) {
     out.travel = (1 - 2 * cycle / stance) * stride;
     out.lift = 0;

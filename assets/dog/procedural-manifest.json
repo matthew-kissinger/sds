@@ -41,7 +41,7 @@
     },
     {
       "path": "app/src/scene/dog/dogRig.ts",
-      "sha256": "680352311929305a52f5d478687019c6edc8a88aed790ebd7f8b792f5d57d1a3"
+      "sha256": "0d06b32a55dd98caf9ba94521f8561b66f93b03d820fb3c9939806dabb7d251b"
     },
     {
       "path": "app/src/scene/dog/dogLegSolver.ts",
@@ -49,7 +49,7 @@
     },
     {
       "path": "app/src/scene/dog/dogGait.ts",
-      "sha256": "0930d6458fce6b44c30458db82d306b34d84cb67a7806a19b8074ff9a8653118"
+      "sha256": "3ccf6ce6ed3a81c8e6d85a3e27631023cc8c2bba8e310da0f7283c03114abd69"
     },
     {
       "path": "app/src/scene/dog/dogMotion.ts",
