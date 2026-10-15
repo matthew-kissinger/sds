@@ -41,12 +41,17 @@ import {
   sheepGaitRateForAgitation,
   sheepLegPose,
   sheepStrideForAgitation,
+  KNEE_COMPLIANCE,
+  sheepKneeBend,
 } from '@app/scene/flock/flockTuning';
 import {
   SHEEP_HOOF_BASELINE,
   SHEEP_AUTHORED_LEG_SPAN,
+  SHEEP_BACK_BONES,
+  SHEEP_FRONT_BONES,
   SHEEP_HOOF_CONTACTS,
   SHEEP_HOOF_SOLE_POINTS,
+  type SheepLegBones,
 } from '@app/scene/flock/sheepParts';
 import {
   SHEEP_TERRAIN_OFFSET_LIMIT,
@@ -549,6 +554,171 @@ describe('sheep gait', () => {
     const stride = sheepStrideForAgitation(0.25);
     expect(stride).toBeGreaterThan(0.2);
     expect(stride * HOOF_LIFT).toBeLessThan(0.12);
+  });
+});
+
+describe('sheep knee solve', () => {
+  const PAIRS: readonly (readonly [string, SheepLegBones])[] = [
+    ['front', SHEEP_FRONT_BONES],
+    ['back', SHEEP_BACK_BONES],
+  ];
+  const FRAME = 1 / 60;
+
+  /** The shader's knee, on the CPU: the span the pose asks the chain for, and
+   *  the bend that span implies. Deliberately mirrors sheepMotion's `spanRise`
+   *  and `spanReach` term for term, INCLUDING the absence of the body bob. */
+  function kneeAt(
+    bones: SheepLegBones,
+    gait: number,
+    agitation: number,
+    ground: number,
+  ): { readonly bend: number; readonly hoofRise: number; readonly hoofReach: number } {
+    const stride = sheepStrideForAgitation(agitation);
+    const pose = sheepLegPose(gait, 1, sheepStanceShareForAgitation(agitation));
+    const hoofRise = pose.lift * stride * HOOF_LIFT + ground;
+    const hoofReach = pose.travel * stride;
+    const span = Math.hypot(bones.restRise - hoofRise, bones.restReach + hoofReach);
+    return { bend: sheepKneeBend(span, bones.upper, bones.lower), hoofRise, hoofReach };
+  }
+
+  /** Every pose the asset can be in: both pairs, the whole agitation range, the
+   *  terrain limit either way, and a full gait cycle walked in real frames. */
+  function envelope(
+    visit: (
+      bones: SheepLegBones,
+      now: ReturnType<typeof kneeAt>,
+      previous: ReturnType<typeof kneeAt>,
+      agitation: number,
+      ground: number,
+    ) => void,
+  ): void {
+    for (const ground of [0, 0.08, -0.08, 0.04, -0.04]) {
+      for (let agitation = 0; agitation <= 1.0001; agitation += 0.02) {
+        const rate = sheepGaitRateForAgitation(agitation);
+        for (const [, bones] of PAIRS) {
+          let previous = kneeAt(bones, 0, agitation, ground);
+          for (let i = 1; i * rate * FRAME < Math.PI * 4; i++) {
+            const now = kneeAt(bones, i * rate * FRAME, agitation, ground);
+            visit(bones, now, previous, agitation, ground);
+            previous = now;
+          }
+        }
+      }
+    }
+  }
+
+  it('reproduces the authored knee, which is how the solver and the mesh stay married', () => {
+    // sheepParts measures the chain off the same rings the loft is built from,
+    // so the solve has to land back on the joint the modeller placed. It does,
+    // to a hundredth of a millimetre on both pairs: the front carpus stands
+    // 0.050 m off the shoulder-to-sole chord and the hind hock 0.053, and the
+    // law of cosines returns those from the bone lengths alone.
+    //
+    // This is the whole drift guard. Retune a leg ring and the solve follows it;
+    // retune it so far that the solve no longer agrees, and this fires.
+    const authored = { front: 0.04994, back: -0.05298 };
+    for (const [name, bones] of PAIRS) {
+      const solved = Math.sqrt(bones.restBend ** 2 - KNEE_COMPLIANCE ** 2);
+      expect(solved * bones.foldDirection).toBeCloseTo(
+        authored[name as 'front' | 'back'],
+        4,
+      );
+    }
+  });
+
+  it('keeps both chains off full extension, where the solve is singular', () => {
+    // A two-bone bend goes as the SQUARE ROOT of how far the limb has shortened,
+    // so a chain authored dead straight sits on a cusp with infinite slope and
+    // answers the first millimetre of hoof lift with a 76 mm snap. Both pairs
+    // therefore carry real slack - the hock always did, and the carpus was moved
+    // forward to 0.065 to match it.
+    for (const [, bones] of PAIRS) {
+      const chain = bones.upper + bones.lower;
+      expect((chain - bones.span) / chain).toBeGreaterThan(0.018);
+    }
+  });
+
+  it('shares one bend ring between the pairs, so the fold profile is one number', () => {
+    // sheepMotion reads KNEE_T off the front chain and applies it to both.
+    expect(SHEEP_BACK_BONES.kneeT).toBe(SHEEP_FRONT_BONES.kneeT);
+  });
+
+  it('leaves an idle sheep on flat ground exactly as modelled', () => {
+    // The title screen stands one sheep in front of the camera doing nothing.
+    // At rest the stride is zero, so the only term that could reach the knee is
+    // the breathing bob - and the bob is deliberately not in the span, because
+    // it is the thorax riding over the scapula rather than the shoulder joint
+    // moving. Were it in, 4 mm of breath would come back as 9 mm of knee.
+    let drift = 0;
+    for (const [, bones] of PAIRS) {
+      for (let i = 0; i < 1500; i++) {
+        drift = Math.max(drift, Math.abs(kneeAt(bones, i * 0.011, 0, 0).bend - bones.restBend));
+      }
+    }
+    expect(drift).toBe(0);
+  });
+
+  it('bends a standing leg to meet the terrain, which the authored fold never did', () => {
+    // This is what the change bought. The old fold was the swing arc times a
+    // constant and was gated to the airborne half of the cycle, so a sheep
+    // standing across a hummock bent nothing at all and took the whole 0.08 m
+    // as stretch. Now the uphill knee folds 0.070 m and the downhill one
+    // straightens 0.026 toward its chord.
+    for (const [, bones] of PAIRS) {
+      expect(kneeAt(bones, 0, 0, SHEEP_TERRAIN_OFFSET_LIMIT).bend - bones.restBend)
+        .toBeGreaterThan(0.065);
+      expect(kneeAt(bones, 0, 0, -SHEEP_TERRAIN_OFFSET_LIMIT).bend - bones.restBend)
+        .toBeLessThan(-0.02);
+    }
+  });
+
+  it('never folds a leg through its own rest pose', () => {
+    // The fold is signed by which side of the chord the MODELLED joint is on, so
+    // the front carpus flexes forward and the hind hock back. An over-reaching
+    // pose drives the bend down to the compliance floor, which pulls the joint
+    // back toward the chord - and the floor can never reach it, because
+    // sqrt(authored^2 + c^2) - c is less than `authored` for any c. Held here on
+    // the real envelope rather than on the algebra.
+    envelope((bones, now) => {
+      const posed = Math.sqrt(bones.restBend ** 2 - KNEE_COMPLIANCE ** 2)
+        + (now.bend - bones.restBend);
+      expect(posed).toBeGreaterThan(0);
+    });
+  });
+
+  it('moves the knee no faster than the hoof it is following', () => {
+    // The anti-pop receipt. Worst case over the whole envelope is 2.60 - 16.1 mm
+    // of knee against 6.2 mm of hoof in one frame, at an agitation of 0.04 where
+    // the stride has just snapped open and the chain crosses full extension. In
+    // absolute terms the worst frame anywhere is 71.7 mm, and it happens at a
+    // dead run where the hoof itself is covering 153 mm per frame.
+    let ratio = 0;
+    let travel = 0;
+    envelope((_bones, now, previous) => {
+      const knee = Math.abs(now.bend - previous.bend);
+      const hoof = Math.hypot(
+        now.hoofRise - previous.hoofRise,
+        now.hoofReach - previous.hoofReach,
+      );
+      travel = Math.max(travel, knee);
+      if (hoof > 1e-9) ratio = Math.max(ratio, knee / hoof);
+    });
+    expect(ratio).toBeLessThan(2.8);
+    expect(travel).toBeLessThan(0.08);
+  });
+
+  it('keeps the fold on straight bones instead of bowing them', () => {
+    // Bones are rigid, so the rings between the joints ride straight lines. The
+    // tent is what the chain does; the sine the old fold used gave the t=0.2
+    // ring 0.59 of full bend where the chain gives 0.36, which bowed the radius
+    // outward and is its own share of why a folding leg read as rubber.
+    const kneeT = SHEEP_FRONT_BONES.kneeT;
+    const tent = (t: number): number => Math.min(t / kneeT, (1 - t) / (1 - kneeT));
+    expect(tent(0)).toBe(0);
+    expect(tent(1)).toBe(0);
+    expect(tent(kneeT)).toBeCloseTo(1, 12);
+    expect(tent(0.2)).toBeCloseTo(0.357, 3);
+    expect(tent(0.86)).toBeCloseTo(0.318, 3);
   });
 });
 

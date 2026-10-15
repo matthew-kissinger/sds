@@ -305,6 +305,98 @@ neither fixed here:
   confirms the backend initialises. A lab session wanting the WebGL2 grading
   should expect the wait or take the receipt from the production build.
 
+### Sheep legs: a solved knee, and the answer on `math`, 2026-10-15
+
+The sheep's mid-leg fold was the airborne swing arc times a hand-tuned half of
+stride, gated to the recovery half of the cycle. It bent the joint on a
+timetable rather than because anything had moved, so the three terms that
+actually move an endpoint - terrain planting at +/-0.08 m, the body bob at
++/-0.016, the fore-aft swing at +/-stride - changed the shoulder-to-sole
+distance with no knee response at all. The limb telescoped. A sheep standing
+across a hummock stretched one leg by a seventh of its length and nothing in the
+pose bent.
+
+`sheepKneeBend` in `flockTuning.ts` is now the closed-form two-bone solve, and
+`sheepParts.ts` measures each chain off the same rings the leg is lofted from,
+so the solver and the mesh cannot drift apart. The solve lands back on the
+modelled joint to a hundredth of a millimetre on both pairs - 0.050 m of carpus
+in front, 0.053 of hock behind - which is the check that it reads the rig
+correctly, and `tests/animal-presentation.spec.ts` holds it.
+
+Three things had to change with it:
+
+- **The front chain was authored dead straight**, 0.0001 m of slack on a 0.5605
+  chain. A two-bone bend goes as the square root of how far the limb has
+  shortened, so a straight chain sits on a cusp with infinite slope: the first
+  frame of a hoof leaving the ground snapped the knee 76 mm. The carpus moved
+  forward to `dz: 0.065`, which gives it the 2.0% slack the hock always had and
+  brings that frame to 45 mm, in line with the hind leg beside it.
+- **`KNEE_COMPLIANCE`, 0.035 m,** is a residual flexion under the square root.
+  The authored hoof sweep over-reaches the chain by 12% at each handover - a
+  0.6 m stride on 0.57 m of bone - so the pose crosses full extension twice a
+  cycle whatever the rest pose is, and the exact solve answers each crossing
+  with 50 mm of knee in one frame at a walk, in plain view, on a planted leg.
+  The residual is a constant and cancels in the difference the shader displaces
+  by, so it changes the shape of the response and not the rest pose. It costs
+  5% of the fold at peak recovery, where the leg is airborne and tucked.
+- **The body bob is deliberately not in the span.** It is the thorax riding over
+  the scapula rather than the shoulder joint translating, and a chain this close
+  to straight answers far too loudly: 4 mm of idle breath would come back as
+  9 mm of knee, a new idle motion on the title screen for no gain. What it
+  leaves behind is the 16 mm the shoulder ring rises at a dead run, already
+  carried and already named as compliance.
+
+What the pass bought, measured over every agitation, both terrain limits and a
+full cycle walked in real frames:
+
+- A standing sheep on a hummock folds the uphill knee 0.070 m and straightens
+  the downhill one 0.026 toward its chord. Both were zero.
+- An idle sheep on flat ground is bit-identical to the modelled mesh.
+- Worst per-frame knee travel anywhere is 71.7 mm, at a dead run where the hoof
+  is covering 153 mm in the same frame. The worst knee-to-hoof ratio is 2.60,
+  and it is 16.1 mm against 6.2 at an agitation of 0.04.
+- Each pair folds the way its own joint is modelled, carpus forward and hock
+  back, with the direction read from the rings. Neither leg folds through its
+  own rest pose anywhere in the envelope, and it cannot: `sqrt(a^2 + c^2) - c`
+  is less than `a` for any compliance `c`.
+- The fold rides a linear tent peaking at the bend ring instead of a sine.
+  Bones are rigid, and the sine gave the `t = 0.2` ring 0.59 of full bend where
+  the chain gives 0.36, bowing the radius outward. It is also one transcendental
+  cheaper than what it replaces.
+
+The hand-tuned constant was not the wrong size, only blind: at full run the
+solve returns 0.140 m of bend on the front chain and 0.154 on the back, against
+the authored 0.5 * 0.3 = 0.150. What it could not do was answer a hill, bend
+during stance, or stop the hock over-folding by 30% at speed.
+
+**`math` from pmndrs is not adopted, and the open question is closed.** The gate
+in `spec/13-asset-lab.md` asks for the FABRIK result to be visibly better and
+not merely equivalent. Every leg chain in this game is two bones - the dog's
+`DOG_JOINTS` triples in `dogLegSolver.ts` and the sheep's shoulder-knee-sole
+rings - and two bones have an exact answer in one step, the law of cosines with
+the cosine cancelled. FABRIK is iterative because three or more links have no
+closed form; on two links it converges toward the line that is already written
+here. Adopting it would spend a dependency, a version pin and a loop to
+approximate an exact answer, so it cannot clear its own gate. The package was
+never installed and is not in `package.json`. Reopen it if a chain with three
+bones is ever authored - a real scapula, or a stifle and hock modelled apart -
+because that is the case the library exists for.
+
+Not done, and not weakened to pass:
+
+- **The hoof path still over-reaches the leg by 12% at speed**, 0.641 m of span
+  against 0.572 of bone, which is what the compliance term is absorbing. The
+  honest fix is a compass gait: the hip dips as the limb swings off vertical,
+  which on a 0.56 m leg at 32 degrees is 0.085 m against the 0.016 the body bob
+  carries. That is a five-fold change to a bounce the owner has just accepted,
+  and it is coupled to the ballistic-bound receipt, so it is a change of its own
+  and not a correction to this one.
+- **No motion review and no hub timing.** The legs were checked functionally in
+  the lab at 4 m and read as jointed limbs with a hock behind and a flexing
+  carpus in front, nothing inverted. Captures at both gameplay cameras and both
+  aspects have not been taken, and the solve's cost - a length, a divide and a
+  square root per vertex, against the sine it replaces - has no hub receipt.
+
 ## Direction changes
 
 Owner-ordered changes that override an earlier specification line. Four files
@@ -503,8 +595,10 @@ each, described in `spec/12-my-times.md`.
   else is equal or better. The gate and the one-way direction of adoption are
   in `spec/13-asset-lab.md`; the deciding measurement is a hub run, not a
   desktop reading.
-- Whether to adopt `math` from pmndrs for leg IK. It is MIT and version 0.1.0,
-  its `math/ik` entry point has `fabrik2` and `fabrik3`, and its allocation-free
-  style matches the `spec/08` hot-path rule. The gate is in
-  `spec/13-asset-lab.md`: exact pin, first consumer in the same commit, measured
-  bundle delta, and a lab comparison against the current hand-rolled solver.
+- ~~Whether to adopt `math` from pmndrs for leg IK.~~ Closed on 2026-10-15, not
+  adopted. Every leg chain here is two bones, where the closed form is exact in
+  one step and an iterative solver can at best converge toward it, so FABRIK
+  cannot be "visibly better, not merely equivalent" as its own gate in
+  `spec/13-asset-lab.md` requires. The reasoning and the sheep's new solver are
+  in the asset polish pass above. Reopen it if a three-bone chain is ever
+  authored.

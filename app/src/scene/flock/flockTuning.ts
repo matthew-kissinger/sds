@@ -250,6 +250,59 @@ export function sheepLegPose(
   return { travel: -1 + eased * 2, lift: Math.sin(t * Math.PI), planted: false };
 }
 
+/**
+ * Closed-form two-bone knee solve: how far the joint stands off the straight
+ * shoulder-to-hoof line, in metres, when the two bones must span `reach`.
+ *
+ * Two bones have an exact answer in one step - drop a perpendicular from the
+ * knee onto the chord, call its foot `along` from the shoulder, and the two
+ * right triangles share that perpendicular:
+ *
+ *   along = (upper^2 - lower^2 + reach^2) / 2 reach
+ *   bend  = sqrt(upper^2 - along^2)
+ *
+ * which is the law of cosines with the cosine cancelled out. NO ITERATION, and
+ * none is possible to want: FABRIK and the rest of the iterative family exist
+ * to handle chains of three or more links, where there is no closed form and a
+ * solver has to walk the chain. On two links they converge TOWARD this answer,
+ * so adopting one here would spend a dependency and a loop to approximate the
+ * line above. spec/13 only admits `math` for an IK result that is "visibly
+ * better, not merely equivalent"; an approximation of an exact answer cannot
+ * clear that, so the sheep get this and the dog keeps the same solve it already
+ * had in dogLegSolver.
+ *
+ * Unreachable spans fall out without a branch. Past full extension `along`
+ * exceeds `upper` and the square root's argument goes negative, so the clamp
+ * returns the straightest limb there is - which is the right pose for a chain
+ * asked to reach further than it can, and the shader twin needs no `If` to get
+ * it.
+ *
+ * KNEE_COMPLIANCE IS WHY THERE IS AN EXTRA TERM UNDER THE ROOT, and it is doing
+ * real work rather than guarding a division. A two-bone chain's bend goes as the
+ * square root of how far the limb has shortened, so at full extension the curve
+ * has infinite slope: the pose crosses that point twice a cycle, because a
+ * 0.6 m hoof sweep over-reaches a 0.57 m chain by 12% at each handover, and the
+ * exact solve answers each crossing with a knee that leaves zero in a single
+ * frame. 50 mm of it at a walk, in plain view, on a planted leg. Keeping a
+ * residual 0.035 m of flexion - 3.6 degrees, the joint stop every rigged limb
+ * has - puts the operating point off the cusp and costs 5% of the fold at peak
+ * recovery, where the leg is airborne and tucked.
+ *
+ * The residual is a constant, so it cancels in the difference the shader
+ * actually displaces by. It changes the SHAPE of the response, not the rest
+ * pose, and a standing sheep on flat ground is still exactly the sheep that was
+ * modelled.
+ */
+export const KNEE_COMPLIANCE = 0.035;
+
+export function sheepKneeBend(reach: number, upper: number, lower: number): number {
+  const span = Math.max(reach, 1e-4);
+  const along = (upper * upper - lower * lower + span * span) / (2 * span);
+  return Math.sqrt(
+    Math.max(upper * upper - along * along, 0) + KNEE_COMPLIANCE * KNEE_COMPLIANCE,
+  );
+}
+
 /** Step length at this agitation, metres. Opens over a twentieth of the range
  *  and then grows with speed, so a moving sheep always takes a real step and a
  *  standing one takes none. The TSL twin builds the same two terms. */

@@ -146,9 +146,18 @@ dependency.
 
 ## Inverse kinematics and the `math` dependency
 
-The dog already has a hand-rolled leg solver (`app/src/scene/dog/dogLegSolver.ts`)
-and both animals already plant feet against the heightfield
-(`DOG_PAW_CONTACTS`, `SHEEP_HOOF_SOLE_POINTS`, `terrainPlanting.ts`).
+Both animals have a hand-rolled leg solver - the dog's
+`app/src/scene/dog/dogLegSolver.ts` and the sheep's `sheepKneeBend` in
+`app/src/scene/flock/flockTuning.ts` - and both plant feet against the
+heightfield (`DOG_PAW_CONTACTS`, `SHEEP_HOOF_SOLE_POINTS`,
+`terrainPlanting.ts`). Both chains are two bones, and both solvers are the
+closed form, which is exact in one step.
+
+That last fact decides the question below for every chain this game currently
+has, and `STATUS.md` records it as closed: an iterative solver converges toward
+an answer already written in closed form, so it cannot be visibly better. The
+gate stands for the case it was written for - a chain of three bones, which
+nothing in the game is authored with yet.
 
 The candidate for better IK is `math` from pmndrs (MIT, `math/ik`, `fabrik2` and
 `fabrik3`): FABRIK chains of two and three bones, which is the shape of a
