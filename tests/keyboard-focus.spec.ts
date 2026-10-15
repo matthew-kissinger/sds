@@ -86,6 +86,37 @@ describe('keyboard focus ownership', () => {
     expect(keyboardAxis({ right: 0, forward: 0 }).forward).toBe(0);
     expect(keyboardSprint()).toBe(false);
   });
+  it('shows and hides the run clock on its own key, once per press', () => {
+    useGameStore.setState({ showTimer: false });
+    key(DEFAULT_INPUT_BINDINGS.timer);
+    expect(useGameStore.getState().showTimer).toBe(true);
+    key(DEFAULT_INPUT_BINDINGS.timer);
+    expect(useGameStore.getState().showTimer).toBe(false);
+    // An edge, like the camera key beside it: a held key repeats, and a toggle
+    // driven by the repeat would strobe rather than toggle.
+    const repeat = Object.assign(new Event('keydown', { cancelable: true }),
+      { code: DEFAULT_INPUT_BINDINGS.timer, repeat: true });
+    keyboard.dispatchEvent(repeat);
+    expect(useGameStore.getState().showTimer).toBe(false);
+  });
+  it('leaves the run clock key to a focused control, and follows a remap', () => {
+    useGameStore.setState({ showTimer: false });
+    key(DEFAULT_INPUT_BINDINGS.timer, true);
+    expect(useGameStore.getState().showTimer).toBe(false);
+    useGameStore.setState({ inputBindings: { ...DEFAULT_INPUT_BINDINGS, timer: 'KeyF' } });
+    key(DEFAULT_INPUT_BINDINGS.timer);
+    expect(useGameStore.getState().showTimer).toBe(false);
+    key('KeyF');
+    expect(useGameStore.getState().showTimer).toBe(true);
+  });
+  it('does not let the run clock key move the dog or reach the intent', () => {
+    // It sits in the same handler as movement and bark, so the guard that
+    // returns early has to actually return.
+    key(DEFAULT_INPUT_BINDINGS.timer);
+    expect(keyboardAxis({ right: 0, forward: 0 })).toEqual({ right: 0, forward: 0 });
+    expect(keyboardSprint()).toBe(false);
+    expect(currentIntent().bark).toBe(false);
+  });
   it('keeps Escape available while a settings control is focused', () => {
     useGameStore.getState().openSettings();
     key('Escape', true);

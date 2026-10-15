@@ -120,7 +120,14 @@ canvas { display: block; touch-action: none; }
 .herd-progress__icon { width: 25px; height: 20px; color: var(--herd-ink-soft); }
 .herd-progress__count { margin-top: 2px; min-width: 48px; font-size: 13px; font-variant-numeric: tabular-nums lining-nums; letter-spacing: .04em; text-align: center; }
 .herd-progress[data-flock-size="200"] .herd-progress__count { font-size: 11px; letter-spacing: .01em; }
-.herd-timer { position: absolute; top: max(100px, calc(env(safe-area-inset-top) + 98px)); left: max(var(--herd-s5), env(safe-area-inset-left)); min-width: 82px; font-size: 15px; font-variant-numeric: tabular-nums lining-nums; letter-spacing: var(--herd-track); text-shadow: 0 1px 10px var(--herd-paper); }
+/* Under its own button in the top right, not loose under the sheep counter.
+   Bare type on grass was the problem: the counter sits on a conic-gradient
+   disc and the gate cue on a sheer dial, so the clock was the one thing on the
+   field with nothing behind it. It takes the same paperSheer fill and full
+   lineStrong border as the two buttons above it - furniture parked at the
+   edge, per the token's own note - so the three read as one cluster, and keeps
+   the halo so the digits do not depend on the fill. */
+.herd-timer { position: absolute; top: calc(max(var(--herd-s5), env(safe-area-inset-top)) + var(--herd-target) + var(--herd-s3)); right: max(var(--herd-s5), env(safe-area-inset-right)); min-width: 102px; padding: 4px var(--herd-s3); border: 1px solid var(--herd-line-strong); border-radius: var(--herd-round); background: var(--herd-paper-sheer); font-size: 15px; font-variant-numeric: tabular-nums lining-nums; letter-spacing: var(--herd-track); text-align: center; text-shadow: var(--herd-halo); }
 .herd-stamina { position: absolute; top: max(var(--herd-s5), env(safe-area-inset-top)); left: 50%; width: clamp(112px, 16vw, 156px); display: grid; gap: 4px; transform: translateX(-50%); filter: drop-shadow(0 2px 8px rgba(65,51,34,.18)); }
 .herd-stamina__label { color: rgba(44,56,40,.76); font-size: 10px; line-height: 1; letter-spacing: .14em; text-align: center; text-transform: uppercase; text-shadow: 0 1px 5px var(--herd-paper); }
 .herd-stamina__track { height: 7px; overflow: hidden; border: 1px solid rgba(78,65,46,.42); border-radius: var(--herd-round); background: rgba(244,234,215,.58); }
@@ -129,6 +136,14 @@ canvas { display: block; touch-action: none; }
 .herd-stamina[data-low=true] .herd-stamina__fill { background: #9f5e45; }
 .herd-pause-button { position: absolute; top: max(var(--herd-s5), env(safe-area-inset-top)); right: max(var(--herd-s5), env(safe-area-inset-right)); display: grid; place-items: center; border-color: var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); pointer-events: auto; }
 .herd-pause-button svg { display: block; width: 15px; height: 15px; }
+/* Inboard of Pause by exactly one target and one gap, so the pair reads as a
+   set and Pause keeps the corner it has always had. The gate cue sweeps against
+   both rectangles in tests/gate-guidance.spec.ts. */
+.herd-timer-button { position: absolute; top: max(var(--herd-s5), env(safe-area-inset-top)); right: calc(max(var(--herd-s5), env(safe-area-inset-right)) + var(--herd-target) + var(--herd-s3)); display: grid; place-items: center; border-color: var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); pointer-events: auto; }
+.herd-timer-button svg { display: block; width: 15px; height: 15px; }
+/* Off is the resting state - spec/06 keeps the clock off by default - so the
+   button is quiet until the clock is actually on the field. */
+.herd-timer-button[aria-pressed=false] { color: var(--herd-ink-soft); }
 .herd-modal { position: fixed; inset: 0; z-index: var(--herd-z-modal); display: grid; place-items: center; padding: max(var(--herd-s5), env(safe-area-inset-top)) max(var(--herd-s5), env(safe-area-inset-right)) max(var(--herd-s5), env(safe-area-inset-bottom)) max(var(--herd-s5), env(safe-area-inset-left)); background: rgba(64,48,31,.14); backdrop-filter: blur(5px); pointer-events: auto; }
 .herd-panel { width: min(92vw, 430px); max-height: min(88vh, 720px); overflow: auto; padding: var(--herd-s7); border: 1px solid var(--herd-line); border-radius: var(--herd-panel); background: var(--herd-paper-glass); box-shadow: 0 18px 70px var(--herd-shadow); }
 .herd-panel--completion { text-align: center; overflow: visible; }

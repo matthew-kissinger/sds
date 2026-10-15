@@ -3,7 +3,8 @@
 /**
  * Keyboard as a device: two window listeners, one set of held keys, no state
  * machine. WASD and the arrow cluster move, Shift sprints, Space barks, C swaps
- * camera framing. Hold the walk key (V by default) for a controlled walk.
+ * camera framing, T shows or hides the run clock. Hold the walk key (V by
+ * default) for a controlled walk.
  *
  * Keys are read by `event.code`, the PHYSICAL key, so the WASD cluster is the
  * WASD cluster on AZERTY and Dvorak too. That is also what a future remap panel
@@ -17,7 +18,7 @@
  * loses the keyup and the dog runs into the fence forever.
  */
 
-import { barkPressed, isPlaying, toggleCameraMode } from './actions';
+import { barkPressed, isPlaying, toggleCameraMode, toggleRunTimer } from './actions';
 import { clearAxis, type MoveAxis } from './axis';
 import { setSprintSource } from './sprintSources';
 import {
@@ -113,6 +114,13 @@ function onKeyDown(event: KeyboardEvent): void {
 
   if (code === bindings.camera) {
     if (!event.repeat) toggleCameraMode();
+    return;
+  }
+
+  // An edge like the camera, and for the same reason: holding the key is one
+  // toggle, not a strobe.
+  if (code === bindings.timer) {
+    if (!event.repeat) toggleRunTimer();
     return;
   }
 
