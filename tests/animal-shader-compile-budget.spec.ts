@@ -15,7 +15,17 @@ describe('initial animal shader compile budget', () => {
     expect(code).toContain('woolBands(');
     expect(code).toContain('MOTTLE_BROAD');
     expect(code).toContain('MOTTLE_MID');
-    expect(code.match(/\bsin\(/g)).toHaveLength(4);
+    // FOUR FOR THE MOTTLE, ONE FOR THE BAND EDGE. The two mottle octaves take
+    // two sines each; the fifth is `edgeBreak`, and it is the whole of what
+    // stops both terminators ruling a horizontal line across every animal in
+    // the flock. It buys that with one sine because it is a dither for an edge
+    // rather than a texture - the mottle already supplies the texture, so the
+    // break needs no second octave of its own.
+    //
+    // This number is a budget, not a formality. Raise it only for something
+    // that can be named as plainly as the above, and never to make a test pass.
+    expect(code.match(/\bsin\(/g)).toHaveLength(5);
+    expect(code).toContain('TERMINATOR_BREAK_FREQ');
   });
 
   it('keeps dog paint compact without dropping its authored bands or marks', () => {

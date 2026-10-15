@@ -70,6 +70,7 @@ import {
   OUTLINE_NEAR_PIXELS, SHAPE_STRIDE, SHEEP_HEADING_STEP_LIMIT, SHEEP_HEADING_STEP_RATE,
   SHEEP_HEADING_TAU,
   SHEEP_MAX_SPEED_MPS, TAU, sheepGaitRateForAgitation, sheepLegPose,
+  sheepStanceShareForAgitation,
   sheepStrideForAgitation,
 } from './flock/flockTuning';
 import { smoothHeadingInto } from './flock/headingSmoothing';
@@ -304,8 +305,11 @@ export function Flock() {
       const sinYaw = Math.sin(yaw);
 
       const stride = sheepStrideForAgitation(level);
-      const positiveSwing = sheepLegPose(motionValues[motionAt]!, 1).travel * stride;
-      const negativeSwing = sheepLegPose(motionValues[motionAt]!, -1).travel * stride;
+      // Falls with speed, so the hoof this plants is the one the shader has on
+      // the ground (flockTuning.ts).
+      const stanceShare = sheepStanceShareForAgitation(level);
+      const positiveSwing = sheepLegPose(motionValues[motionAt]!, 1, stanceShare).travel * stride;
+      const negativeSwing = sheepLegPose(motionValues[motionAt]!, -1, stanceShare).travel * stride;
       const scaleX = shape[at]!;
       const scaleY = shape[at + 1]!;
       const scaleZ = shape[at + 2]!;
@@ -319,7 +323,7 @@ export function Flock() {
         const phase = motionValues[motionAt]!;
         measureSheepStanceContact(
           diagnostics.contact, field, terrainValues, terrainAt, groundY, x, z, cosYaw, sinYaw,
-          scaleX, scaleY, scaleZ, phase, stride,
+          scaleX, scaleY, scaleZ, phase, stride, stanceShare,
         );
         sheepFootErrorMax = Math.max(sheepFootErrorMax, diagnostics.contact.footErrorMax);
         if (diagnostics.contact.stanceContacts === 0) sheepAirborne += 1;
