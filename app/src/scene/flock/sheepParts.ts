@@ -65,6 +65,24 @@ export const HEAD_GRAZE_END = 0.66;
 export const HEAD_NOSE_Z = 0.755 + HEAD_FORWARD;
 
 /**
+ * Where an authored head z ends up once the loft is stretched by HEAD_FORWARD.
+ *
+ * Exported because the burial volume in sheepGeometry has to travel with the
+ * rings it buries. It did not, and that is a drift worth naming: the volume
+ * ended at a hardcoded 0.56, the second ring sat at 0.555 just inside it, and
+ * reaching the head out slid that ring to 0.620 - past the end of its own
+ * burial - so a narrow neck ring surfaced through the fleece. The asset test
+ * for exactly that caught it. Two numbers describing one lengthening, in two
+ * files, with only a comment holding them together.
+ */
+export function headStretchedZ(z: number): number {
+  const first = HEAD_RINGS[0]!.z;
+  const last = HEAD_RINGS[HEAD_RINGS.length - 1]!.z;
+  const alongHead = Math.max(0, Math.min((z - first) / (last - first), 1));
+  return z + alongHead * HEAD_FORWARD;
+}
+
+/**
  * A point on a unit section: a circle and a square blended by `square`. The
  * square term divides out the larger component, which walks the point onto the
  * unit box; near 0.5 the corners are visible without the section reading as a

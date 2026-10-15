@@ -50,6 +50,7 @@ import {
   LEG_PLACEMENT,
   earShape,
   headShape,
+  headStretchedZ,
   legShape,
 } from './sheepParts';
 import { FLEECE_LIFT, HEAD_LIFT } from './sheepFormTuning';
@@ -89,11 +90,33 @@ const BODY_PUFFS: readonly BodyPuff[] = [
   { cx: 0.015, cy: 0.53, cz: 0.22, rx: 0.3, ry: 0.36, rz: 0.36, tx: 0.86, ty: -0.37, tz: -0.44, blend: 0.84 },
   { cx: -0.01, cy: 0.54, cz: -0.07, rx: 0.38, ry: 0.36, rz: 0.47, tx: -0.53, ty: 0.94, tz: 0.62, blend: 0.86 },
   { cx: -0.015, cy: 0.52, cz: -0.38, rx: 0.29, ry: 0.35, rz: 0.29, tx: 0.21, ty: 0.4, tz: 0.13, blend: 0.84 },
-  // The back line: withers high at 0.955, the station's own 0.89 as the dip
-  // behind the shoulder, a rump back up at 0.92, then the fall to the tail.
-  { cx: 0.04, cy: 0.75, cz: 0.21, rx: 0.23, ry: 0.21, rz: 0.24, tx: 0.35, ty: 1.24, tz: -0.71, blend: 0.58 },
-  { cx: 0.14, cy: 0.72, cz: -0.05, rx: 0.12, ry: 0.11, rz: 0.14, tx: -0.92, ty: 0.28, tz: 0.5, blend: 0.66 },
-  { cx: -0.05, cy: 0.75, cz: -0.31, rx: 0.185, ry: 0.18, rz: 0.21, tx: 0.62, ty: -1.05, tz: 0.87, blend: 0.62 },
+  // The back line: withers, the dip behind the shoulder, a rump back up, then
+  // the fall to the tail.
+  //
+  // WIDENED, BECAUSE THE FLEECE LUMP HAD SWALLOWED IT. The articulation was
+  // authored across 0.065 m - withers 0.955, dip 0.89, rump 0.92 - which was
+  // enough while the lump field was signed and averaged to nothing. Rectifying
+  // that field so it only ever adds wool (sheepMotion) put up to 0.086 m of
+  // outward bulge on every surface including this one, and noise larger than
+  // the signal is noise that wins: measured down the spine afterwards the line
+  // ran 1.067, 1.007, 1.070, 0.968, 1.015 - bumpy rather than articulated, with
+  // its highest point where the dip was meant to be.
+  //
+  // The crests are pushed apart instead, to withers 1.102, loin 1.018, rump
+  // 1.065 measured: 0.084 m of range, comfortably over the lump, and the
+  // difference between a flock of individuals and one continuous woolly mass
+  // at Classic distance.
+  //
+  // THE BARREL STATION IS NOT THE PLACE TO DO THIS, which cost an hour worth
+  // writing down. Taking 0.025 m off its height to deepen the dip also took
+  // 0.018 m off the CHEST's width - it spans the whole body, and shortening
+  // the ellipsoid moves where smoothTowardBody lands its flank vertices - so
+  // the fleece-span variation this file tests for fell from 0.067 to 0.053 and
+  // the animal moved toward the equal scallops that test exists to forbid. The
+  // back line belongs to the crests; the stations are the barrel.
+  { cx: 0.04, cy: 0.785, cz: 0.21, rx: 0.23, ry: 0.21, rz: 0.24, tx: 0.35, ty: 1.24, tz: -0.71, blend: 0.58 },
+  { cx: 0.14, cy: 0.70, cz: -0.05, rx: 0.12, ry: 0.11, rz: 0.14, tx: -0.92, ty: 0.28, tz: 0.5, blend: 0.66 },
+  { cx: -0.05, cy: 0.80, cz: -0.31, rx: 0.185, ry: 0.18, rz: 0.21, tx: 0.62, ty: -1.05, tz: 0.87, blend: 0.62 },
   { cx: 0.015, cy: 0.65, cz: -0.49, rx: 0.19, ry: 0.17, rz: 0.15, tx: 0.44, ty: 0.16, tz: -0.27, blend: 0.68 },
   // Shoulder and haunch swells descend over the top third of each leg. Their
   // large/medium pairing is intentionally uneven: the old four equal scallops
@@ -122,6 +145,30 @@ const BODY_PUFFS: readonly BodyPuff[] = [
   // vertical connector. Its width remains broad enough to be the collar from
   // which the visible muzzle emerges.
   { cx: 0.02, cy: 0.45, cz: 0.45, rx: 0.27, ry: 0.27, rz: 0.24, tx: 0.28, ty: -0.36, tz: 0.16, blend: 0.78, spin: 19, graze: 0.34 },
+  // THE NECK, WHICH IS WHY THE HEAD COULD NEVER COME FORWARD. Measured in flat
+  // black the animal was a loaf: the back ran 1.01 to 1.07 over 0.7 m with no
+  // withers and no rump, and the head lived entirely INSIDE the fleece except
+  // for 0.04 m of muzzle. Four centimetres on a one-and-a-half metre animal is
+  // not a head, and a shape with no head does not read as a sheep - which is
+  // the one thing spec/05 makes a hard rule.
+  //
+  // Simply reaching the head out is the wrong fix, and the asset already knows
+  // it: two tests in sheep-asset.spec.ts hold the muzzle to within 0.1 m of the
+  // ruff and forbid an exposed narrow span, because a head on a bare stalk
+  // reads as a lever bolted to a wool ball. Someone tried it and backed it out.
+  //
+  // A real sheep has no bare stalk. The fleece CONTINUES up the neck and stops
+  // at the poll, so the lever is never visible: body, then woolly neck, then
+  // bare head. These two carry that wool forward to 0.86, tapering as they go,
+  // so the head can reach past the body while the span between them stays
+  // buried. Both those tests still hold, by construction rather than by being
+  // relaxed - the ruff they measure moved forward with the face.
+  // These sit LOW, because a neck leaves the chest and not the top of the
+  // shoulder, and because the ring they have to bury is buried from underneath:
+  // the head loft's widest vertices are its bottom-outer ones, and wool carried
+  // at withers height passes over them and leaves a throat showing.
+  { cx: 0.01, cy: 0.42, cz: 0.58, rx: 0.2, ry: 0.23, rz: 0.2, tx: -0.33, ty: 0.52, tz: 0.41, blend: 0.74, spin: 21, graze: 0.4 },
+  { cx: 0.005, cy: 0.45, cz: 0.71, rx: 0.15, ry: 0.17, rz: 0.16, tx: 0.46, ty: -0.27, tz: -0.58, blend: 0.7, spin: 22, graze: 0.46 },
 ];
 
 /**
@@ -280,10 +327,16 @@ const VOLUMES: readonly Volume[] = [
   ...ALL_PUFFS.map((puff, i) => puffVolume(puff, i)),
   // The buried root, so neither the head nor the wool draws an interior line at
   // the join. The volume stops before the cheek so the face keeps its contour.
+  //
+  // Both ends run through headStretchedZ, because the rings this buries move
+  // when the head reaches forward and a burial volume that stays put stops
+  // burying them. Its end was a hardcoded 0.56 against a second ring at 0.555:
+  // four thousandths of clearance, which the first lengthening of the head
+  // spent, surfacing a narrow neck ring through the fleece.
   segmentVolume(
     ALL_PUFFS.length,
-    [0, 0.625 + HEAD_LIFT, 0.4],
-    [0, 0.6 + HEAD_LIFT, 0.56],
+    [0, 0.625 + HEAD_LIFT, headStretchedZ(0.4)],
+    [0, 0.6 + HEAD_LIFT, headStretchedZ(0.56)],
     0.11,
   ),
 ];

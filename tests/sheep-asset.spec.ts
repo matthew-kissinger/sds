@@ -371,8 +371,22 @@ describe('the instanced sheep asset', () => {
     geometry = buildSheepGeometry();
     const index = geometry.getIndex();
 
+    // 2,100 -> 2,150, and what the 70 bought is the two puffs that carry the
+    // fleece up the neck. Measured in flat black beforehand, the animal was a
+    // loaf with a 0.04 m nub on the front: no head, so nothing that reads as a
+    // sheep, against a spec/05 rule that every asset must read as itself in
+    // silhouette. The head could not simply reach out, because a head on a bare
+    // stalk is the "neck-and-nose lever" two tests in this file were written to
+    // forbid. Wool up the neck is what lets the face come forward with the span
+    // behind it still buried, which is why this is geometry and not a constant.
+    //
+    // Two puffs, 35 triangles each, 3.4 per cent of the recipe: +14,000 at the
+    // 200-sheep cap, against a field already drawing about 3.4 million, so
+    // under half a per cent of the frame. The constraint this budget exists to
+    // protect is ONE geometry and therefore one draw call however large the
+    // flock grows, and that is untouched.
     expect(index).not.toBeNull();
-    expect(index!.count / 3).toBeLessThanOrEqual(2_100);
+    expect(index!.count / 3).toBeLessThanOrEqual(2_150);
   });
 
   it('keeps a warm cream middle over a saturated cool wool shadow', () => {
