@@ -57,7 +57,7 @@ import {
   type TSLNode,
 } from '@app/tsl/nodes';
 import {
-  BODY_BOB_STRIDE,
+  BODY_BOB_RUN,
   BODY_BREATH,
   HOOF_LIFT,
   SHEEP_STANCE_BOUND,
@@ -291,7 +291,7 @@ export function createSheepMotion(
   // setting back the tapping that the setting has no opinion about.
   const bodyBob = cos(bobArg.sub(stanceShare.mul(float(TAU))))
     .negate()
-    .mul(float(BODY_BREATH).add(stride.mul(float(BODY_BOB_STRIDE))))
+    .mul(float(BODY_BREATH).add(agitation.mul(float(BODY_BOB_RUN))))
     .mul(float(1).sub(legs.y));
 
   const stanceTravel = float(1).sub(stanceT.mul(float(2)));

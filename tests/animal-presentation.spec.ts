@@ -28,7 +28,12 @@ import {
   HOOF_LIFT,
   SHEEP_HEADING_STEP_LIMIT,
   SHEEP_MAX_SPEED_MPS,
-  BODY_BOB_STRIDE,
+  BODY_BOB_RUN,
+  SHEEP_HEADING_TAU_REST,
+  SHEEP_HEADING_TAU_RUN,
+  YAW_JITTER,
+  sheepHeadingTauForAgitation,
+  sheepYawOffsetShareForAgitation,
   BODY_BREATH,
   SHEEP_STANCE_WALK,
   sheepBodyBob,
@@ -222,6 +227,44 @@ describe('animal terrain planting', () => {
   });
 });
 
+describe('sheep facing', () => {
+  // The sim writes headings[i] = velocity.angle(), so the heading IS the travel
+  // direction - and the angle of a nearly-zero vector is nearly meaningless. A
+  // settling sheep sits just above the sim's own movement threshold, where the
+  // reported angle swings tens of degrees between ticks on a small change in
+  // the flocking terms. Both curves below exist to stop the drawn body copying
+  // that, and both ride the same walk knee so the presentation has one speed
+  // curve rather than three that disagree.
+
+  it('damps the facing hard at rest and releases it once the legs are walking', () => {
+    expect(sheepHeadingTauForAgitation(0)).toBe(SHEEP_HEADING_TAU_REST);
+    expect(sheepHeadingTauForAgitation(0.25)).toBeCloseTo(SHEEP_HEADING_TAU_RUN, 9);
+    expect(sheepHeadingTauForAgitation(1)).toBeCloseTo(SHEEP_HEADING_TAU_RUN, 9);
+    // Monotonic, so no speed is damped less than a slower one.
+    let previous = Number.POSITIVE_INFINITY;
+    for (const agitation of [0, 0.05, 0.1, 0.2, 0.25, 0.6, 1]) {
+      const tau = sheepHeadingTauForAgitation(agitation);
+      expect(tau).toBeLessThanOrEqual(previous);
+      previous = tau;
+    }
+    // A moving animal still turns promptly: at 60 Hz a fifth of the remaining
+    // angle is taken in one frame, so a turn is done in a few of them.
+    expect(1 - Math.exp(-(1 / 60) / sheepHeadingTauForAgitation(1))).toBeGreaterThan(0.12);
+  });
+
+  it('stops carrying the standing yaw offset into a run', () => {
+    // YAW_JITTER is 26 degrees of spread, so up to 13 either way. Applied as a
+    // constant it pointed a bolting sheep 13 degrees off the line it was
+    // travelling along, which is not facing askew, it is crabbing - and it left
+    // the body a permanent rotation error for the smoothing to work against.
+    expect(sheepYawOffsetShareForAgitation(0)).toBe(1);
+    expect(sheepYawOffsetShareForAgitation(0.25)).toBe(0);
+    expect(sheepYawOffsetShareForAgitation(1)).toBe(0);
+    const worstCrabAtSpeed = (YAW_JITTER / 2) * sheepYawOffsetShareForAgitation(0.3);
+    expect(worstCrabAtSpeed).toBe(0);
+  });
+});
+
 describe('sheep fleece containment', () => {
   // "Their legs go out the sides of the wool sometimes because it shakes so
   // fast." The shaking was not what did it. The fleece lump was a SIGNED field:
@@ -310,14 +353,13 @@ describe('sheep body bob', () => {
 
   function extremaTurns(agitation: number): { low: number; high: number } {
     const share = sheepStanceShareForAgitation(agitation);
-    const stride = sheepStrideForAgitation(agitation);
     let low = 0;
     let high = 0;
     for (let i = 0; i < TURNS; i++) {
       const turn = i / TURNS;
-      const value = sheepBodyBob(turn * Math.PI * 2, stride, share);
-      if (value < sheepBodyBob(low * Math.PI * 2, stride, share)) low = turn;
-      if (value > sheepBodyBob(high * Math.PI * 2, stride, share)) high = turn;
+      const value = sheepBodyBob(turn * Math.PI * 2, agitation, share);
+      if (value < sheepBodyBob(low * Math.PI * 2, agitation, share)) low = turn;
+      if (value > sheepBodyBob(high * Math.PI * 2, agitation, share)) high = turn;
     }
     return { low, high };
   }
@@ -341,9 +383,8 @@ describe('sheep body bob', () => {
     const soleWeight = 1;
     for (const agitation of [0.25, 1]) {
       const share = sheepStanceShareForAgitation(agitation);
-      const stride = sheepStrideForAgitation(agitation);
       for (let i = 0; i < 64; i++) {
-        const atSole = sheepBodyBob(i / 64 * Math.PI * 2, stride, share)
+        const atSole = sheepBodyBob(i / 64 * Math.PI * 2, agitation, share)
           * (1 - soleWeight);
         expect(Math.abs(atSole)).toBe(0);
       }
@@ -356,13 +397,12 @@ describe('sheep body bob', () => {
     let standing = 0;
     for (let i = 0; i < TURNS; i++) {
       standing = Math.max(standing, Math.abs(sheepBodyBob(
-        i / TURNS * Math.PI * 2, sheepStrideForAgitation(0), SHEEP_STANCE_WALK,
+        i / TURNS * Math.PI * 2, 0, SHEEP_STANCE_WALK,
       )));
     }
     expect(standing).toBeCloseTo(BODY_BREATH, 6);
 
-    const boltStride = sheepStrideForAgitation(1);
-    const boltAmplitude = BODY_BREATH + boltStride * BODY_BOB_STRIDE;
+    const boltAmplitude = BODY_BREATH + BODY_BOB_RUN;
     // Peak to peak against a 0.72 m withers. Real trotting quadrupeds oscillate
     // four to six per cent of height; a tenth of stride measured eleven.
     const peakToPeakFraction = boltAmplitude * 2 / 0.72;
@@ -376,13 +416,18 @@ describe('sheep body bob', () => {
     const suspension = (0.5 - share) * cycle;
     expect(boltAmplitude).toBeLessThan(9.81 * suspension * suspension / 8);
 
+    // AND IT DOES NOT SATURATE. Riding stride instead looked right and was
+    // not: stride's walk term is full by agitation 0.25, so an ambling sheep
+    // carried seventy per cent of a bolt's bob and read as bouncing rather
+    // than walking. A quarter of the speed must get about a quarter of it.
     let previous = 0;
     for (const agitation of [0, 0.25, 0.5, 0.75, 1]) {
-      const amplitude = BODY_BREATH
-        + sheepStrideForAgitation(agitation) * BODY_BOB_STRIDE;
+      const amplitude = BODY_BREATH + agitation * BODY_BOB_RUN;
       expect(amplitude).toBeGreaterThan(previous);
       previous = amplitude;
     }
+    const walk = BODY_BREATH + 0.25 * BODY_BOB_RUN;
+    expect((walk - BODY_BREATH) / (boltAmplitude - BODY_BREATH)).toBeCloseTo(0.25, 6);
   });
 
   it('is twinned by the shader, not re-derived there', () => {
@@ -394,7 +439,7 @@ describe('sheep body bob', () => {
     // sheepBodyBob: two cycles per stride, offset by the stance share, tapered
     // by the leg weight and added into `rise`.
     expect(source).toContain('cos(bobArg.sub(stanceShare.mul(float(TAU))))');
-    expect(source).toContain('float(BODY_BREATH).add(stride.mul(float(BODY_BOB_STRIDE)))');
+    expect(source).toContain('float(BODY_BREATH).add(agitation.mul(float(BODY_BOB_RUN)))');
     expect(source).toContain('.mul(float(1).sub(legs.y))');
     expect(source).toContain('.add(bodyBob)');
   });

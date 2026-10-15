@@ -68,10 +68,11 @@ import {
   AGITATION_TAU,
   OUTLINE_FAR_METRES, OUTLINE_FAR_PIXELS, OUTLINE_MAX, OUTLINE_MIN, OUTLINE_NEAR_METRES,
   OUTLINE_NEAR_PIXELS, SHAPE_STRIDE, SHEEP_HEADING_STEP_LIMIT, SHEEP_HEADING_STEP_RATE,
-  SHEEP_HEADING_TAU,
+  sheepHeadingTauForAgitation,
   SHEEP_MAX_SPEED_MPS, TAU, sheepGaitRateForAgitation, sheepLegPose,
   sheepStanceShareForAgitation,
   sheepStrideForAgitation,
+  sheepYawOffsetShareForAgitation,
 } from './flock/flockTuning';
 import { smoothHeadingInto } from './flock/headingSmoothing';
 import {
@@ -291,7 +292,7 @@ export function Flock() {
         Math.cos(headings[i]!),
         Math.sin(headings[i]!),
         delta,
-        SHEEP_HEADING_TAU,
+        sheepHeadingTauForAgitation(level),
         SHEEP_HEADING_STEP_LIMIT,
         SHEEP_HEADING_STEP_RATE,
       );
@@ -300,7 +301,7 @@ export function Flock() {
       }
       const yaw = Math.PI / 2
         - Math.atan2(presentationHeadings[headingAt + 1]!, presentationHeadings[headingAt]!)
-        + shape[at + 3]!;
+        + shape[at + 3]! * sheepYawOffsetShareForAgitation(level);
       const cosYaw = Math.cos(yaw);
       const sinYaw = Math.sin(yaw);
 

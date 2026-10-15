@@ -17,8 +17,35 @@ export const SHEEP_MAX_SPEED_MPS = SHEEP_MAX_SPEED_PER_TICK * TICK_HZ;
 
 /** Agitation smoothing time constant, seconds. Frame-rate independent. */
 export const AGITATION_TAU = 0.14;
-/** Visual facing response. Sim headings remain untouched and authoritative. */
-export const SHEEP_HEADING_TAU = 0.1;
+/**
+ * Visual facing response, in seconds. Sim headings remain untouched and
+ * authoritative; this only decides how fast the drawn body chases them.
+ *
+ * IT HAS TO DEPEND ON SPEED, BECAUSE THE SIGNAL'S QUALITY DOES. The sim writes
+ * `headings[i] = velocity.angle()`, so the heading is the travel direction -
+ * and the angle of a nearly-zero vector is nearly meaningless. A sheep settling
+ * or grazing sits just above the sim's own MIN_MOVEMENT_SPEED guard, where a
+ * tiny change in the separation and cohesion terms swings the reported angle by
+ * tens of degrees between ticks. One fixed 0.1 s filter passed most of that
+ * through, and the animal visibly shivered while it was seeking its place in
+ * the flock. Because the ramp bands on the world normal, a shiver in the facing
+ * is also a shiver in the shading across the whole fleece, which is why the
+ * wool looked like it was crawling when the fault was not in the wool.
+ *
+ * So: 0.6 s at rest, where the heading is mostly noise and nobody can tell a
+ * slow drift from a fast one, easing to 0.12 s by the time the legs are
+ * visibly walking, where the heading is real and a late turn would show. The
+ * same walk knee the stride and the yaw offset use, so one speed curve governs
+ * the whole presentation rather than three disagreeing ones.
+ */
+export const SHEEP_HEADING_TAU_REST = 0.6;
+export const SHEEP_HEADING_TAU_RUN = 0.12;
+
+export function sheepHeadingTauForAgitation(agitation: number): number {
+  const level = Math.min(Math.max(agitation, 0), 1);
+  const walk = Math.min(level * WALK_KNEE, 1);
+  return SHEEP_HEADING_TAU_REST + (SHEEP_HEADING_TAU_RUN - SHEEP_HEADING_TAU_REST) * walk;
+}
 /**
  * The fastest sustained turn the flock's presentation may show, in radians per
  * second. This is the 0.28 rad per rendered frame the flock shipped with, read
@@ -84,19 +111,25 @@ export const SHEEP_STANCE_BOUND = 0.16;
  * and the legs only catch it: lowest at mid-stance where a diagonal carries the
  * weight, highest at mid-suspension where neither does.
  *
- * Amplitude is a fraction of stride, so it opens with speed and closes to
- * nothing at a graze, plus a small floor that is the resting breath the gait
- * rate's own floor exists for.
+ * Amplitude rides AGITATION, plus a small floor that is the resting breath the
+ * gait rate's own floor exists for.
  *
- * A twentieth of stride puts the bolt at 0.022 m either side, so 0.045 m peak
- * to peak, which on a 0.72 m withers is six per cent - the top of where real
- * trotting quadrupeds sit, and a trot at a quarter agitation lands on four.
- * The ballistic rise for this suspension interval is 0.058 m; this is a third
- * of it, because a leg is a spring and not a stilt. A tenth of stride was tried
- * first and measured eleven per cent of height peak to peak, which is not a
- * bound, it is a pogo stick.
+ * It rode stride first, and that was wrong in a way worth recording, because
+ * stride looks like the right quantity and is not. Stride saturates early: its
+ * walk term is full by agitation 0.25 (WALK_KNEE is 4), so a sheep ambling at a
+ * quarter speed already carried seventy per cent of a bolt's amplitude. The bob
+ * was correct in shape and far too large for the speed, and on an animal barely
+ * moving that does not read as a bound - it reads as a rapid bounce, which is
+ * exactly how it was described. Agitation does not saturate, so the bob now
+ * opens with the speed it is supposed to be a consequence of.
+ *
+ * 0.018 puts the bolt at 0.022 m either side, so 0.045 m peak to peak: six per
+ * cent of a 0.72 m withers, the top of where real trotting quadrupeds sit, with
+ * a quarter-agitation walk now down at 0.0085 m rather than 0.0154. The
+ * ballistic rise for this suspension interval is 0.058 m and this is a third of
+ * it, because a leg is a spring and not a stilt.
  */
-export const BODY_BOB_STRIDE = 0.05;
+export const BODY_BOB_RUN = 0.018;
 export const BODY_BREATH = 0.004;
 
 /**
@@ -110,10 +143,11 @@ export const BODY_BREATH = 0.004;
  */
 export function sheepBodyBob(
   gait: number,
-  stride: number,
+  agitation: number,
   stanceShare: number,
 ): number {
-  const amplitude = BODY_BREATH + stride * BODY_BOB_STRIDE;
+  const level = Math.min(Math.max(agitation, 0), 1);
+  const amplitude = BODY_BREATH + level * BODY_BOB_RUN;
   return -Math.cos(gait * 2 - TAU * stanceShare) * amplitude;
 }
 
@@ -206,6 +240,29 @@ export const BUILD_WIDE = 0.12;
  *  degrees to 26, because at 12 a settled group still read as one animal stamped
  *  out in rows. */
 export const YAW_JITTER = 0.46;
+
+/**
+ * How much of that offset survives at this agitation.
+ *
+ * ALL OF IT, AT ANY SPEED, WAS SIDESTEPPING. The offset is up to 13 degrees
+ * either way and it was applied as a constant, so an animal at a dead run was
+ * pointed thirteen degrees off the line it was travelling along - which is not
+ * a sheep facing slightly askew, it is a sheep crabbing. It also meant the body
+ * carried a permanent rotation error that the heading smoothing was forever
+ * working against, and because the ramp is evaluated on the world normal, that
+ * constant small rotation dragged the bands across the fleece. The wool looked
+ * like it was crawling, and the cause was not in the wool.
+ *
+ * Standing at an angle to the flock is the thing worth keeping, and a standing
+ * animal keeps all of it. It fades out over the same walk knee the legs open
+ * on, so by the time a sheep is visibly stepping it is facing where it is
+ * going. The fade rides smoothed agitation, so the body turns onto its line
+ * rather than snapping onto it.
+ */
+export function sheepYawOffsetShareForAgitation(agitation: number): number {
+  const level = Math.min(Math.max(agitation, 0), 1);
+  return 1 - Math.min(level * WALK_KNEE, 1);
+}
 
 /** Per-instance lateral scatter off the sim position, metres. Presentation only
  *  and deliberately under a quarter of the sim's separation distance, so the
