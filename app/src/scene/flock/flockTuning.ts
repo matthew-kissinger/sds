@@ -64,17 +64,48 @@ export const SHEEP_HEADING_STEP_LIMIT = 0.28;
 export const TAU = Math.PI * 2;
 
 /**
- * Gait rate in radians per second: the floor a standing sheep keeps ticking over
- * at, plus what a walk adds, plus what a bolt adds. The floor exists because the
- * body bob rides this phase and a resting sheep still breathes; the legs do not
- * move at rest because their amplitude, not their rate, is what agitation opens.
- * At the top that is 9.8 rad/s, so 1.6 strides a second.
+ * The rate a standing sheep keeps ticking over at, radians per second. It
+ * exists because the body bob rides this phase and a resting sheep breathes.
+ * The legs do not move at rest because their amplitude, not their rate, is what
+ * agitation opens.
+ *
+ * It is the ONLY authored rate left. There used to be three - a rest, a walk
+ * and a run, summed into a cadence - and the honest problem with that is that
+ * cadence is not free to author. Given a step length and a ground speed, how
+ * often a planted foot must be picked up is arithmetic, and an authored number
+ * can only agree with it or be wrong. The old code wrote the arithmetic down as
+ * a "lock", then applied 85 per cent of it (GAIT_LOCK_BLEND), which is a
+ * deliberate 15 per cent of slide in every stance at every speed. Measured as a
+ * ratio of hoof sweep to ground speed it ran 0.90 to 0.97: the foot never once
+ * kept up with the ground, and that residue is what still read as tapping after
+ * the stance share was fixed.
+ *
+ * So cadence is derived now and stride is authored, which is the way round the
+ * physics allows.
  */
 export const GAIT_REST = 1.6;
-export const GAIT_WALK = 3;
-export const GAIT_RUN = 5.2;
-export const STRIDE_WALK = 0.18;
-export const STRIDE_RUN = 0.188;
+
+/**
+ * Fore-aft half-travel of a hoof, in metres, at a walk and at a bolt.
+ *
+ * AUTHORED AGAINST THE LEG, because this is the number a leg's length actually
+ * limits. SHEEP_AUTHORED_LEG_SPAN is 0.59 m, and a limb can swing to roughly
+ * half its length fore and aft before the hip runs out of travel. 0.30 m is
+ * 0.51 of the leg at full speed, which is where a galloping animal's foot
+ * genuinely reaches; the old 0.368 was 0.62 of it, past what the joint has, and
+ * part of why legs appeared outside the body.
+ *
+ * It opens over a very short band rather than ramping with agitation, because a
+ * sheep that is walking at all is taking a real step - a creature does not take
+ * four-centimetre paces. Below the band the amplitude closes to zero so a
+ * standing animal's legs are still, which is the only thing the ramp was for.
+ */
+export const STRIDE_WALK = 0.2;
+export const STRIDE_RUN = 0.3;
+/** Agitation at which the stride is fully open. A twentieth: a sheep that has
+ *  started moving has started stepping. */
+export const STRIDE_OPEN_KNEE = 20;
+
 /** Hoof clearance as a fraction of fore-aft stride. */
 export const HOOF_LIFT = 0.52;
 
@@ -95,14 +126,24 @@ export const HOOF_LIFT = 0.52;
  *
  * A real sheep answers the same problem by bounding: the hooves spend less of
  * the cycle on the ground and more of it in the air, so the body covers its
- * distance in flight instead of in cadence. Dropping the share to 0.16 at a bolt
- * brings the demanded rate down to 9.78 rad/s - just under the authored 9.8, so
- * the lock stops engaging at all - and leaves 84 per cent of the cycle airborne,
- * with an interval where neither diagonal is planted. That is the suspension
- * phase, and it is why the gait now reads as a bound.
+ * distance in flight instead of in cadence.
+ *
+ * THESE ARE DUTY FACTORS, AND THE WALKING ONE WAS NOT A WALK. 0.34 means each
+ * foot is off the ground for two thirds of the cycle; with the diagonals offset
+ * by half a cycle that leaves two intervals per stride where NEITHER pair is
+ * down. A sheep ambling at a third of a metre per second was airborne 34 per
+ * cent of the time. Quadrupeds do not do that at a walk - a walk is defined by
+ * never having fewer than two feet down, which needs a duty factor above 0.5 -
+ * and brief touches with air between them is precisely what "tap, tap, tap"
+ * describes.
+ *
+ * 0.62 at a walk gives an overlap where all four are down, no suspension at
+ * all, and it passes through 0.5 at about a third of top speed where the gait
+ * becomes a trot. 0.20 at a bolt is a gallop's duty factor and leaves 60 per
+ * cent of the cycle airborne, which is the suspension a bound is named for.
  */
-export const SHEEP_STANCE_WALK = 0.34;
-export const SHEEP_STANCE_BOUND = 0.16;
+export const SHEEP_STANCE_WALK = 0.62;
+export const SHEEP_STANCE_BOUND = 0.2;
 
 /**
  * THE BODY HAS TO RISE. A gait is not four legs cycling under a torso held at a
@@ -123,13 +164,20 @@ export const SHEEP_STANCE_BOUND = 0.16;
  * exactly how it was described. Agitation does not saturate, so the bob now
  * opens with the speed it is supposed to be a consequence of.
  *
- * 0.018 puts the bolt at 0.022 m either side, so 0.045 m peak to peak: six per
- * cent of a 0.72 m withers, the top of where real trotting quadrupeds sit, with
- * a quarter-agitation walk now down at 0.0085 m rather than 0.0154. The
- * ballistic rise for this suspension interval is 0.058 m and this is a third of
- * it, because a leg is a spring and not a stilt.
+ * 0.012 puts the bolt at 0.016 m either side, so 0.032 m peak to peak: four and
+ * a half per cent of a 0.72 m withers, inside where real trotting quadrupeds
+ * sit.
+ *
+ * TRIMMED FROM 0.018 WHEN THE CADENCE BECAME HONEST. A bob cannot be larger
+ * than the rise free flight would give it, or the body is being thrown by
+ * nothing. The suspension used to be long because the cadence was wrong, which
+ * bought a 0.058 m ballistic ceiling the bob sat comfortably under. Deriving
+ * the cadence from the planting constraint shortened each flight to 0.125 s and
+ * with it the ceiling, to 0.019 m - and 0.022 m was suddenly over it. This is
+ * the test catching a real consequence two changes downstream, which is the
+ * only reason to write the ballistic bound into a test rather than a comment.
  */
-export const BODY_BOB_RUN = 0.018;
+export const BODY_BOB_RUN = 0.012;
 export const BODY_BREATH = 0.004;
 
 /**
@@ -157,11 +205,16 @@ export function sheepStanceShareForAgitation(agitation: number): number {
   return SHEEP_STANCE_WALK + (SHEEP_STANCE_BOUND - SHEEP_STANCE_WALK) * level;
 }
 
-const GAIT_LOCK_BLEND = 0.85;
-/** A bound on the lock's request. With the share above it no longer binds
- *  anywhere in range - the peak demand is about 10.8 rad/s - but it stays as the
- *  guard that stopped a short stride asking for an unbounded cadence. */
-const GAIT_LOCK_RATE_MAX = 14;
+/**
+ * A bound on the derived cadence. The demand peaks near 19.2 rad/s - about
+ * three strides a second, at a canter around 4.3 m/s, which is what a small
+ * animal covering that ground actually does - so at 20 this does not bind
+ * anywhere in range. It remains as the guard that stops a degenerate stride
+ * asking for an unbounded cadence, which is the only job it ever had.
+ *
+ * There is no blend any more. A blend here is a fraction of a slide.
+ */
+const GAIT_RATE_MAX = 20;
 
 export interface SheepLegPose {
   /** -1 at the back reach, +1 at the front reach. */
@@ -197,23 +250,42 @@ export function sheepLegPose(
   return { travel: -1 + eased * 2, lift: Math.sin(t * Math.PI), planted: false };
 }
 
+/** Step length at this agitation, metres. Opens over a twentieth of the range
+ *  and then grows with speed, so a moving sheep always takes a real step and a
+ *  standing one takes none. The TSL twin builds the same two terms. */
 export function sheepStrideForAgitation(agitation: number): number {
   const level = Math.min(Math.max(agitation, 0), 1);
-  const walk = Math.min(level * WALK_KNEE, 1);
-  return walk * STRIDE_WALK + level * STRIDE_RUN;
+  const open = Math.min(level * STRIDE_OPEN_KNEE, 1);
+  return open * (STRIDE_WALK + level * (STRIDE_RUN - STRIDE_WALK));
 }
 
+/**
+ * Cadence, radians per second, DERIVED rather than authored.
+ *
+ * A planted foot sweeps from +stride to -stride over its stance, so holding it
+ * still against the ground requires exactly
+ *
+ *   body speed * pi * stance share / stride
+ *
+ * and there is no second opinion to be had about it. The previous version
+ * computed this, called it a lock, and then applied 85 per cent of it on top of
+ * an authored cadence - which guaranteed the hoof swept slower than the ground
+ * at every speed in the range. Measured, the sweep-to-ground ratio ran 0.90 at
+ * an amble and 0.97 at a canter, never 1. A foot that is 3 to 10 per cent slow
+ * is a foot sliding forward under a body, every stance, for the whole life of
+ * the animation.
+ *
+ * Taking the constraint exactly puts that ratio at 1.000 across the range. The
+ * feel knobs that remain are the ones physics leaves free: how long a step is
+ * and how much of the cycle it spends down.
+ */
 export function sheepGaitRateForAgitation(agitation: number): number {
   const level = Math.min(Math.max(agitation, 0), 1);
-  const walk = Math.min(level * WALK_KNEE, 1);
-  const authored = GAIT_REST + walk * GAIT_WALK + level * GAIT_RUN;
   const stride = sheepStrideForAgitation(level);
-  if (stride <= 1e-6) return authored;
-  const planted = Math.min(
-    level * SHEEP_MAX_SPEED_MPS * Math.PI * sheepStanceShareForAgitation(level) / stride,
-    GAIT_LOCK_RATE_MAX,
-  );
-  return authored + Math.max(planted - authored, 0) * GAIT_LOCK_BLEND;
+  if (stride <= 1e-6) return GAIT_REST;
+  const planted = level * SHEEP_MAX_SPEED_MPS * Math.PI
+    * sheepStanceShareForAgitation(level) / stride;
+  return Math.max(GAIT_REST, Math.min(planted, GAIT_RATE_MAX));
 }
 
 /** Agitation at which the walk is fully open. Matches WALK_KNEE in the motion

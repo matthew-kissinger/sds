@@ -62,6 +62,7 @@ import {
   HOOF_LIFT,
   SHEEP_STANCE_BOUND,
   SHEEP_STANCE_WALK,
+  STRIDE_OPEN_KNEE,
   STRIDE_RUN,
   STRIDE_WALK,
 } from './flockTuning';
@@ -104,10 +105,6 @@ function paintedFleeceField(point: TSLNode): TSLNode {
   );
   return primary.mul(float(0.52)).add(cross.mul(float(0.31))).add(weave.mul(float(0.17)));
 }
-
-/** Agitation at which the walk cycle is fully open. Low, so a sheep drifting at
- *  half a metre per second still visibly steps. */
-const WALK_KNEE = 4;
 
 /** Rearward fold of the middle leg during airborne recovery, as a fraction of
  * stride. The shoulder and hoof stay on the authored path while the joint tucks
@@ -167,7 +164,7 @@ export function createSheepMotion(
   clock: TSLNode,
   terrainOffsets: TSLNode,
 ): SheepMotion {
-  const walk = clamp(agitation.mul(float(WALK_KNEE)), float(0), float(1));
+  const open = clamp(agitation.mul(float(STRIDE_OPEN_KNEE)), float(0), float(1));
 
   // The instance's own wool. Sampled from positionLocal rather than from the
   // incoming base, so the outline hull is displaced by exactly the field the
@@ -258,7 +255,12 @@ export function createSheepMotion(
     .mul(float(0.012).add(agitation.mul(float(TAIL_WIGGLE))).add(response.mul(float(0.025))))
     .mul(motionScale);
 
-  const stride = walk.mul(float(STRIDE_WALK)).add(agitation.mul(float(STRIDE_RUN)));
+  // Twin of sheepStrideForAgitation: opens over a twentieth of the range, then
+  // grows with speed. A sheep that is moving at all takes a real step; only a
+  // standing one takes none.
+  const stride = open.mul(
+    float(STRIDE_WALK).add(agitation.mul(float(STRIDE_RUN - STRIDE_WALK))),
+  );
   // A short planted interval moves backward under the body; the longer recovery
   // moves forward while visibly airborne. The former symmetric sine made the
   // world-space foot travel forward with the sheep and read as reverse walking.

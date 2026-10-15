@@ -55,6 +55,11 @@ import {
 } from '@app/scene/flock/terrainPlanting';
 import { buildSheepGeometry } from '@app/scene/flock/sheepGeometry';
 
+/** The cadence guard in flockTuning. Stated rather than exported, because the
+ *  tests below assert it is never reached and an export would invite reading it
+ *  as a knob. */
+const GAIT_RATE_CEILING = 20;
+
 /** Farthest the fleece lump can push, both octaves at once, in local metres. */
 const FLEECE_LUMP_REACH = 0.066 + 0.02;
 
@@ -368,11 +373,18 @@ describe('sheep body bob', () => {
     for (const agitation of [0, 0.1, 0.25, 0.5, 0.75, 1]) {
       const share = sheepStanceShareForAgitation(agitation);
       const { low, high } = extremaTurns(agitation);
-      // Pair P is planted over turns [0, share); its mid-stance is share / 2.
-      // Pair N is planted over [0.5, 0.5 + share), so the first interval with
-      // neither pair down runs [share, 0.5) and its middle is (share + 0.5) / 2.
-      expect(low).toBeCloseTo(share / 2, 2);
-      expect(high).toBeCloseTo((share + 0.5) / 2, 2);
+      // The bob runs at twice the gait, so it has TWO lows and TWO highs per
+      // cycle and an extremum scan finds whichever equivalent point it meets
+      // first. Compare modulo the half-turn period, or the test reports a
+      // correct bob as broken the moment the stance share crosses a half.
+      const period = (turn: number): number => ((turn % 0.5) + 0.5) % 0.5;
+      // Pair P is planted over turns [0, share); its mid-stance is share / 2,
+      // and the body is lowest there, under the loaded diagonal. A quarter of
+      // a cycle later it is highest - which is mid-suspension while the share
+      // is under a half, and mid-overlap once it is over one and the gait has
+      // become a walk with no suspension left to be high in.
+      expect(period(low)).toBeCloseTo(period(share / 2), 2);
+      expect(period(high)).toBeCloseTo(period(share / 2 + 0.25), 2);
     }
   });
 
@@ -468,30 +480,69 @@ describe('sheep gait', () => {
     expect(nextStrike.travel).toBeGreaterThan(0.99);
   });
 
-  it('reduces planted-foot travel error without over-speeding the walk', () => {
-    // THE RANGE IS THE POINT. This used to test 0.1 and 0.25 only, so the walk
-    // was held to 15 per cent slip and the bolt was never measured at all. At
-    // full agitation the shipped gait slipped 51 per cent: a 0.28 m stride
-    // flicked at 2.1 strides a second under a body covering 3.4 m, which is
-    // what read as tapping. A gait that is only correct where it was sampled
-    // is not a correct gait.
-    for (const agitation of [0.1, 0.25, 0.5, 0.75, 1]) {
+  it('plants the hoof exactly, at every speed in the range', () => {
+    // THE RANGE IS THE POINT, and the tolerance is now the point too. This once
+    // tested 0.1 and 0.25 only, held them to 15 per cent slip, and never
+    // measured the bolt at all - where the shipped gait slipped 51 per cent.
+    // Widening the range exposed that; deriving the cadence from the planting
+    // constraint rather than blending 85 per cent of it removed it outright.
+    //
+    // A planted foot sweeps 2 * stride while the body covers speed * stance
+    // time. Those are now equal by construction, so the honest assertion is
+    // equality, not a budget. A tolerance here would only hide the next
+    // regression - any slide at all means the cadence stopped being derived.
+    for (const agitation of [0.05, 0.1, 0.25, 0.4, 0.6, 0.8, 1]) {
       const stride = sheepStrideForAgitation(agitation);
       const rate = sheepGaitRateForAgitation(agitation);
       const bodyTravelDuringStance = agitation * SHEEP_MAX_SPEED_MPS
         * sheepStanceShareForAgitation(agitation) * Math.PI * 2 / rate;
       const plantedHoofSweep = stride * 2;
-      const forwardSlip = bodyTravelDuringStance - plantedHoofSweep;
 
-      expect(forwardSlip).toBeGreaterThanOrEqual(0);
-      expect(forwardSlip / bodyTravelDuringStance).toBeLessThan(0.15);
-      expect(rate / (Math.PI * 2)).toBeLessThan(1.8);
+      expect(plantedHoofSweep / bodyTravelDuringStance).toBeCloseTo(1, 9);
+
+      // And the cadence that falls out stays where a small quadruped's does.
+      // It peaks near three strides a second at a canter, which is what an
+      // animal this size covering 4.3 m/s actually runs; the old 1.8 bound
+      // belonged to a gait whose feet were sliding to make up the difference.
+      expect(rate / (Math.PI * 2)).toBeLessThan(3.2);
+      expect(rate).toBeLessThanOrEqual(GAIT_RATE_CEILING);
     }
   });
 
-  it('keeps rest breathing slow and caps the running cadence', () => {
+  it('walks with feet on the ground and only leaves it to bound', () => {
+    // A walk is DEFINED by never having fewer than two feet down, which with
+    // diagonal pairs offset half a cycle needs a duty factor over a half. The
+    // old walking share was 0.34, so an animal ambling at a third of a metre a
+    // second spent a third of its time airborne. That is not a walk, and brief
+    // touches with air between them is exactly what "tap, tap, tap" described.
+    const airborne = (agitation: number): number =>
+      Math.max(0, 1 - 2 * sheepStanceShareForAgitation(agitation));
+
+    expect(airborne(0)).toBe(0);
+    expect(airborne(0.1)).toBe(0);
+    expect(airborne(0.25)).toBe(0);
+    // And by a bolt it is mostly in the air, which is what a bound is.
+    expect(airborne(1)).toBeGreaterThan(0.5);
+    // Monotonic: no speed is more airborne than a faster one.
+    let previous = -1;
+    for (const agitation of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+      expect(airborne(agitation)).toBeGreaterThanOrEqual(previous);
+      previous = airborne(agitation);
+    }
+  });
+
+  it('keeps rest breathing slow, and never reaches the cadence ceiling', () => {
     expect(sheepGaitRateForAgitation(0)).toBeCloseTo(1.6, 6);
-    expect(sheepGaitRateForAgitation(1)).toBeLessThanOrEqual(14);
+    // The ceiling is a guard against a degenerate stride asking for an
+    // unbounded cadence, not a tuning knob - so the interesting assertion is
+    // that nothing in range touches it. If it ever binds, a hoof is sliding
+    // again, because the cadence below it is the one that plants the foot.
+    let peak = 0;
+    for (let agitation = 0; agitation <= 1; agitation += 1 / 512) {
+      peak = Math.max(peak, sheepGaitRateForAgitation(agitation));
+    }
+    expect(peak).toBeLessThan(GAIT_RATE_CEILING);
+    expect(peak).toBeGreaterThan(18);
   });
 
   it('makes walking travel read wider than its vertical hoof lift', () => {
