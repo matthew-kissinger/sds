@@ -211,10 +211,99 @@ Evidence, this workstation, the functional lane:
 - Forced WebGL2 via `?debug=webgl`: backend `webgl2`, 37 draw calls, 3,462,348
   triangles, grading correct.
 
-Not done: no hub timing, and no phone-aspect capture. `spec/05` asks the critic
-loop for both gameplay distances and a beauty angle at desktop and phone
-aspect; this pass used two desktop distances. The grading is therefore
-reviewed, not accepted.
+Not done at the time: no hub timing, and no phone-aspect capture. That gap was
+closed on 2026-10-15, below.
+
+### Grass regrade: acceptance, 2026-10-15
+
+Accepted on colour. The captures `spec/05` asks for exist at both aspects, and
+the three grading lines it names hold at every one of them.
+
+Captures are listed in `captures/grass-regrade/README.md` (gitignored). Two
+lanes, both on this workstation, which is the functional lane:
+
+- **Lab**, dev server, WebGPU, high tier, flock 200, at 2560x1440, 390x844 and
+  844x390. Shipped, Previous and Library grade flipped at a held camera, at the
+  Whole field frame and the Grass frame.
+- **Production build**, `tools/playtest-profile.mjs` against `dist/` at the
+  three viewports `spec/13` names. `art-classic-webgpu` and `art-follow-webgpu`
+  report backend `webgpu` at 2560x1440, 48 and 54 draw calls;
+  `art-phone-high-webgpu` reports `webgpu` at 390x844 ratio 3, 49 draw calls;
+  `art-phone-low-webgl2` and `art-landscape-low-webgl2` report backend `webgl2`
+  at 390x844 and 844x390 ratio 3, 32 and 42 draw calls. Canvas non-blank on all
+  five. **The forced-WebGL2 and phone-aspect pairing is therefore checked.**
+
+The beauty angle is the lab's Whole field frame at bearing 2.43 rad. That is
+not an approximation of `camera/beautyOrbit.ts`, it is the same pose:
+`RADIUS 36` and `HEIGHT 9` against the subject's 36 m and 9 m, opening bearing
+`atan2(0.45, -0.52) = 2.4279`, and the same `centre + sin(angle) * radius`
+placement. Only the aim height differs, 2.2 m against the turntable's 2.25 m.
+
+The angle cannot come from the production build. `CameraRig` reads debug flags
+behind `import.meta.env.DEV`, so `?debug=beauty` is stripped from `dist` and
+`grep beauty dist/assets/*.js` finds nothing. `playtest-profile.mjs` encodes
+this already, as a `beautyCameraAvailable` check that fails whenever the beauty
+camera is asked for. The beauty angle is a dev-server and lab frame by
+construction, and `spec/13`'s "captures from the running production build"
+cannot be met for that one camera.
+
+Measured rather than judged, since "saturated shadows, hue-shifted cool, never
+gray or black" is a claim about pixels. Grass-hued pixels only, darkest decile
+against brightest, in the production captures:
+
+| scenario | shadow hue shift | shadow saturation | shadow value |
+| --- | --- | --- | --- |
+| `art-classic-webgpu` | +18.7 deg | -0.025 | 0.564 |
+| `art-follow-webgpu` | +30.3 deg | -0.036 | 0.527 |
+| `art-phone-high-webgpu` | +17.8 deg | +0.009 | 0.576 |
+| `art-phone-low-webgl2` | +10.2 deg | +0.108 | 0.606 |
+
+Every shadow shifts toward cool, no saturation moves more than 0.04 against the
+lit decile, and no value is within 0.35 of black. At the beauty frame the
+shipped grading reads +7.1 deg and +0.094 on phone against +5.0 and +0.092 on
+desktop: the grading does not change with aspect, which was the open question.
+
+Against the other two gradings at the same frames, the shipped one is the
+middle it was designed to be. Shadow saturation gain at the beauty frame:
+Previous +0.076, Shipped +0.094, Library +0.131. At 11 m the ordering holds and
+the reason the middle is right is visible: Library gives every blade its own
+spine shading and the field reads as countable blades, Previous has no root
+depth at all and reads washed, Shipped holds the mass. That judgement now
+exists at phone aspect, where it previously did not.
+
+Open, and not weakened to pass:
+
+- **The flock-parting rule is not re-tested.** `spec/05` requires that at
+  Classic camera height the flock parts into individual sheep and the dog is
+  findable in under a second. Every capture here has the dog findable, but the
+  probe's art workload drives real `W` input for the whole sample, so the dog
+  outruns the flock and no production frame has sheep in it. The grading is
+  accepted on colour and mass; that one line rests on the 2026-10-14 desktop
+  pass. The lens is not the obstacle: `CameraRig` computes
+  `baseFov = 45 + (view.fov - 45) * weight` and the Follow weight is zero in
+  Classic, so Classic is a 45 degree lens at both aspects and the lab's fixed
+  canvas lens is exact there.
+- **No hub timing.** Unchanged. Every `checks.boot` in the probe run failed,
+  and `art-phone-high-webgpu` also failed `frames` and `freezeFree`. Those are
+  timing checks on the functional lane with other work on the machine, so by
+  `spec/13` they are not reportable either as performance or as a regression.
+  They are recorded here so the `pass: false` in
+  `captures/profiling/grass-gate-receipts/report.json` is not read as a visual
+  failure. The visual checks in the same run passed.
+
+Two tooling defects found while taking these, neither caused by the regrade and
+neither fixed here:
+
+- `playtest-profile.mjs --flock-views` clicks a button named `Title` to restart
+  a run. The pause menu offers `Resume`, `Settings` and `End run`; `Title`
+  belongs to a different panel. The locator times out after 30 s and takes the
+  whole scenario's `checks` down with it. This is the flag that would have
+  produced the flock frames the open item above needs.
+- `?debug=webgl` in the lab takes far longer than WebGPU to reach a first draw -
+  more than two minutes at both 2560x1440 and 390x844, against about twenty
+  seconds for WebGPU. It does arrive; a `WebGLTimestampQueryPool` warning
+  confirms the backend initialises. A lab session wanting the WebGL2 grading
+  should expect the wait or take the receipt from the production build.
 
 ## Direction changes
 

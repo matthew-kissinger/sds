@@ -43,6 +43,12 @@ export interface LabStore {
   readonly quality: Exclude<QualityPreference, 'auto'>;
   /** Which grading the grass wears. `shipped` is what the game draws. */
   readonly grading: GradingId;
+  /**
+   * Whether the controls are on screen. A 300 px panel over a 390 px phone
+   * viewport leaves 90 px of subject, so the narrow viewports spec/13 names
+   * are unjudgeable until this can be put away.
+   */
+  readonly panelOpen: boolean;
   readonly flockSize: FlockSize;
   /** Turntable bearing, radians. Advanced by `orbitRate` while spinning. */
   readonly orbit: number;
@@ -62,6 +68,7 @@ export interface LabStore {
   setView(view: LabViewMode): void;
   setQuality(quality: Exclude<QualityPreference, 'auto'>): void;
   setGrading(grading: GradingId): void;
+  setPanelOpen(panelOpen: boolean): void;
   setFlockSize(flockSize: FlockSize): void;
   setOrbit(orbit: number): void;
   setSpinning(spinning: boolean): void;
@@ -83,6 +90,7 @@ export const useLabStore = create<LabStore>((set) => ({
   view: 'lit',
   quality: 'high',
   grading: 'shipped',
+  panelOpen: true,
   flockSize: 25,
   orbit: 0,
   spinning: false,
@@ -98,6 +106,7 @@ export const useLabStore = create<LabStore>((set) => ({
   setView: (view) => set({ view }),
   setQuality: (quality) => set({ quality }),
   setGrading: (grading) => set({ grading }),
+  setPanelOpen: (panelOpen) => set({ panelOpen }),
   setFlockSize: (flockSize) => set({ flockSize }),
   setOrbit: (orbit) => set({ orbit }),
   setSpinning: (spinning) => set({ spinning }),
