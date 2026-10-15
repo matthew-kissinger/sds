@@ -18,7 +18,7 @@ import { Atmosphere } from '@app/scene/Atmosphere';
 import { preloadFieldSceneAssets } from '@app/scene/FieldScene';
 import { useGameStore } from '@app/state/store';
 import { useLabStore } from './labStore';
-import { LAB_PARTS, labSubject } from './subjects';
+import { GROUND_PARTS, LAB_PARTS, labSubject } from './subjects';
 
 /** Flat backgrounds for the analysis views: black reads on bone, not on sky. */
 const SILHOUETTE_BACKGROUND = '#f2ece0';
@@ -29,6 +29,7 @@ export function LabScene() {
   const view = useLabStore((state) => state.view);
   const quality = useLabStore((state) => state.quality);
   const flockSize = useLabStore((state) => state.flockSize);
+  const ground = useLabStore((state) => state.ground);
 
   preloadFieldSceneAssets();
   useGameLoop();
@@ -47,7 +48,10 @@ export function LabScene() {
     useGameStore.getState().startGame(flockSize);
   }, [flockSize]);
 
-  const parts = labSubject(subject).parts;
+  const subjectParts = labSubject(subject).parts;
+  const parts = ground
+    ? subjectParts
+    : subjectParts.filter((id) => !GROUND_PARTS.includes(id));
 
   return (
     <>

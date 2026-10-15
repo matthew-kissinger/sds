@@ -111,6 +111,13 @@ export function Panel() {
         ))}
       </div>
 
+      <span style={label}>Ground</span>
+      <div style={row}>
+        <Button on={lab.ground} onClick={() => lab.setGround(!lab.ground)}>
+          {lab.ground ? 'Terrain and grass' : 'Subject alone'}
+        </Button>
+      </div>
+
       <span style={label}>Grading</span>
       <div style={row}>
         {GRADINGS.map((entry) => (

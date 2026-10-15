@@ -41,6 +41,8 @@ export interface LabStore {
   readonly subject: LabSubjectId;
   readonly view: LabViewMode;
   readonly quality: Exclude<QualityPreference, 'auto'>;
+  /** Terrain and grass under the subject. Off isolates it against the flat. */
+  readonly ground: boolean;
   /** Which grading the grass wears. `shipped` is what the game draws. */
   readonly grading: GradingId;
   readonly flockSize: FlockSize;
@@ -62,6 +64,7 @@ export interface LabStore {
   setView(view: LabViewMode): void;
   setQuality(quality: Exclude<QualityPreference, 'auto'>): void;
   setGrading(grading: GradingId): void;
+  setGround(ground: boolean): void;
   setFlockSize(flockSize: FlockSize): void;
   setOrbit(orbit: number): void;
   setSpinning(spinning: boolean): void;
@@ -83,6 +86,7 @@ export const useLabStore = create<LabStore>((set) => ({
   view: 'lit',
   quality: 'high',
   grading: 'shipped',
+  ground: true,
   flockSize: 25,
   orbit: 0,
   spinning: false,
@@ -98,6 +102,7 @@ export const useLabStore = create<LabStore>((set) => ({
   setView: (view) => set({ view }),
   setQuality: (quality) => set({ quality }),
   setGrading: (grading) => set({ grading }),
+  setGround: (ground) => set({ ground }),
   setFlockSize: (flockSize) => set({ flockSize }),
   setOrbit: (orbit) => set({ orbit }),
   setSpinning: (spinning) => set({ spinning }),
