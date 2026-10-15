@@ -57,6 +57,32 @@ describe('grass material graph', () => {
     expect(source).toContain('const localPress = tslMax(horizontalPress, verticalPress)');
   });
 
+  it('lets the body standing on a blade own which way it goes', () => {
+    // The four slots used to be summed and the sum's magnitude clamped, which
+    // bounded how far a blade moved and said nothing about which way. Direction
+    // was the plain vector sum, so a blade already pinned flat under one sheep
+    // still swung to follow every other sheep that came near - and this flock
+    // changes direction often enough that several animals near one patch
+    // dragged it back and forth. Capping a push that points somewhere new every
+    // frame does not make it calm.
+    //
+    // A mean weighted by each body's own SQUARED strength makes it a dominance
+    // rather than a democracy: one body alone is unchanged, two pressing the
+    // same way give one body's worth instead of two, and a weak far body cannot
+    // turn a blade a near one is standing on.
+    expect(source).toContain('const weightX = dot(pushX, pushX)');
+    expect(source).toContain('const weightW = dot(pushW, pushW)');
+    expect(source).toMatch(/pushX\.mul\(weightX\)/);
+    expect(source).toMatch(/\.div\(tslMax\(weightX\.add\(weightY\)\.add\(weightZ\)\.add\(weightW\)/);
+    // Squared weights, not lengths: four dots instead of four square roots on
+    // half a million blades, and a sharper dominance for free.
+    expect(source).not.toMatch(/length\(push[XYZW]\)/);
+    // And the old democratic sum is gone, not merely bypassed.
+    expect(source).not.toMatch(
+      /evaluateBodyPush\(root, slots\.x, recordX\)\s*\n\s*\.add\(evaluateBodyPush/,
+    );
+  });
+
   it('retains the one-path toon, body wake, and bark interaction graph', () => {
     expect(source).toContain(
       '([at, slot, record]: TSLNode[]) => bodyPush(at, slot, record)',

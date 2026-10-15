@@ -147,17 +147,34 @@ const FLATTEN = 0.72;
 /**
  * The recovery spring, as a pure function of a ghost's age in seconds.
  *
- *   1.0 while the body is there, through zero at 0.54 s, down to about -0.11
- *   at 0.9 s, and exactly 0 at 1.55 s.
+ *   1.0 while the body is there, through zero at 0.83 s, down to about -0.08
+ *   at 1.10 s, and exactly 0 at 1.55 s.
  *
  * The negative lobe is the overshoot: the blades that were pushed away lean
  * back past upright before settling. The envelope reaches zero rather than
  * decaying asymptotically because the trail is finite - the oldest ghost has to
  * be able to leave without a step (see interactionField.ts).
+ *
+ * SLOWED FROM A RATE OF 2.9, which stood the grass up in 0.54 s and snapped
+ * back through a -0.12 overshoot at 0.80 s. Against a flock that changes
+ * direction as often as this one does, a field recovering that briskly reads as
+ * twitchy rather than alive - every jink got an immediate answer from several
+ * square metres of grass.
+ *
+ * The fix is to slow it WITHOUT flattening it, because the overshoot is the
+ * character and a spring that merely fades is a sponge. Dropping the rate alone
+ * does flatten it - the envelope has decayed too far by the time the cosine
+ * turns negative - so the shape comes down from 2.4 to 1.5 to hold amplitude
+ * out at the lobe. The result rises slower, settles later and overshoots by
+ * less but for longer: -0.078 at 1.10 s where it was -0.119 at 0.80 s.
+ *
+ * The envelope still reaches zero at exactly the same 1.55 s, so the trail
+ * lengths, the ghost ring sizes and the interactor budget are all untouched.
+ * This costs nothing; it is three constants.
  */
 const SPRING_DECAY = 1.55;
-const SPRING_SHAPE = 2.4;
-const SPRING_RATE = 2.9;
+const SPRING_SHAPE = 1.5;
+const SPRING_RATE = 1.9;
 
 /**
  * The same curve in plain numbers, so the trail lengths in interactionField.ts
@@ -496,10 +513,48 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
     const recordY: TSLNode = texture(interactors, vec2(slots.y, float(0.5)), 0);
     const recordZ: TSLNode = texture(interactors, vec2(slots.z, float(0.5)), 0);
     const recordW: TSLNode = texture(interactors, vec2(slots.w, float(0.5)), 0);
-    const push = evaluateBodyPush(root, slots.x, recordX)
-      .add(evaluateBodyPush(root, slots.y, recordY))
-      .add(evaluateBodyPush(root, slots.z, recordZ))
-      .add(evaluateBodyPush(root, slots.w, recordW));
+    const pushX = evaluateBodyPush(root, slots.x, recordX);
+    const pushY = evaluateBodyPush(root, slots.y, recordY);
+    const pushZ = evaluateBodyPush(root, slots.z, recordZ);
+    const pushW = evaluateBodyPush(root, slots.w, recordW);
+
+    // THE BODY STANDING ON A BLADE OWNS IT. The four slots used to be summed
+    // and the sum's magnitude clamped, which bounded how FAR a blade moved but
+    // said nothing about WHICH WAY. Direction was the plain vector sum, so a
+    // blade already pinned flat under one sheep still swung to follow every
+    // other sheep that came near, and with this flock changing direction as
+    // often as it does, several animals near one patch dragged it back and
+    // forth. Capping the size of a push that is pointing somewhere new every
+    // frame does not make it calm.
+    //
+    // So the slots now combine as a mean weighted by each body's own squared
+    // strength. Squared, so it is firmly a dominance and not a democracy, and
+    // squared also costs four dots where four lengths would cost four square
+    // roots on half a million blades.
+    //
+    // What that buys, case by case: one body alone comes through EXACTLY as
+    // before, because a weighted mean of one term is that term. Two bodies
+    // pressing the same way give one body's worth rather than two, which is
+    // the whole of "grass already down does not get pushed down again". Two
+    // pressing from opposite sides cancel horizontally and keep both their
+    // flatten, so the blade is pressed straight down between them, which is
+    // what actually happens. And a far body with a weak push can no longer
+    // turn a blade that a near one is standing on, because its weight is the
+    // square of a small number.
+    //
+    // A convex combination cannot exceed its largest term, so this bounds the
+    // result by one body's push by construction - the clamp below is now a
+    // guard rather than the mechanism, and it is kept because it costs two
+    // instructions and the explosive case it names is worth never revisiting.
+    const weightX = dot(pushX, pushX);
+    const weightY = dot(pushY, pushY);
+    const weightZ = dot(pushZ, pushZ);
+    const weightW = dot(pushW, pushW);
+    const push = pushX.mul(weightX)
+      .add(pushY.mul(weightY))
+      .add(pushZ.mul(weightZ))
+      .add(pushW.mul(weightW))
+      .div(tslMax(weightX.add(weightY).add(weightZ).add(weightW), float(1e-6)));
     const bark = barkPush(root, inputs.interaction.barkPulse);
 
     // Overlapping ghosts along a trail would otherwise stack into a shove no

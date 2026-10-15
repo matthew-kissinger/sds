@@ -80,8 +80,19 @@ const INFLUENCE =
 /** World-space separation between wake samples. It is smaller than either
  * body's half-length, so a sprint cannot leave an uncovered gap. */
 export const MIN_GHOST_DISTANCE = 0.58;
-/** Seconds for a newly deposited sample to ease up to full strength. */
-export const GHOST_BIRTH_DURATION = 0.135;
+/**
+ * Seconds for a newly deposited sample to ease up to full strength.
+ *
+ * LENGTHENED FROM 0.135, which is the other half of the field reacting too
+ * fast. A live body presses instantly and should - it is standing there - but
+ * the trail behind it does not have to arrive at full strength almost at once.
+ * At a bolt a sheep drops a ghost every 0.081 s, so at 0.135 s each one was
+ * essentially fully grown before the next landed and the wake had a hard
+ * leading edge travelling with the animal. At 0.26 s several samples are always
+ * part-grown, so the wake fills in behind the body instead of snapping in under
+ * it - and it softens most exactly where it was worst, at speed.
+ */
+export const GHOST_BIRTH_DURATION = 0.26;
 /** Dog trail slots. Its player-facing wake gets the larger ring. */
 export const DOG_GHOSTS = 11;
 /** Sheep trail slots. */
