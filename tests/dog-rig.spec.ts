@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three/webgpu';
 import { buildDogGeometry, DOG_PAW_CONTACTS } from '@app/scene/dog/dogGeometry';
 import { makeDogMaterial } from '@app/scene/dog/dogMaterial';
-import { DogRig } from '@app/scene/dog/dogRig';
+import { DogRig, SIT_HIND_ADVANCE } from '@app/scene/dog/dogRig';
 import { SPINE, FORE_LEG } from '@app/scene/dog/dogParts';
 import { DOG_JOINTS, DOG_LEG_ROOTS } from '@app/scene/dog/dogRigDefinition';
-import { createDogMotion, advanceDogMotion, resetDogMotion, DOG_MAX_BANK } from '@app/scene/dog/dogMotion';
+import { createDogMotion, advanceDogMotion, resetDogMotion, DOG_MAX_BANK, type DogMotion } from '@app/scene/dog/dogMotion';
 import { dogGaitRate, dogStanceShare, dogStride, sampleDogPaw, DOG_GAIT_TAU, DOG_SWING_FLICK, DOG_SWING_MATCH } from '@app/scene/dog/dogGait';
 import { dogOutlineWidth } from '@app/scene/dog/outlineWidth';
 
@@ -369,6 +369,131 @@ describe('dog leg reach', () => {
       expect(out.planted).toBe(false);
       expect(out.stanceTravel).toBeLessThan(-dogStride(speed));
     }
+  });
+});
+
+describe('dog sit', () => {
+  /** The hind chain, measured off the bind joints. */
+  const HIND = (() => {
+    const i = DOG_LEG_ROOTS[2]!;
+    const d = (a: number, b: number): number => Math.hypot(
+      DOG_JOINTS[b]!.position[0] - DOG_JOINTS[a]!.position[0],
+      DOG_JOINTS[b]!.position[1] - DOG_JOINTS[a]!.position[1],
+      DOG_JOINTS[b]!.position[2] - DOG_JOINTS[a]!.position[2],
+    );
+    return { index: i, chain: d(i, i + 1) + d(i + 1, i + 2) };
+  })();
+  const FORE = (() => {
+    const i = DOG_LEG_ROOTS[0]!;
+    const d = (a: number, b: number): number => Math.hypot(
+      DOG_JOINTS[b]!.position[0] - DOG_JOINTS[a]!.position[0],
+      DOG_JOINTS[b]!.position[1] - DOG_JOINTS[a]!.position[1],
+      DOG_JOINTS[b]!.position[2] - DOG_JOINTS[a]!.position[2],
+    );
+    return { index: i, chain: d(i, i + 1) + d(i + 1, i + 2) };
+  })();
+
+  /**
+   * The underside of the point of buttock, in the coat's space.
+   *
+   * `SPINE[0]` is the point of buttock at rest-space z -0.96, y 1.00, half
+   * height 0.17, so its underside is y 0.83. It skins to the pelvis bone, whose
+   * rest position is (0, 1.05, -0.56) with an identity rest rotation - so in
+   * that bone's frame the point sits at (0, -0.22, -0.40) and follows the pose,
+   * rotation included. The ground is y 0.20, where the paws contact.
+   */
+  const GROUND = 0.2;
+  function buttockUnderside(rig: DogRig, inverse: THREE.Matrix4): THREE.Vector3 {
+    return new THREE.Vector3(0, -0.22, -0.40)
+      .applyMatrix4(rig.bones[1]!.matrixWorld).applyMatrix4(inverse);
+  }
+
+  /** Run, brake to a standstill, idle until seated, then get up. */
+  function sitCycle(visit: (frame: number, rig: DogRig, motion: DogMotion) => void): void {
+    const { rig, group, dispose } = fixture();
+    try {
+      group.updateMatrixWorld(true);
+      const motion = createDogMotion();
+      let travelled = 0;
+      for (let frame = 0; frame < 900; frame++) {
+        const t = frame / 60;
+        const speed = t < 2 ? 15
+          : t < 14 ? Math.max(0, 15 - (t - 2) * 40)
+            : Math.min(8, (t - 14) * 40);
+        advanceDogMotion(motion, 1 / 60, speed, 0, 1);
+        travelled += speed / 60;
+        rig.pose(motion, { groundY: () => 0 }, 0, travelled, 0, 0, 1);
+        visit(frame, rig, motion);
+      }
+    } finally { dispose(); }
+  }
+
+  it('rests the point of buttock and the hocks on the ground', () => {
+    // THE DEFECT THIS HOLDS: the sit dropped the pelvis by a hand-tuned 0.3 m
+    // while the `-0.17 * moving` ride height RAISED the root by 0.17 as the dog
+    // stopped, so the point of buttock finished 206 mm in the air with the hock
+    // 174 mm above the ground. The dog squatted rather than sat.
+    const inverse = new THREE.Matrix4();
+    let seen = false;
+    sitCycle((frame, rig, motion) => {
+      if (motion.sit < 0.999) return;
+      seen = true;
+      inverse.copy(rig.coat.matrixWorld).invert();
+      const buttock = buttockUnderside(rig, inverse);
+      expect(Math.abs(buttock.y - GROUND), `buttock at frame ${frame}`).toBeLessThan(0.01);
+      const hock = new THREE.Vector3();
+      rig.bones[HIND.index + 1]!.getWorldPosition(hock).applyMatrix4(inverse);
+      expect(Math.abs(hock.y - GROUND), `hock at frame ${frame}`).toBeLessThan(0.01);
+      // The hock lands there because the foot is under the hip rather than
+      // ahead of it, and the solver's own backward pole does the rest. It is not
+      // placed on the ground by a second rule.
+      const hip = new THREE.Vector3();
+      const paw = new THREE.Vector3();
+      rig.bones[HIND.index]!.getWorldPosition(hip).applyMatrix4(inverse);
+      rig.bones[HIND.index + 2]!.getWorldPosition(paw).applyMatrix4(inverse);
+      expect(hip.distanceTo(paw) / HIND.chain, 'hind folded').toBeLessThan(0.7);
+      // The fore legs carry the chest, near straight as a sitting dog's are,
+      // but off the cusp the solver clamps at.
+      rig.bones[FORE.index]!.getWorldPosition(hip).applyMatrix4(inverse);
+      rig.bones[FORE.index + 2]!.getWorldPosition(paw).applyMatrix4(inverse);
+      const fore = hip.distanceTo(paw) / FORE.chain;
+      expect(fore, 'fore near straight').toBeGreaterThan(0.9);
+      expect(fore, 'fore off the cusp').toBeLessThan(0.98);
+    });
+    expect(seen, 'the dog never sat').toBe(true);
+    expect(SIT_HIND_ADVANCE).toBeGreaterThan(0);
+  });
+
+  it('gathers the feet to a standstill instead of teleporting them', () => {
+    // THE DEFECT THIS HOLDS: `dogStride` collapses to zero with the speed, so on
+    // the frame a dog reached a standstill every paw's commanded travel became
+    // zero at once and four feet caught anywhere in their cycles were moved to
+    // the standing stance in that frame. Measured at 471.9 mm of paw and 249.7
+    // mm of knee in one frame, with the limb pulled to 1.0000 of its bone.
+    const inverse = new THREE.Matrix4();
+    const previous = [0, 1, 2, 3].map(() => new THREE.Vector3());
+    const paw = new THREE.Vector3();
+    let worst = 0;
+    let where = '';
+    sitCycle((frame, rig, motion) => {
+      inverse.copy(rig.coat.matrixWorld).invert();
+      for (let foot = 0; foot < 4; foot++) {
+        rig.bones[DOG_LEG_ROOTS[foot]! + 2]!.getWorldPosition(paw).applyMatrix4(inverse);
+        // Only the standstill: a paw in flight at 15 m/s covers 250 mm a frame
+        // and is supposed to.
+        if (frame > 0 && motion.locomotionSpeed < 0.1) {
+          const step = previous[foot]!.distanceTo(paw);
+          if (step > worst) { worst = step; where = `foot ${foot} frame ${frame}`; }
+        }
+        previous[foot]!.copy(paw);
+      }
+    });
+    // 53.4 mm, from 471.9. What is left is not the teleport: it is the last two
+    // frames of the speed ramp, over which `dogStride` itself collapses from
+    // 0.4 m to nothing while the feet are still following the swing curve. That
+    // is the same root cause one step further upstream - gait geometry being a
+    // function of the instantaneous speed - and STATUS.md carries it.
+    expect(worst, where).toBeLessThan(0.06);
   });
 });
 

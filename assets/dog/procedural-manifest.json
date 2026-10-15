@@ -41,7 +41,7 @@
     },
     {
       "path": "app/src/scene/dog/dogRig.ts",
-      "sha256": "ce628071c857c553fc4a505c6cd007309868fd7306b43e04c49070c08e35c8a4"
+      "sha256": "b59ff0e67c84646f1112e8f19dfc9136e431ee6b511943cf7d216634ae89171e"
     },
     {
       "path": "app/src/scene/dog/dogLegSolver.ts",

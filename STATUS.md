@@ -579,13 +579,64 @@ Open, and recorded in `tests/dog-rig.spec.ts` rather than left to be rediscovere
   where a contact belongs, and the limb reaches the solver's clamp. The sweep
   bound can only take back the part past the stride. The fix is a transition that
   re-times the swing instead of moving a foot's phase.
-- **The sit is still wrong.** The hind chain sits at 0.99 of its bone while
-  seated and the pelvis drops by a hand-tuned 0.3 m with nothing deciding where
-  the ground is, so the dog's hindquarters hover rather than rest. Reported from
-  the field, not yet addressed.
+- ~~**The sit is still wrong.**~~ Done, below.
 - **No hub receipt.** Curve evaluation in a per-frame pose that already runs,
   with one added `Math.hypot` per foot; there is no plausible cost, which is a
   reason to say so rather than to claim it measured.
+
+### A dog that sits, and feet that stop without teleporting, 2026-10-15
+
+**The sit.** It was authored by eye and it showed. A sitting dog rests on three
+things - both fore paws, the point of buttock, and the hocks with the metatarsus
+lying flat - and two of those are contacts this rig can be solved against.
+`SPINE[0]` is the point of buttock, rest-space z -0.96 with its underside at
+y 0.83; the ground is y 0.20 where the paws contact. So a sit has to bring that
+point down 0.63 m. The pose that shipped brought it down 0.30 while the
+`-0.17 * moving` ride height RAISED the root by 0.17 as the dog stopped.
+
+| | shipped | now | wanted |
+| --- | --- | --- | --- |
+| point of buttock | 0.406 | 0.203 | 0.200, the ground |
+| hock | 0.374 | 0.200 | 0.200, the ground |
+| fore reach | 0.973 | 0.950 | near straight, off the cusp |
+| hind reach | 0.692 | 0.564 | folded |
+
+The four numbers were solved against those contacts on the real rig -
+sensitivities measured one lever at a time, then a grid - rather than nudged
+until it looked right. The hock is not placed on the ground by a rule of its
+own: once the hip is low enough and the foot is under it rather than ahead of
+it, the solver's existing backward pole puts the middle joint 0.41 m behind the
+hip at ground level, which is the hock down with the metatarsus flat and the
+foot forward of it. That is what `SIT_HIND_ADVANCE` is for, and why it is 0.22
+rather than something that looks like a step.
+
+**And the stop.** Found while measuring the sit, present with the shipped code:
+`dogStride` collapses to zero with the speed, so on the frame a dog reaches a
+standstill every paw's commanded travel becomes zero at once and four feet
+caught anywhere in their cycles are moved to the standing stance in that one
+frame. Measured at 471.9 mm of paw and 249.7 mm of knee in a single frame, with
+the limb reaching 1.0000 of its bone on the way - the same thing again a few
+seconds later when the sit dropped the locks. A foot now keeps where it was
+drawn and the difference decays over 0.35 s, so it gathers rather than
+teleports: 471.9 mm -> 53.4 mm.
+
+What is left of that 53 mm is the last two frames of the speed ramp, over which
+`dogStride` itself collapses from 0.4 m to nothing while the feet are still on
+the swing curve. That is the same root cause one step upstream, and it is the
+third place this week it has been paid for, after the braking stance and the
+gallop transition: **gait geometry is a function of the instantaneous speed**.
+Worth fixing once, properly, rather than a fourth time.
+
+Still open, and now the oldest thing here:
+
+- **Both chains bind straight.** The hind limb is 0.17% short of straight in the
+  bind pose and the fore 0.77%, so a dog standing still has its hind limb at
+  0.998 of its bone - on the cusp where a two-bone solve has infinite slope and a
+  millimetre of paw is tens of millimetres of knee. Every drop, crouch and gallop
+  term in `dogRig` exists to buy bend back. The sheep's front leg had the same
+  problem this week and was fixed by authoring a real carpus into the rings; the
+  dog wants an authored stifle angle, which moves the bind pose and so the
+  skinning, and is a bigger change than anything above.
 
 ## Direction changes
 

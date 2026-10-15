@@ -39,6 +39,68 @@ const TRUNK_STRETCH = 0.045;
 // The scapula travels over the ribcage with the limb it carries, which is where
 // a real dog gets stance length that leg length cannot supply.
 const SCAPULA_SHARE = 0.25;
+/**
+ * How long a foot takes to gather from where it was standing to where the pose
+ * wants it, seconds.
+ *
+ * A gait's geometry is a function of the INSTANTANEOUS speed, and `dogStride`
+ * goes to zero with it, so the frame a dog reaches a standstill every paw's
+ * commanded travel becomes zero at once: four feet caught anywhere in their
+ * cycles were teleported to the standing stance. Measured through the rig on a
+ * brake at DOG_ACCELERATION, that was a paw moving 471.9 mm and a knee 249.7 mm
+ * in a single frame, with the limb reaching 1.0000 of its bone on the way. The
+ * same thing happened again a few seconds later when the sit dropped the locks.
+ *
+ * So a foot keeps where it was and the difference decays. 0.35 s is long enough
+ * that the gather reads as a dog settling its feet rather than skating, and
+ * short enough to be over before it is sat down. A real dog takes a small step
+ * instead, which is an animation this rig does not have; sliding is the honest
+ * approximation, and it is bounded by the stride.
+ */
+const SETTLE_TAU = 0.35;
+/**
+ * The seated pose, chosen from where the dog TOUCHES THE GROUND rather than by
+ * eye. A sitting dog rests on three things: both fore paws, the point of
+ * buttock, and the hocks with the metatarsus lying flat from hock to foot. Two
+ * of those are contacts this rig can be solved against.
+ *
+ * The point of buttock is `SPINE[0]` - rest-space z -0.96, y 1.00, half height
+ * 0.17, so its underside sits at y 0.83 and skins to the pelvis. Ground is
+ * y 0.20, where the paws contact. So a sit has to bring that point down 0.63 m,
+ * and the pose that shipped brought it down 0.30 while the `-0.17 * moving` ride
+ * height RAISED the root by 0.17 as the dog stopped: measured, the point of
+ * buttock finished 206 mm in the air with the hock 174 mm above the ground and
+ * the hind limb folded only to 0.69 of its bone. The dog was squatting, not
+ * sitting, which is what "the butt hovers" looks like from the field.
+ *
+ * These four were solved against the contacts on the real rig - sensitivities
+ * measured one lever at a time, then a grid - and what they produce is:
+ *
+ * | | shipped | now | wanted |
+ * | --- | --- | --- | --- |
+ * | point of buttock | 0.406 | 0.203 | 0.200, the ground |
+ * | hock | 0.374 | 0.200 | 0.200, the ground |
+ * | fore reach | 0.973 | 0.950 | near straight, off the cusp |
+ * | hind reach | 0.692 | 0.564 | folded |
+ * | chest | 1.028 | 0.994 | carried by straight fore legs |
+ *
+ * The hock lands on the ground without being put there: once the hip is low
+ * enough and the foot is under it rather than ahead of it, the solver's own
+ * backward pole puts the middle joint 0.41 m behind the hip at ground level,
+ * which is the hock down with the metatarsus flat and the foot forward of it.
+ * That is why `SIT_HIND_ADVANCE` is what it is - it is not how far the foot
+ * should look advanced, it is what puts the hock on the ground.
+ *
+ * `SIT_PELVIS_PITCH` and `SIT_SPINE_PITCH` are a pair: the pelvis is the parent
+ * of the chest here, so dropping it drops the fore legs with it. The pelvis
+ * pitches nose-up to carry the chest back to where straight fore legs can hold
+ * it, and the spine takes back enough of that to leave the back sloping rather
+ * than hinged.
+ */
+export const SIT_DROP = 0.45;
+export const SIT_PELVIS_PITCH = 0.55;
+export const SIT_SPINE_PITCH = 0.42;
+export const SIT_HIND_ADVANCE = 0.22;
 
 export class DogRig {
   readonly bones: THREE.Bone[];
@@ -56,9 +118,17 @@ export class DogRig {
   private readonly plants = new Float64Array(8);
   private readonly recoveryOffsets = new Float64Array(8);
   private readonly planted = [false, false, false, false];
+  /** Where a foot was standing, less where the pose now wants it. */
+  private readonly settleOffsets = new Float64Array(8);
+  /** Where each foot was actually drawn last frame, in the world. */
+  private readonly drawn = new Float64Array(8);
+  /** Whether each foot is gathering rather than locked or swinging. */
+  private readonly settling = [false, false, false, false];
   /** Last posed body position, for the travel one frame covers. */
   private lastX = NaN;
   private lastZ = NaN;
+  /** Last posed value of the motion clock, for the decay above. */
+  private lastClock = NaN;
   constructor(geometry: THREE.BufferGeometry, material: DogMaterial) {
     this.bones = DOG_JOINTS.map((joint) => {
       const bone = new THREE.Bone();
@@ -86,9 +156,12 @@ export class DogRig {
   reset(): void {
     this.planted.fill(false);
     this.recoveryOffsets.fill(0);
+    this.settleOffsets.fill(0);
+    this.settling.fill(false);
     // A teleported dog has not travelled the gap it was moved across.
     this.lastX = NaN;
     this.lastZ = NaN;
+    this.lastClock = NaN;
     this.resetBones();
   }
   private resetBones(): void {
@@ -120,10 +193,10 @@ export class DogRig {
       - GALLOP_DROP * gallop * upright
       - BANK_ROOT_DROP * Math.abs(bank) / DOG_MAX_BANK
       - CROUCH_DROP * motion.crouch * moving * upright;
-    bones[1]!.position.y -= motion.sit * 0.3;
+    bones[1]!.position.y -= motion.sit * SIT_DROP;
     bones[1]!.position.z -= motion.sit * 0.06;
-    bones[1]!.rotation.set(-motion.sit * 0.35, motion.leadPelvis * upright, -bank * 0.4);
-    bones[2]!.rotation.x = motion.sit * 0.22;
+    bones[1]!.rotation.set(-motion.sit * SIT_PELVIS_PITCH, motion.leadPelvis * upright, -bank * 0.4);
+    bones[2]!.rotation.x = motion.sit * SIT_SPINE_PITCH;
     // The trunk is longest once per stride, where the fore feet are reaching and
     // the hind feet are still behind, which is stance length legs cannot supply.
     bones[3]!.position.z += TRUNK_STRETCH * Math.cos(motion.gaitPhase)
@@ -160,11 +233,16 @@ export class DogRig {
       ? 0 : Math.hypot(x - this.lastX, z - this.lastZ);
     this.lastX = x;
     this.lastZ = z;
+    // `motion.clock` is the one dt this rig is handed, and it freezes with the
+    // rest of the pose clocks on pause, which is what a decay should do too.
+    const dt = Number.isNaN(this.lastClock) ? 0 : Math.max(0, motion.clock - this.lastClock);
+    this.lastClock = motion.clock;
+    const settleDecay = dt > 0 ? Math.exp(-dt / SETTLE_TAU) : 1;
     for (let foot = 0; foot < 4; foot++) {
       const paw = this.paws[foot]!;
       const rest = DOG_PAW_CONTACTS[foot]!;
       const travel = paw.travel * (1 - motion.sit);
-      const seatedAdvance = foot >= 2 ? motion.sit * 0.16 : 0;
+      const seatedAdvance = foot >= 2 ? motion.sit * SIT_HIND_ADVANCE : 0;
       const nominalX = rest.x;
       let localX = nominalX;
       let localZ = rest.z + travel + seatedAdvance;
@@ -261,6 +339,38 @@ export class DogRig {
         worldX = x + localX * c + localZ * s;
         worldZ = z - localX * s + localZ * c;
       } else this.recoveryOffsets.fill(0, foot * 2, foot * 2 + 2);
+      if (!lock && paw.planted) {
+        // Nominally standing, but not world-locked: the dog has stopped, or has
+        // sat down. Both drop every lock at once while `dogStride` collapses to
+        // zero, so the pose wants all four feet at the standing stance this very
+        // frame, wherever their cycles had them. See `SETTLE_TAU`.
+        //
+        // Captured against WHERE THE FOOT WAS DRAWN, not against the lock: the
+        // lock bookkeeping above has already overwritten itself by here, and for
+        // a foot that was mid-swing it never held a stance position at all - and
+        // the swinging feet are the ones with the furthest to go.
+        // `dt > 0` also means there HAS been a previous frame: nothing can have
+        // been drawn before the first pose, or while the clocks are paused.
+        if (!this.settling[foot] && dt > 0) {
+          this.settling[foot] = true;
+          const dx = this.drawn[foot * 2]! - x;
+          const dz = this.drawn[foot * 2 + 1]! - z;
+          this.settleOffsets[foot * 2] = dx * c - dz * s - localX;
+          this.settleOffsets[foot * 2 + 1] = dx * s + dz * c - localZ;
+        }
+        localX += this.settleOffsets[foot * 2]!;
+        localZ += this.settleOffsets[foot * 2 + 1]!;
+        worldX = x + localX * c + localZ * s;
+        worldZ = z - localX * s + localZ * c;
+        this.settleOffsets[foot * 2] = this.settleOffsets[foot * 2]! * settleDecay;
+        this.settleOffsets[foot * 2 + 1] = this.settleOffsets[foot * 2 + 1]! * settleDecay;
+      } else {
+        this.settling[foot] = false;
+        this.settleOffsets[foot * 2] = 0;
+        this.settleOffsets[foot * 2 + 1] = 0;
+      }
+      this.drawn[foot * 2] = worldX;
+      this.drawn[foot * 2 + 1] = worldZ;
       this.planted[foot] = lock;
       const lift = paw.lift * (1 - motion.sit);
       const terrain = field.groundY(worldX, worldZ) - ground;
