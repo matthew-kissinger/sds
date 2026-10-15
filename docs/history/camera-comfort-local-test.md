@@ -1,3 +1,8 @@
+> **Archived 2026-10-14.** Closed investigation, kept for its reasoning and
+> measurements only. Procedure for the investigation archived beside it.
+> Current release state is in `STATUS.md`, the chronology is in `CHANGELOG.md`,
+> and the rules that outlived this work are in `AGENTS.md` and `spec/`.
+
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Copyright (c) 2026 Matthew Kissinger -->
 

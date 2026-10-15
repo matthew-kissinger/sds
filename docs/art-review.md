@@ -48,24 +48,26 @@ source or deterministic recipe, provenance, license and digest. Captures and
 receipts stay under ignored `captures/`; do not commit them. The probe closes
 its browser contexts and preview server. No deployment is performed.
 
-## Current owner-review direction
+## What owns what
 
-The September 2026 candidate combines the spreading oak silhouette with soft
-sculpted shading. Rebuild the owned geometry with
-`node tools/bake-sculpted-trees.mjs`; use `--check` to verify the committed output.
-The recipe owns crown proportions and connected wood; `tsl/palette.ts` owns
-tree, bark, cloud and sky colors. `tsl/sky.ts` owns the six cloud masses and sun
-disc, while `Atmosphere.tsx` and `PostProcessing.tsx` own haze and high-tier bloom.
-No generated concept image is loaded by the game.
+Change the owner, not the symptom:
 
-Keep shape and pigment coordinates in `positionGeometry`: Three's node path
-has already applied instance transforms to `positionLocal`. Using field-sized
-coordinates for normalized crown variation displaced foliage from its trunks
-in the first iteration. World coordinates remain appropriate for shared wind.
+- `tools/bake-sculpted-trees.mjs` owns crown proportions and connected wood.
+  Run it to rebuild the committed geometry; `--check` verifies the output.
+- `tsl/palette.ts` owns tree, bark, cloud and sky colors.
+- `tsl/sky.ts` owns the cloud masses and the sun disc.
+- `Atmosphere.tsx` and `PostProcessing.tsx` own haze and high-tier bloom.
+- No generated concept image is loaded by the game.
 
-This is a review candidate. Low geometry counts and passing code tests do not
-establish final art acceptance or physical-phone performance.
+Low geometry counts and passing code tests do not establish art acceptance or
+physical-phone performance. Current direction lives in `STATUS.md`, and the
+asset polish plan is `spec/13-asset-lab.md`.
+
 # Hub hardware measurements
+
+The hub is the timing lane and this PC is the functional lane; `AGENTS.md`
+states the rule and its preflight thresholds. What follows is how to drive the
+probe.
 
 `tools/hub-presentation-probe.mjs` can run against a copied production `dist/`
 in a private Linux directory. Copy its `art-render-counters.mjs` and

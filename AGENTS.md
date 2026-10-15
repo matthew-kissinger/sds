@@ -1,6 +1,6 @@
 # AGENTS.md - Sheepdog Sim contributor operating guide
 
-Read `spec/00-vision.md` through `spec/10-roadmap.md` before changing code. The
+Read `spec/00-vision.md` through `spec/13-asset-lab.md` before changing code. The
 specification is the product contract. When code and specification disagree,
 surface the discrepancy instead of silently choosing one.
 
@@ -11,10 +11,15 @@ surface the discrepancy instead of silently choosing one.
 3. Read the specification documents for the system you will change.
 4. Read `STATUS.md` for current release evidence and open review gates.
 
+`STATUS.md` is the current state. `CHANGELOG.md` is the chronology.
+`docs/history/` holds closed investigations, kept for their reasoning and
+measurements; nothing there is current direction.
+
 ## Repository boundary
 
 The version 3 client is the TypeScript application under `app/`, `sim/`,
-`assets/` and `tools/`. The retained `worker/`, `shared/`, `tests/worker/` and
+`assets/` and `tools/`. The asset lab under `lab/` is a development-only
+consumer of that client. The retained `worker/`, `shared/`, `tests/worker/` and
 `docs/operations/` trees support the public score service and version 2
 rollback. Keep that service isolated from the client.
 
@@ -38,9 +43,9 @@ These rules name failure modes observed in the version 2 client.
    `ShaderMaterial`, `onBeforeCompile` or renderer-specific material forks.
 4. Use store subscriptions. Do not add window globals, UI bridge singletons or
    custom-event glue.
-5. `sim/` imports no Three.js, React, DOM, app, Worker or network code. It uses
-   required seeded random sources and no clocks or implementation-dependent
-   math in tick paths.
+5. `sim/` imports no Three.js, React, DOM, app, Worker, network or third-party
+   math code. It uses required seeded random sources and no clocks or
+   implementation-dependent math in tick paths.
 6. Production accepts only the documented `seed` and `debug` query parameters.
    Probes live in `tools/` and drive the normal application.
 7. Name files for what they own, not a migration phase or campaign.
@@ -49,11 +54,57 @@ These rules name failure modes observed in the version 2 client.
 9. Never regenerate a deterministic fixture merely to make a test pass. Treat
    a trace diff as a gameplay decision.
 10. A field, feature or flag exists only when shipped code reads it in the same
-    change.
+    change. The same holds for a dependency: it lands with its first real
+    consumer or not at all.
 11. Every runtime asset needs an editable source or deterministic in-repository
     recipe, provenance, license record and digest.
 12. Player-facing prose uses no hype, emoji or exclamation marks. Prefer
     concrete numbers and short sentences.
+
+## No editor code in the game
+
+The asset lab is a separate Vite entry under `lab/` with its own config. The
+production build keeps `app/` as its root and never references it, so lab code
+cannot reach `dist/`. Imports run from `lab/` into `app/src/` and `sim/`, never
+the reverse, and the lab adds no URL parameter to the player page.
+
+Live tuning works by exported tuning objects that the shipped code reads and the
+lab copies and mutates. The lab emits a TypeScript patch so a session ends as a
+committed constant. See `spec/13-asset-lab.md`.
+
+## Presentation and simulation are separate decisions
+
+Animation, inverse kinematics, shading, juice and camera presentation are
+presentation. They can be changed and reviewed freely under the visual gates.
+
+The dog's controller and the sheep simulation are not presentation. A change to
+`sim/`, `app/src/input/` or `sim/tuning.ts` moves the trace fixtures in
+`tests/fixtures/` and makes existing `field-v3` times incomparable with new
+ones. That is a gameplay decision for the owner, recorded under `STATUS.md` open
+questions, never a side effect of a polish pass.
+
+Where the shipped simulation deliberately overrides an earlier specification
+line, the override and its reasoning live in the code that owns the constant.
+`sim/tuning.ts` carries the bark redesign table that way.
+
+## Measurement lanes
+
+Which machine produced a number decides whether the number counts.
+
+- **The hub is the timing lane.** Frame times, percentiles and startup timing
+  come from the hub over the `hub` SSH alias, running
+  `tools/hub-presentation-probe.mjs` against a copied production `dist/`.
+  Preflight requires two consecutive samples at or under 5% GPU and 15%
+  aggregate CPU. Runs are 60 to 600 seconds. Receipts land under
+  `captures/stability/hub-receipts/`. Use isolated working directories there and
+  do not disturb another job or checkout.
+- **This PC is the functional lane.** It runs other work concurrently, so its
+  timings cannot certify performance or establish a regression. Functional,
+  visual and interaction testing are fine here.
+- **Browser phone emulation is neither.** It shares the host GPU. It checks
+  composition and layout, and is never reported as phone performance.
+- Physical-device receipts cannot be substituted by either lane. Record the gap
+  rather than claiming universal phone support.
 
 ## Visual and audio review
 
@@ -67,6 +118,25 @@ the running build against `spec/05-art-direction.md` and the acceptance lines
 for that system. A review loop ends at acceptance or after five documented
 iterations. Record unresolved risks in `STATUS.md` instead of weakening the
 standard or hiding the result.
+
+Stills cannot pass motion work, and the asset lab cannot close a gate. Both are
+for iteration; acceptance comes from the production build.
+
+## Screen-anchored interface elements
+
+These rules were paid for by a measured defect and are easy to reintroduce.
+Full reasoning is in `spec/11-typography.md` and `spec/06-ux-ui-juice.md`.
+
+- Text stays in the DOM. `app/src/quality/autoTier.ts` caps the canvas device
+  pixel ratio between 0.8 and 1.5 while the DOM composites at the device's own
+  ratio, so moving labels into the canvas renders them at a fraction of their
+  current resolution.
+- Anything that tracks a moving camera samples every frame, not on a timer.
+- Do not round a screen-space transform to whole device pixels.
+- Do not put a CSS transition on a transform that is rewritten every frame. It
+  trails the camera and rubber-bands instead of landing.
+- Read a direction in the camera's own basis, not from the ground bearing. The
+  rigs look down 22.5 and 44.9 degrees, which foreshortens the forward axis.
 
 ## Workflow
 

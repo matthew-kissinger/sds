@@ -47,6 +47,11 @@ diff records a simulation decision and must be reviewed as one.
   documented license.
 - Validation tools drive the normal application path and do not add production
   player controls.
+- The asset lab under `lab/` is development-only. It imports from the client;
+  the client never imports from it, and no lab code reaches `dist/`.
+- Performance numbers come from the hub, not from this workstation. `AGENTS.md`
+  states the lanes and the preflight thresholds; a timing claim from a loaded
+  machine is not evidence.
 
 ## Changes and reviews
 

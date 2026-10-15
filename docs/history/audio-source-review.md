@@ -1,3 +1,8 @@
+> **Archived 2026-10-14.** Closed investigation, kept for its reasoning and
+> measurements only. The rejected PCM-synthesis experiment is not in the shipped set; see `assets/audio/README.md`.
+> Current release state is in `STATUS.md`, the chronology is in `CHANGELOG.md`,
+> and the rules that outlived this work are in `AGENTS.md` and `spec/`.
+
 # Audio source review
 
 Updated 2026-08-24.

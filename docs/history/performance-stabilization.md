@@ -1,3 +1,8 @@
+> **Archived 2026-10-14.** Closed investigation, kept for its reasoning and
+> measurements only. The hub timing-lane rule this established is now stated in `AGENTS.md`.
+> Current release state is in `STATUS.md`, the chronology is in `CHANGELOG.md`,
+> and the rules that outlived this work are in `AGENTS.md` and `spec/`.
+
 # Performance investigation — 2026-09-07
 
 Scope: stabilize the current solo game and its 25/75/200 flock configurations.

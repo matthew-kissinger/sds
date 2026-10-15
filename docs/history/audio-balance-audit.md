@@ -1,3 +1,8 @@
+> **Archived 2026-10-14.** Closed investigation, kept for its reasoning and
+> measurements only. Closed by owner approval; the shipped ledger is `assets/audio/README.md`.
+> Current release state is in `STATUS.md`, the chronology is in `CHANGELOG.md`,
+> and the rules that outlived this work are in `AGENTS.md` and `spec/`.
+
 # Calm soundscape audit
 
 2026-09-05. Added by owner request during the active presentation/feel goal.

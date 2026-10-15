@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * P2-DELTA-IMPL: the GameSim delta builder
- * (docs/hardening/delta-protocol-design.md sections 3-4, test plan section 9).
+ * (v2 delta-protocol design, sections 3-4 and test plan section 9; not imported here, see the version 2 history).
  *
  * Locks, against the REAL producer (a live GameSimulation):
  *   - round-trip: keyframe + delta sequence reconstructs the full snapshot

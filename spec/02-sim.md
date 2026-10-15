@@ -10,7 +10,7 @@ The herding feel is the single most valuable artifact in sds. It lifts into `sim
 | FlockingAlgorithms | `sds/shared/FlockingAlgorithms.js` | Verbatim. Separation/alignment/cohesion/seek/flee, config-driven. This IS the feel. O(n^2) neighbors is fine at 200; spatial hash only if the GPU-scale toggle's CPU fallback ever needs it. |
 | MovementPhysics | `sds/shared/MovementPhysics.js` | Verbatim minus slope-modulated speed (herd's sim is flat 2D; ground relief is visual only). Keep damping, smoothing, micro-movement threshold, stamina, NaN/Infinity guards. |
 | EntityCollision | `sds/shared/EntityCollision.js` | Verbatim. Capped positional correction (never snap), hashed fallback normals, trig-free. Body radii are tuned to mesh scale; re-verify against the new painterly meshes. |
-| BarkImpulse | `sds/shared/BarkImpulse.js` | Verbatim. Decaying steering intent in a forward cone, cone test via precomputed cos(50 deg). |
+| BarkImpulse | `sds/shared/BarkImpulse.js` | Structure and the hybrid forward/radial idea only. REDESIGNED on owner order: sds's bark was measured as a nudge rather than a verb. Decaying steering intent in a forward cone, plus a near radius where the cone is ignored, plus a startle ripple. `sim/tuning.ts` owns the shipped table and the reasoning for every value that moved. |
 | Rect boundary + gate | `sds/shared/BoundaryCollision.js` (rect branch only) | Extract the rect math: rectBoundarySteer, gate-gap force suppression, hard constraints, isWithinArea. Leave the island/coastline union, all dispatch layers, and every compat shim behind. |
 | PenBarrier | `sds/shared/PenBarrier.js` | Verbatim. The pen mechanism (see below). |
 | Spawn generation | `sds/shared/SpawnLogic.js` (non-competitive path) | Clustered rejection-sampled ring spawns, rng required. Spawn-time trig is acceptable: runs once, server-side (or local-solo-side), seeded, result transmitted. |
@@ -59,7 +59,13 @@ Gate:       passage slot half-depth 2, attraction 0.5 seek within 30 m of the
             gate, armed only while a dog is inside 1.5x the flee radius AND on
             the far side of the sheep from the gate (dot(toGate, toDog) < 0)
 Collision:  body radius dog 1.2 / sheep 0.78, push cap per tick 0.42 / 0.14
-Bark:       range 24, cone cos(50 deg), decay 36 ticks
+Bark:       range 40, cone half-angle 60 deg, near radius 10 (cone ignored
+            inside it), steer force 0.34, decay 75 ticks, cooldown 90 ticks,
+            forward/radial weight 0.45/0.55, min falloff 0.55 scaling force
+            AND duration. Startle ripple: radius 6, force 0.38, duration 0.5,
+            delay 0.25 ticks per metre capped at 18. The sds values this
+            replaced were range 24, cone cos(50 deg), decay 36 ticks; see the
+            table in `sim/tuning.ts` for why each one moved.
 Tick:       60 Hz fixed
 ```
 
