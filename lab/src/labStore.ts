@@ -58,10 +58,15 @@ export interface LabStore {
   /** Ground distance and height of the turntable, metres. */
   readonly distance: number;
   readonly height: number;
-  /** Treadmill: hold a commanded direction so a gait can be watched. */
+  /**
+   * Treadmill: hold a commanded direction so a gait can be watched. `walking`
+   * is the master switch - sprinting is walking, faster - because a lit Sprint
+   * button that did nothing until Walk was also lit was read as a dead control
+   * and the treadmill as broken.
+   */
   readonly walking: boolean;
   readonly sprinting: boolean;
-  /** Which way the held turn key points: -1 left, 0 straight, 1 right. */
+  /** Which way the treadmill steers: -1 orbits left, 0 shuttles, 1 orbits right. */
   readonly turnRate: number;
   readonly counters: LabCounters;
   readonly backend: string;
@@ -117,8 +122,11 @@ export const useLabStore = create<LabStore>((set) => ({
   setSpinning: (spinning) => set({ spinning }),
   setDistance: (distance) => set({ distance: Math.max(1, distance) }),
   setHeight: (height) => set({ height }),
-  setWalking: (walking) => set({ walking }),
-  setSprinting: (sprinting) => set({ sprinting }),
+  // The two treadmill switches are one control with two speeds, so each end
+  // keeps the pair consistent rather than leaving a state that reads as on and
+  // behaves as off.
+  setWalking: (walking) => set(walking ? { walking } : { walking, sprinting: false }),
+  setSprinting: (sprinting) => set(sprinting ? { sprinting, walking: true } : { sprinting }),
   setTurnRate: (turnRate) => set({ turnRate }),
   reportCounters: (counters) => set({ counters }),
   reportBackend: (backend) => set({ backend }),
