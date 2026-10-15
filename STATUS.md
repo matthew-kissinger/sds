@@ -313,6 +313,52 @@ cite this section by name: `sim/BarkImpulse.ts`, `sim/tuning.ts`,
 the clean-room import into this repository and was restored on 2026-10-14 from
 the record those files carry.
 
+- **Sheep grass footprint, 2026-10-15.** The owner's observation was that a
+  sheep's impact on the grass reaches too far forward and back for how long a
+  sheep is. It did, by a factor of two. The footprint rect ran 1.68 m of
+  half-length against an animal `sheepGeometry.ts` states at 1.67 m nose to
+  tail, so with `INTERACTION_RADIUS` and `falloff` the pressed region reached
+  2.40 m fore and aft of a body that ends at 0.78 m: more flattened grass past
+  the nose than the whole sheep is long.
+
+  The dog is the thing that shows what the rule was meant to be. Its footprint
+  IS its body's half-extents - 1.16 against the 1.173 that `dogParts.ts` SPINE
+  lofts, 0.48 against its widest 0.45 - with `falloff` as the soft edge
+  outside. The sheep missed that rule because `SHEEP_SCALE` was authored above
+  one, on the written premise that "a sheep is wider and longer through the
+  wool than a collie is through the ribs". This game's meshes say otherwise:
+  the collie is 2.35 m by 0.90 m and the sheep 1.67 m by 0.84 m, so the dog is
+  the bigger animal and the scale belonged below one. The old comment hid the
+  error by comparing unlike things, a half-width against a collision radius
+  but a half-length against a full body length.
+
+  `SHEEP_SCALE` is now x0.93 / z0.71, which lands the sheep on the dog's two
+  ratios: 0.824 against 0.835 along, 0.446 against 0.42 across. `spec/06` is
+  amended in the same change. Presentation only - `interactionField.ts` is in
+  `app/src`, `sim/` cannot import it, so no trace fixture moves and no
+  `field-v3` time becomes incomparable. The reach a body files into the lookup
+  grid falls from 2.40 m to 1.52 m, which is strictly less work.
+
+  The test that should have caught this asserted the premise instead of
+  measuring it: "a sheep is wider and longer than a collie, or the scale is
+  upside down". It was upside down, and the assertion held the error in place.
+  It now derives the dog's half-extents from the SPINE table and requires each
+  footprint to sit within a tenth of its own animal.
+
+  Evidence, this workstation, the functional lane: lint, `typecheck` and
+  `typecheck:lab` clean. 905 tests in 112 files, all passing - 904 before, plus
+  the one added here. Build exit 0, 2,277.14 kB raw and 634.68 kB gzip against
+  2,277.11 and 634.68 before: 0.03 kB raw and nothing gzipped. Release
+  hardening probe exit 0, player page params still exactly `debug` and `seed`,
+  client secret scan clean. Before and after at the Sheep frame are in
+  `captures/sheep-footprint/`. No hub timing.
+
+  A worktree note, since it cost a false failure here: `assets/audio/licensed/`
+  is gitignored, so a fresh worktree has none of it, and both
+  `audio-manifest.spec.ts` and `tools/release-hardening-probe.mjs` fail on the
+  missing `birds-loop.flac` until the directory is copied across from a
+  checkout that has it. Neither failure is a code defect.
+
 - **Bark redesign, 2026-08-21.** sds's bark reached 24 m through a 100 degree
   cone and expired in 36 ticks, which made it a nudge rather than a verb: a
   player could bark into a spread flock and watch four sheep drift a metre. The
