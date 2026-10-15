@@ -434,6 +434,71 @@ candidate run first into a cold shader cache, so it establishes nothing in
 either direction and is recorded rather than read. The gate was already failing
 before this change.
 
+### Dog legs: a swing that starts where the limb can reach, 2026-10-15
+
+Measured the same way the sheep were, but through the real rig rather than a
+twin: a `DogRig` posed by the real `advanceDogMotion`, frame by frame, at ten
+speeds from 1 to 25 m/s, reading the posed bone positions back out. Two defects,
+both invisible to the existing guards because every one of them held.
+
+| speed | hind reach | paw off its commanded target | worst joint travel in one frame |
+| --- | --- | --- | --- |
+| 4 m/s | 0.97 | 0 mm | 50 mm |
+| 8 m/s | 1.0000 | 11 mm | 141 mm |
+| 15 m/s | 1.0000 | 69 mm | 196 mm |
+| 25 m/s | 1.0000 | 133 mm | 262 mm |
+
+From 8 m/s the hind limb is at full extension for part of every cycle, 13% of it
+at a sprint; the fore limb joins at 20. The gait's own planting was never the
+problem - stance slip measures zero at every speed, because `dogStride` is
+already derived from the stance share and the cadence, the same constraint the
+sheep were given this week.
+
+**The sub-frame one.** A swing's foot-drift offset is read on the first airborne
+frame against that frame's nominal. But a frame almost never lands on the stance
+handover: it lands some fraction past it, and over that fraction a world-locked
+foot keeps travelling backward under the body while the swing curve already has
+it standing still at `-stride`. The gap is speed times that fraction - 93 mm at
+DOG_MAX_SPEED - and it was banked as drift and held into the swing by
+`remaining`, at the one moment in the cycle when the hind limb is already at full
+stretch. `sampleDogPaw` now also reports `stanceTravel`, the stance ramp carried
+on past its own end, and the offset is measured against that instead. The two
+curves meet exactly at the boundary, so a foot that is where the ramp says it is
+has no drift to carry; a real turn's drift is untouched, and the two lift-off
+tests that guard the turn case pass unchanged.
+
+**The structural one.** The hind paw rests 0.08 m behind its hip, so at the end
+of a 0.4 m drive it is 0.55 m aft of the hip and 0.76 below it: 0.94 m of demand
+on 0.935 m of bone, with the body bob near its peak at exactly that moment.
+`GALLOP_DROP` brings the chest down past a trot - 0.085 m, gated at 5 m/s,
+leaving 0.29 m of belly clearance at the deepest rib. It is where a real dog
+gets the same reach back, and it is already how this rig answers the same problem
+under bank.
+
+After both, over every speed, both pairs and a full cycle: the paw lands on its
+commanded target to within a tenth of a millimetre, no limb exceeds 0.954 of its
+chain, stance slip stays at zero, and the worst single-frame joint travel falls
+from 262 mm to 114 - against a paw covering 417 mm in that same frame. Three
+guards in `tests/dog-rig.spec.ts` hold all of it, and each was checked against
+the old behaviour first: they fail at 91 mm and 0.99999.
+
+The sheep's `KNEE_COMPLIANCE` was tried here and is not shipped. It removes the
+square-root cusp at full extension, which is what it is for, but with the pose no
+longer visiting full extension there is no cusp to remove and it cost 5 mm of paw
+placement at every speed. A guard on reach is the right form of that protection,
+and that is what the second test is.
+
+Not done:
+
+- **No lab verification.** The lab's treadmill does not latch on the Dog
+  subject - the buttons click without taking - so the dog sits idle and no camera
+  angle shows the gait. This is the third capture-tooling defect recorded in this
+  pass, after the two below, and like them it was not caused by the change it
+  blocks. Every number above comes from the rig itself.
+- **No hub receipt.** The change is two scalar expressions in a per-frame pose
+  that already runs; there is no plausible cost, which is a reason to say so
+  rather than a reason to claim it measured.
+
 ## Direction changes
 
 Owner-ordered changes that override an earlier specification line. Four files
