@@ -47,7 +47,7 @@ export const GAIT_REST = 1.6;
 export const GAIT_WALK = 3;
 export const GAIT_RUN = 5.2;
 export const STRIDE_WALK = 0.18;
-export const STRIDE_RUN = 0.1;
+export const STRIDE_RUN = 0.188;
 /** Hoof clearance as a fraction of fore-aft stride. */
 export const HOOF_LIFT = 0.52;
 
@@ -56,13 +56,77 @@ export const HOOF_LIFT = 0.52;
  *
  *   body speed * pi * stance share / stride
  *
- * because its planted interval sweeps from +stride to -stride. Keeping stance
- * shorter than recovery allows an ordinary walking cadence to hold the ground,
- * then gives the hoof longer to lift and return forward. Full lock at a bolt
- * would still cycle implausibly fast, so the request is capped before blending.
+ * because its planted interval sweeps from +stride to -stride.
+ *
+ * STANCE SHARE FALLS WITH SPEED, and that is what makes a bolting sheep read as
+ * an animal rather than as a sewing machine. Hold it at the walking 0.34 and the
+ * equation above has only two ways to absorb 7.2 m/s: a stride no 0.59 m leg can
+ * reach, or a cadence that is a blur. The shipped asset took the blur - the lock
+ * asked for 27.5 rad/s, was capped to 14, and blended to 13.4, which is 2.1
+ * strides a second flicking a 0.28 m stride while the body covered 3.4 m. Eighty
+ * three per cent of every stride was slide, and it looked like tapping.
+ *
+ * A real sheep answers the same problem by bounding: the hooves spend less of
+ * the cycle on the ground and more of it in the air, so the body covers its
+ * distance in flight instead of in cadence. Dropping the share to 0.16 at a bolt
+ * brings the demanded rate down to 9.78 rad/s - just under the authored 9.8, so
+ * the lock stops engaging at all - and leaves 84 per cent of the cycle airborne,
+ * with an interval where neither diagonal is planted. That is the suspension
+ * phase, and it is why the gait now reads as a bound.
  */
-export const SHEEP_STANCE_SHARE = 0.34;
+export const SHEEP_STANCE_WALK = 0.34;
+export const SHEEP_STANCE_BOUND = 0.16;
+
+/**
+ * THE BODY HAS TO RISE. A gait is not four legs cycling under a torso held at a
+ * fixed height - that is a walk cycle played on a hovercraft, and it is the
+ * other half of why the flock read as tapping. In a bound the body is thrown,
+ * and the legs only catch it: lowest at mid-stance where a diagonal carries the
+ * weight, highest at mid-suspension where neither does.
+ *
+ * Amplitude is a fraction of stride, so it opens with speed and closes to
+ * nothing at a graze, plus a small floor that is the resting breath the gait
+ * rate's own floor exists for.
+ *
+ * A twentieth of stride puts the bolt at 0.022 m either side, so 0.045 m peak
+ * to peak, which on a 0.72 m withers is six per cent - the top of where real
+ * trotting quadrupeds sit, and a trot at a quarter agitation lands on four.
+ * The ballistic rise for this suspension interval is 0.058 m; this is a third
+ * of it, because a leg is a spring and not a stilt. A tenth of stride was tried
+ * first and measured eleven per cent of height peak to peak, which is not a
+ * bound, it is a pogo stick.
+ */
+export const BODY_BOB_STRIDE = 0.05;
+export const BODY_BREATH = 0.004;
+
+/**
+ * Vertical body offset in local metres, before the (1 - legWeight) taper that
+ * keeps it off the soles. CPU twin of the TSL expression in sheepMotion.
+ *
+ * Two lows and two highs per gait cycle, because the diagonals alternate; the
+ * phase offset is what puts the lows under the stance rather than beside it,
+ * and it tracks `stanceShare` so the alignment survives the walk-to-bound
+ * change rather than only holding at one speed.
+ */
+export function sheepBodyBob(
+  gait: number,
+  stride: number,
+  stanceShare: number,
+): number {
+  const amplitude = BODY_BREATH + stride * BODY_BOB_STRIDE;
+  return -Math.cos(gait * 2 - TAU * stanceShare) * amplitude;
+}
+
+/** Stance share at this agitation. The TSL twin mixes the same two constants. */
+export function sheepStanceShareForAgitation(agitation: number): number {
+  const level = Math.min(Math.max(agitation, 0), 1);
+  return SHEEP_STANCE_WALK + (SHEEP_STANCE_BOUND - SHEEP_STANCE_WALK) * level;
+}
+
 const GAIT_LOCK_BLEND = 0.85;
+/** A bound on the lock's request. With the share above it no longer binds
+ *  anywhere in range - the peak demand is about 10.8 rad/s - but it stays as the
+ *  guard that stopped a short stride asking for an unbounded cadence. */
 const GAIT_LOCK_RATE_MAX = 14;
 
 export interface SheepLegPose {
@@ -77,14 +141,24 @@ function unitTurn(turns: number): number {
   return turns - Math.floor(turns);
 }
 
-/** CPU twin of the TSL leg curve used for terrain contact and regression tests. */
-export function sheepLegPose(gait: number, legSign: number): SheepLegPose {
+/**
+ * CPU twin of the TSL leg curve used for terrain contact and regression tests.
+ *
+ * `stanceShare` is passed rather than read from a constant because it is no
+ * longer one: it falls with speed, and a twin that assumed the walking value
+ * would plant hooves on frames where the shader has them airborne.
+ */
+export function sheepLegPose(
+  gait: number,
+  legSign: number,
+  stanceShare: number,
+): SheepLegPose {
   const turn = unitTurn(gait / TAU + (legSign < 0 ? 0.5 : 0));
-  if (turn < SHEEP_STANCE_SHARE) {
-    const t = turn / SHEEP_STANCE_SHARE;
+  if (turn < stanceShare) {
+    const t = turn / stanceShare;
     return { travel: 1 - t * 2, lift: 0, planted: true };
   }
-  const t = (turn - SHEEP_STANCE_SHARE) / (1 - SHEEP_STANCE_SHARE);
+  const t = (turn - stanceShare) / (1 - stanceShare);
   const eased = t * t * (3 - 2 * t);
   return { travel: -1 + eased * 2, lift: Math.sin(t * Math.PI), planted: false };
 }
@@ -102,7 +176,7 @@ export function sheepGaitRateForAgitation(agitation: number): number {
   const stride = sheepStrideForAgitation(level);
   if (stride <= 1e-6) return authored;
   const planted = Math.min(
-    level * SHEEP_MAX_SPEED_MPS * Math.PI * SHEEP_STANCE_SHARE / stride,
+    level * SHEEP_MAX_SPEED_MPS * Math.PI * sheepStanceShareForAgitation(level) / stride,
     GAIT_LOCK_RATE_MAX,
   );
   return authored + Math.max(planted - authored, 0) * GAIT_LOCK_BLEND;

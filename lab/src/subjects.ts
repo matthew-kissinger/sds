@@ -51,6 +51,16 @@ export const LAB_PARTS: Record<LabPartId, ComponentType> = {
 };
 
 /**
+ * The parts that are the FIELD rather than the asset standing in it.
+ *
+ * Dropping them is what makes the silhouette view do its job: it paints every
+ * mesh flat black, so with the ground mounted a sheep is a black shape against
+ * a black meadow and the one hard rule in spec/05 - every asset must read as
+ * itself in flat black - cannot be judged at all.
+ */
+export const GROUND_PARTS: readonly LabPartId[] = ['terrain', 'grass', 'grass-lib'];
+
+/**
  * Where the turntable points. `dog` and `flock` track the live simulation, so
  * a subject that moves stays framed without anyone typing coordinates.
  */
@@ -77,8 +87,16 @@ export const LAB_SUBJECTS = [
   {
     id: 'sheep',
     label: 'Sheep',
-    note: 'The hero asset at 200 instances. Silhouette, wool volume, face, gait, hoof contact.',
-    parts: ['terrain', 'grass', 'flock'],
+    note: 'The hero asset at 200 instances. Silhouette, wool volume, face, gait, hoof contact. Sprint the dog through them to raise agitation and see the bound.',
+    // THE DOG IS MOUNTED HERE ON PURPOSE, and it is not scope creep. A sheep's
+    // agitation is the sim's, and the sim only raises it when a dog presses the
+    // flock - so without one this subject can only ever show a grazing animal,
+    // and spec/13's promise to "watch the animation cycle without playing the
+    // game to reach that state" is unmet for the hero asset. The treadmill
+    // already drives the dog through the real controller, so mounting it makes
+    // the whole gait reachable with the mechanism that is already here, rather
+    // than with a lab flag inside app/src that tripwire 4 forbids.
+    parts: ['terrain', 'grass', 'flock', 'dog'],
     // ONE sheep, not the centroid. A 25-sheep spawn is 50 m across, so a
     // centroid orbit at review distance puts the camera inside the flock and
     // frames grass. The cohesion view below is where the flock is the subject.

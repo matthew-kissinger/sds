@@ -132,11 +132,12 @@ export function measureSheepStanceContact(
   scaleZ: number,
   phase: number,
   stride: number,
+  stanceShare: number,
 ): void {
   out.footErrorMax = 0;
   out.stanceContacts = 0;
   for (const sole of SHEEP_HOOF_SOLE_POINTS) {
-    const pose = sheepLegPose(phase, sole.legSign);
+    const pose = sheepLegPose(phase, sole.legSign, stanceShare);
     const hoofLift = pose.lift * stride * HOOF_LIFT;
     if (hoofLift > 1e-6) continue;
     out.stanceContacts += 1;

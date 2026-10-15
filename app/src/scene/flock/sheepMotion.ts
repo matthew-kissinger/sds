@@ -44,6 +44,7 @@
 
 import {
   clamp,
+  cos,
   float,
   fract,
   mix,
@@ -56,8 +57,11 @@ import {
   type TSLNode,
 } from '@app/tsl/nodes';
 import {
+  BODY_BOB_STRIDE,
+  BODY_BREATH,
   HOOF_LIFT,
-  SHEEP_STANCE_SHARE,
+  SHEEP_STANCE_BOUND,
+  SHEEP_STANCE_WALK,
   STRIDE_RUN,
   STRIDE_WALK,
 } from './flockTuning';
@@ -228,17 +232,35 @@ export function createSheepMotion(
   const positivePair = step(float(0), legs.x);
   const pairOffset = float(1).sub(positivePair).mul(float(0.5));
   const legTurn = fract(gait.mul(float(1 / (Math.PI * 2))).add(pairOffset));
-  const recovery = step(float(SHEEP_STANCE_SHARE), legTurn);
-  const stanceT = clamp(
-    legTurn.mul(float(1 / SHEEP_STANCE_SHARE)),
-    float(0),
-    float(1),
+  // The share of the cycle a hoof holds the ground, falling with speed so a
+  // bolt bounds rather than flickers. `sheepStanceShareForAgitation` mixes the
+  // same two constants on the CPU, for terrain contact and the guard suite.
+  const stanceShare = mix(
+    float(SHEEP_STANCE_WALK),
+    float(SHEEP_STANCE_BOUND),
+    clamp(agitation, float(0), float(1)),
   );
+  const recovery = step(stanceShare, legTurn);
+  const stanceT = clamp(legTurn.div(stanceShare), float(0), float(1));
   const recoveryT = clamp(
-    legTurn.sub(float(SHEEP_STANCE_SHARE)).mul(float(1 / (1 - SHEEP_STANCE_SHARE))),
+    legTurn.sub(stanceShare).div(float(1).sub(stanceShare)),
     float(0),
     float(1),
   );
+  // The body bob, twinned in flockTuning's sheepBodyBob. Scaled by
+  // (1 - legWeight), which is what that attribute was authored for: full on the
+  // torso, zero at the sole, so a planted hoof stays planted and the limb takes
+  // up the difference as compliance. The hoof-contact receipt therefore needs
+  // no term for this, and neither does terrain planting.
+  //
+  // Not scaled by motionScale. This is locomotion, like `swing` and `hoof`
+  // beside it, not secondary life: damping it would hand the reduced-motion
+  // setting back the tapping that the setting has no opinion about.
+  const bodyBob = cos(bobArg.sub(stanceShare.mul(float(TAU))))
+    .negate()
+    .mul(float(BODY_BREATH).add(stride.mul(float(BODY_BOB_STRIDE))))
+    .mul(float(1).sub(legs.y));
+
   const stanceTravel = float(1).sub(stanceT.mul(float(2)));
   const recoveryTravel = smoothstep(float(0), float(1), recoveryT)
     .mul(float(2))
@@ -256,7 +278,7 @@ export function createSheepMotion(
 
   // Wool follow-through and mid-leg flex never translate either endpoint of a
   // leg. There is therefore no body-to-hoof span inflation hidden in the pose.
-  const rise = jiggle.add(responseJiggle).add(hoof);
+  const rise = jiggle.add(responseJiggle).add(hoof).add(bodyBob);
 
   // Four CPU samples, selected by authored leg quadrant. Applied only down the
   // leg and after the body pitch, so every stance sole lands on the visible

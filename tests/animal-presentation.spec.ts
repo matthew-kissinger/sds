@@ -28,7 +28,11 @@ import {
   HOOF_LIFT,
   SHEEP_HEADING_STEP_LIMIT,
   SHEEP_MAX_SPEED_MPS,
-  SHEEP_STANCE_SHARE,
+  BODY_BOB_STRIDE,
+  BODY_BREATH,
+  SHEEP_STANCE_WALK,
+  sheepBodyBob,
+  sheepStanceShareForAgitation,
   sheepGaitRateForAgitation,
   sheepLegPose,
   sheepStrideForAgitation,
@@ -137,12 +141,12 @@ describe('animal terrain planting', () => {
           1.08,
           1.04,
           contact,
-          sheepLegPose(phase, foot === 0 || foot === 3 ? 1 : -1).travel * stride,
+          sheepLegPose(phase, foot === 0 || foot === 3 ? 1 : -1, SHEEP_STANCE_WALK).travel * stride,
         ));
         const c = Math.cos(yaw);
         const s = Math.sin(yaw);
         for (const sole of SHEEP_HOOF_SOLE_POINTS) {
-          const pose = sheepLegPose(phase, sole.legSign);
+          const pose = sheepLegPose(phase, sole.legSign, SHEEP_STANCE_WALK);
           if (!pose.planted) continue;
           const localX = sole.x * 0.93;
           const localZ = (sole.z + pose.travel * stride) * 1.04;
@@ -165,8 +169,8 @@ describe('animal terrain planting', () => {
     for (let tick = 0; tick < 180; tick++) {
       sim.step(DRIVE, FIXED_DT);
       const phase = tick * 0.137;
-      const positiveSwing = sheepLegPose(phase, 1).travel * 0.24;
-      const negativeSwing = sheepLegPose(phase, -1).travel * 0.24;
+      const positiveSwing = sheepLegPose(phase, 1, SHEEP_STANCE_WALK).travel * 0.24;
+      const negativeSwing = sheepLegPose(phase, -1, SHEEP_STANCE_WALK).travel * 0.24;
       for (let i = 0; i < sim.headings.length; i++) {
         const x = sim.positions[i * 2]!;
         const z = sim.positions[i * 2 + 1]!;
@@ -214,15 +218,116 @@ describe('animal terrain planting', () => {
   });
 });
 
+describe('sheep body bob', () => {
+  // The bob is the half of the gait that is not the legs. Four limbs cycling
+  // under a torso held at one height is a walk cycle on a hovercraft, and the
+  // phase relationship is the whole content of the fix: a body that rises when
+  // a foot lands reads as a bounce, not as a bound.
+  const TURNS = 720;
+
+  function extremaTurns(agitation: number): { low: number; high: number } {
+    const share = sheepStanceShareForAgitation(agitation);
+    const stride = sheepStrideForAgitation(agitation);
+    let low = 0;
+    let high = 0;
+    for (let i = 0; i < TURNS; i++) {
+      const turn = i / TURNS;
+      const value = sheepBodyBob(turn * Math.PI * 2, stride, share);
+      if (value < sheepBodyBob(low * Math.PI * 2, stride, share)) low = turn;
+      if (value > sheepBodyBob(high * Math.PI * 2, stride, share)) high = turn;
+    }
+    return { low, high };
+  }
+
+  it('sits lowest under the stance and highest in the suspension, at every speed', () => {
+    for (const agitation of [0, 0.1, 0.25, 0.5, 0.75, 1]) {
+      const share = sheepStanceShareForAgitation(agitation);
+      const { low, high } = extremaTurns(agitation);
+      // Pair P is planted over turns [0, share); its mid-stance is share / 2.
+      // Pair N is planted over [0.5, 0.5 + share), so the first interval with
+      // neither pair down runs [share, 0.5) and its middle is (share + 0.5) / 2.
+      expect(low).toBeCloseTo(share / 2, 2);
+      expect(high).toBeCloseTo((share + 0.5) / 2, 2);
+    }
+  });
+
+  it('never moves a planted sole, because the taper is the leg weight', () => {
+    // The shader multiplies the bob by (1 - legWeight) and the sole rings are
+    // authored at legWeight 1. This is the arithmetic that lets hoof contact
+    // and terrain planting carry no term for the bob at all.
+    const soleWeight = 1;
+    for (const agitation of [0.25, 1]) {
+      const share = sheepStanceShareForAgitation(agitation);
+      const stride = sheepStrideForAgitation(agitation);
+      for (let i = 0; i < 64; i++) {
+        const atSole = sheepBodyBob(i / 64 * Math.PI * 2, stride, share)
+          * (1 - soleWeight);
+        expect(Math.abs(atSole)).toBe(0);
+      }
+    }
+  });
+
+  it('opens with speed, closes to a breath at a graze, and stays under a pogo', () => {
+    // Over the cycle, not at phase zero: the stance offset means phase zero is
+    // partway up the swell rather than at either end of it.
+    let standing = 0;
+    for (let i = 0; i < TURNS; i++) {
+      standing = Math.max(standing, Math.abs(sheepBodyBob(
+        i / TURNS * Math.PI * 2, sheepStrideForAgitation(0), SHEEP_STANCE_WALK,
+      )));
+    }
+    expect(standing).toBeCloseTo(BODY_BREATH, 6);
+
+    const boltStride = sheepStrideForAgitation(1);
+    const boltAmplitude = BODY_BREATH + boltStride * BODY_BOB_STRIDE;
+    // Peak to peak against a 0.72 m withers. Real trotting quadrupeds oscillate
+    // four to six per cent of height; a tenth of stride measured eleven.
+    const peakToPeakFraction = boltAmplitude * 2 / 0.72;
+    expect(peakToPeakFraction).toBeGreaterThan(0.04);
+    expect(peakToPeakFraction).toBeLessThan(0.065);
+
+    // And well inside the free-flight rise for the same suspension, because a
+    // leg is a spring: a bob at or over ballistic is a body nothing caught.
+    const share = sheepStanceShareForAgitation(1);
+    const cycle = Math.PI * 2 / sheepGaitRateForAgitation(1);
+    const suspension = (0.5 - share) * cycle;
+    expect(boltAmplitude).toBeLessThan(9.81 * suspension * suspension / 8);
+
+    let previous = 0;
+    for (const agitation of [0, 0.25, 0.5, 0.75, 1]) {
+      const amplitude = BODY_BREATH
+        + sheepStrideForAgitation(agitation) * BODY_BOB_STRIDE;
+      expect(amplitude).toBeGreaterThan(previous);
+      previous = amplitude;
+    }
+  });
+
+  it('is twinned by the shader, not re-derived there', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app', 'src', 'scene', 'flock', 'sheepMotion.ts'),
+      'utf8',
+    );
+    // bobArg is gait * 2, so the TSL expression below is the same function as
+    // sheepBodyBob: two cycles per stride, offset by the stance share, tapered
+    // by the leg weight and added into `rise`.
+    expect(source).toContain('cos(bobArg.sub(stanceShare.mul(float(TAU))))');
+    expect(source).toContain('float(BODY_BREATH).add(stride.mul(float(BODY_BOB_STRIDE)))');
+    expect(source).toContain('.mul(float(1).sub(legs.y))');
+    expect(source).toContain('.add(bodyBob)');
+  });
+});
+
 describe('sheep gait', () => {
   it('plants backward and recovers forward while lifted', () => {
-    const strike = sheepLegPose(0, 1);
-    const toeOff = sheepLegPose((SHEEP_STANCE_SHARE - 1e-4) * Math.PI * 2, 1);
+    const share = SHEEP_STANCE_WALK;
+    const strike = sheepLegPose(0, 1, share);
+    const toeOff = sheepLegPose((share - 1e-4) * Math.PI * 2, 1, share);
     const recovery = sheepLegPose(
-      (SHEEP_STANCE_SHARE + (1 - SHEEP_STANCE_SHARE) * 0.5) * Math.PI * 2,
+      (share + (1 - share) * 0.5) * Math.PI * 2,
       1,
+      share,
     );
-    const nextStrike = sheepLegPose((1 - 1e-4) * Math.PI * 2, 1);
+    const nextStrike = sheepLegPose((1 - 1e-4) * Math.PI * 2, 1, share);
 
     expect(strike.planted).toBe(true);
     expect(strike.travel).toBeCloseTo(1, 6);
@@ -236,11 +341,17 @@ describe('sheep gait', () => {
   });
 
   it('reduces planted-foot travel error without over-speeding the walk', () => {
-    for (const agitation of [0.1, 0.25]) {
+    // THE RANGE IS THE POINT. This used to test 0.1 and 0.25 only, so the walk
+    // was held to 15 per cent slip and the bolt was never measured at all. At
+    // full agitation the shipped gait slipped 51 per cent: a 0.28 m stride
+    // flicked at 2.1 strides a second under a body covering 3.4 m, which is
+    // what read as tapping. A gait that is only correct where it was sampled
+    // is not a correct gait.
+    for (const agitation of [0.1, 0.25, 0.5, 0.75, 1]) {
       const stride = sheepStrideForAgitation(agitation);
       const rate = sheepGaitRateForAgitation(agitation);
       const bodyTravelDuringStance = agitation * SHEEP_MAX_SPEED_MPS
-        * SHEEP_STANCE_SHARE * Math.PI * 2 / rate;
+        * sheepStanceShareForAgitation(agitation) * Math.PI * 2 / rate;
       const plantedHoofSweep = stride * 2;
       const forwardSlip = bodyTravelDuringStance - plantedHoofSweep;
 
