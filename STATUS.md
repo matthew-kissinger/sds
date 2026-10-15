@@ -155,10 +155,17 @@ Evidence, all on this workstation, which is the functional lane:
   has one, and `tests/painted-field.spec.ts` owns the scales, the quintic fade
   and the single-copy rule.
 
-Not done: no hub timing was taken, and the sky reads blue on the forced-WebGL2
-backend against tan on WebGPU. That is outside the colour this change touched
-and was not compared against the pre-change build, so it is an observation and
-not a finding.
+Not done: no hub timing was taken.
+
+One observation that is NOT a finding, written down so it is not rediscovered
+as one. The sky came out blue in some lab captures and warm in others. It is
+neither the backend nor this change: both appearances occurred on WebGPU and
+both on pre-change and post-change builds. The lab takes about twenty seconds
+to reach its first draw on this workstation, and a capture nine seconds after
+a subject change can land either side of the post chain becoming active. That
+is a capture-timing artefact of how these shots were taken, not a defect in the
+sky. Lab captures of a graded surface should wait for a non-zero draw count
+rather than a fixed delay.
 
 ## Direction changes
 
