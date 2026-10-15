@@ -13,16 +13,34 @@ const source = readFileSync(
 describe('grass material graph', () => {
   it('uses the compact deterministic field for all three moving wind octaves', () => {
     expect(source).not.toContain('mx_noise_float');
-    expect(source).toContain('function sineHashField(');
+    expect(source).toContain('function flowField(');
     expect(source).toMatch(/const coarse = octave\(root, travel, 0\)/);
     expect(source).toMatch(/const middle = octave\(root, travel, 1\)/);
     expect(source).toMatch(/const fine = octave\(root, travel, 2\)/);
-    expect(source).toMatch(/return sineHashField\(flow, frequency, angle, time\.mul\(float\(evolve\)\)\)/);
+    expect(source).toMatch(/return flowField\(flow, frequency, angle, time\.mul\(float\(evolve\)\)\)/);
   });
 
-  it('shares that field with both authored colour scales', () => {
-    expect(source).toMatch(/sineHashField\(root, PATCH_SCALE, 0\.38, float\(0\.7\)\)/);
-    expect(source).toMatch(/sineHashField\(root, MOTTLE_SCALE, -1\.13, float\(2\.4\)\)/);
+  it('takes its colour breakup from the shared painted field, not a copy', () => {
+    // This used to assert that the colour scales went through the same local
+    // field as the wind, with scene/Terrain.tsx asserting the mirror image. The
+    // two copies had drifted to different inner constants, so the ground and
+    // the grass were near neighbours rather than one field and no test could
+    // have caught it. One function, read by both, is the invariant now.
+    expect(source).toContain("import { paintedBlend } from '@app/tsl/paintedField'");
+    expect(source).toContain('const blend = paintedBlend(root)');
+    expect(source).not.toContain('PATCH_SCALE');
+    expect(source).not.toContain('MOTTLE_SCALE');
+  });
+
+  it('keeps grading on a struct rather than in the graph', () => {
+    // Defaults are the shipped values; the struct is what lets the asset lab
+    // hold two gradings against each other (spec/13).
+    expect(source).toContain('export interface GrassMaterialStyle');
+    expect(source).toContain('export interface GrassPalette');
+    expect(source).toContain('const style = inputs.style ?? DEFAULT_GRASS_STYLE');
+    expect(source).toContain('const palette = inputs.palette ?? DEFAULT_GRASS_PALETTE');
+    // The five greens stay a lens onto the one palette, never a second set.
+    expect(source).not.toMatch(/#[0-9a-fA-F]{6}/);
   });
 
   it('does not turn a broad wind front into a dark colour stripe', () => {

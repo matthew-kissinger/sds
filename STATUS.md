@@ -112,6 +112,54 @@ different `ROOT_SHADE`, `ROOT_AO`, `TIP_GOLD`, tint range, `CLUMP_HUE` and noise
 function. Screenshots are lab captures on this workstation and are not
 acceptance evidence; no timing was taken, because timings come from the hub.
 
+### The painted field and the grading struct, 2026-10-14
+
+The first shipped-code change of the pass. The library's two liftable pieces
+came across without it becoming a dependency.
+
+A defect surfaced on the way. The painted breakup lived twice: `paintedField`
+in `scene/Terrain.tsx` and `sineHashField` in `scene/grass/grassMaterial.ts`,
+at the same frequencies, angles and phases, each with a comment saying the two
+matched so a clump on a browner patch would be browner. The copies had drifted
+to different inner constants - 1.31 against 1.37, 0.47 against 0.43, 0.63
+against 0.61, 0.70 against 0.72 - so the ground and the grass were near
+neighbours rather than one field, and a test in each file asserted its own copy.
+That is the hazard `grassMaterial.ts` names three lines above its own copy of
+the recovery spring.
+
+What shipped:
+
+- `app/src/tsl/paintedField.ts` is now the single `paintedBlend`, read by the
+  ground and by the grass. It is lattice value noise with a quintic fade,
+  lifted from the library, in place of the two drifted sine pairs. The authored
+  scales are carried unchanged: ~14 m patches broken by ~4 m mottling.
+- `GrassMaterialStyle` and `GrassPalette` name the grading - wind speed,
+  octave weights, reach, flutter, tip gold, tint range, clump hue, and the five
+  greens. Defaults are the values this material has always had, and the palette
+  stays a lens onto `tsl/palette.ts` rather than a second set of colours, which
+  a test enforces by rejecting any hex in the file.
+- Wind keeps a sine form, now named `flowField` for what it owns. It has to
+  evolve, and a lattice would need re-hashing per frame to move.
+
+Evidence, all on this workstation, which is the functional lane:
+
+- `npm run lint` clean. `npm run typecheck` and `npm run typecheck:lab` clean.
+- Production build exit 0, 2,277.04 kB raw and 634.68 kB gzip, against 2,276.64
+  and 634.52 before: 0.40 kB and 0.16 kB.
+- Lab, high tier, one camera, WebGPU: 21 draw calls, 3,165,230 triangles, 13
+  geometries, 18 textures - identical to the same shot before the change.
+- Lab, forced WebGL2 via `?debug=webgl`: backend `webgl2`, 22 draw calls,
+  3,168,206 triangles, ground and grass both correct.
+- Three source-shape guards changed deliberately rather than deleted. The pair
+  that asserted each file's own copy of the field now assert that neither file
+  has one, and `tests/painted-field.spec.ts` owns the scales, the quintic fade
+  and the single-copy rule.
+
+Not done: no hub timing was taken, and the sky reads blue on the forced-WebGL2
+backend against tan on WebGPU. That is outside the colour this change touched
+and was not compared against the pre-change build, so it is an observation and
+not a finding.
+
 ## Direction changes
 
 Owner-ordered changes that override an earlier specification line. Four files

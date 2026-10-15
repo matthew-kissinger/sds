@@ -29,23 +29,15 @@ import {
   float,
   mix,
   positionWorld,
-  sin,
   smoothstep,
-  type TSLNode,
 } from '@app/tsl/nodes';
+import { paintedBlend } from '@app/tsl/paintedField';
 import { makeToonMaterial } from '@app/tsl/toon';
 import { useHeightfield } from '@app/world/heightfield';
 import { buildTerrainGeometry } from '@app/world/terrainGeometry';
 import { PALETTE } from '@app/tsl/palette';
 
 const { bounds } = HOME_FIELD;
-
-/** Two octaves: ~14 m patches broken up by ~4 m mottling. One octave alone
- *  reads as camouflage blobs from the classic camera. */
-const PATCH_SCALE = 0.07;
-const MOTTLE_SCALE = 0.26;
-const MOTTLE_WEIGHT = 0.45;
-const TAU = Math.PI * 2;
 
 /** Metres of blend at the fence line. Short: the fence is a hard edge. */
 const FIELD_EDGE = 1.5;
@@ -55,42 +47,15 @@ const RELIEF_TINT_RANGE = 2;
 /** How far the tint travels. Small on purpose; light, not a second palette. */
 const RELIEF_TINT = 0.07;
 
-/**
- * A compact deterministic field in roughly [-1, 1]. Two crossed strokes and
- * an inner warp preserve broad painterly patches without importing the large
- * MaterialX gradient-noise helper graph into the terrain's first-frame shader.
- */
-function paintedField(
-  root: TSLNode,
-  frequency: number,
-  angle: number,
-  phase: number,
-): TSLNode {
-  const c = Math.cos(angle);
-  const s = Math.sin(angle);
-  const x = root.x.mul(float(c)).add(root.y.mul(float(s))).mul(float(frequency * TAU));
-  const z = root.y.mul(float(c)).sub(root.x.mul(float(s))).mul(float(frequency * TAU));
-  const cross = sin(
-    z.mul(float(1.31))
-      .sub(x.mul(float(0.47)))
-      .add(float(phase * 1.71 + 0.39)),
-  );
-  return sin(x.add(z.mul(float(0.63))).add(float(phase)).add(cross.mul(float(0.7))));
-}
-
 export function Terrain() {
   const field = useHeightfield();
 
   const geometry = useMemo(() => buildTerrainGeometry(field), [field]);
 
   const material = useMemo(() => {
-    const patches = paintedField(positionWorld.xz, PATCH_SCALE, 0.38, 0.7);
-    const mottle = paintedField(positionWorld.xz, MOTTLE_SCALE, -1.13, 2.4);
-    const blend = smoothstep(
-      float(-0.35),
-      float(0.35),
-      patches.add(mottle.mul(float(MOTTLE_WEIGHT))),
-    );
+    // The same field the grass standing on it reads (tsl/paintedField.ts), so
+    // a clump on a browner patch is itself browner.
+    const blend = paintedBlend(positionWorld.xz);
 
     const pasture = mix(color(PALETTE.grassDark), color(PALETTE.grassLight), blend);
     // The surround keeps the same breakup at a duller amplitude, so the ground
