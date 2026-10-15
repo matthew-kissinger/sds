@@ -211,10 +211,99 @@ Evidence, this workstation, the functional lane:
 - Forced WebGL2 via `?debug=webgl`: backend `webgl2`, 37 draw calls, 3,462,348
   triangles, grading correct.
 
-Not done: no hub timing, and no phone-aspect capture. `spec/05` asks the critic
-loop for both gameplay distances and a beauty angle at desktop and phone
-aspect; this pass used two desktop distances. The grading is therefore
-reviewed, not accepted.
+Not done at the time: no hub timing, and no phone-aspect capture. That gap was
+closed on 2026-10-15, below.
+
+### Grass regrade: acceptance, 2026-10-15
+
+Accepted on colour. The captures `spec/05` asks for exist at both aspects, and
+the three grading lines it names hold at every one of them.
+
+Captures are listed in `captures/grass-regrade/README.md` (gitignored). Two
+lanes, both on this workstation, which is the functional lane:
+
+- **Lab**, dev server, WebGPU, high tier, flock 200, at 2560x1440, 390x844 and
+  844x390. Shipped, Previous and Library grade flipped at a held camera, at the
+  Whole field frame and the Grass frame.
+- **Production build**, `tools/playtest-profile.mjs` against `dist/` at the
+  three viewports `spec/13` names. `art-classic-webgpu` and `art-follow-webgpu`
+  report backend `webgpu` at 2560x1440, 48 and 54 draw calls;
+  `art-phone-high-webgpu` reports `webgpu` at 390x844 ratio 3, 49 draw calls;
+  `art-phone-low-webgl2` and `art-landscape-low-webgl2` report backend `webgl2`
+  at 390x844 and 844x390 ratio 3, 32 and 42 draw calls. Canvas non-blank on all
+  five. **The forced-WebGL2 and phone-aspect pairing is therefore checked.**
+
+The beauty angle is the lab's Whole field frame at bearing 2.43 rad. That is
+not an approximation of `camera/beautyOrbit.ts`, it is the same pose:
+`RADIUS 36` and `HEIGHT 9` against the subject's 36 m and 9 m, opening bearing
+`atan2(0.45, -0.52) = 2.4279`, and the same `centre + sin(angle) * radius`
+placement. Only the aim height differs, 2.2 m against the turntable's 2.25 m.
+
+The angle cannot come from the production build. `CameraRig` reads debug flags
+behind `import.meta.env.DEV`, so `?debug=beauty` is stripped from `dist` and
+`grep beauty dist/assets/*.js` finds nothing. `playtest-profile.mjs` encodes
+this already, as a `beautyCameraAvailable` check that fails whenever the beauty
+camera is asked for. The beauty angle is a dev-server and lab frame by
+construction, and `spec/13`'s "captures from the running production build"
+cannot be met for that one camera.
+
+Measured rather than judged, since "saturated shadows, hue-shifted cool, never
+gray or black" is a claim about pixels. Grass-hued pixels only, darkest decile
+against brightest, in the production captures:
+
+| scenario | shadow hue shift | shadow saturation | shadow value |
+| --- | --- | --- | --- |
+| `art-classic-webgpu` | +18.7 deg | -0.025 | 0.564 |
+| `art-follow-webgpu` | +30.3 deg | -0.036 | 0.527 |
+| `art-phone-high-webgpu` | +17.8 deg | +0.009 | 0.576 |
+| `art-phone-low-webgl2` | +10.2 deg | +0.108 | 0.606 |
+
+Every shadow shifts toward cool, no saturation moves more than 0.04 against the
+lit decile, and no value is within 0.35 of black. At the beauty frame the
+shipped grading reads +7.1 deg and +0.094 on phone against +5.0 and +0.092 on
+desktop: the grading does not change with aspect, which was the open question.
+
+Against the other two gradings at the same frames, the shipped one is the
+middle it was designed to be. Shadow saturation gain at the beauty frame:
+Previous +0.076, Shipped +0.094, Library +0.131. At 11 m the ordering holds and
+the reason the middle is right is visible: Library gives every blade its own
+spine shading and the field reads as countable blades, Previous has no root
+depth at all and reads washed, Shipped holds the mass. That judgement now
+exists at phone aspect, where it previously did not.
+
+Open, and not weakened to pass:
+
+- **The flock-parting rule is not re-tested.** `spec/05` requires that at
+  Classic camera height the flock parts into individual sheep and the dog is
+  findable in under a second. Every capture here has the dog findable, but the
+  probe's art workload drives real `W` input for the whole sample, so the dog
+  outruns the flock and no production frame has sheep in it. The grading is
+  accepted on colour and mass; that one line rests on the 2026-10-14 desktop
+  pass. The lens is not the obstacle: `CameraRig` computes
+  `baseFov = 45 + (view.fov - 45) * weight` and the Follow weight is zero in
+  Classic, so Classic is a 45 degree lens at both aspects and the lab's fixed
+  canvas lens is exact there.
+- **No hub timing.** Unchanged. Every `checks.boot` in the probe run failed,
+  and `art-phone-high-webgpu` also failed `frames` and `freezeFree`. Those are
+  timing checks on the functional lane with other work on the machine, so by
+  `spec/13` they are not reportable either as performance or as a regression.
+  They are recorded here so the `pass: false` in
+  `captures/profiling/grass-gate-receipts/report.json` is not read as a visual
+  failure. The visual checks in the same run passed.
+
+Two tooling defects found while taking these, neither caused by the regrade and
+neither fixed here:
+
+- `playtest-profile.mjs --flock-views` clicks a button named `Title` to restart
+  a run. The pause menu offers `Resume`, `Settings` and `End run`; `Title`
+  belongs to a different panel. The locator times out after 30 s and takes the
+  whole scenario's `checks` down with it. This is the flag that would have
+  produced the flock frames the open item above needs.
+- `?debug=webgl` in the lab takes far longer than WebGPU to reach a first draw -
+  more than two minutes at both 2560x1440 and 390x844, against about twenty
+  seconds for WebGPU. It does arrive; a `WebGLTimestampQueryPool` warning
+  confirms the backend initialises. A lab session wanting the WebGL2 grading
+  should expect the wait or take the receipt from the production build.
 
 ## Direction changes
 
@@ -223,6 +312,52 @@ cite this section by name: `sim/BarkImpulse.ts`, `sim/tuning.ts`,
 `tests/bark.spec.ts` and `tests/helpers/traces.ts`. The section did not survive
 the clean-room import into this repository and was restored on 2026-10-14 from
 the record those files carry.
+
+- **Sheep grass footprint, 2026-10-15.** The owner's observation was that a
+  sheep's impact on the grass reaches too far forward and back for how long a
+  sheep is. It did, by a factor of two. The footprint rect ran 1.68 m of
+  half-length against an animal `sheepGeometry.ts` states at 1.67 m nose to
+  tail, so with `INTERACTION_RADIUS` and `falloff` the pressed region reached
+  2.40 m fore and aft of a body that ends at 0.78 m: more flattened grass past
+  the nose than the whole sheep is long.
+
+  The dog is the thing that shows what the rule was meant to be. Its footprint
+  IS its body's half-extents - 1.16 against the 1.173 that `dogParts.ts` SPINE
+  lofts, 0.48 against its widest 0.45 - with `falloff` as the soft edge
+  outside. The sheep missed that rule because `SHEEP_SCALE` was authored above
+  one, on the written premise that "a sheep is wider and longer through the
+  wool than a collie is through the ribs". This game's meshes say otherwise:
+  the collie is 2.35 m by 0.90 m and the sheep 1.67 m by 0.84 m, so the dog is
+  the bigger animal and the scale belonged below one. The old comment hid the
+  error by comparing unlike things, a half-width against a collision radius
+  but a half-length against a full body length.
+
+  `SHEEP_SCALE` is now x0.93 / z0.71, which lands the sheep on the dog's two
+  ratios: 0.824 against 0.835 along, 0.446 against 0.42 across. `spec/06` is
+  amended in the same change. Presentation only - `interactionField.ts` is in
+  `app/src`, `sim/` cannot import it, so no trace fixture moves and no
+  `field-v3` time becomes incomparable. The reach a body files into the lookup
+  grid falls from 2.40 m to 1.52 m, which is strictly less work.
+
+  The test that should have caught this asserted the premise instead of
+  measuring it: "a sheep is wider and longer than a collie, or the scale is
+  upside down". It was upside down, and the assertion held the error in place.
+  It now derives the dog's half-extents from the SPINE table and requires each
+  footprint to sit within a tenth of its own animal.
+
+  Evidence, this workstation, the functional lane: lint, `typecheck` and
+  `typecheck:lab` clean. 905 tests in 112 files, all passing - 904 before, plus
+  the one added here. Build exit 0, 2,277.14 kB raw and 634.68 kB gzip against
+  2,277.11 and 634.68 before: 0.03 kB raw and nothing gzipped. Release
+  hardening probe exit 0, player page params still exactly `debug` and `seed`,
+  client secret scan clean. Before and after at the Sheep frame are in
+  `captures/sheep-footprint/`. No hub timing.
+
+  A worktree note, since it cost a false failure here: `assets/audio/licensed/`
+  is gitignored, so a fresh worktree has none of it, and both
+  `audio-manifest.spec.ts` and `tools/release-hardening-probe.mjs` fail on the
+  missing `birds-loop.flac` until the directory is copied across from a
+  checkout that has it. Neither failure is a code defect.
 
 - **Bark redesign, 2026-08-21.** sds's bark reached 24 m through a 100 degree
   cone and expired in 36 ticks, which made it a nudge rather than a verb: a

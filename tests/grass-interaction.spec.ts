@@ -18,6 +18,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { springResponse } from '@app/scene/grass/grassMaterial';
+import { SPINE } from '@app/scene/dog/dogParts';
 import {
   DOG_FOOTPRINT,
   DOG_GHOSTS,
@@ -128,16 +129,46 @@ describe('the carried feel constants', () => {
     expect(INTERACTION_RADIUS).toBe(1.02);
     expect(INTERACTION_STRENGTH).toBe(0.58);
     expect(DOG_FOOTPRINT).toEqual({ halfLen: 1.16, halfWid: 0.48, falloff: 0.68 });
-    expect(SHEEP_SCALE).toEqual({ x: 1.25, z: 1.45 });
+    expect(SHEEP_SCALE).toEqual({ x: 0.93, z: 0.71 });
   });
 
   it('build the sheep footprint by scaling the dog, not by a second guess', () => {
     expect(SHEEP_FOOTPRINT.halfWid).toBeCloseTo(DOG_FOOTPRINT.halfWid * SHEEP_SCALE.x, 12);
     expect(SHEEP_FOOTPRINT.halfLen).toBeCloseTo(DOG_FOOTPRINT.halfLen * SHEEP_SCALE.z, 12);
     expect(SHEEP_FOOTPRINT.falloff).toBe(DOG_FOOTPRINT.falloff);
-    // A sheep is wider and longer than a collie, or the scale is upside down.
-    expect(SHEEP_FOOTPRINT.halfWid).toBeGreaterThan(DOG_FOOTPRINT.halfWid);
-    expect(SHEEP_FOOTPRINT.halfLen).toBeGreaterThan(DOG_FOOTPRINT.halfLen);
+  });
+
+  // The assertion this replaces was that a sheep is wider and longer than a
+  // collie "or the scale is upside down". It was upside down: the premise was
+  // never measured against the meshes, and in this game the dog is the bigger
+  // animal, so the test held a 2x-too-long sheep footprint in place. Measure
+  // both against what is actually lofted instead.
+  it('give each animal the half-extents of its own body', () => {
+    // The collie, straight off the loft table, so this cannot drift from it.
+    const dogHalfLen = (Math.max(...SPINE.map((r) => r.z)) - Math.min(...SPINE.map((r) => r.z))) / 2;
+    const dogHalfWid = Math.max(...SPINE.map((r) => r.halfWidth));
+    expect(dogHalfLen).toBeCloseTo(1.173, 2);
+    expect(dogHalfWid).toBeCloseTo(0.45, 2);
+
+    // The sheep, as sheepGeometry.ts states it: "1.67 nose to tail, about 0.84
+    // across the widest flank lobes".
+    const sheepHalfLen = 1.67 / 2;
+    const sheepHalfWid = 0.84 / 2;
+
+    // A footprint is the body it belongs to, give or take a tenth. `falloff`
+    // is what softens the edge; it is not licence to press grass the animal is
+    // nowhere near.
+    expect(DOG_FOOTPRINT.halfLen / dogHalfLen).toBeGreaterThan(0.9);
+    expect(DOG_FOOTPRINT.halfLen / dogHalfLen).toBeLessThan(1.1);
+    expect(DOG_FOOTPRINT.halfWid / dogHalfWid).toBeGreaterThan(0.9);
+    expect(DOG_FOOTPRINT.halfWid / dogHalfWid).toBeLessThan(1.1);
+    expect(SHEEP_FOOTPRINT.halfLen / sheepHalfLen).toBeGreaterThan(0.9);
+    expect(SHEEP_FOOTPRINT.halfLen / sheepHalfLen).toBeLessThan(1.1);
+    expect(SHEEP_FOOTPRINT.halfWid / sheepHalfWid).toBeGreaterThan(0.9);
+    expect(SHEEP_FOOTPRINT.halfWid / sheepHalfWid).toBeLessThan(1.1);
+
+    // And therefore, the fact the old assertion got backwards.
+    expect(SHEEP_FOOTPRINT.halfLen).toBeLessThan(DOG_FOOTPRINT.halfLen);
   });
 });
 

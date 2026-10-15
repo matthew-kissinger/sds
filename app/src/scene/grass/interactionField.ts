@@ -46,13 +46,30 @@ import { createBarkPulseField } from '../juice/barkPulse';
 export const DOG_FOOTPRINT = { halfLen: 1.16, halfWid: 0.48, falloff: 0.68 } as const;
 
 /**
- * The sheep's body, as spec/06 states it: the dog's footprint scaled x1.25
- * across and z1.45 along. A sheep is wider and longer through the wool than a
- * collie is through the ribs, and the numbers land where the mesh does - 0.60 m
- * of half-width against the sim's 0.78 m collision radius, 1.68 m of half-length
- * against a 1.9 m body.
+ * The sheep's body: the dog's footprint scaled x0.93 across and z0.71 along.
+ *
+ * THE SCALE IS BELOW ONE BECAUSE THE DOG IS THE BIGGER ANIMAL. This read x1.25
+ * and z1.45 on the premise that "a sheep is wider and longer through the wool
+ * than a collie is through the ribs", and in this game's geometry that is
+ * backwards. `sheepGeometry.ts` states the sheep at 1.67 m nose to tail and
+ * 0.84 m across the widest flank lobes; `dogParts.ts` lofts SPINE from z -0.96
+ * to z 1.385 at a widest half-width of 0.45, so the collie is 2.35 m by 0.90 m.
+ * The sheep pressed a rect 3.36 m long onto a field it occupies 1.67 m of, and
+ * at the Follow camera the wake ran a body length past the nose and the tail.
+ *
+ * The old justification hid it by comparing unlike things: 0.60 m of half-width
+ * against a 0.78 m collision RADIUS, which is a half-extent, then 1.68 m of
+ * half-length against a 1.9 m BODY, which is a full length. Compared like for
+ * like the width was 1.4x the flank and the length was 2.0x the body.
+ *
+ * What the dog does is the rule, and it is only visible once both are measured:
+ * its footprint IS its body's half-extents, 1.16 against 1.173 along and 0.48
+ * against 0.45 across, with `falloff` providing the soft edge outside. These
+ * numbers put the sheep at the same two ratios - 0.824 against 0.835 along,
+ * 0.446 against 0.42 across - so both animals press the grass they stand on and
+ * nothing else.
  */
-export const SHEEP_SCALE = { x: 1.25, z: 1.45 } as const;
+export const SHEEP_SCALE = { x: 0.93, z: 0.71 } as const;
 export const SHEEP_FOOTPRINT = {
   halfWid: DOG_FOOTPRINT.halfWid * SHEEP_SCALE.x,
   halfLen: DOG_FOOTPRINT.halfLen * SHEEP_SCALE.z,

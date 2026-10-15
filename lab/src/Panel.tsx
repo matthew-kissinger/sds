@@ -64,7 +64,48 @@ function Slider(props: {
   );
 }
 
+/**
+ * The control that puts the controls away.
+ *
+ * It is not a cosmetic preference. The panel is 300 px wide and two of the
+ * three viewports spec/13 names are 390 px and 844 px across, so with the
+ * panel up a phone capture is 90 px of subject beside 300 px of buttons.
+ * Nothing about the grading can be judged from that. It sits outside the
+ * `aside` so the same button reopens it.
+ */
+function PanelToggle(props: { readonly open: boolean; readonly onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      title={props.open ? 'Hide the controls for a capture' : 'Show the controls'}
+      style={{
+        position: 'absolute', top: '8px', right: '8px', zIndex: 1,
+        background: 'rgba(16,20,23,0.82)', color: '#b9b2a6',
+        border: '1px solid #2e363b', borderRadius: '4px',
+        padding: '3px 8px', font: 'inherit', fontSize: '11px', cursor: 'pointer',
+      }}
+    >
+      {props.open ? 'Hide' : 'Panel'}
+    </button>
+  );
+}
+
 export function Panel() {
+  const lab = useLabStore();
+
+  // The toggle is a sibling of the panel rather than a child of it, so it
+  // keeps its place in the tree across a collapse and stays in the same
+  // corner either way.
+  return (
+    <>
+      <PanelToggle open={lab.panelOpen} onClick={() => lab.setPanelOpen(!lab.panelOpen)} />
+      {lab.panelOpen ? <Controls /> : null}
+    </>
+  );
+}
+
+function Controls() {
   const lab = useLabStore();
   const subject = labSubject(lab.subject);
 
