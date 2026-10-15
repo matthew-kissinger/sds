@@ -391,11 +391,48 @@ Not done, and not weakened to pass:
   carries. That is a five-fold change to a bounce the owner has just accepted,
   and it is coupled to the ballistic-bound receipt, so it is a change of its own
   and not a correction to this one.
-- **No motion review and no hub timing.** The legs were checked functionally in
-  the lab at 4 m and read as jointed limbs with a hock behind and a flexing
-  carpus in front, nothing inverted. Captures at both gameplay cameras and both
-  aspects have not been taken, and the solve's cost - a length, a divide and a
-  square root per vertex, against the sine it replaces - has no hub receipt.
+- **No motion review.** The legs were checked functionally in the lab at 4 m and
+  read as jointed limbs, with a hock behind and a flexing carpus in front and
+  nothing inverted. Captures at both gameplay cameras and both aspects have not
+  been taken, and the obstacle is the one already recorded above: the probe's
+  art workload drives `W` for the whole sample, so the dog outruns the flock and
+  the Classic capture from this very run has the sheep as a distant raft at the
+  top edge with no leg visible at all. This is the same defect that holds the
+  grass regrade's flock-parting line open, and it now blocks a second gate.
+
+Hub timing, 2026-10-15, `mk-os`, GTX 1660 Ti, `performance` profile, 1440x900,
+Classic camera, 60 s each. The candidate is `5332de35`; the baseline is the same
+tree with `sheepMotion.ts`, `sheepParts.ts` and `flockTuning.ts` reverted one
+commit, so the delta is this change alone. Preflight on every run was at or
+under 2.5% CPU and 0% GPU, inside the 5%/15% requirement. Receipts in
+`captures/stability/hub-receipts/`.
+
+| build | backend | frames | p50 | p95 | p99 | max | >100 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| baseline | WebGPU | 7,192 | 8.30 | 8.40 | 8.40 | 25.0 | 0 |
+| candidate | WebGPU | 7,191 | 8.30 | 8.40 | 8.40 | 25.0 | 0 |
+| baseline | WebGL2 | 7,195 | 8.30 | 8.40 | 8.40 | 16.7 | 0 |
+| candidate | WebGL2 | 7,194 | 8.30 | 8.40 | 8.40 | 16.7 | 0 |
+
+Identical to the last digit the probe reports, on both backends, with 40 draw
+calls and 3,959,384 triangles on all four runs. **Read it as a bound, not a
+measurement**: the hub presents at 120 Hz and every percentile here is the
+8.3 ms refresh interval, so what the run establishes is that the solve stays
+inside the frame the display asks for with at least 8.3 ms of headroom against
+the stated 16.7 ms budget - not that it costs nothing. A length, a divide and a
+square root per vertex, against the sine it replaces, is too small for this lane
+to resolve.
+
+Bundle: the initial JS chunk goes from 631,341 to 631,697 gzipped bytes, +356
+for the solve and its constants. The release probe passes at 635,615 gzip
+against a 1,572,864 limit and 6,164,223 estimated first-load bytes against
+8,388,608, with a clean client secret scan.
+
+Startup still fails its 2,000 ms gate on every run - 2,698 and 3,478 ms on the
+baseline, 3,835 and 5,332 on the candidate. That is one sample each with the
+candidate run first into a cold shader cache, so it establishes nothing in
+either direction and is recorded rather than read. The gate was already failing
+before this change.
 
 ## Direction changes
 
