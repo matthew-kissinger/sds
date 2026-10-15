@@ -90,6 +90,45 @@ This keeps tripwire 10 honest: the game reads every field that exists, and the
 lab adds no flag to `app/src`. It also makes the constants testable, which is
 worth the refactor on its own.
 
+## Grass: the shipped field and `threejs-field-grass`
+
+The standalone grass library is the shipped field extracted and generalised. It
+is mounted in the lab beside the real one, over the same committed scatter, so
+the two can be judged rather than argued about. It is a sibling checkout aliased
+in `vite.lab.config.ts`, it is not in `package.json`, and no production build can
+reach it.
+
+The comparison is already made and recorded in `STATUS.md`. Its shape is what
+governs adoption:
+
+- Scatter, decode, blade mesh and palette are the same on both sides, to the
+  value. Draw calls and triangles are equal at the same tier and camera.
+- The library is ahead on grading and authoring: value noise instead of a sine
+  hash, and every grading constant named on a `GrassMaterialStyle` and
+  `GrassPalette` rather than hardcoded.
+- The library is behind on interaction, and only there. It rasterises a
+  deformation grid on the CPU where the game evaluates oriented footprint SDFs
+  per vertex on the GPU, it has no bark wave, no reduced-motion path, and it
+  does not damp wind through pressed grass.
+
+So adoption runs one way. Grading, authoring structs, geometry and the bake API
+may come from the library into the game. The interaction field goes the other
+way: the game's is the reference implementation and the library takes it, or
+makes interaction pluggable so the game keeps its own.
+
+**The gate.** The library may become a dependency when, in this order: its
+interaction is the game's architecture or injectable; the bark wave and the
+reduced-motion path survive; a lab A/B at one camera shows no regression in
+wake edge, wind damping under press or silhouette; and the hub reports the
+swap at or inside the current frame budget on both backends, with the WebGPU
+and forced-WebGL2 receipts `AGENTS.md` requires. An exact version pin and a
+measured bundle delta land in the same change, as tripwire 10 requires.
+
+Until every one of those holds, the library stays a lab subject and the game
+keeps `app/src/scene/grass/`. A grading or noise improvement found this way is
+lifted into the shipped material as an ordinary change; it does not need the
+dependency.
+
 ## Inverse kinematics and the `math` dependency
 
 The dog already has a hand-rolled leg solver (`app/src/scene/dog/dogLegSolver.ts`)

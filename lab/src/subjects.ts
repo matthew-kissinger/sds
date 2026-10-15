@@ -24,15 +24,19 @@ import { Terrain } from '@app/scene/Terrain';
 import { Treeline } from '@app/scene/Treeline';
 import { HOME_FIELD } from '@sim/field';
 import { BARN_AT, HOUSE_AT } from '@app/scene/farmhouse/plan';
+import { LibraryGrass } from './LibraryGrass';
 
 export type LabPartId =
-  | 'terrain' | 'grass' | 'fence' | 'pen' | 'farmhouse' | 'farmer'
+  | 'terrain' | 'grass' | 'grass-lib' | 'fence' | 'pen' | 'farmhouse' | 'farmer'
   | 'treeline' | 'scatter' | 'flock' | 'dog';
 
 /** Draw order matters, so this record is ordered as `FieldScene` orders it. */
 export const LAB_PARTS: Record<LabPartId, ComponentType> = {
   terrain: Terrain,
   grass: GrassField,
+  // The extracted library, in the same slot in the draw order. The only part
+  // here that is not a game component: it is the other side of an A/B.
+  'grass-lib': LibraryGrass,
   fence: FenceLine,
   pen: Pen,
   farmhouse: Farmhouse,
@@ -90,9 +94,21 @@ export const LAB_SUBJECTS = [
   },
   {
     id: 'grass',
-    label: 'Grass',
-    note: 'The signature system and the largest performance lever. Density tiers, wind, interaction.',
+    label: 'Grass (shipped)',
+    note: 'The signature system and the largest performance lever. Flip to Grass (library) for the A/B: same bytes, same blade mesh, same tier. The camera holds across the flip.',
     parts: ['terrain', 'grass', 'dog'],
+    target: { kind: 'dog' },
+    distance: 11,
+    height: 2,
+  },
+  {
+    id: 'grass-lib',
+    label: 'Grass (library)',
+    // Identical frame to `grass` on purpose: the panel holds the camera when
+    // the two frames match, which is what makes the flip a comparison rather
+    // than two separate views.
+    note: 'threejs-field-grass over the same tufts.bin. No bark wave, no reduced-motion path, and the wake is a 1 m CPU raster instead of a per-vertex footprint SDF.',
+    parts: ['terrain', 'grass-lib', 'dog'],
     target: { kind: 'dog' },
     distance: 11,
     height: 2,

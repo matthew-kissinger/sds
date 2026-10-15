@@ -48,11 +48,69 @@ Decisions taken at the start of the pass, so they are not relitigated:
 - Documentation was consolidated first: closed logs moved to `docs/history/`,
   durable rules lifted into `AGENTS.md` and `spec/`, and `CLAUDE.md` added as a
   pointer rather than a second copy of the guide.
+- The lab typechecks under its own `tsconfig.lab.json` and has left the root
+  `include`. `npm run build` is `tsc -b && vite build`, so while `lab` sat in
+  that list a type error in a development tool could fail a production build.
+  `npm run typecheck:lab` is a maintainer command and not a release gate; it
+  needs the sibling grass checkout to pass. The gates in `AGENTS.md` are
+  unchanged.
 
 Nothing in this pass has reached a review gate yet. Documentation consolidation
 verified on 2026-10-14: `npm run lint` and `npm run typecheck` clean, `npm test`
 899 passed in 111 files. No production build or probe was run, because this
 change touches no shipped code.
+
+### Grass: the shipped field against `threejs-field-grass`, 2026-10-14
+
+Both are mounted in the lab as the `Grass (shipped)` and `Grass (library)`
+subjects, over the same `assets/grass/tufts.bin`, at one camera the panel holds
+across the flip. The library is a sibling checkout aliased in
+`vite.lab.config.ts`, absent from `package.json`, and cannot reach `dist/`.
+
+Already the same, verified rather than assumed:
+
+- Palette. The library's `DEFAULT_GRASS_PALETTE` is the game's five values
+  exactly: `#87995f`, `#a7b76c`, `#8b9468`, `#c0a074`, `#ffc582`.
+- Blade mesh. `tuftGeometry` differs only in an import path, and the two
+  `mulberry32` agree over 20,000 draws on each of six seeds.
+- Decode. One divisor differs: the library scales yaw by 65535 and the game by
+  65536. The game's is correct for a wrapping angle; the error is 1e-4 rad.
+- Cost. 21 draw calls and 3,165,230 triangles on both, high tier, same camera.
+  The library holds 12 geometries and 16 textures against 13 and 18, which is
+  the bark ring and the slot grid it does not have.
+
+Why it is not a drop-in:
+
+- Interaction is the opposite architecture. The game packs interactor records
+  and a cell-to-slot index and evaluates four oriented footprint SDFs per vertex
+  on the GPU. The library rasterises a deformation field on the CPU and samples
+  one linearly-filtered texel. Over this field at a 1 m cell that is 213 x 213:
+  45,369 cells cleared and finalised in full every frame whatever moved, and
+  181 KB re-uploaded per frame. Its own default covers 100 m at 0.5 m, so that
+  cost is sized for a demo field rather than this one.
+- There is no bark wave and no reduced-motion path.
+- The game damps the wind octaves and the flutter where a tuft is pressed. The
+  library runs full wind through flattened grass.
+- The wake is quantised to 8 bits and to the cell, so its edge is softer than a
+  per-vertex footprint. Both wakes are visible at the paws at 11 m; only the
+  shipped one has a crisp boundary.
+
+What the library is ahead on, and worth lifting:
+
+- `valueNoiseField`, lattice value noise with a quintic fade, against the
+  game's `sineHashField`. No axis-aligned banding in the patch and the mottle.
+- `GrassMaterialStyle` and `GrassPalette`. Every grading constant the game
+  hardcodes is a named field, with a second preset already written against it.
+  That is the tuning struct this pass was going to have to author anyway.
+- `lateralSpread` and `bladeDirectionSpread`: a pressed tuft fans instead of
+  every blade leaning one way.
+- `generateScatter` and `encodeScatter`: a bake API the game's own recipe can
+  sit on, leaving `tools/bake-grass.mjs` and the digest rule intact.
+
+The whole visible difference is grading, not colour: identical palette,
+different `ROOT_SHADE`, `ROOT_AO`, `TIP_GOLD`, tint range, `CLUMP_HUE` and noise
+function. Screenshots are lab captures on this workstation and are not
+acceptance evidence; no timing was taken, because timings come from the hub.
 
 ## Direction changes
 
@@ -199,6 +257,13 @@ each, described in `spec/12-my-times.md`.
   0.8 to 1.5, so it can render as a sub-pixel line. Checking the game's own
   Reduce Motion toggle on the reporting phone distinguishes them. Not yet
   measured on a device.
+- Whether to build the grass on `threejs-field-grass`. The owner's condition is
+  that it be at least as performant as what ships. It is not, yet, and the
+  reason is narrow: only the interaction field differs, and it trades GPU work
+  for a constant CPU and upload cost sized for a 100 m demo field. Everything
+  else is equal or better. The gate and the one-way direction of adoption are
+  in `spec/13-asset-lab.md`; the deciding measurement is a hub run, not a
+  desktop reading.
 - Whether to adopt `math` from pmndrs for leg IK. It is MIT and version 0.1.0,
   its `math/ik` entry point has `fabrik2` and `fabrik3`, and its allocation-free
   style matches the `spec/08` hot-path rule. The gate is in

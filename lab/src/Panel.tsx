@@ -67,9 +67,16 @@ export function Panel() {
   const lab = useLabStore();
   const subject = labSubject(lab.subject);
 
+  // Flipping between two subjects that authored the SAME frame holds the camera
+  // exactly, which is what makes the shipped/library grass pair an A/B rather
+  // than two unrelated views. A subject with a frame of its own adopts it.
   const pickSubject = (id: LabSubjectId) => {
+    const from = labSubject(lab.subject);
     const next = labSubject(id);
-    useLabStore.setState({ subject: id, distance: next.distance, height: next.height, orbit: 0 });
+    const sameFrame = next.distance === from.distance && next.height === from.height;
+    useLabStore.setState(sameFrame
+      ? { subject: id }
+      : { subject: id, distance: next.distance, height: next.height, orbit: 0 });
   };
 
   return (
