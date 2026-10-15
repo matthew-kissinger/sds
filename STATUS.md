@@ -490,14 +490,102 @@ and that is what the second test is.
 
 Not done:
 
-- **No lab verification.** The lab's treadmill does not latch on the Dog
-  subject - the buttons click without taking - so the dog sits idle and no camera
-  angle shows the gait. This is the third capture-tooling defect recorded in this
-  pass, after the two below, and like them it was not caused by the change it
-  blocks. Every number above comes from the rig itself.
+- **No lab verification at the time.** CORRECTED, 2026-10-15: this entry
+  originally said the lab's treadmill did not latch on the Dog subject. It does
+  latch. The claim came from reading `button.className` to decide whether a
+  toggle had taken, and the lab's `Button` styles inline and sets no class, so an
+  empty className was a false negative, not a dead control. The treadmill's real
+  defects were different and are recorded below. Every number above still comes
+  from the rig itself.
 - **No hub receipt.** The change is two scalar expressions in a per-frame pose
   that already runs; there is no plausible cost, which is a reason to say so
   rather than a reason to claim it measured.
+
+### The lab treadmill, and the snap at the end of a swing, 2026-10-15
+
+Two findings, one in the lab's own tooling and one in the gait, found because
+the first was blocking the second.
+
+**The treadmill.** `Sprint` latched and did nothing: the module's only effect
+returned early unless `walking` was also on, so a lit button drove no keys.
+Sprinting is walking, faster, so the store now keeps the pair consistent from
+either end. The larger problem was that it held `forward` and nothing else, and
+`forward` under Classic's basis is the constant world +z - straight at the gate
+standing open at z = 100. The lab mounts no `CameraRig`, so `cameraModeBlend`
+stays 0 and that basis never changes. The dog left the field in about fourteen
+seconds, parked in the pen at z = 107.5, and sat down, with the lab camera
+following it out there. It now chooses which of the eight compass directions
+four movement keys can describe from where the dog actually is: straight
+shuttles through the flock and turns around at 50 m, a held turn orbits at 35 m.
+Still only keys - the conditioner decides everything about how that direction is
+taken up, which is the whole contract of the file.
+
+Measured in the browser, at a sprint, over 66 seconds: the radius from the
+flock's own ground stayed between 0.1 m and 60.2 m, against 80 m to the nearest
+fence, with legs of about 100 m between turnarounds.
+
+It also re-presses the held keys every 0.25 s rather than trusting its own cache
+of them. `keyboard.ts` drops every held key on blur and on tab-hide, and a hot
+update leaves the replaced instance's keyup to land after the new one has
+recorded the key as held; either way the diff saw no change and never pressed
+again. That was measured as a dog standing still with KeyD down for all 132
+samples over 66 seconds, with the loop still rendering at 13.9 ms - which is
+indistinguishable from the broken treadmill the file was opened to fix.
+
+**The snap.** A planted paw stands still in the world, so its body-space travel
+sweeps backward at exactly the body's ground speed. The swing was a smoothstep,
+which leaves and arrives with zero body-space velocity - so the paw's world
+velocity stepped by the whole of the dog's speed in the frame it lifted and again
+in the frame it landed. Through the rig, at two thirds of DOG_MAX_SPEED, the paw
+covered 98 mm on the frame it touched down and 0 mm on the next. `sin` for the
+lift is worse than it looks for the same reason: it is steepest at exactly those
+two frames, and threw the paw upward at 1.7 m/s in the one it lifted.
+
+The swing is now a cubic whose end slopes are the stance sweep, and the lift is
+`sin` squared. The two slopes are not equal, because their costs are not: the
+rearward bulge lands just after lift-off where the hind limb is already at 0.95
+of its bone, and the forward one lands where the limb is folding.
+
+| | touchdown step, 2 / 8 m/s | lift-off step | reach, steady |
+| --- | --- | --- | --- |
+| before | 59 / 141 mm | 56 / 134 mm | 0.954 |
+| after | 19 / 41 mm | 29 / 124 mm | 0.957 |
+
+The foot is placed exactly, rather than slammed forward into the ground, up to
+6.3 m/s; above that it takes what the bone allows, 82% of the match at two thirds
+of DOG_MAX_SPEED and 43% at a sprint, where a paw covers 25 cm a frame.
+
+**And a third thing, which was already there.** A stance is a distance - exactly
+`2 * dogStride` - but `dogStanceShare` turns it into a share of the cycle at the
+CURRENT speed. Change the speed under a foot the world has locked down and the
+two stop agreeing: braking raises the stance share, the foot is held past the
+stride it budgeted, the body walks away from it, and the limb is pulled straight.
+On a 10 m/s^2 brake from DOG_MAX_SPEED - gentler than DOG_ACCELERATION, which is
+what the player gets - the hind chain reached 1.0000 of its bone and the solver
+clamped, leaving the paw 145.6 mm off the ground it was meant to be standing on.
+Confirmed present with the shipped curve, so it is not something this week
+introduced; the lab treadmill turns around constantly, which is why it surfaced
+now. A contact now ends where its stride ends and slides forward past that, which
+is what a braking dog's foot does on grass. Reach 1.0000 -> 0.9559, paw
+145.6 mm -> 0.00 mm off target, and every steady speed untouched.
+
+Open, and recorded in `tests/dog-rig.spec.ts` rather than left to be rediscovered:
+
+- **The gallop transition drags a foot's phase.** `sampleDogPaw` offsets each
+  foot by a share of `sprint` computed from the instantaneous speed, so foot 3
+  moves 0.3 of a cycle between DOG_MAX_SPEED and DOG_SPRINT_SPEED. A dog surging
+  across that band has that phase dragged by 0.22 of a cycle - about 1.4 whole
+  stances at those speeds - so a foot is locked down mid-sweep, 196 mm behind
+  where a contact belongs, and the limb reaches the solver's clamp. The sweep
+  bound can only take back the part past the stride. The fix is a transition that
+  re-times the swing instead of moving a foot's phase.
+- **The sit is still wrong.** The hind chain sits at 0.99 of its bone while
+  seated and the pelvis drops by a hand-tuned 0.3 m with nothing deciding where
+  the ground is, so the dog's hindquarters hover rather than rest. Reported from
+  the field, not yet addressed.
+- **No hub receipt.** Curve evaluation in a per-frame pose that already runs,
+  with one added `Math.hypot` per foot; there is no plausible cost, which is a
+  reason to say so rather than to claim it measured.
 
 ## Direction changes
 

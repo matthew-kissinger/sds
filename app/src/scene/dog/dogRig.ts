@@ -5,7 +5,7 @@ import * as THREE from 'three/webgpu';
 import type { Heightfield } from '@app/world/heightfield';
 import { DOG_PAW_CONTACTS } from './dogGeometry';
 import { DOG_JOINTS, DOG_LEG_ROOTS } from './dogRigDefinition';
-import { sampleDogPaw, type DogPawPose } from './dogGait';
+import { dogStride, sampleDogPaw, type DogPawPose } from './dogGait';
 import { DogLegSolver } from './dogLegSolver';
 import type { DogMaterial } from './dogMaterial';
 import { DOG_SPRINT_SPEED } from '@sim/tuning';
@@ -52,8 +52,13 @@ export class DogRig {
   private readonly rotationInverse = new THREE.Quaternion();
   private readonly paws: DogPawPose[] = Array.from({ length: 4 }, () => ({ travel: 0, lift: 0, planted: true, recovery: 0, stanceTravel: 0 }));
   private readonly locks = new Float64Array(8);
+  /** Where the BODY was when each foot planted, so its sweep can be measured. */
+  private readonly plants = new Float64Array(8);
   private readonly recoveryOffsets = new Float64Array(8);
   private readonly planted = [false, false, false, false];
+  /** Last posed body position, for the travel one frame covers. */
+  private lastX = NaN;
+  private lastZ = NaN;
   constructor(geometry: THREE.BufferGeometry, material: DogMaterial) {
     this.bones = DOG_JOINTS.map((joint) => {
       const bone = new THREE.Bone();
@@ -81,6 +86,9 @@ export class DogRig {
   reset(): void {
     this.planted.fill(false);
     this.recoveryOffsets.fill(0);
+    // A teleported dog has not travelled the gap it was moved across.
+    this.lastX = NaN;
+    this.lastZ = NaN;
     this.resetBones();
   }
   private resetBones(): void {
@@ -145,6 +153,13 @@ export class DogRig {
     this.coat.getWorldQuaternion(this.rotationInverse).invert();
     const c = Math.cos(yaw);
     const s = Math.sin(yaw);
+    // What one frame of travel is worth. Contact is decided once a frame, so
+    // the stance ramp can only be observed to end within a frame of where it
+    // should, and at a sprint that one frame is two thirds of a stride.
+    const frameTravel = Number.isNaN(this.lastX)
+      ? 0 : Math.hypot(x - this.lastX, z - this.lastZ);
+    this.lastX = x;
+    this.lastZ = z;
     for (let foot = 0; foot < 4; foot++) {
       const paw = this.paws[foot]!;
       const rest = DOG_PAW_CONTACTS[foot]!;
@@ -163,9 +178,49 @@ export class DogRig {
         const dz = worldZ - z;
         localX = dx * c - dz * s;
         localZ = dx * s + dz * c;
+        // A STANCE IS A DISTANCE, NOT A STRETCH OF CLOCK, and the distance is
+        // exactly `2 * dogStride`: the foot sweeps from +stride to -stride while
+        // the body covers the same ground, which is why stance slip measures
+        // zero at every steady speed. `dogStanceShare` turns that distance into
+        // the share of the cycle it takes AT THE CURRENT SPEED - so change the
+        // speed under a foot the world has locked down and the two stop
+        // agreeing. Braking raises the stance share, so the foot is held past
+        // the stride it budgeted while the body keeps going, and neither curve
+        // notices. On a 10 m/s^2 brake from DOG_MAX_SPEED - gentler than
+        // DOG_ACCELERATION, which is what the player gets - the hind chain was
+        // pulled to 1.0000 of its bone and the solver clamped, leaving the paw
+        // 145.6 mm off the ground it was meant to be standing on. Accelerating
+        // between 8 and 20 m/s did the same.
+        //
+        // So a contact ends where its stride ends, and past that the lock is
+        // carried forward with the body: the foot slides, which is what a
+        // braking dog does on grass, instead of the limb snapping straight.
+        //
+        // Measured as the BODY'S OWN PATH since the foot planted, not as a
+        // body-space coordinate. In a turn a locked foot's local Z falls behind
+        // the straight-ahead line without the body having carried it any
+        // further, and clamping on that broke the lift-off the turn tests pin.
+        const sweep = Math.hypot(x - this.plants[foot * 2]!, z - this.plants[foot * 2 + 1]!);
+        const allowed = 2 * dogStride(motion.locomotionSpeed);
+        if (sweep > allowed) {
+          const back = (sweep - allowed) / sweep;
+          worldX += (x - worldX) * back;
+          worldZ += (z - worldZ) * back;
+          this.locks[foot * 2] = worldX;
+          this.locks[foot * 2 + 1] = worldZ;
+          this.plants[foot * 2] = this.plants[foot * 2]! + (x - this.plants[foot * 2]!) * back;
+          this.plants[foot * 2 + 1] = this.plants[foot * 2 + 1]!
+            + (z - this.plants[foot * 2 + 1]!) * back;
+          const dx = worldX - x;
+          const dz = worldZ - z;
+          localX = dx * c - dz * s;
+          localZ = dx * s + dz * c;
+        }
       } else if (!this.planted[foot] || paw.planted) {
         this.locks[foot * 2] = worldX;
         this.locks[foot * 2 + 1] = worldZ;
+        this.plants[foot * 2] = x;
+        this.plants[foot * 2 + 1] = z;
       }
       if (!paw.planted) {
         // A turning stance ends away from the straight-ahead foot line. Preserve
@@ -186,7 +241,17 @@ export class DogRig {
         if (this.planted[foot]) {
           const dx = this.locks[foot * 2]! - x;
           const dz = this.locks[foot * 2 + 1]! - z;
-          const rampZ = rest.z + paw.stanceTravel * (1 - motion.sit) + seatedAdvance;
+          // The ramp ends where the stride ends, for the same reason the lock
+          // does, plus the one frame contact is sampled at. `stanceTravel` is
+          // deliberately unbounded so the sub-frame handover reads right, but a
+          // stance carried well past its stride makes it read the slide above as
+          // if it were a turn's drift - and then carries that forward into the
+          // swing, on top of the reach the swing already wants. Measured: the
+          // hind chain hit the solver's own clamp while the dog surged between
+          // 8 and 20 m/s, which is the one case the sweep bound alone missed.
+          const stride = dogStride(motion.locomotionSpeed);
+          const rampTravel = Math.max(paw.stanceTravel, -stride - frameTravel);
+          const rampZ = rest.z + rampTravel * (1 - motion.sit) + seatedAdvance;
           this.recoveryOffsets[foot * 2] = dx * c - dz * s - nominalX;
           this.recoveryOffsets[foot * 2 + 1] = dx * s + dz * c - rampZ;
         }
