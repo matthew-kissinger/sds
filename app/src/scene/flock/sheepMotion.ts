@@ -118,7 +118,14 @@ const LEG_RECOVERY_FOLD = 0.5;
 /** How far moving fleece lags the body, radians, and how far it travels. Idle
  * sheep keep the collar and body vertically still on the live title scene. */
 const JIGGLE_LAG = 1.9;
-const JIGGLE_RUN = 0.05;
+/** How far the fleece swells, AS A FRACTION OF THE LUMP it is swelling - not a
+ *  distance. The wool moves along its own normals now, so the amount it can
+ *  move is the amount of wool there is at that vertex, and a thin patch over
+ *  the ribs necessarily moves less than a full puff over the haunch. That is
+ *  the behaviour; a metre value would flatten it back out. At a run this is
+ *  0.024 m of surface travel on a mean lump, against 0.032 m when the whole
+ *  fleece translated vertically together. */
+const FLEECE_SWELL_RUN = 0.55;
 
 /** Fore-aft hoof travel, m, split between the walk knee and raw speed. A
  *  standing sheep gets zero of both, so its legs are still. */
@@ -128,7 +135,7 @@ const JIGGLE_RUN = 0.05;
 const EAR_FLICK = 0.026;
 const EAR_STARTLE = 0.055;
 const TAIL_WIGGLE = 0.035;
-const RESPONSE_JIGGLE = 0.036;
+const FLEECE_SWELL_RESPONSE = 0.35;
 
 export interface SheepMotion {
   /** Apply the whole animation to a local-space position node. Takes the
@@ -170,35 +177,66 @@ export function createSheepMotion(
     seed.mul(float(11.7)),
     seed.mul(float(31.3)).add(float(9.6)),
   );
-  const lump = paintedFleeceField(
+  // THE LUMP ONLY ADDS WOOL. Both octaves are rectified to 0..1 before they are
+  // scaled, so the field bulges outward and never carves inward.
+  //
+  // Signed, it did both, and that is what put legs outside the fleece. The
+  // narrowest wool is the -x haunch at 0.33 against a 0.279 leg: a 0.051
+  // margin, which a lump reaching -0.086 eats straight through, leaving the
+  // limb standing proud of the body it hangs from. It was per-instance seeded,
+  // so it happened to some sheep and not others, which is exactly how it was
+  // described - "sometimes".
+  //
+  // Rectifying also WIDENS the fleece, by the half-amplitude it used to spend
+  // digging: about 0.043 m of mean outward bulge. A sheep in full fleece is a
+  // wide thing on narrow legs, so the margin and the silhouette improve
+  // together rather than trading against each other.
+  const broadLump = paintedFleeceField(
     positionLocal.mul(float(FLEECE_BROAD * TAU)).add(woolOffset),
-  )
+  ).mul(float(0.5)).add(float(0.5));
+  const fineLump = paintedFleeceField(
+    positionLocal
+      .mul(float(FLEECE_FINE * TAU))
+      .add(woolOffset)
+      .add(vec3(17.9, 3.1, 24.4)),
+  ).mul(float(0.5)).add(float(0.5));
+  const lump = broadLump
     .mul(float(FLEECE_BROAD_AMP))
-    .add(
-      paintedFleeceField(
-        positionLocal
-          .mul(float(FLEECE_FINE * TAU))
-          .add(woolOffset)
-          .add(vec3(17.9, 3.1, 24.4)),
-      ).mul(float(FLEECE_FINE_AMP)),
-    );
-  const fleeceLump = normalLocal.mul(lump.mul(masks.x));
+    .add(fineLump.mul(float(FLEECE_FINE_AMP)));
 
-  // Twice-gait phase remains useful for small fleece follow-through. Leg flex
-  // itself is derived from the airborne recovery below so it bends in a clear
-  // anatomical direction instead of merely squashing the limb vertically.
+  // Twice-gait phase is the body bob's own rate, and the bob is what the wool
+  // hangs off, so it is the rate the wool answers at. Leg flex is derived from
+  // the airborne recovery below instead, so it bends anatomically rather than
+  // merely squashing the limb vertically.
   const bobArg = gait.mul(float(2));
+
   // Wool carrying a graze mask is the collar around the buried skull root.
   // Keep that join planted while the rest of the fleece retains its secondary
   // motion; lifting only the collar made the neck appear to telescope.
   const fleeceLifeMask = masks.x.mul(
     float(1).sub(smoothstep(float(0.1), float(0.14), masks.y)),
   );
-  const jiggle = sin(bobArg.sub(float(JIGGLE_LAG)))
+
+  // THE FLEECE MOVES ALONG ITS OWN NORMALS, NOT UP THE WORLD AXIS. This was the
+  // jitter. Every fleece vertex used to receive one scalar on +Y, so the whole
+  // coat rose and fell as a rigid slab - and a rigid slab ticking up and down
+  // is read as a vibration, however slow it is made, because nothing about it
+  // is shaped like wool. Swelling the lump instead moves each vertex along the
+  // surface it belongs to: the haunch swings out while the flank swings down,
+  // the thin patch over the ribs barely moves, and the coat breathes rather
+  // than pulses. It also means the fleece WIDENS as it moves, which a vertical
+  // translation could never do.
+  const fleeceSwell = sin(bobArg.sub(float(JIGGLE_LAG)))
     .mul(fleeceLifeMask)
-    .mul(agitation)
-    .mul(float(JIGGLE_RUN))
+    .mul(
+      agitation.mul(float(FLEECE_SWELL_RUN))
+        .add(response.mul(float(FLEECE_SWELL_RESPONSE))),
+    )
     .mul(motionScale);
+  const fleeceLump = normalLocal.mul(
+    lump.mul(masks.x).mul(float(1).add(fleeceSwell)),
+  );
+
 
   // The ears carry a constant graze mask of 0.85; the head is a gradient and
   // the poll is 0.5, so a narrow band selects both ear blades without another
@@ -220,11 +258,6 @@ export function createSheepMotion(
     .mul(float(0.012).add(agitation.mul(float(TAIL_WIGGLE))).add(response.mul(float(0.025))))
     .mul(motionScale);
 
-  const responseJiggle = sin(gait.mul(float(3)).add(seed))
-    .mul(response)
-    .mul(fleeceLifeMask)
-    .mul(float(RESPONSE_JIGGLE))
-    .mul(motionScale);
   const stride = walk.mul(float(STRIDE_WALK)).add(agitation.mul(float(STRIDE_RUN)));
   // A short planted interval moves backward under the body; the longer recovery
   // moves forward while visibly airborne. The former symmetric sine made the
@@ -278,7 +311,7 @@ export function createSheepMotion(
 
   // Wool follow-through and mid-leg flex never translate either endpoint of a
   // leg. There is therefore no body-to-hoof span inflation hidden in the pose.
-  const rise = jiggle.add(responseJiggle).add(hoof).add(bodyBob);
+  const rise = hoof.add(bodyBob);
 
   // Four CPU samples, selected by authored leg quadrant. Applied only down the
   // leg and after the body pitch, so every stance sole lands on the visible

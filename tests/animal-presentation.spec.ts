@@ -48,6 +48,10 @@ import {
   footTerrainOffset,
   writeSheepTerrainOffsets,
 } from '@app/scene/flock/terrainPlanting';
+import { buildSheepGeometry } from '@app/scene/flock/sheepGeometry';
+
+/** Farthest the fleece lump can push, both octaves at once, in local metres. */
+const FLEECE_LUMP_REACH = 0.066 + 0.02;
 
 const terrain = join(process.cwd(), 'assets', 'terrain');
 const manifest = JSON.parse(
@@ -215,6 +219,85 @@ describe('animal terrain planting', () => {
       }
     }
     expect(maxError).toBeLessThan(1e-6);
+  });
+});
+
+describe('sheep fleece containment', () => {
+  // "Their legs go out the sides of the wool sometimes because it shakes so
+  // fast." The shaking was not what did it. The fleece lump was a SIGNED field:
+  // it bulged outward and carved inward by the same amount, and where it carved
+  // it pulled the wool surface back behind the leg hanging under it. Seeded per
+  // instance, so it happened to some sheep and not others - which is what
+  // "sometimes" meant.
+  const LEGS = [
+    { name: 'front +x', x: 0.225, z: 0.22 },
+    { name: 'front -x', x: -0.225, z: 0.22 },
+    { name: 'back +x', x: 0.21, z: -0.28 },
+    { name: 'back -x', x: -0.21, z: -0.28 },
+  ] as const;
+
+  /** Widest wool, and widest leg, in one leg's own quarter of the body. */
+  function margins() {
+    const geometry = buildSheepGeometry();
+    const position = geometry.getAttribute('position');
+    const uv = geometry.getAttribute('uv');
+    const uv1 = geometry.getAttribute('uv1');
+    return LEGS.map((leg) => {
+      let wool = 0;
+      let limb = 0;
+      for (let i = 0; i < position.count; i++) {
+        const x = position.getX(i);
+        if (Math.sign(x) !== Math.sign(leg.x)) continue;
+        const z = position.getZ(i);
+        const onLeg = Math.abs(uv1.getX(i)) > 0.5;
+        if (onLeg) {
+          if (Math.abs(z - leg.z) <= 0.2) limb = Math.max(limb, Math.abs(x));
+          continue;
+        }
+        const y = position.getY(i);
+        if (uv.getX(i) <= 0.5) continue;
+        if (Math.abs(z - leg.z) > 0.18 || y < 0.3 || y > 0.8) continue;
+        wool = Math.max(wool, Math.abs(x));
+      }
+      return { name: leg.name, margin: wool - limb };
+    });
+  }
+
+  it('authors every leg inside the wool it hangs from', () => {
+    for (const { margin } of margins()) expect(margin).toBeGreaterThan(0);
+  });
+
+  it('keeps a margin the lump cannot spend, because the lump only adds', () => {
+    // The authored margin is 0.065 m at its worst, on the front -x leg. The
+    // lump's two octaves reach 0.066 + 0.02 = 0.086 m, so a SIGNED field had
+    // 0.021 m more inward travel than the tightest quarter of this body could
+    // afford. Rectified, its inward travel is zero and the margin is whole at
+    // every phase, on every instance, however hard the fleece is shaken.
+    const worst = Math.min(...margins().map((entry) => entry.margin));
+    expect(worst).toBeGreaterThan(FLEECE_LUMP_REACH - 0.025);
+    expect(worst).toBeLessThan(FLEECE_LUMP_REACH);
+
+    const source = readFileSync(
+      join(process.cwd(), 'app', 'src', 'scene', 'flock', 'sheepMotion.ts'),
+      'utf8',
+    );
+    // Both octaves remapped from -1..1 to 0..1 before they are scaled.
+    expect(source.match(/\.mul\(float\(0\.5\)\)\.add\(float\(0\.5\)\)/g)).toHaveLength(2);
+    expect(source).toContain('const lump = broadLump');
+  });
+
+  it('drives the fleece at one frequency, so the envelope cannot beat', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app', 'src', 'scene', 'flock', 'sheepMotion.ts'),
+      'utf8',
+    );
+    // Twice the gait is the bob's rate, and the bob is what the wool hangs off.
+    // A second term at THREE times the gait beat against it once per stride,
+    // swelling and collapsing the envelope - fast wool is not the same thing as
+    // wool with a pulse, and only the second one reads as a seizure.
+    expect(source).toContain('sin(bobArg.sub(float(JIGGLE_LAG)))');
+    expect(source).not.toContain('gait.mul(float(3))');
+    expect(source).not.toContain('responseJiggle');
   });
 });
 
