@@ -22,6 +22,6 @@
       "@app/*": ["./app/src/*"]
     }
   },
-  "include": ["app/src", "sim", "tests", "tools"],
+  "include": ["app/src", "sim", "tests", "tools", "lab"],
   "exclude": ["tests/worker"]
 }
