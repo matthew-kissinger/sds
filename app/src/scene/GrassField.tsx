@@ -35,7 +35,11 @@ import * as THREE from 'three/webgpu';
 import { useGameStore } from '@app/state/store';
 import { GRASS_PRESETS } from './grass/density';
 import { resolvedRenderTier } from '@app/quality/autoTier';
-import { makeGrassMaterial } from './grass/grassMaterial';
+import {
+  DEFAULT_GRASS_STYLE,
+  makeGrassMaterial,
+  type GrassMaterialStyle,
+} from './grass/grassMaterial';
 import { createInteractionField, type InteractionField } from './grass/interactionField';
 import { FIELD_TUFT, SURROUND_TUFT, buildTuftGeometry, type TuftShape } from './grass/tuftGeometry';
 import { decodeTufts, grassGroup, useTufts } from './grass/tuftData';
@@ -54,6 +58,7 @@ function buildTier(
   fraction: number,
   spread: number,
   interaction: InteractionField | null,
+  style: GrassMaterialStyle,
 ): GrassTier {
   const group = grassGroup(groupId);
   const buffers = decodeTufts(records, group, Math.round(group.count * fraction), spread);
@@ -61,6 +66,7 @@ function buildTier(
   const material = makeGrassMaterial({
     tufts: new THREE.InstancedBufferAttribute(buffers.tufts, 4),
     interaction,
+    style,
   });
 
   const mesh = new THREE.InstancedMesh(geometry, material, buffers.count);
@@ -75,7 +81,18 @@ function buildTier(
   return { mesh, blades: shape.blades * buffers.count };
 }
 
-export function GrassField() {
+export interface GrassFieldProps {
+  /**
+   * The grading. The game mounts this with no props and gets the shipped
+   * default; the asset lab passes a candidate so two gradings can be held
+   * against each other at one camera (spec/13). Changing it rebuilds the
+   * tiers, decode included, which costs nothing in a shipped page because
+   * nothing there ever changes it.
+   */
+  readonly style?: GrassMaterialStyle;
+}
+
+export function GrassField({ style = DEFAULT_GRASS_STYLE }: GrassFieldProps = {}) {
   const sim = useGameStore((state) => state.sim);
   const quality = useGameStore((state) => state.quality);
   const autoTierReceipt = useGameStore((state) => state.autoTierReceipt);
@@ -92,10 +109,10 @@ export function GrassField() {
 
   const tiers = useMemo(
     () => [
-      buildTier(records, 'field', FIELD_TUFT, density.field, density.spread, interaction),
-      buildTier(records, 'surround', SURROUND_TUFT, density.surround, density.spread, null),
+      buildTier(records, 'field', FIELD_TUFT, density.field, density.spread, interaction, style),
+      buildTier(records, 'surround', SURROUND_TUFT, density.surround, density.spread, null, style),
     ],
-    [records, density, interaction],
+    [records, density, interaction, style],
   );
 
   useEffect(

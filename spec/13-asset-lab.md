@@ -90,6 +90,21 @@ This keeps tripwire 10 honest: the game reads every field that exists, and the
 lab adds no flag to `app/src`. It also makes the constants testable, which is
 worth the refactor on its own.
 
+**Grass is the first asset through this, and it landed short of the mechanism
+above.** `GrassMaterialStyle` and `GrassPalette` exist and the shipped code
+reads every field; `GrassField` takes an optional `style`, the game mounts it
+with no props, and the presets live in `lab/`. But the lab offers NAMED
+GRADINGS rather than live sliders, and nothing emits a TypeScript patch: the
+winning preset was promoted into `DEFAULT_GRASS_STYLE` by hand.
+
+That was enough to settle a grading, and it is worth knowing why before the
+next asset copies it. Changing the style rebuilds the tiers, decode included,
+because the values are baked into the node graph. Presets flip in about a
+second, which is fine; a slider at sixty hertz is not. Live scrubbing needs
+the graded values promoted to TSL uniforms first, so the graph is built once
+and the uniforms move. Whoever wants sliders should do that, and should do it
+when a second asset needs them rather than for grass alone.
+
 ## Grass: the shipped field and `threejs-field-grass`
 
 The standalone grass library is the shipped field extracted and generalised. It

@@ -9,6 +9,7 @@
 import { create } from 'zustand';
 import type { FlockSize, QualityPreference } from '@app/state/store';
 import { labSubject, type LabSubjectId } from './subjects';
+import type { GradingId } from './grassGradings';
 
 /**
  * How the subject is shaded. `lit` is the only one the player ever sees.
@@ -40,6 +41,8 @@ export interface LabStore {
   readonly subject: LabSubjectId;
   readonly view: LabViewMode;
   readonly quality: Exclude<QualityPreference, 'auto'>;
+  /** Which grading the grass wears. `shipped` is what the game draws. */
+  readonly grading: GradingId;
   readonly flockSize: FlockSize;
   /** Turntable bearing, radians. Advanced by `orbitRate` while spinning. */
   readonly orbit: number;
@@ -58,6 +61,7 @@ export interface LabStore {
   setSubject(subject: LabSubjectId): void;
   setView(view: LabViewMode): void;
   setQuality(quality: Exclude<QualityPreference, 'auto'>): void;
+  setGrading(grading: GradingId): void;
   setFlockSize(flockSize: FlockSize): void;
   setOrbit(orbit: number): void;
   setSpinning(spinning: boolean): void;
@@ -78,6 +82,7 @@ export const useLabStore = create<LabStore>((set) => ({
   subject: OPENING,
   view: 'lit',
   quality: 'high',
+  grading: 'shipped',
   flockSize: 25,
   orbit: 0,
   spinning: false,
@@ -92,6 +97,7 @@ export const useLabStore = create<LabStore>((set) => ({
   setSubject: (subject) => set({ subject }),
   setView: (view) => set({ view }),
   setQuality: (quality) => set({ quality }),
+  setGrading: (grading) => set({ grading }),
   setFlockSize: (flockSize) => set({ flockSize }),
   setOrbit: (orbit) => set({ orbit }),
   setSpinning: (spinning) => set({ spinning }),

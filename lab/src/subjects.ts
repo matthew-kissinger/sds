@@ -17,13 +17,13 @@ import { Farmer } from '@app/scene/Farmer';
 import { Farmhouse } from '@app/scene/Farmhouse';
 import { FenceLine } from '@app/scene/FenceLine';
 import { Flock } from '@app/scene/Flock';
-import { GrassField } from '@app/scene/GrassField';
 import { Pen } from '@app/scene/Pen';
 import { Scatter } from '@app/scene/Scatter';
 import { Terrain } from '@app/scene/Terrain';
 import { Treeline } from '@app/scene/Treeline';
 import { HOME_FIELD } from '@sim/field';
 import { BARN_AT, HOUSE_AT } from '@app/scene/farmhouse/plan';
+import { GradedGrass } from './GradedGrass';
 import { LibraryGrass } from './LibraryGrass';
 
 export type LabPartId =
@@ -33,7 +33,10 @@ export type LabPartId =
 /** Draw order matters, so this record is ordered as `FieldScene` orders it. */
 export const LAB_PARTS: Record<LabPartId, ComponentType> = {
   terrain: Terrain,
-  grass: GrassField,
+  // The game's own grass, wearing whichever grading the panel selected. With
+  // `Shipped` chosen - the default - this IS `GrassField` as the game mounts
+  // it, because that is the style it falls back to.
+  grass: GradedGrass,
   // The extracted library, in the same slot in the draw order. The only part
   // here that is not a game component: it is the other side of an A/B.
   'grass-lib': LibraryGrass,
@@ -94,8 +97,8 @@ export const LAB_SUBJECTS = [
   },
   {
     id: 'grass',
-    label: 'Grass (shipped)',
-    note: 'The signature system and the largest performance lever. Flip to Grass (library) for the A/B: same bytes, same blade mesh, same tier. The camera holds across the flip.',
+    label: 'Grass',
+    note: 'The signature system and the largest performance lever. The Grading control regrades it. Flip to Grass (library code) for the implementation A/B: same bytes, same blade mesh, same tier, camera held.',
     parts: ['terrain', 'grass', 'dog'],
     target: { kind: 'dog' },
     distance: 11,
@@ -103,11 +106,11 @@ export const LAB_SUBJECTS = [
   },
   {
     id: 'grass-lib',
-    label: 'Grass (library)',
+    label: 'Grass (library code)',
     // Identical frame to `grass` on purpose: the panel holds the camera when
     // the two frames match, which is what makes the flip a comparison rather
     // than two separate views.
-    note: 'threejs-field-grass over the same tufts.bin. No bark wave, no reduced-motion path, and the wake is a 1 m CPU raster instead of a per-vertex footprint SDF.',
+    note: 'threejs-field-grass drawing the same tufts.bin. It brings its own material, so the Grading control does not reach it. No bark wave, no reduced-motion path, and the wake is a 1 m CPU raster instead of a per-vertex footprint SDF.',
     parts: ['terrain', 'grass-lib', 'dog'],
     target: { kind: 'dog' },
     distance: 11,

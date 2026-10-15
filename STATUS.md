@@ -167,6 +167,55 @@ is a capture-timing artefact of how these shots were taken, not a defect in the
 sky. Lab captures of a graded surface should wait for a non-zero draw count
 rather than a fixed delay.
 
+### Grass regrade, 2026-10-14
+
+Three gradings held against each other in the lab at one camera, judged
+against `spec/05-art-direction.md`. Three iterations, closed at acceptance,
+inside the five the guide allows.
+
+1. **Previous.** Light and flat. At the Classic camera the flock reads as a
+   pale cluster against pale green, which fails the hard rule that the flock
+   parts into individual sheep and the dog is findable in under a second. The
+   root was pale enough to read as washed out rather than as shadow.
+2. **Library grade**, the extracted library's numbers on the shipped material.
+   Past the bar in two places. Its root occlusion at 0.62 draws a dark pocket
+   at every clump base, and `spec/05` puts grass explicitly outside the outline
+   pass; its tint range of 0.86 to 1.16 reads as speckle rather than as the
+   subtle breakup the spec asks for. At 11 m its spine darkening at 0.90 gives
+   every blade its own shading, so the field reads as countable blades against
+   a reference bar that says brushstroke masses.
+3. **Candidate**, shipped. The library direction as far as the spec supports
+   and no further.
+
+What moved: root shade 0.72/0.80/0.90 to 0.62/0.72/0.86, blue still down least
+so the shadow stays cool; tip gold 0.16 to 0.24; clump hue 0.28 to 0.38; tint
+0.95-1.05 to 0.91-1.11. What was held: root occlusion moved only 0.82 to 0.76,
+and spine edge did not move at all. Wind is untouched. The painted breakup is
+untouched and was never a candidate, because the grass and the ground read one
+field now and regrading its frequencies would pull the clumps off their
+patches.
+
+The lab mechanism is `GrassField` taking an optional `style`, with `lab/`
+holding the presets. The game mounts it with no props and gets the shipped
+grading, so nothing in `app/src` carries a field only the lab reads.
+
+Evidence, this workstation, the functional lane:
+
+- Lint, `typecheck` and `typecheck:lab` clean. 904 tests in 112 files.
+- Build exit 0, 2,277.11 kB raw and 634.68 kB gzip, against 2,277.04 and
+  634.68 before the regrade: 0.07 kB raw and nothing gzipped. Both changes
+  together are 0.47 kB raw and 0.16 kB gzip over the pre-pass build.
+- Whole field, high tier, WebGPU: 36 draw calls and 3,423,564 triangles,
+  identical to the same shot before the regrade. A grading is literals in an
+  unchanged graph, and the counters say so.
+- Forced WebGL2 via `?debug=webgl`: backend `webgl2`, 37 draw calls, 3,462,348
+  triangles, grading correct.
+
+Not done: no hub timing, and no phone-aspect capture. `spec/05` asks the critic
+loop for both gameplay distances and a beauty angle at desktop and phone
+aspect; this pass used two desktop distances. The grading is therefore
+reviewed, not accepted.
+
 ## Direction changes
 
 Owner-ordered changes that override an earlier specification line. Four files

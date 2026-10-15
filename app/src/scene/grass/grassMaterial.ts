@@ -175,18 +175,11 @@ export function springResponse(age: number): number {
 
 /** Linear multiplier turning the pasture green into the tone at a blade's
  *  root, where light does not reach. Cool, not black: shadows keep their hue. */
-const ROOT_SHADE = [0.72, 0.8, 0.9] as const;
-/** Shallow root occlusion grounds each clump. Root tint and toon shade already
- *  supply depth; avoid multiplying them into a dark outline around every clump
- *  beside the softer tree masses. */
-const ROOT_AO = 0.82;
+/** Metres over which root occlusion fades out. Shape, not grade. */
 const ROOT_AO_HEIGHT = 0.26;
 /** How trodden ground is coloured: the surround's duller green carried toward
  *  the pen floor's warm trodden earth. */
 const WORN_EARTH = 0.35;
-/** A little darker at the two long edges, so a flat strip of triangles reads
- *  as a strand with a spine. */
-const SPINE_EDGE = 0.96;
 
 // --- grading -----------------------------------------------------------------
 
@@ -226,6 +219,27 @@ export interface GrassMaterialStyle {
    *  rigid object. Tip only. */
   readonly flutterRate: number;
   readonly flutterAmplitude: number;
+  /**
+   * Linear multiplier turning the pasture green into the tone at a blade's
+   * root, where light does not reach. Cool, not black: spec/05 is explicit
+   * that shadows shift hue toward cool and never toward gray or mud, so the
+   * blue channel always comes down least.
+   */
+  readonly rootShade: readonly [number, number, number];
+  /**
+   * Root occlusion, grounding each clump. Shallow on purpose: root tint and
+   * toon shade already supply depth, and multiplying them into a hard dark
+   * ring around every clump reads as an outline beside the softer tree
+   * masses - which spec/05 forbids on grass specifically.
+   */
+  readonly rootAo: number;
+  /**
+   * Darkening at a blade's two long edges, so a flat strip of triangles reads
+   * as a strand with a spine. The brake on this one is the reference bar:
+   * grass is brushstroke masses, not photoreal blades, and edge contrast is
+   * what pulls a mass apart into countable blades.
+   */
+  readonly spineEdge: number;
   /** How much of the sun's own halo the tips take. Grass that catches the
    *  light goes gold before it goes white, and this is the whole difference
    *  between a green field and a golden-hour one. */
@@ -243,17 +257,45 @@ export interface GrassMaterialStyle {
   readonly clumpHue: number;
 }
 
-/** What this material has always shipped. Changing nothing is the point. */
+/**
+ * The shipped grading.
+ *
+ * Wind is untouched from the original material. Colour was regraded against
+ * spec/05 in the asset lab, three gradings at one camera, and the numbers
+ * below are the ones that won:
+ *
+ *  - ROOT SHADE went deeper, from [0.72, 0.8, 0.9]. "Saturated shadows,
+ *    hue-shifted cool, never gray mud" is a hard rule, and the old root was
+ *    pale enough to read as washed out rather than as shadow. Blue still comes
+ *    down least, so the shadow stays cool.
+ *  - TIP GOLD and CLUMP HUE went up, from 0.16 and 0.28. "Sun-warmed greens
+ *    and golds", and hue variation between clumps is what reads as plants
+ *    where brightness variation alone reads as noise.
+ *  - TINT widened a little, from 0.95-1.05, to keep large flats off vector-flat
+ *    without crossing into speckle.
+ *  - ROOT AO came down only slightly, from 0.82. Deeper looked better in
+ *    isolation and worse in the field: it draws a dark ring at every clump
+ *    base, and spec/05 puts grass explicitly outside the outline pass.
+ *  - SPINE EDGE did not move. Edge contrast is what pulls a mass apart into
+ *    countable blades, and the reference bar is brushstroke masses.
+ *
+ * What this buys, at the Classic camera, is the hard rule in spec/05: the
+ * flock parts into individual sheep and the dog is findable in under a second,
+ * where against the old lighter field they were a pale cluster in pale green.
+ */
 export const DEFAULT_GRASS_STYLE: GrassMaterialStyle = {
   windSpeed: 6.5,
   octaveWeights: [0.55, 0.3, 0.15],
   windReach: 0.38,
   flutterRate: 5.2,
   flutterAmplitude: 0.035,
-  tipGold: 0.16,
-  tintMin: 0.95,
-  tintMax: 1.05,
-  clumpHue: 0.28,
+  rootShade: [0.62, 0.72, 0.86],
+  rootAo: 0.76,
+  spineEdge: 0.96,
+  tipGold: 0.24,
+  tintMin: 0.91,
+  tintMax: 1.11,
+  clumpHue: 0.38,
 };
 
 export interface GrassMaterialInputs {
@@ -529,7 +571,7 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
   );
   const ground = mix(color(palette.dark), color(palette.light), blend);
   const pasture = mix(ground, clumpTone, float(style.clumpHue));
-  const rootTone = color(palette.dark).mul(vec3(...ROOT_SHADE));
+  const rootTone = color(palette.dark).mul(vec3(...style.rootShade));
   const tipTone = mix(color(palette.light), color(palette.sunGlow), float(style.tipGold));
 
   const stalk = mix(rootTone, pasture, smoothstep(float(0.02), float(0.46), along));
@@ -542,11 +584,11 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
 
   const tint = mix(float(style.tintMin), float(style.tintMax), fract(seed.mul(float(7.31))));
   const occlusion = mix(
-    float(ROOT_AO),
+    float(style.rootAo),
     float(1),
     smoothstep(float(0), float(ROOT_AO_HEIGHT), along),
   );
-  const spine = mix(float(SPINE_EDGE), float(1), sin(across.mul(float(Math.PI))));
+  const spine = mix(float(style.spineEdge), float(1), sin(across.mul(float(Math.PI))));
 
   const material = makeToonMaterial(health.mul(tint).mul(occlusion).mul(spine));
   material.positionNode = positionLocal.add(vec3(displaceX, displaceY, displaceZ));

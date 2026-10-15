@@ -5,6 +5,7 @@ import type { ChangeEvent } from 'react';
 import type { FlockSize } from '@app/state/store';
 import { useLabStore, type LabViewMode } from './labStore';
 import { LAB_SUBJECTS, labSubject, type LabSubjectId } from './subjects';
+import { GRADINGS, grading } from './grassGradings';
 
 const VIEWS: readonly { readonly id: LabViewMode; readonly label: string }[] = [
   { id: 'lit', label: 'Lit' },
@@ -109,6 +110,16 @@ export function Panel() {
           </Button>
         ))}
       </div>
+
+      <span style={label}>Grading</span>
+      <div style={row}>
+        {GRADINGS.map((entry) => (
+          <Button key={entry.id} on={entry.id === lab.grading} onClick={() => lab.setGrading(entry.id)}>
+            {entry.label}
+          </Button>
+        ))}
+      </div>
+      <p style={{ margin: '0 0 14px', fontSize: '11px', opacity: 0.7 }}>{grading(lab.grading).note}</p>
 
       <span style={label}>Tier</span>
       <div style={row}>
