@@ -23,6 +23,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Dog gait geometry belongs to a contact rather than to a frame. A foot's share
+  of the cycle is fixed when it touches down, its stride is frozen while it
+  carries weight and re-aimed only in the air, and its place in the gait order
+  is re-timed only while it is off the ground. Measured over six speed profiles,
+  this takes the limb from 2106 foot-frames within 1% of straight to 52, retires
+  the 0.35 s foot settle decay, and leaves steady-state reach and stance slip
+  unchanged.
+
 - The version 3 score client is isolated to the `field-v3` partition and exact
   flock sizes 25, 75 and 200. It does not import the version 2 network client.
 - Release workflows build and verify an exact commit, keep preview scores away

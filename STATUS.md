@@ -625,18 +625,117 @@ What is left of that 53 mm is the last two frames of the speed ramp, over which
 the swing curve. That is the same root cause one step upstream, and it is the
 third place this week it has been paid for, after the braking stance and the
 gallop transition: **gait geometry is a function of the instantaneous speed**.
-Worth fixing once, properly, rather than a fourth time.
+Worth fixing once, properly, rather than a fourth time. Done, below.
+
+### A contact belongs to the foot standing on it, 2026-10-15
+
+The root cause the three sections above each paid for separately. A stance is a
+DISTANCE - exactly `2 * dogStride`, the paw sweeping from +stride to -stride
+while the body covers the same ground, which is why stance slip measures zero at
+every steady speed. `dogStanceShare` is what turns that distance into a share of
+the cycle at a given speed. Reading that share per frame means **the gate
+deciding when a planted foot lifts moves while the foot is on the ground**, and
+every symptom followed from it.
+
+Worth writing down what the two curves actually are, because the shape of them
+is why the fix is split the way it is. Substituting the share into the stride:
+
+| speed | stance share | stride |
+| --- | --- | --- |
+| 0 | 0.62 | 0 |
+| 1 | 0.62 | 0.205 |
+| 2.112 | 0.62 | 0.400 |
+| 4 | 0.370 | 0.400 |
+| 12 | 0.183 | 0.400 |
+| 25 | 0.134 | 0.400 |
+
+Above 2.112 m/s the stance clamp is off and the two terms cancel exactly:
+**stride is flat at `DOG_MAX_PAW_REACH` for the whole running range** and the
+share carries all of the speed dependence. Below it the dog is taking shorter
+steps at the gait rate's floor and the stride collapses with the speed - which
+is the standstill, and nowhere else. So the share is a timing gate that the
+whole contact is measured against, and the stride is geometry; they need
+different rules, and giving them the same one is what made the earlier attempts
+trade one defect for another.
+
+**One rule.** A foot on the ground is world-locked and carrying weight, so the
+contact it committed to at touchdown is what it gets. A foot in the air is only
+choosing where to land, so it may be re-aimed and re-timed freely, and that is
+where every change the speed asks for is now taken. In `DogMotion`:
+
+- `footStance` is fixed at touchdown and held for the whole cycle.
+- `footStride` is frozen while the foot carries weight and closes toward the
+  live value across the swing, arriving at touchdown. Deliberately not
+  rate-limited: a cap at a third of what a swing costs anyway made a foot LAND
+  still owing 318 mm of stride, standing 302 mm in front of its own contact with
+  the limb against the solver's clamp for a quarter of a second. Measured, the
+  cap made the hard brake worse, not better - 1.0000 of the chain against
+  0.9901. Paying it in the air is the whole point of doing it in the air.
+- `footOffset` is the foot's place in the gait order, moved at `DOG_RETIME_RATE`
+  and only while airborne. The trot-to-gallop separation drags foot 3 by 0.6 of
+  a cycle, and doing that to a foot on the ground pulled it along its own stance
+  ramp - the one case the `dogRig` sweep bound could never catch, because the
+  body had not travelled any further than it should have.
+
+Measured through the real rig, six speed profiles, counting every foot-frame
+where a limb sits within 1% of straight - the cusp where a two-bone solve has
+infinite slope and a millimetre of paw is tens of millimetres of knee:
+
+| profile | shipped | now |
+| --- | --- | --- |
+| gallop surge, 8 to 20 m/s | 1.0000, 7 frames | **0.9525, none** |
+| sprint surge, 12 to 25 m/s | 1.0000, 14 frames | **0.9537, none** |
+| standing start to 15 m/s | 0.9983, 1 frame | **0.9710, none** |
+| brake, 15 to 2 m/s | 0.9575, none | 0.9559, none |
+| brake to a dead stop | 1.0000, 219 frames | **0.9901, 1 frame** |
+| stop, then sit | 1.0000, 307 frames | **1.0000, 30 frames** |
+
+2106 clamped foot-frames to 52. Steady-state reach is unchanged to four decimal
+places at every speed, and stance slip is still zero.
+
+**Two things it exposed.** Neither was a regression - both are in the shipped
+code too - but both became visible once a stopped dog's feet really were at
+rest rather than merely heading there:
+
+- The sweep bound's allowance was `2 * footStride`, and a standing contact has
+  no stride at all, so twice nothing is an allowance of nothing. A dog spawned
+  at rest and accelerated had the bound collapse its feet onto the body root on
+  the second frame: 547 mm of paw with all four limbs pinned straight. The
+  allowance now has `DOG_MAX_PAW_REACH` as a floor, and the carry is along the
+  body's own displacement by the excess rather than a lerp toward the root by
+  the excess's share of the sweep - the two agree while the excess is small and
+  part company as it grows, and the second is what had the singularity.
+- `-0.17 * moving` lowers a moving dog and goes to nothing at a standstill, so a
+  standing dog stood at its bind pose - where the hind chain is 0.17% from
+  straight. `STAND_DROP` is a 0.045 m floor on it, which buys the fore limb back
+  to 0.940 and the hind to 0.950, costs 4.5 cm of a 1.05 m standing height, and
+  applies only below 0.4 m/s where the moving term is not already deeper.
+
+**And one patch retired.** The 0.35 s settle decay that brought the standstill
+teleport down from 471.9 mm to 53.4 mm is gone, along with its three arrays.
+With a contact holding the stride it planted with, and the world lock no longer
+given up below a walk, there is nothing left to gather from: removing the decay
+entirely leaves the measured standstill step where it already was, at 56.0 mm.
+The `dogRig` sweep bound stays as a backstop - what the share buys is a contact
+of the right length in cycles, and the body's speed still decides what that is
+worth in metres, so a foot that plants and then accelerates hard can still
+outrun its stride. Nothing reaches it now, but the margin is a function of the
+acceleration the movement layer happens to allow, and a limb snapping straight
+is not an acceptable way to find out that has been raised.
 
 Still open, and now the oldest thing here:
 
 - **Both chains bind straight.** The hind limb is 0.17% short of straight in the
-  bind pose and the fore 0.77%, so a dog standing still has its hind limb at
-  0.998 of its bone - on the cusp where a two-bone solve has infinite slope and a
-  millimetre of paw is tens of millimetres of knee. Every drop, crouch and gallop
-  term in `dogRig` exists to buy bend back. The sheep's front leg had the same
-  problem this week and was fixed by authoring a real carpus into the rings; the
-  dog wants an authored stifle angle, which moves the bind pose and so the
-  skinning, and is a bigger change than anything above.
+  bind pose and the fore 0.77%, so the bind pose is itself within a millimetre
+  of the cusp. `STAND_DROP` above is a floor on the symptom, and `BANK_ROOT_DROP`,
+  `GALLOP_DROP` and `CROUCH_DROP` all exist to buy bend back the same way. The
+  sheep's front leg had the same problem this week and was fixed by authoring a
+  real carpus into the rings; the dog wants an authored stifle angle, which moves
+  the bind pose and so the skinning, and is a bigger change than anything above.
+- **The dead stop still clamps, for 30 frames of a sit.** Down from 307, and the
+  one frame at 1.0000 is the fore limb passing through near-straight as the sit
+  ramp takes over. The sit itself is solved against its contacts and measures
+  0.950; it is the transition into it that is unmeasured, and it is next.
 
 ## Direction changes
 

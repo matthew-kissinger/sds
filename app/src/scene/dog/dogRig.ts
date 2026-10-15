@@ -5,15 +5,39 @@ import * as THREE from 'three/webgpu';
 import type { Heightfield } from '@app/world/heightfield';
 import { DOG_PAW_CONTACTS } from './dogGeometry';
 import { DOG_JOINTS, DOG_LEG_ROOTS } from './dogRigDefinition';
-import { dogStride, sampleDogPaw, type DogPawPose } from './dogGait';
+import { DOG_MAX_PAW_REACH, type DogPawPose } from './dogGait';
 import { DogLegSolver } from './dogLegSolver';
 import type { DogMaterial } from './dogMaterial';
 import { DOG_SPRINT_SPEED } from '@sim/tuning';
-import { DOG_MAX_BANK, type DogMotion } from './dogMotion';
+import { dogFootPose, DOG_MAX_BANK, type DogMotion } from './dogMotion';
 
 // At full bank the inside fore-limb runs out of reach, and a real animal buys
 // the same reach back the same way, by dropping its chest.
 const BANK_ROOT_DROP = 0.1;
+/**
+ * How far the chest sits below the bind pose when the dog is standing still.
+ *
+ * BOTH CHAINS BIND ALL BUT STRAIGHT - the hind limb 0.17% short, the fore 0.77%
+ * - so the bind pose is itself within a millimetre of the cusp where a two-bone
+ * solve has infinite slope. The `-0.17 * moving` term below lowers a MOVING dog
+ * and goes to nothing at a standstill, which used to be harmless only because
+ * `dogStride` never quite reached zero and so a standing foot was never quite
+ * at its rest contact. Now that a stopped dog's feet really are at rest, the
+ * hind limb stands at 1.0000 of its bone and the solver clamps: measured over
+ * the whole of a standstill, not as a transient. A centimetre of ground under
+ * one paw is then tens of millimetres of knee.
+ *
+ * 0.045 m buys the fore limb back to 0.940 and the hind to 0.950, costs 4.5 cm
+ * of a 1.05 m standing height, and is a FLOOR rather than an addition - above
+ * 0.4 m/s the moving term is already deeper and nothing here applies, so no
+ * speed the dog actually runs at is touched. It carries `upright` for the same
+ * reason every other root term does: the seated pose is solved against the
+ * ground it sits on and must not move.
+ *
+ * This is a floor on the symptom. The cure is an authored stifle angle, which
+ * moves the bind pose and so the skinning; STATUS.md carries it.
+ */
+const STAND_DROP = 0.045;
 // And past a trot the STRIDE runs the hind limb out of reach, for the same
 // reason and with the same answer. The hind paw rests 0.08 m behind its hip, so
 // at the end of a 0.4 m drive it is 0.55 m aft of the hip and 0.76 below it:
@@ -39,25 +63,6 @@ const TRUNK_STRETCH = 0.045;
 // The scapula travels over the ribcage with the limb it carries, which is where
 // a real dog gets stance length that leg length cannot supply.
 const SCAPULA_SHARE = 0.25;
-/**
- * How long a foot takes to gather from where it was standing to where the pose
- * wants it, seconds.
- *
- * A gait's geometry is a function of the INSTANTANEOUS speed, and `dogStride`
- * goes to zero with it, so the frame a dog reaches a standstill every paw's
- * commanded travel becomes zero at once: four feet caught anywhere in their
- * cycles were teleported to the standing stance. Measured through the rig on a
- * brake at DOG_ACCELERATION, that was a paw moving 471.9 mm and a knee 249.7 mm
- * in a single frame, with the limb reaching 1.0000 of its bone on the way. The
- * same thing happened again a few seconds later when the sit dropped the locks.
- *
- * So a foot keeps where it was and the difference decays. 0.35 s is long enough
- * that the gather reads as a dog settling its feet rather than skating, and
- * short enough to be over before it is sat down. A real dog takes a small step
- * instead, which is an animation this rig does not have; sliding is the honest
- * approximation, and it is bounded by the stride.
- */
-const SETTLE_TAU = 0.35;
 /**
  * The seated pose, chosen from where the dog TOUCHES THE GROUND rather than by
  * eye. A sitting dog rests on three things: both fore paws, the point of
@@ -118,17 +123,9 @@ export class DogRig {
   private readonly plants = new Float64Array(8);
   private readonly recoveryOffsets = new Float64Array(8);
   private readonly planted = [false, false, false, false];
-  /** Where a foot was standing, less where the pose now wants it. */
-  private readonly settleOffsets = new Float64Array(8);
-  /** Where each foot was actually drawn last frame, in the world. */
-  private readonly drawn = new Float64Array(8);
-  /** Whether each foot is gathering rather than locked or swinging. */
-  private readonly settling = [false, false, false, false];
   /** Last posed body position, for the travel one frame covers. */
   private lastX = NaN;
   private lastZ = NaN;
-  /** Last posed value of the motion clock, for the decay above. */
-  private lastClock = NaN;
   constructor(geometry: THREE.BufferGeometry, material: DogMaterial) {
     this.bones = DOG_JOINTS.map((joint) => {
       const bone = new THREE.Bone();
@@ -156,12 +153,9 @@ export class DogRig {
   reset(): void {
     this.planted.fill(false);
     this.recoveryOffsets.fill(0);
-    this.settleOffsets.fill(0);
-    this.settling.fill(false);
     // A teleported dog has not travelled the gap it was moved across.
     this.lastX = NaN;
     this.lastZ = NaN;
-    this.lastClock = NaN;
     this.resetBones();
   }
   private resetBones(): void {
@@ -182,14 +176,12 @@ export class DogRig {
     // negated here. The rig shipped with them positive, which leaned the dog
     // out of its turns and yawed the chest and head out of them as well.
     const bank = motion.bank * upright;
-    for (let foot = 0; foot < 4; foot++) {
-      sampleDogPaw(motion.gaitPhase, motion.locomotionSpeed, foot, this.paws[foot]!);
-    }
+    for (let foot = 0; foot < 4; foot++) dogFootPose(motion, foot, this.paws[foot]!);
     // Bend the body into its stride envelope so fixed-length limbs can reach,
     // instead of stretching a paw to compensate for a rigid high torso.
     const gallop = Math.min(1, Math.max(0,
       (motion.locomotionSpeed - GALLOP_GATE_SPEED) / (DOG_SPRINT_SPEED - GALLOP_GATE_SPEED)));
-    bones[0]!.position.y = -0.17 * moving * upright + motion.bob
+    bones[0]!.position.y = -Math.max(STAND_DROP, 0.17 * moving) * upright + motion.bob
       - GALLOP_DROP * gallop * upright
       - BANK_ROOT_DROP * Math.abs(bank) / DOG_MAX_BANK
       - CROUCH_DROP * motion.crouch * moving * upright;
@@ -233,11 +225,6 @@ export class DogRig {
       ? 0 : Math.hypot(x - this.lastX, z - this.lastZ);
     this.lastX = x;
     this.lastZ = z;
-    // `motion.clock` is the one dt this rig is handed, and it freezes with the
-    // rest of the pose clocks on pause, which is what a decay should do too.
-    const dt = Number.isNaN(this.lastClock) ? 0 : Math.max(0, motion.clock - this.lastClock);
-    this.lastClock = motion.clock;
-    const settleDecay = dt > 0 ? Math.exp(-dt / SETTLE_TAU) : 1;
     for (let foot = 0; foot < 4; foot++) {
       const paw = this.paws[foot]!;
       const rest = DOG_PAW_CONTACTS[foot]!;
@@ -248,7 +235,18 @@ export class DogRig {
       let localZ = rest.z + travel + seatedAdvance;
       let worldX = x + localX * c + localZ * s;
       let worldZ = z - localX * s + localZ * c;
-      const lock = paw.planted && motion.speed > 0.08 && motion.sit < 0.05;
+      // A FOOT ON THE GROUND IS ON THE GROUND, at any speed. The stance ramp
+      // runs on the gait's clock, so the only thing holding it to the ground a
+      // dog is actually standing on is this lock, and it used to be given up
+      // below 0.08 m/s - which was safe only because `dogStride` collapsed with
+      // the speed and took the ramp's amplitude to zero with it. Now that a
+      // contact holds the stride it planted with, giving the lock up means the
+      // ramp keeps sweeping 0.8 m on its own clock while the body stands still,
+      // and the foot slides the whole of it: measured at 163.2 mm in one frame
+      // on a brake to a dead stop, against 58.4 before. Held, a stopped dog's
+      // feet simply stay where they are, and each one gathers to the standing
+      // stance on its own next swing, which the cycle goes on providing.
+      const lock = paw.planted && motion.sit < 0.05;
       if (lock && this.planted[foot]) {
         worldX = this.locks[foot * 2]!;
         worldZ = this.locks[foot * 2 + 1]!;
@@ -257,38 +255,54 @@ export class DogRig {
         localX = dx * c - dz * s;
         localZ = dx * s + dz * c;
         // A STANCE IS A DISTANCE, NOT A STRETCH OF CLOCK, and the distance is
-        // exactly `2 * dogStride`: the foot sweeps from +stride to -stride while
-        // the body covers the same ground, which is why stance slip measures
-        // zero at every steady speed. `dogStanceShare` turns that distance into
-        // the share of the cycle it takes AT THE CURRENT SPEED - so change the
-        // speed under a foot the world has locked down and the two stop
-        // agreeing. Braking raises the stance share, so the foot is held past
-        // the stride it budgeted while the body keeps going, and neither curve
-        // notices. On a 10 m/s^2 brake from DOG_MAX_SPEED - gentler than
-        // DOG_ACCELERATION, which is what the player gets - the hind chain was
-        // pulled to 1.0000 of its bone and the solver clamped, leaving the paw
-        // 145.6 mm off the ground it was meant to be standing on. Accelerating
-        // between 8 and 20 m/s did the same.
+        // exactly `2 * motion.footStride`: the foot sweeps from +stride to
+        // -stride while the body covers the same ground, which is why stance
+        // slip measures zero at every steady speed. A contact now carries its
+        // own stride and its own share of the cycle from the frame it planted
+        // (see `DogMotion.footStance`), so the two agree through a speed change
+        // and the body can no longer outrun a foot it has locked down.
         //
-        // So a contact ends where its stride ends, and past that the lock is
-        // carried forward with the body: the foot slides, which is what a
-        // braking dog does on grass, instead of the limb snapping straight.
+        // This stays as the backstop, because what the share buys is a contact
+        // of the right LENGTH IN CYCLES and the body's speed still decides what
+        // that is worth in metres. A foot that plants and then accelerates hard
+        // covers more ground than its stride before its share runs out. Measured
+        // through the rig, latching alone keeps the worst case under the stride,
+        // so nothing reaches this - but the margin is not large, it is a
+        // function of the acceleration the movement layer happens to allow, and
+        // a limb snapping straight is not an acceptable way to find out it has
+        // been raised. Past its stride the lock is carried forward with the body
+        // and the foot slides, which is what a braking dog does on grass.
         //
         // Measured as the BODY'S OWN PATH since the foot planted, not as a
         // body-space coordinate. In a turn a locked foot's local Z falls behind
         // the straight-ahead line without the body having carried it any
         // further, and clamping on that broke the lift-off the turn tests pin.
         const sweep = Math.hypot(x - this.plants[foot * 2]!, z - this.plants[foot * 2 + 1]!);
-        const allowed = 2 * dogStride(motion.locomotionSpeed);
+        // Never less than the limb's own reach to give, because a STANDING
+        // contact has no stride at all - `dogStride` is zero below a walk - and
+        // twice nothing is an allowance of nothing. A dog spawned at rest and
+        // accelerated therefore had `back` come out at the whole of the sweep on
+        // its second frame, which does not bound the foot, it collapses it onto
+        // the body root: 547 mm of paw in one frame with all four limbs pinned
+        // straight, on the second frame of every standing start. A foot that has
+        // no step to take is still a foot, and what it can be left behind by
+        // before anything is pulled straight is DOG_MAX_PAW_REACH.
+        const allowed = Math.max(2 * motion.footStride[foot]!, DOG_MAX_PAW_REACH);
         if (sweep > allowed) {
-          const back = (sweep - allowed) / sweep;
-          worldX += (x - worldX) * back;
-          worldZ += (z - worldZ) * back;
+          // Carried ALONG the body's own displacement by exactly the excess,
+          // rather than lerped toward the body root by the excess's share of the
+          // sweep. The two agree while the excess is small and part company as
+          // it grows, and the second has a root-collapsing singularity as the
+          // allowance goes to nothing - which is how the above was found.
+          const excess = sweep - allowed;
+          const alongX = (x - this.plants[foot * 2]!) / sweep;
+          const alongZ = (z - this.plants[foot * 2 + 1]!) / sweep;
+          worldX += alongX * excess;
+          worldZ += alongZ * excess;
           this.locks[foot * 2] = worldX;
           this.locks[foot * 2 + 1] = worldZ;
-          this.plants[foot * 2] = this.plants[foot * 2]! + (x - this.plants[foot * 2]!) * back;
-          this.plants[foot * 2 + 1] = this.plants[foot * 2 + 1]!
-            + (z - this.plants[foot * 2 + 1]!) * back;
+          this.plants[foot * 2] = this.plants[foot * 2]! + alongX * excess;
+          this.plants[foot * 2 + 1] = this.plants[foot * 2 + 1]! + alongZ * excess;
           const dx = worldX - x;
           const dz = worldZ - z;
           localX = dx * c - dz * s;
@@ -322,12 +336,12 @@ export class DogRig {
           // The ramp ends where the stride ends, for the same reason the lock
           // does, plus the one frame contact is sampled at. `stanceTravel` is
           // deliberately unbounded so the sub-frame handover reads right, but a
-          // stance carried well past its stride makes it read the slide above as
-          // if it were a turn's drift - and then carries that forward into the
-          // swing, on top of the reach the swing already wants. Measured: the
-          // hind chain hit the solver's own clamp while the dog surged between
-          // 8 and 20 m/s, which is the one case the sweep bound alone missed.
-          const stride = dogStride(motion.locomotionSpeed);
+          // stance carried past its stride makes it read the slide above as if
+          // it were a turn's drift - and then carries that forward into the
+          // swing, on top of the reach the swing already wants. The contact's
+          // own stride, not this frame's: the foot committed to that when it
+          // planted and the bound has to agree with the ramp it is bounding.
+          const stride = motion.footStride[foot]!;
           const rampTravel = Math.max(paw.stanceTravel, -stride - frameTravel);
           const rampZ = rest.z + rampTravel * (1 - motion.sit) + seatedAdvance;
           this.recoveryOffsets[foot * 2] = dx * c - dz * s - nominalX;
@@ -339,38 +353,16 @@ export class DogRig {
         worldX = x + localX * c + localZ * s;
         worldZ = z - localX * s + localZ * c;
       } else this.recoveryOffsets.fill(0, foot * 2, foot * 2 + 2);
-      if (!lock && paw.planted) {
-        // Nominally standing, but not world-locked: the dog has stopped, or has
-        // sat down. Both drop every lock at once while `dogStride` collapses to
-        // zero, so the pose wants all four feet at the standing stance this very
-        // frame, wherever their cycles had them. See `SETTLE_TAU`.
-        //
-        // Captured against WHERE THE FOOT WAS DRAWN, not against the lock: the
-        // lock bookkeeping above has already overwritten itself by here, and for
-        // a foot that was mid-swing it never held a stance position at all - and
-        // the swinging feet are the ones with the furthest to go.
-        // `dt > 0` also means there HAS been a previous frame: nothing can have
-        // been drawn before the first pose, or while the clocks are paused.
-        if (!this.settling[foot] && dt > 0) {
-          this.settling[foot] = true;
-          const dx = this.drawn[foot * 2]! - x;
-          const dz = this.drawn[foot * 2 + 1]! - z;
-          this.settleOffsets[foot * 2] = dx * c - dz * s - localX;
-          this.settleOffsets[foot * 2 + 1] = dx * s + dz * c - localZ;
-        }
-        localX += this.settleOffsets[foot * 2]!;
-        localZ += this.settleOffsets[foot * 2 + 1]!;
-        worldX = x + localX * c + localZ * s;
-        worldZ = z - localX * s + localZ * c;
-        this.settleOffsets[foot * 2] = this.settleOffsets[foot * 2]! * settleDecay;
-        this.settleOffsets[foot * 2 + 1] = this.settleOffsets[foot * 2 + 1]! * settleDecay;
-      } else {
-        this.settling[foot] = false;
-        this.settleOffsets[foot * 2] = 0;
-        this.settleOffsets[foot * 2 + 1] = 0;
-      }
-      this.drawn[foot * 2] = worldX;
-      this.drawn[foot * 2 + 1] = worldZ;
+      // NO GATHER HERE ANY MORE, and the absence is the point. A foot that
+      // was nominally standing but not world-locked used to have to be slid
+      // from where it had been drawn to where the pose now wanted it, under
+      // a 0.35 s decay: 471.9 mm of paw and 249.7 mm of knee in a single frame
+      // otherwise, because `dogStride` collapsed with the speed and so the
+      // frame a dog stopped, all four feet were commanded to the standing
+      // stance at once from wherever their cycles had them. A contact now holds
+      // the stride it planted with and the lock is no longer given up below a
+      // walk, so there is nothing to gather from: removing the decay entirely
+      // leaves the measured standstill step where it already was.
       this.planted[foot] = lock;
       const lift = paw.lift * (1 - motion.sit);
       const terrain = field.groundY(worldX, worldZ) - ground;
