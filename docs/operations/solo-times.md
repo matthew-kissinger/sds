@@ -1,9 +1,10 @@
-# Sheepdog Sim 3 solo-times cutover
+# Sheepdog Sim solo times
 
 ## Status
 
-Implemented locally on `codex/v3-static-cutover`. No production Worker, D1,
-Pages, DNS or repository setting has been changed.
+Deployed. The production Worker shipped first, without a D1 migration, and
+health plus all three `field-v3` leaderboard read paths returned HTTP 200 before
+Pages was cut over. The procedure below is the one to repeat, not a plan.
 
 The Worker-only change adds `worker/src/scorePartitions.ts`. The helper keeps
 the clean-room client on `field-v3`, allows exactly 25, 75 and 200 for solo

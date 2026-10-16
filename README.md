@@ -127,7 +127,8 @@ including [trees](assets/treeline/README.md), [dog](assets/dog/README.md),
 
 Production deploys use the manually dispatched
 [Pages workflow](.github/workflows/deploy.yml), pinned to a full commit SHA on
-`main`. It installs dependencies, runs lint, typechecks, tests and the build,
+`main`, and the procedure is
+[docs/operations/deployment.md](docs/operations/deployment.md). It installs dependencies, runs lint, typechecks, tests and the build,
 archives the artifact, then verifies the live release and discovery pages.
 
 Contributor checks additionally cover:

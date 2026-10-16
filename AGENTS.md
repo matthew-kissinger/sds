@@ -36,6 +36,10 @@ rollback. Keep that service isolated from the client.
   `workflow_dispatch` taking that exact SHA, so what shipped is always a named
   commit that can be named again to roll back - which is the whole reason
   version 2 is still recoverable from its own immutable deployment.
+- `docs/operations/deployment.md` is the one description of how a change reaches
+  production: the single workflow, what each Cloudflare and GitHub name means,
+  which deployment targets are stale, and the seven steps from merge to tag.
+  Read it before deploying rather than inferring the procedure from workflows.
 
 ## Architecture tripwires
 
