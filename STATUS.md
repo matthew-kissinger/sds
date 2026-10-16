@@ -193,9 +193,11 @@ with its grass rebake. The Kiln barn followed the same evening: merged behind
 `BARN_SOURCE` (pull request 123), the owner's look review passed on the
 production build together with a house fix (no window over the door), its
 hub receipt passed (twelve runs, same shape), and the flip merged (pull
-request 125, `e3642877`). The whole homestead is Kiln. Release 3.3.0 is the
-head of `main`, awaiting its tag. Open from the barn review: the slate course
-wander (owner's call, see the status log). Next: Stage B.
+request 125, `e3642877`). The whole homestead is Kiln and live as 3.3.0
+(`6a605e16`, tag `v3.3.0`). Open from the barn review: the slate course
+wander (owner's call, see the status log). Stage B was then attempted on the
+preview Worker and its four checks passed (pull request 126, draft, below).
+Next: the owner's decision on the production cutover to `cf`.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -230,6 +232,28 @@ preview and production steps, keeps production on Stage A. The planning
 review's reasons: `cf` is beta and only accepts the Vite plugin's v2 beta;
 its `exports` map replaces the migrations array and is documented as one-way
 once deployed; and `cf deploy` provisions missing resources by default.
+
+**Stage B's four checks passed on the preview Worker, 2026-10-16** (pull
+request 126, kept as a draft; the measurements are in
+`docs/history/status-log.md`, Release 2 Stage B). `cf` 1.0.0-beta.18 and the
+Vite plugin 2.0.0-beta.v.1 built the same artifact as Stage A (digest
+`2b64a94f...`), and the pull request's own Preview run uploaded the `pr-126`
+alias and deployed to `sds-worker-preview` with `cf`: the served asset set,
+headers and bodies are identical to the Stage A baseline except
+`release.json`'s commit; the versions' bindings, runtime and `migration_tag`
+(`v2`) are identical and the zone's route list is unchanged; a wrangler
+deploy of the older Stage A build and a wrangler rollback across the `cf`
+deploy both left the tag at `v2`; and every earlier alias still answers. Two
+costs the attempt measured, both in the status log: the plugin reads
+`cloudflare.config.ts` from the Vite root only, so the file lives in `app/`
+and `cf` runs from there; and the plugin forces the build to
+`app/.cloudflare/output/v0`, so `dist/` and the generated `wrangler.json` are
+no longer written, which means the branch cannot deploy production with
+wrangler. Merging it is therefore the cutover: `deploy.yml` moves to `cf
+deploy --prebuilt`, the tools and the deployment runbook read the Build
+Output, and `wrangler.toml` stays only as long as a rollback to Stage A needs
+it. Production stays on Stage A until the owner gives that go; a change in
+either beta before then reopens the checks.
 
 From the renderer boot review
 (`docs/history/renderer-boot-review-2026-10-16.md`), done 2026-10-16: the
