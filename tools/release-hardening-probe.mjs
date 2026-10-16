@@ -239,8 +239,11 @@ for (const path of launchExecutableFiles) {
 const launchExecutableSource = launchExecutableFiles
   .map((path) => readFileSync(path, 'utf8'))
   .join('\n');
+if (launchExecutableSource.includes('sds-worker.matt-m-kissinger.workers.dev')) {
+  fail('the score API must be same-origin, but the bundle names the workers.dev host');
+}
 for (const required of [
-  'sds-worker.matt-m-kissinger.workers.dev',
+  '/api/register',
   'field-v3',
   'soloClassic',
 ]) {

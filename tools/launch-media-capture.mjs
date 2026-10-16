@@ -25,7 +25,8 @@ import {
 const PORT = 5324;
 const OUTPUT = join(repo, 'app', 'public', 'og', 'sheepdog-sim-v2.png');
 const GITHUB_OUTPUT = join(repo, 'docs', 'launch', 'media', 'sheepdog-sim-github.jpg');
-const SCORE_ORIGIN = 'https://sds-worker.matt-m-kissinger.workers.dev';
+// The score API is same-origin, so it is mocked on the preview server itself.
+const SCORE_ORIGIN = `http://localhost:${PORT}`;
 
 mkdirSync(dirname(OUTPUT), { recursive: true });
 mkdirSync(dirname(GITHUB_OUTPUT), { recursive: true });
@@ -52,7 +53,7 @@ try {
     if (message.type() === 'error') errors.push(message.text());
   });
 
-  await page.route(`${SCORE_ORIGIN}/**`, (route) => route.abort('blockedbyclient'));
+  await page.route(`${SCORE_ORIGIN}/api/**`, (route) => route.abort('blockedbyclient'));
   await page.route(`${SCORE_ORIGIN}/api/register`, async (route) => {
     await route.fulfill({
       status: 200,

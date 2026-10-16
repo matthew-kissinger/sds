@@ -42,9 +42,17 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
   },
+  // The client calls the score API same-origin at /api, as it does in
+  // production where sds-worker serves both. Locally that is `wrangler dev`
+  // run from worker/ on its default port; without it the online boards report
+  // unavailable and the game itself is unaffected.
   server: {
     port: 5199,
     strictPort: true,
+    proxy: { '/api': 'http://127.0.0.1:8787' },
+  },
+  preview: {
+    proxy: { '/api': 'http://127.0.0.1:8787' },
   },
   optimizeDeps: {
     include: ['ajv'],

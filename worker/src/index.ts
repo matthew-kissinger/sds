@@ -53,17 +53,6 @@ interface Env {
   SCORE_ADMIN_SECRET?: string;
 }
 
-const ALLOWED_ORIGINS = new Set([
-  'https://sheepdogsim.com',
-  'https://www.sheepdogsim.com',
-  'https://sds-frontend.pages.dev',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:4173',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173',
-]);
-
 // P-SEC-4 (g): front-door rate limiter. A best-effort per-isolate token bucket
 // keyed by the client IP (cf-connecting-ip). Cloudflare keeps isolates warm and
 // pins a given client to a colo, so the overwhelming majority of one IP's
@@ -160,22 +149,23 @@ function scoreSubmitAllowed(persistentId: string): boolean {
   return consumeToken(b, now, SCORE_BUCKET_CAPACITY, SCORE_REFILL_PER_SEC);
 }
 
-function corsHeaders(origin: string | null): Record<string, string> {
-  const allow =
-    origin &&
-    (ALLOWED_ORIGINS.has(origin) ||
-      origin.endsWith('.sds-frontend.pages.dev') ||
-      origin.endsWith('.sheepdogsim.pages.dev'))
-      ? origin
-      : '*';
-  return {
-    'access-control-allow-origin': allow,
-    'access-control-allow-methods': 'GET, POST, OPTIONS',
-    'access-control-allow-headers': 'Content-Type, Authorization',
-    'access-control-max-age': '86400',
-    vary: 'Origin',
-  };
-}
+// The game now calls this API same-origin. These headers remain for the
+// callers that are still cross-origin: every client built before Release 1,
+// which has sds-worker.matt-m-kissinger.workers.dev baked in - an open tab, the
+// Pages deployment that answers sheepdogsim.com again if the route is deleted
+// for a rollback, and the immutable v2 deployment on sds-frontend.pages.dev -
+// plus local probes that build with VITE_SCORE_API_BASE.
+//
+// The old per-origin allow-list answered '*' for any origin it did not name,
+// so it never restricted anything. Identity is a bearer token, never a cookie,
+// and '*' forbids credentialed requests, so a fixed '*' is the same access
+// with nothing to maintain. Delete it once nothing calls the workers.dev host.
+const CORS_HEADERS: Record<string, string> = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
+  'access-control-allow-headers': 'Content-Type, Authorization',
+  'access-control-max-age': '86400',
+};
 
 function json(body: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -220,8 +210,7 @@ export default {
     // Only /api/* is the API. Anything else is the game's static surface.
     if (!path.startsWith('/api/')) return env.ASSETS.fetch(request);
 
-    const origin = request.headers.get('Origin');
-    const cors = corsHeaders(origin);
+    const cors = CORS_HEADERS;
 
     if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: cors });

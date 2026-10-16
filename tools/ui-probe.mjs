@@ -33,7 +33,8 @@ const base = urlFlag ? urlFlag.replace(/\/$/, '') : `http://localhost:${port}`;
 const label = flag('label', 'phase4-ui');
 if (!/^[a-z0-9][a-z0-9._-]*$/i.test(label)) throw new Error(`bad --label ${label}`);
 const outDir = join(repo, 'captures', 'ui', label);
-const SCORE_ORIGIN = 'https://sds-worker.matt-m-kissinger.workers.dev';
+// The score API is same-origin, so it is mocked on the page's own origin.
+const SCORE_ORIGIN = base;
 
 async function mockScores(page) {
   await page.route(`${SCORE_ORIGIN}/api/register`, (route) => route.fulfill({
