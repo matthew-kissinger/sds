@@ -131,8 +131,11 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   Release 2 work. Release 1 ships the code-built house.
   `tests/treeline-assets.spec.ts` now permits exactly one runtime GLB, the
   farmhouse, digest-checked against `assets/house/asset-manifest.json`.
-- Hub timing runs once, at the end, before the tag: both backends, before and
-  after, with the dependency bump and the Worker migration in. Receipts go to
+- Hub gate passed 2026-10-16 on both backends: frame percentiles identical to
+  3.1.0, zero frames over 100 ms, same tier, draws and triangles. It also found
+  and removed a startup regression from `@react-three/fiber` 9.8's Suspense
+  gating of async renderer factories, fixed in this repository's boot path
+  rather than by pinning. The receipt and the bisect are in
   `docs/history/status-log.md`.
 - Cleanups: revoke the unused `BROWSERSTACK_*` repository secrets, delete the
   two stale GitHub environments, and turn off Web Analytics on the Pages

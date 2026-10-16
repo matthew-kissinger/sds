@@ -5,6 +5,64 @@
 
 # Status log
 
+## Release 1 hub gate - 2026-10-16, passed
+
+Taken on `mk-os` over the `hub` alias, native viewport, Classic camera,
+adapter nvidia/turing, Chrome stable at `/opt/google/chrome/chrome`, Playwright
+1.61.1 read-only. Preflight idle samples under 2% CPU and 0% GPU for every run.
+"Before" is the exact 3.1.0 production artifact (`1dbd0150`, downloaded from
+the deploy run's archive). "Candidate" is the 3.2.0 build at `10bd9be6`: the
+Worker migration code, every dependency at latest stable, the farmhouse loader
+on `procedural`, and the boot-path fix below. Receipts under
+`captures/stability/hub-receipts/release1/`, gitignored as every receipt in this
+lane is, so the numbers here are the record.
+
+**60-second runs, one per backend and arm.**
+
+| | frames | p50 | p95 | p99 | max | over 100 ms | ready | draws | triangles |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| WebGPU before | 7,188 | 8.30 | 8.40 | 8.40 | 41.6 | 0 | 2,757 ms | 40 | 3,959,384 |
+| WebGPU candidate | 7,185 | 8.30 | 8.40 | 8.40 | 25.1 | 0 | 2,588 ms | 40 | 3,959,384 |
+| WebGL2 before | 7,195 | 8.30 | 8.40 | 8.40 | 16.8 | 0 | 2,643 ms | 40 | 3,959,384 |
+| WebGL2 candidate | 7,196 | 8.30 | 8.40 | 8.40 | 25.0 | 0 | 2,135 ms | 40 | 3,959,384 |
+
+No frame-time regression: every percentile is identical on both backends, zero
+frames over 100 ms, the same draw and triangle readout, the same `high` tier by
+measurement. The same two limits as the asset polish receipt apply: a
+vsync-locked distribution near 120 Hz shows the budget is met with headroom,
+not how much; and the settled Classic screenshot has the farm out of frame.
+
+**The startup regression that was found and removed.** The first candidate
+build (before the boot fix) booted slower than 3.1.0: medians of three
+boot-only runs put the renderer-to-capability window at 230 ms against 76 on
+WebGPU and 399 against 98 on WebGL2, consistent every run, with every other
+boot window unchanged. Single-revert variants on the hub cleared three 0.186.1,
+react 19.3.1 and vite 8 of any part in it; only `@react-three/fiber` 9.7.0 in
+place of 9.8.2 restored the baseline, and a `scheduler` 0.27 override produced a
+byte-identical bundle, so it was fiber's own code. The cause, read in the
+shipped fiber and react-dom code and confirmed against fiber's 9.8.0 release
+notes (pmndrs/react-three-fiber#3925): a Canvas whose `gl` factory returns a
+promise now waits on it through a Suspense gate, and React's fallback throttle
+(`FALLBACK_THROTTLE_MS`, 300 ms) holds the resolved commit until 300 ms after
+the fallback was shown. WebGL2 initialises almost instantly and paid the full
+300; WebGPU's own init absorbed half.
+
+The fix is in this repository's boot path, not a pin: `glFactory` returns the
+renderer before `init()` resolves so fiber mounts synchronously, the capability
+probe awaits `rendererReady()` before it measures, and the frame loop stays
+paused until the scene is ready because three throws on a render before init.
+Boot-only medians after the fix, three runs each, interleaved with the unfixed
+build: renderer-to-capability 64 to 87 ms on both backends, inside the 3.1.0
+band; ready 2,645 ms WebGPU and 2,639 ms WebGL2 against 2,662 and 1,833 to
+2,702 before, with the shaders phase as noisy as it always is on WebGL2.
+
+**Harness note.** Every candidate receipt lists one failed request,
+`cloudflareinsights.com/cdn-cgi/rum`: the beacon now in `app/index.html`
+cannot report from the probe's loopback origin, and `probe:boot` on this PC
+also logs a 502 because the dev proxy for `/api` has no Worker behind it. Both
+are artifacts of the new architecture meeting a static harness, not defects;
+the probes should stub those two paths so they measure the game alone.
+
 ## Release 1, Phase 1 - 2026-10-16: dependencies and farmhouse wiring
 
 Two parallel worktree passes, merged to `main` the same day. Desk lane only;
