@@ -4,6 +4,28 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- 3.2.1 (not yet tagged): one root package. The Worker is built and served by
+  `@cloudflare/vite-plugin` from the root `wrangler.toml`; `worker/` keeps its
+  source and migrations but loses its `package.json`, lockfile and
+  `tsconfig.json`. `npm run dev` serves the game and the score API on one
+  origin with a local D1 and no proxy. There is no client change, and
+  `dist/release.json` reports the same artifact digest as 3.2.0.
+- The release manifest is written by a Vite plugin at the end of the client
+  build, after `app/public` is copied, instead of by a command after the build.
+  It skips the plugin's `.assetsignore`, which is never uploaded or served.
+- `Deploy` and `Preview` run wrangler from the repository root with
+  `--config .wrangler/build/sds_worker/wrangler.json`, the configuration the
+  build generated, after `scripts/verify-deploy-config.mjs` checks its name,
+  route, D1 id, migrations and assets. The preview D1 id is committed in
+  `wrangler.toml`; the `CF_PREVIEW_D1_ID` variable and its substitution step
+  are gone, and the preview D1 migrates before the build.
+- Browser probes serve `dist/` with a small static server instead of
+  `vite preview`.
+
 ## [3.2.0] - 2026-10-16
 
 ### Changed

@@ -82,8 +82,8 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   with single-page-application fallback, `run_worker_first` on `/api/*`,
   `workers_dev = true` set explicitly, and a Worker route on
   `sheepdogsim.com/*`. Cutover by route, never custom domain; rollback is
-  deleting the route. Configuration stays in `worker/wrangler.toml` for this
-  release. The `cf` CLI's `cloudflare.config.ts` is Release 2 work: `cf` is a
+  deleting the route. Configuration stayed in `worker/wrangler.toml` for this
+  release and moved to the root in Release 2 Stage A. The `cf` CLI's `cloudflare.config.ts` is Release 2 work: `cf` is a
   beta that rebuilds the project shape and does not run this repository's build
   script, and that must not land in the same change as a live hostname cutover.
   Code merged 2026-10-16: assets block, route, `workers_dev = true`,
@@ -176,7 +176,26 @@ plain directory, one `wrangler.toml` at the root with the preview D1 id
 committed, the release manifest written by a Vite plugin into the uploaded
 directory, the client kept at `dist/`, `vite dev` serving game and API with a
 local D1 and no proxy, the workflows deploying with wrangler from the root.
-Stage A ships alone as 3.2.1 with no client change. Stage B: `cf` and
+Stage A ships alone as 3.2.1 with no client change.
+
+**Stage A is in review** (pull request `release2/stage-a-vite-plugin`, not
+tagged). Measured with `@cloudflare/vite-plugin` 1.64.0 and wrangler 4.151.1:
+the plugin forces the client to `dist/client` unless
+`environments.client.build.outDir` is set, so the client stays at `dist/` and
+the Worker builds to `.wrangler/build/sds_worker`; it always emits
+`dist/.assetsignore`, which the release manifest leaves out of its digest, so
+the artifact digest is identical to 3.2.0's (32 files, 6,588,591 bytes); and
+its deploy redirect lands in `app/.wrangler/deploy/config.json` because the
+Vite root is `app/`, where wrangler will not follow it, so both workflows pass
+the generated `.wrangler/build/sds_worker/wrangler.json` with `--config` and
+`verify-deploy-config.mjs` checks that file before every deploy and preview.
+Browser probes serve `dist/` with a static server, not `vite preview`. Rolling
+back to the 3.2.0 commit dispatches `Deploy` at the `v3.2.0` ref. After the
+tag, the first production deploy is the check that wrangler publishes the same
+route, bindings and migrations from the generated file; the dry run and the
+config comparison showed no difference.
+
+Stage B: `cf` and
 `cloudflare.config.ts`, attempted on the preview Worker only, and cut to
 production only if four checks pass (identical asset set and headers, identical
 bindings and route list, the Durable Object migration tag untouched by a
