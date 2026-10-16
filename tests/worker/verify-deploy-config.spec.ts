@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // @ts-expect-error plain ES module without declarations
-import { checkDeployConfig } from '../../scripts/verify-deploy-config.mjs';
+import { checkBuildOutput, checkDeployConfig } from '../../scripts/verify-deploy-config.mjs';
 
 const PRODUCTION_D1 = '513aa937-e60a-4fb6-b499-9f3814149e88';
 const PREVIEW_D1 = '6d5b0fce-952f-4d94-8936-b51fc559496c';
@@ -135,5 +135,78 @@ describe('verify-deploy-config', () => {
     const failures = check(config).join('\n');
     expect(failures).toMatch(/assets\.run_worker_first:/);
     expect(failures).toMatch(/assets\.not_found_handling:/);
+  });
+});
+
+/**
+ * The same gate for the Build Output `cf deploy --prebuilt` ships (Release 2
+ * Stage B): app/.cloudflare/output/v0 with config.json, the Worker's
+ * worker.config.json, its bundle and the assets.
+ */
+const cfWorker = (preview = false) => ({
+  name: preview ? 'sds-worker-preview' : 'sds-worker',
+  compatibilityDate: '2026-04-01',
+  compatibilityFlags: ['nodejs_compat'],
+  assets: { notFoundHandling: 'single-page-application', runWorkerFirst: ['/api/*'] },
+  observability: { enabled: true },
+  workersDev: true,
+  previewUrls: preview,
+  ...(preview ? {} : { triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] }),
+  env: {
+    ASSETS: { type: 'assets' },
+    DB: { type: 'd1', name: preview ? 'sds-db-preview' : 'sds-db', id: preview ? PREVIEW_D1 : PRODUCTION_D1 },
+    JWT_SECRET: { type: 'secret' },
+  },
+  manifest: { type: 'partial', mainModule: 'index.js', modules: {} },
+});
+
+function writeBuildOutput(worker: Record<string, unknown>, mode: string, { withRelease = true } = {}) {
+  const output = mkdtempSync(join(tmpdir(), 'sds-build-output-'));
+  writeFileSync(join(output, 'config.json'), JSON.stringify({ buildContext: { isPreview: false, mode } }));
+  const workerDir = join(output, 'workers', 'default');
+  mkdirSync(join(workerDir, 'bundle'), { recursive: true });
+  mkdirSync(join(workerDir, 'assets'));
+  writeFileSync(join(workerDir, 'bundle', 'index.js'), '');
+  writeFileSync(join(workerDir, 'assets', 'index.html'), '<html></html>');
+  if (withRelease) writeFileSync(join(workerDir, 'assets', 'release.json'), '{}');
+  writeFileSync(join(workerDir, 'worker.config.json'), JSON.stringify(worker));
+  return output;
+}
+
+describe('verify-deploy-config --cf', () => {
+  const outputs: string[] = [];
+  const check = (worker: Record<string, unknown>, mode: string, options: { preview?: boolean; withRelease?: boolean } = {}) => {
+    const output = writeBuildOutput(worker, mode, options);
+    outputs.push(output);
+    return checkBuildOutput(output, options) as string[];
+  };
+  afterAll(() => { for (const output of outputs) rmSync(output, { recursive: true, force: true }); });
+
+  it('passes the production and preview Build Outputs it expects', () => {
+    expect(check(cfWorker(), 'production')).toEqual([]);
+    expect(check(cfWorker(true), 'preview', { preview: true })).toEqual([]);
+  });
+
+  it('fails a build made in the other mode', () => {
+    expect(check(cfWorker(true), 'preview').join('\n')).toMatch(/buildContext\.mode:|^name:/m);
+    expect(check(cfWorker(), 'production', { preview: true }).join('\n')).toMatch(/buildContext\.mode:/);
+  });
+
+  it('fails a wrong D1, a dropped route, a preview route and a Durable Object export', () => {
+    const wrongDb = cfWorker();
+    wrongDb.env.DB.id = PREVIEW_D1;
+    expect(check(wrongDb, 'production').join('\n')).toMatch(/^env:/m);
+    const noRoute = { ...cfWorker(), triggers: [] };
+    expect(check(noRoute, 'production').join('\n')).toMatch(/^triggers:/m);
+    const previewRoute = { ...cfWorker(true), triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] };
+    expect(check(previewRoute, 'preview', { preview: true }).join('\n')).toMatch(/^triggers:/m);
+    const withExports = { ...cfWorker(), exports: { RoomDO: { type: 'durable-object', storage: 'sqlite' } } };
+    expect(check(withExports, 'production').join('\n')).toMatch(/^exports:/m);
+  });
+
+  it('fails a missing bundle entry and a missing release.json', () => {
+    const noMain = { ...cfWorker(), manifest: { type: 'partial', mainModule: 'missing.js', modules: {} } };
+    expect(check(noMain, 'production').join('\n')).toMatch(/manifest\.mainModule/);
+    expect(check(cfWorker(), 'production', { withRelease: false }).join('\n')).toMatch(/no release\.json/);
   });
 });

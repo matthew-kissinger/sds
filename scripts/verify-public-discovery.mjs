@@ -132,7 +132,10 @@ function verifyPages(files) {
 }
 
 function readLocal() {
-  const dist = join(repo, sourceFiles ? 'app/public' : 'dist');
+  // --dist names the built directory to read when it is not dist/: the cf
+  // path's Build Output assets (Release 2 Stage B) live under
+  // app/.cloudflare/output/v0/workers/default/assets.
+  const dist = join(repo, sourceFiles ? 'app/public' : option('dist', 'dist'));
   const paths = {
     '/': 'index.html',
     '/about': 'about.html',

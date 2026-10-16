@@ -58,11 +58,12 @@ export default defineConfig({
     react(),
     dropUnreferencedModels,
     // The Worker is built and served by the Cloudflare plugin from the root
-    // wrangler.toml; the client never imports it. The Vite root is app/, so
-    // both paths are absolute.
+    // cloudflare.config.ts (Release 2 Stage B; the plugin's 2.0 line reads
+    // that file and has no config path); the client never imports it. Local
+    // D1 and asset state for `vite dev` and `vite preview` live under
+    // .cloudflare/, gitignored.
     cloudflare({
-      configPath: fileURLToPath(new URL('./wrangler.toml', import.meta.url)),
-      persistState: { path: fileURLToPath(new URL('./.wrangler/state', import.meta.url)) },
+      persistState: { path: fileURLToPath(new URL('./.cloudflare/state', import.meta.url)) },
     }),
     releaseManifest,
   ],
@@ -74,16 +75,13 @@ export default defineConfig({
     },
   },
   build: {
-    // With the Cloudflare plugin this is the parent of every Worker build
-    // environment: the Worker lands in .wrangler/build/sds_worker, and
-    // wrangler.json there is what wrangler deploys (--config). It stays out of
-    // dist/ so that dist/ is exactly what is served.
-    outDir: fileURLToPath(new URL('./.wrangler/build', import.meta.url)),
-    emptyOutDir: true,
+    // The Cloudflare plugin 2.0 owns the output: it writes the Build Output
+    // Specification under the Vite root, app/.cloudflare/output/v0/, with the
+    // client at workers/default/assets/ and the Worker beside it. That assets
+    // directory is the artifact `cf deploy` uploads, so release.json is
+    // written into it (releaseManifest above follows the client's outDir).
     target: 'es2022',
   },
-  // The plugin would put the client in dist/client; the artifact stays at dist/.
-  environments: { client: { build: { outDir: dist, emptyOutDir: true } } },
   // The client calls the score API same-origin at /api, as it does in
   // production where sds-worker serves both. `vite dev` runs the Worker beside
   // the client through the Cloudflare plugin, so there is no proxy.

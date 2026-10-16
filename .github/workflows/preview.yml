@@ -6,6 +6,16 @@ name: Preview
 #   https://pr-<number>-sds-worker-preview.matt-m-kissinger.workers.dev
 # It never uploads a version of production: a version preview of sds-worker
 # would share production's D1 and secrets.
+#
+# RELEASE 2 STAGE B (STATUS.md). This workflow is the `cf` CLI's attempt on
+# the preview Worker: the Build Output the Cloudflare Vite plugin 2.0 writes
+# from app/cloudflare.config.ts is what `cf` uploads, with `--prebuilt` so the
+# build stays this repository's own `npm run build:preview`. Besides the
+# aliased version it also DEPLOYS the version to the preview Worker, which the
+# wrangler path never did, so that Stage B's second and third checks (bindings
+# and route list; the Durable Object migration tag across a wrangler deploy of
+# an older commit and a rollback) can be read from a live `cf`-made deployment.
+# Production stays on wrangler (deploy.yml) until the four checks pass.
 
 on:
   pull_request:
@@ -32,6 +42,11 @@ jobs:
     env:
       PREVIEW_ALIAS: pr-${{ github.event.pull_request.number }}
       PREVIEW_URL: https://pr-${{ github.event.pull_request.number }}-sds-worker-preview.matt-m-kissinger.workers.dev
+      PREVIEW_ROOT_URL: https://sds-worker-preview.matt-m-kissinger.workers.dev
+      BUILD_OUTPUT: app/.cloudflare/output/v0
+      # `cf` keeps its own credentials; the token and account are the ones the
+      # wrangler path used. Telemetry off, as for any tool in CI here.
+      CF_SEND_TELEMETRY: 'false'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -46,27 +61,23 @@ jobs:
           sudo apt-get install -y ffmpeg
           node tools/prepare-approved-audio.mjs --download
       # No VITE_SCORE_API_BASE: the preview calls its own origin's /api, as
-      # production does. CLOUDFLARE_ENV makes the Vite plugin generate the
-      # [env.preview] configuration; it is set on this step only, because
-      # wrangler also reads it and would warn on a config that is already
-      # resolved.
+      # production does. The Vite mode selects the Worker that
+      # app/cloudflare.config.ts returns; `preview` is sds-worker-preview.
       - name: Build the client and the preview Worker
-        run: npm run build
+        run: npm run build:preview
         env:
-          CLOUDFLARE_ENV: preview
           SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
           SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
-      - run: npm run check:discovery
+      - run: node scripts/verify-public-discovery.mjs --require-analytics --dist "$BUILD_OUTPUT/workers/default/assets"
       - name: Verify preview release identity
-        run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ github.event.pull_request.head.sha }}"
-      - name: Verify the generated preview configuration
-        run: node scripts/verify-deploy-config.mjs --preview
+        run: node scripts/verify-release-manifest.mjs --path "$BUILD_OUTPUT/workers/default/assets/release.json" --sha "${{ github.event.pull_request.head.sha }}"
+      - name: Verify the Build Output
+        run: node scripts/verify-deploy-config.mjs --cf --preview
 
-      # The script names wrangler.toml and --env preview itself. The plugin's
-      # redirect file lands under app/, where wrangler never sees it, so a build
-      # on disk does not change which configuration this uses. The preview
-      # database id is committed in wrangler.toml; the script refuses to run
-      # against the production id.
+      # The script names wrangler.toml and --env preview itself; `cf` does not
+      # read that file, and this step does not use `cf`. The preview database
+      # id is committed in wrangler.toml and app/cloudflare.config.ts; the
+      # script refuses to run against the production id.
       - name: Migrate preview D1 only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -74,23 +85,34 @@ jobs:
           D1_TARGET: preview
         run: node scripts/d1-migrate-remote.mjs
 
-      # A version upload leaves the preview Worker's deployed version and every
-      # other pull request's alias alone. It refuses a Durable Object lifecycle
-      # change; such a change needs a `wrangler deploy` of the generated config
-      # once first.
-      - name: Upload preview version
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: versions upload --config .wrangler/build/sds_worker/wrangler.json --preview-alias ${{ env.PREVIEW_ALIAS }} --message ${{ github.event.pull_request.head.sha }}
+      # `cf` finds app/cloudflare.config.ts by walking up from its working
+      # directory, so it runs from app/. `--prebuilt` uploads the Build Output
+      # verified above without building again. Dry run first: it validates the
+      # output and prints the bindings it would deploy, with no API request.
+      - name: Dry-run the cf upload
+        working-directory: app
+        run: npx cf deploy --dry-run --prebuilt --mode preview
+      - name: Upload the aliased preview version with cf
+        working-directory: app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx cf workers versions create --prebuilt --mode preview --preview-alias "$PREVIEW_ALIAS" --message "${{ github.event.pull_request.head.sha }}"
+      - name: Deploy the version to the preview Worker with cf
+        working-directory: app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx cf deploy --prebuilt --mode preview --message "${{ github.event.pull_request.head.sha }}"
 
-      - name: Verify the preview's game, API and identity
+      - name: Verify the preview's game, API and identity on the alias and on the deployed Worker
         env:
           SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           node scripts/verify-worker-origin.mjs --url "$PREVIEW_URL" --sha "$SDS_RELEASE_SHA" --retries 12
+          node scripts/verify-worker-origin.mjs --url "$PREVIEW_ROOT_URL" --sha "$SDS_RELEASE_SHA" --retries 12
           node scripts/verify-identity.mjs --url "$PREVIEW_URL" --save "$RUNNER_TEMP/preview-identity.json"
           node scripts/verify-identity.mjs --url "$PREVIEW_URL" --check "$RUNNER_TEMP/preview-identity.json"
           echo "Preview: $PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployed preview Worker: $PREVIEW_ROOT_URL" >> "$GITHUB_STEP_SUMMARY"
