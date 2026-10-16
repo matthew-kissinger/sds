@@ -165,7 +165,9 @@ Full reasoning is in `spec/11-typography.md` and `spec/06-ux-ui-juice.md`.
   duplicated work, not diligence. Run it locally when you need the answer sooner
   than CI will give it, or when you are changing something CI cannot see.
 - Record test counts, bundle size, renderer receipts, performance percentiles
-  and screenshots in `STATUS.md` when closing a release gate.
+  and screenshots in `docs/history/status-log.md` when closing a release gate,
+  and leave `STATUS.md` a short pointer to that entry. Recording the full
+  evidence in `STATUS.md` is what grew it to 1,060 lines.
 - Keep browser probes clean: close pages, contexts, listeners and local servers.
 - Do not commit captures, browser profiles, environment files, generated build
   output or credentials.
