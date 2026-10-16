@@ -802,8 +802,42 @@ with a 4.9 m void over it. It now has a railed landing, three bedrooms, a
 ceiling at the wall head and a loft hatch, and two first-floor windows are lit.
 The asset went from 3,224 triangles to 3,440.
 
-Not done: the barn has had no equivalent of the Kiln treatment, and no
-screenshot of this pass has been taken on the hub.
+### Hub receipt for the asset polish pass, 2026-10-16
+
+Taken on `mk-os` over the `hub` alias against a copied production `dist/` built
+from ac3fe5fa, 60 s per backend, native viewport, Classic camera, adapter
+nvidia/turing with `fallback: false`. Preflight: GPU 0%, load average 0.19, top
+process 0.6%, well inside the 5%/15% gate. The receipts are at
+`captures/stability/hub-receipts/asset-polish/` on this machine; that tree is
+gitignored, as every receipt in this lane is, so the numbers below are the
+record and the files are only their provenance.
+
+| | frames | p50 | p95 | p99 | max | over 100 ms | ready |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| WebGPU before | 7,191 | 8.30 | 8.40 | 8.40 | 25.0 | 0 | 3,835 ms |
+| WebGPU after | 7,185 | 8.30 | 8.40 | 8.40 | 25.0 | 0 | 2,591 ms |
+| WebGL2 before | 7,194 | 8.30 | 8.40 | 8.40 | 16.7 | 0 | 5,332 ms |
+| WebGL2 after | 7,197 | 8.30 | 8.40 | 8.40 | 16.7 | 0 | 2,824 ms |
+
+No frame-time regression: every percentile and the max are identical to the
+previous candidate receipt, on both backends, with zero frames over 100 ms.
+Startup came down 1,244 ms on WebGPU and 2,508 ms on WebGL2, which is the grass
+and flock work in this branch and not the farmhouse pass. `startupPass` is still
+false against the 2,000 ms budget, as it already was before this branch.
+
+TWO LIMITS ON WHAT THIS RECEIPT SETTLES, because reading it as a clean sweep
+would be reading it wrong. First, p50 8.30 against p95 8.40 is a vsync-locked
+distribution near 120 Hz, so it establishes that the frame budget is met with
+headroom and NOT how much headroom there is; a cost increase smaller than the
+remaining 8.4 ms would not appear. Second, the draw readout is identical at 40
+calls and 3,959,384 triangles, and that is not evidence about the farmhouse:
+the probe's settled screenshot is a Classic camera over open grass with the farm
+out of frame, so the readout never sampled the buildings. What the receipt does
+cover is the whole-run distribution of a 60 s Classic run, which is the thing
+the 16.7 ms budget is written against.
+
+Not done: the barn has had no equivalent of the Kiln treatment, and no targeted
+measurement of the farm cluster itself - the probe has no camera that frames it.
 
 ## Direction changes
 
