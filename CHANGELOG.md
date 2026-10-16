@@ -24,9 +24,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   beacon. `Deploy Worker` is gone; a client and its API can no longer ship from
   different commits. Pull-request previews are version aliases on the preview
   Worker with its own D1, never a version of production.
-- The Cloudflare Web Analytics beacon is in `app/index.html`, carrying the
-  token of the `sheepdogsim.com` analytics site, so the repository owns the
-  invariant its discovery check asserts instead of a dashboard toggle.
+- The Cloudflare Web Analytics beacon is in `app/index.html` and in the
+  `about`, `support` and `privacy` pages, carrying the token of the
+  `sheepdogsim.com` analytics site, so the repository owns the invariant its
+  discovery check asserts instead of a dashboard toggle. The cutover measured
+  that the zone's automatic injection does not reach Worker-served pages, so
+  the check now requires exactly one beacon on every HTML route.
+- `www.sheepdogsim.com` resolves for the first time: a proxied DNS record and
+  a zone redirect rule send it to the apex with path and query kept, verified
+  by the discovery check. Host canonicalisation lives at the zone edge
+  because static assets answer before Worker code runs.
+- `npm run build` writes `dist/release.json` as its last step, so any build
+  of a commit is a complete artifact; the workflows only verify it.
 - Dependencies to their latest stable releases: vitest 5.0.5, ESLint 10.13.0,
   Vite 8.3.4, `@vitejs/plugin-react` 6.1.2, Three.js 0.186.1 with its types,
   React 19.3.1, `@react-three/fiber` 9.8.2, `@types/node` 26, wrangler 4.151.1,

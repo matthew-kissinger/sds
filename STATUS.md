@@ -17,14 +17,16 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3 is live at `https://sheepdogsim.com`. `release.json` is the
-  authority for the exact deployed source commit and artifact digest; it
-  currently reports `1dbd01507eec15eabf31486e2a8b78909a26abc5`, built
-  2026-10-16, 34 files and 8,420,670 bytes - the same file count and size
-  `npm run probe:release` measures locally.
-- The production Worker was deployed first without a D1 migration. Health and
-  all three `field-v3` leaderboard read paths returned HTTP 200 before Pages
-  was cut over.
+- Version 3.2.0 is live at `https://sheepdogsim.com`, served by the
+  `sds-worker` Worker through the `sheepdogsim.com/*` route since the
+  2026-10-16 cutover (`docs/history/status-log.md`). `release.json` is the
+  authority for the exact deployed source commit and artifact digest.
+  `www.sheepdogsim.com` redirects to the apex at the zone edge.
+- The `sds-frontend` Pages project is dormant underneath the route: it serves
+  3.1.0 on `sds-frontend.pages.dev`, receives no `sheepdogsim.com` traffic,
+  and is the Release 1 rollback (delete the route). It is retired in Release 2.
+- The Web Analytics site `sheepdogsim.com` is in snippet mode and is fed by the
+  beacon every HTML page carries; Web Analytics on the Pages project is off.
 - Player-facing branding is `Sheepdog Sim`. The `3.1.0` number is retained only
   in package, migration and release records.
 - One workflow deploys the client, to the `sds-frontend` Cloudflare Pages project

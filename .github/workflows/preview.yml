@@ -76,14 +76,9 @@ jobs:
           SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
       - if: steps.gate.outputs.ready == 'true'
         run: npm run check:discovery
-      - name: Write preview release identity
+      - name: Verify preview release identity
         if: steps.gate.outputs.ready == 'true'
-        env:
-          SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
-          SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
-        run: |
-          node scripts/write-release-manifest.mjs
-          node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA"
+        run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ github.event.pull_request.head.sha }}"
 
       - name: Bind the preview D1 database
         if: steps.gate.outputs.ready == 'true'

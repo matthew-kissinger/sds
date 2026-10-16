@@ -5,6 +5,36 @@
 
 # Status log
 
+## Release 1 production cutover - 2026-10-16, complete
+
+Per `docs/operations/worker-cutover.md`, owner go for steps 1 and 2.
+
+- Step 1: `sds-worker` deployed without a route from `58b247b5` (version
+  `1a5d42f7`), replacing the 2026-09-22 version `f5c30a31`; the Durable Object
+  `deleted_classes` migration applied. On `workers.dev`: manifest commit
+  matched, `/api/healthz` JSON, `field-v3/25` board read, pre-change identity
+  `Cutover Check#0001` resolved with its old token accepted and a wrong secret
+  refused, discovery passed, cross-origin board read from the Pages client
+  answered `access-control-allow-origin: *`.
+- Step 2: `wrangler triggers deploy` attached `sheepdogsim.com/*`. On the apex:
+  3.2.0 manifest at the deployed commit, JSON API, same identity checks,
+  discovery passed. `sds-frontend.pages.dev` kept serving 3.1.0. No downtime.
+- Finding: the zone's automatic analytics injection did not reach any
+  Worker-served page, so `/about`, `/support` and `/privacy` had no beacon.
+  Fixed in `ad37eaca`: the snippet in every page, the check requiring it.
+- Finding: `www.sheepdogsim.com` had never had a DNS record. Fixed as zone
+  configuration (proxied CNAME, redirect rule, 301 with path and query kept),
+  not as a Worker route, because assets answer before Worker code runs.
+- Incident, minutes long: the `ad37eaca` redeploy was built with a plain
+  `npm run build`, which did not write `release.json`, so the live manifest
+  answered with `index.html` until the manifest was written and redeployed
+  (`b37a2a39`). The build now writes the manifest itself.
+- Dashboard, owner-approved: Web Analytics off on the Pages project; the
+  `sheepdogsim.com` analytics site switched to snippet mode, token unchanged.
+- Preview D1: the two `Cutover Check` test players deleted. Production D1
+  still holds the `Cutover Check#0001` and one raw-API `Player` row created
+  for the identity checks; the owner decides whether they are removed.
+
 ## Release 1 hub gate - 2026-10-16, passed
 
 Taken on `mk-os` over the `hub` alias, native viewport, Classic camera,

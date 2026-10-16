@@ -19,7 +19,7 @@ pushed, and keeps a `workflow_dispatch` escape hatch that takes a full
 2. runs lint, both typechecks, the build with `SDS_RELEASE_SHA` and
    `SDS_RELEASE_REF`, the discovery check and the full test suite, which
    includes `tests/worker` and the Wrangler configuration test;
-3. writes `dist/release.json` and verifies it with `--require-v3-static`;
+3. verifies the `dist/release.json` the build wrote, with `--require-v3-static`;
 4. archives `dist/` as `release-<sha>` for 90 days;
 5. runs `wrangler deploy` from `worker/`, which uploads `../dist` as the
    Worker's static assets, deploys the API code, applies any Durable Object
@@ -162,11 +162,15 @@ its multiplayer, which went with the Durable Objects.
 
 ## Build identity
 
-`scripts/write-release-manifest.mjs` writes `dist/release.json` after the
-production build, recording the package version, the exact source commit and
-ref, the UTC build time, the `release-capabilities.json` declaration, and the
-file count, byte count and SHA-256 digest over the whole artifact except the
-manifest itself.
+`scripts/write-release-manifest.mjs` writes `dist/release.json` as the last
+step of `npm run build`, recording the package version, the exact source
+commit and ref (`SDS_RELEASE_SHA` and `SDS_RELEASE_REF`, else the checkout's
+HEAD and branch), the UTC build time, the `release-capabilities.json`
+declaration, and the file count, byte count and SHA-256 digest over the whole
+artifact except the manifest itself. It is part of the build because a `dist/`
+without it is served as the single-page fallback: at the Release 1 cutover a
+plain rebuild shipped once without the manifest and the live `/release.json`
+answered with `index.html` for a few minutes.
 
 `scripts/verify-release-manifest.mjs` checks the local artifact before the
 deploy and the live manifest after it. `npm run probe:release` runs the same

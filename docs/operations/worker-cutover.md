@@ -40,9 +40,8 @@ Commands are PowerShell 7, run from the repository root unless a step says
    $sha = git rev-parse HEAD
    ```
 
-3. Dependencies, licensed audio and a build. Build once and keep this `dist/`
-   for every step; a rebuild empties `dist/` and drops `release.json`, which
-   the single-page fallback would then answer with `index.html`.
+3. Dependencies, licensed audio and a build. The build writes `release.json`
+   itself, so any `npm run build` of the commit is a complete artifact.
 
    ```powershell
    npm ci
@@ -52,7 +51,6 @@ Commands are PowerShell 7, run from the repository root unless a step says
    $env:SDS_RELEASE_SHA = $sha
    $env:SDS_RELEASE_REF = 'main'
    npm run build
-   node scripts/write-release-manifest.mjs
    node scripts/verify-release-manifest.mjs --path dist/release.json --sha $sha --require-v3-static
    npm run check:discovery
    ```

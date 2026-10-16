@@ -102,13 +102,9 @@ jobs:
       # The full suite, which includes tests/worker and its configuration test.
       - run: npm test --if-present
 
-      - name: Write and verify release identity
-        env:
-          SDS_RELEASE_SHA: ${{ steps.source.outputs.sha }}
-          SDS_RELEASE_REF: ${{ inputs.commit_sha || github.ref_name }}
-        run: |
-          node scripts/write-release-manifest.mjs
-          node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA" --require-v3-static
+      # The build wrote dist/release.json itself; this proves it names this SHA.
+      - name: Verify release identity
+        run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ steps.source.outputs.sha }}" --require-v3-static
 
       - name: Archive exact release artifact
         uses: actions/upload-artifact@v5
