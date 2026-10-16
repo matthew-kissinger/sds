@@ -12,9 +12,9 @@
     "@msgpack/msgpack": "^3.0.0-beta2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261013.1",
+    "@cloudflare/workers-types": "^5.20261016.1",
     "typescript": "^6.0.3",
-    "wrangler": "^4.150.0"
+    "wrangler": "^4.151.1"
   },
   "overrides": {
     "esbuild": "^0.28.1"
