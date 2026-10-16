@@ -26,10 +26,11 @@ import { BARN_AT, HOUSE_AT } from '@app/scene/farmhouse/plan';
 import { GradedGrass } from './GradedGrass';
 import { KilnHouse } from './KilnHouse';
 import { LibraryGrass } from './LibraryGrass';
+import { SPIKE_AT, SurfaceSpike } from './SurfaceSpike';
 
 export type LabPartId =
   | 'terrain' | 'grass' | 'grass-lib' | 'fence' | 'pen' | 'farmhouse' | 'kiln-house'
-  | 'farmer' | 'treeline' | 'scatter' | 'flock' | 'dog';
+  | 'farmer' | 'treeline' | 'scatter' | 'flock' | 'dog' | 'surface-spike';
 
 /** Draw order matters, so this record is ordered as `FieldScene` orders it. */
 export const LAB_PARTS: Record<LabPartId, ComponentType> = {
@@ -52,6 +53,9 @@ export const LAB_PARTS: Record<LabPartId, ComponentType> = {
   scatter: Scatter,
   flock: Flock,
   dog: Dog,
+  // The atlas spike (experiment/surface-atlas): not a game component, the
+  // other side of an A/B like `grass-lib`. See SurfaceSpike.tsx.
+  'surface-spike': SurfaceSpike,
 };
 
 /**
@@ -156,6 +160,15 @@ export const LAB_SUBJECTS = [
     parts: ['terrain', 'grass', 'kiln-house', 'farmer'],
     target: { kind: 'fixed', x: HOUSE_AT.x, z: HOUSE_AT.z },
     distance: 26,
+    height: 6,
+  },
+  {
+    id: 'surface-spike',
+    label: 'Surface spike',
+    note: 'One barn wall three ways: A procedural TSL, B the same surface from a KTX2 atlas, B+ the atlas with painted knots and nails. Judge at 90 m and at 3 m. ?spike=a|b|bplus mounts one panel at the target.',
+    parts: ['terrain', 'grass', 'surface-spike'],
+    target: { kind: 'fixed', x: SPIKE_AT.x, z: SPIKE_AT.z },
+    distance: 30,
     height: 6,
   },
   {

@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "recipe": "tools/bake-surface-atlas.mjs",
+  "format": "VK_FORMAT_R8G8B8A8_UNORM, zstd, full mip chain, linear transfer",
+  "texels": 2048,
+  "cellTexels": 1024,
+  "cellMetres": 4,
+  "texelsPerMetre": 256,
+  "gain": 1.25,
+  "cells": {
+    "barn": [
+      0,
+      0
+    ],
+    "barnPainted": [
+      1,
+      0
+    ],
+    "limewash": [
+      0,
+      1
+    ],
+    "slate": [
+      1,
+      1
+    ]
+  },
+  "levels": 12,
+  "bytes": {
+    "ktx2": 254468,
+    "png": 96149,
+    "gpuRgba8WithMips": 22369620,
+    "gpuUastcWithMipsEstimate": 5592405
+  },
+  "sha256": {
+    "ktx2": "4f3008ce28f28c3cd64246f7b9b09de7ff0a0e2923f6ddff86785642e3a9a7c4",
+    "png": "ca31489db1e99b07a1caad9a5c1b69d84edc02cb8961467290d742173911c908",
+    "level0": "ab6207e65d3c9390391892ea47bd5a7f543fd95db6f5eab07d50f211156acf66"
+  }
+}
