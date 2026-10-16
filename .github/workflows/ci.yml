@@ -17,6 +17,12 @@ jobs:
   verify-client:
     name: Verify static client
     runs-on: ubuntu-latest
+    env:
+      # Where the Cloudflare Vite plugin 2.0 writes the build (Release 2 Stage
+      # B): the Build Output Specification under the Vite root, the game under
+      # its workers/default/assets. The plugin fixes these paths; a build.outDir
+      # is overridden, so nothing is written to dist/ any more.
+      BUILD_OUTPUT: app/.cloudflare/output/v0
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -36,16 +42,16 @@ jobs:
         env:
           SDS_RELEASE_SHA: ${{ github.sha }}
           SDS_RELEASE_REF: ${{ github.ref }}
-      - run: npm run check:discovery
+      - run: node scripts/verify-public-discovery.mjs --require-analytics --dist "$BUILD_OUTPUT/workers/default/assets"
       - run: npm test --if-present
-      # The build wrote dist/release.json and the Worker's deploy config itself.
+      # The build wrote the release manifest and the Worker's configuration itself.
       - name: Verify packaged release identity
-        run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ github.sha }}"
-      - name: Verify the generated deploy configuration
-        run: node scripts/verify-deploy-config.mjs
+        run: node scripts/verify-release-manifest.mjs --path "$BUILD_OUTPUT/workers/default/assets/release.json" --sha "${{ github.sha }}"
+      - name: Verify the Build Output
+        run: node scripts/verify-deploy-config.mjs --cf
       - uses: actions/upload-artifact@v7
         with:
           name: pages-candidate-${{ github.sha }}
-          path: dist/
+          path: app/.cloudflare/output/v0/
           if-no-files-found: error
           retention-days: 14

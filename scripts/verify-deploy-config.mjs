@@ -43,6 +43,12 @@ const MIGRATIONS = [
  * app/cloudflare.config.ts for why the project lives with it.
  */
 export const BUILD_OUTPUT = 'app/.cloudflare/output/v0'
+/**
+ * The built game inside it: what the Worker serves as its assets, where
+ * dist/ used to be. The plugin forces the client's build.outDir here
+ * (`forceBuildOutputDirs`), so a Vite outDir cannot keep it at dist/.
+ */
+export const BUILT_CLIENT = `${BUILD_OUTPUT}/workers/default/assets`
 
 function parseArgs(args) {
   const options = { preview: false, cf: false, config: '.wrangler/build/sds_worker/wrangler.json' }
