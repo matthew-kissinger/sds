@@ -34,7 +34,7 @@ jobs:
       PREVIEW_URL: https://pr-${{ github.event.pull_request.number }}-sds-worker-preview.matt-m-kissinger.workers.dev
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
