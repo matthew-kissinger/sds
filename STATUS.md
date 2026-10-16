@@ -204,13 +204,18 @@ longer claims Neutral.
   from migration 0001, with a data migration that preserves identities and
   `field-v3` times and is verified against production reads before cutover.
   `shared/` goes with it.
-- Kiln farmhouse: amend the recipe under `assets/house/` so the bake writes the
-  backdrop shader's two surface channels per face from its own authoring data,
-  then grade the house's look in-game - massing, roof, wall surface - against
-  `spec/05` and the owner's review, not against the old procedural house.
-  Regrade the farmhouse surface material where it reads sloppy. Re-bake, flip
-  `FARMHOUSE_SOURCE`, and gate on the hub. The agent does this with Kiln
-  available on the owner's PC.
+- Kiln farmhouse: `assets/house/farmhouse.kiln.js` is the owner's own authored
+  walk-in design (2026-10-15: door on hinges, porch, deep reveals, hall,
+  fireplace and stair), deliberately not a match for the old procedural house,
+  and it stands as authored. The work is the contract, not the design: amend
+  the recipe so the bake writes the backdrop shader's two per-vertex surface
+  channels from its own authoring data, make the loader read them and fail
+  loudly without them, and fix only defects in how surfaces map onto the
+  authored geometry. The collapsed porch roof and fascia seen in Release 1
+  were that design rendered wrong by the missing channels. Grading is the
+  owner's review of the correctly rendered house in-game against `spec/05`,
+  never parity with the old house. Re-bake, flip `FARMHOUSE_SOURCE`, and gate
+  on the hub. Kiln friction is logged as classified dogfood feedback.
 - Kiln barn, right after the farmhouse (added 2026-10-16; the status log had
   recorded "the barn has had no equivalent of the Kiln treatment" and the plan
   had left it out): a second recipe under `assets/barn/`, baked with the same
