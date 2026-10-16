@@ -17,8 +17,10 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.2.1 (`c5964ff2`, tag `v3.2.1`) is live at `https://sheepdogsim.com`,
-  served by the `sds-worker` Worker through the `sheepdogsim.com/*` route since
+- Version 3.3.0 (tag `v3.3.0`, the Kiln homestead) is the release at the head
+  of `main`; 3.2.1 (`c5964ff2`, tag `v3.2.1`) is live until its tag is pushed
+  and the `Deploy` run passes its live checks. Served at
+  `https://sheepdogsim.com` by the `sds-worker` Worker through the `sheepdogsim.com/*` route since
   the 2026-10-16 cutover (`docs/history/status-log.md`). `release.json` is the
   authority for the exact deployed source commit and artifact digest.
   `www.sheepdogsim.com` redirects to the apex at the zone edge.
@@ -29,10 +31,11 @@ investigations are in `docs/history/`.
   beacon every HTML page carries; Web Analytics on the Pages project is off.
 - Player-facing branding is `Sheepdog Sim`. The `3.1.0` number is retained only
   in package, migration and release records.
-- One workflow deploys the client, to the `sds-frontend` Cloudflare Pages project
-  that serves `sheepdogsim.com`. The project name, the undisableable
-  `sds-frontend.pages.dev` hostname, the two stale GitHub environments and the
-  separate Worker origin are explained in `docs/operations/deployment.md`.
+- One `Deploy` workflow, on an annotated `v*` tag, builds the client, deploys
+  the `sds-worker` Worker with the game as its static assets, and verifies the
+  live manifest, origin and analytics (`docs/operations/deployment.md`). The
+  dormant Pages project and its `sds-frontend.pages.dev` hostname are
+  explained there too.
 - The owner selected the CC0 Fox Trees Pack Round and Spreading hybrid for the
   shipped treeline. The final field contains 139 trees outside the fence, no
   understory shrubs and no exposed root runs.
@@ -186,10 +189,13 @@ then passed the owner's look review on the production build and the hub
 receipt (twelve 60 s runs, both backends, both cameras, the homestead in and
 out of frame: identical percentiles, zero frames over 100 ms, no added draws;
 `docs/history/status-log.md`), and `FARMHOUSE_SOURCE` is flipped to `kiln`
-with its grass rebake. In flight: the Kiln barn (an agent authoring the recipe
-on its own branch against the merged channel convention). Next in order: the
-barn's look review on the production build, its hub receipt, its flip with a
-grass rebake, a release, then Stage B.
+with its grass rebake. The Kiln barn followed the same evening: merged behind
+`BARN_SOURCE` (pull request 123), the owner's look review passed on the
+production build together with a house fix (no window over the door), its
+hub receipt passed (twelve runs, same shape), and the flip merged (pull
+request 125, `e3642877`). The whole homestead is Kiln. Release 3.3.0 is the
+head of `main`, awaiting its tag. Open from the barn review: the slate course
+wander (owner's call, see the status log). Next: Stage B.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -279,19 +285,19 @@ longer claims Neutral.
   had left it out): a second recipe under `assets/barn/`, baked with the same
   per-vertex surface channels the farmhouse fix establishes, welded into the
   same board, roof and opening buffers so the draw count does not move, graded
-  in-game by the same standard, Kiln feedback logged the same way. **In
-  review** (pull request 123, 2026-10-16): a three-bay threshing barn under a
-  gambrel, its cart doors open onto a dark interior, a hay door under a hood,
-  a lit loft window and a cupola; 2,350 triangles, no added draws, no
-  textures, standing in `BARN`'s box on `BARN_AT`. `BARN_SOURCE` stays
-  procedural. The bake also writes its outline envelope and ground footprint
-  into the GLB extras, and the game derives the barn's outline from them. The
-  grass bake reads `BARN_SOURCE` and records it (rebaked for what main ships,
-  the Kiln house and the procedural barn, its tufts are byte-identical to
-  main's). Its floor takes the same step above the pad.
-  `docs/history/barn-kiln-2026-10-16.md` has the design, the numbers and the
-  Kiln feedback. The owner's look review and the hub receipt remain; then the
-  flip with its grass rebake, and folding the two Kiln loaders into one.
+  in-game by the same standard, Kiln feedback logged the same way. **Shipped**
+  (pull request 123 merged, look review and hub receipt passed, `BARN_SOURCE`
+  flipped to `kiln` in pull request 125, all 2026-10-16): a three-bay
+  threshing barn under a gambrel, its cart doors open onto a dark interior, a
+  hay door under a hood, a lit loft window and a cupola; 2,350 triangles, no
+  added draws, no textures, standing in `BARN`'s box on `BARN_AT`. The bake
+  also writes its outline envelope and ground footprint into the GLB extras,
+  and the game derives the barn's outline from them. The grass bake reads
+  `BARN_SOURCE` and cuts the barn's footprint. Its floor takes the same step
+  above the pad. `docs/history/barn-kiln-2026-10-16.md` has the design, the
+  numbers and the Kiln feedback. Open: the slate course wander on its long
+  pitches (owner's call; it is the shared slate graph's), and folding the two
+  Kiln loaders into one with the house's envelope written by its bake.
 - Surfaces stay procedural (decided 2026-10-16 on a measured spike,
   `docs/history/spike-surface-atlas-2026-10-16.md`, branch
   `experiment/surface-atlas`, pull request 122, not for merge). The owner

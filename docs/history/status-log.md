@@ -5,6 +5,74 @@
 
 # Status log
 
+## Kiln barn hub receipt - 2026-10-16, passed; `BARN_SOURCE` flipped
+
+The owner passed the Kiln barn, and the house with its window over the door
+removed, on look review of the production build (`vite preview` of a `dist/`
+built from the flip branch with both constants on `kiln`), and asked for the
+flip, the merge on a clean receipt, and the release tag prepared.
+
+Taken on `mk-os` as the house receipt was (same alias, viewport, Chrome,
+Playwright, 200 sheep, `high` tier on every run; preflight idle under 2% CPU
+and 0% GPU). "Before" is `main` at `32b3c96d` built for production: the Kiln
+house shipped, the procedural barn. "After" is the barn branch at `129520a5`
+built with `BARN_SOURCE = 'kiln'` and `assets/grass/` rebaked for it (36
+files; two runtime GLBs, the house and the barn). The house in both arms is
+the bake before the window fix below; that fix removes 132 triangles and adds
+nothing, so the receipt bounds it. Receipts under
+`captures/stability/hub-receipts/kiln-barn/`, gitignored.
+
+**60 s runs, both backends; the default input and the homestead drive in
+both cameras.**
+
+| | frames | p50 | p95 | p99 | max | over 100 ms | ready | draws | triangles |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Default WebGPU before | 7,176 | 8.3 | 8.4 | 8.4 | 25.0 | 0 | 2,637 ms | 40 | 3,958,224 |
+| Default WebGPU after | 7,187 | 8.3 | 8.4 | 8.4 | 33.3 | 0 | 2,673 ms | 40 | 3,958,239 |
+| Default WebGL2 before | 7,192 | 8.3 | 8.4 | 8.4 | 16.8 | 0 | 2,716 ms | 40 | 3,958,224 |
+| Default WebGL2 after | 7,187 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 1,991 ms | 40 | 3,958,239 |
+| Classic WebGPU before | 7,184 | 8.3 | 8.4 | 8.4 | 33.4 | 0 | 2,559 ms | 53 | 3,965,250 |
+| Classic WebGPU after | 7,189 | 8.3 | 8.4 | 8.4 | 33.3 | 0 | 2,740 ms | 53 | 3,967,003 |
+| Classic WebGL2 before | 7,195 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 2,201 ms | 53 | 3,965,250 |
+| Classic WebGL2 after | 7,187 | 8.3 | 8.4 | 8.4 | 83.3 | 0 | 1,894 ms | 53 | 3,967,003 |
+| Follow WebGPU before | 7,191 | 8.3 | 8.4 | 8.4 | 25.0 | 0 | 2,588 ms | 47 | 3,924,898 |
+| Follow WebGPU after | 7,179 | 8.3 | 8.4 | 8.4 | 25.1 | 0 | 2,682 ms | 47 | 3,926,651 |
+| Follow WebGL2 before | 7,194 | 8.3 | 8.4 | 8.4 | 16.8 | 0 | 2,741 ms | 47 | 3,924,898 |
+| Follow WebGL2 after | 7,190 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 3,625 ms | 47 | 3,926,651 |
+
+**Boot-only, three repetitions per arm and backend, medians of `readyMs`.**
+WebGPU 2,661 before, 2,623 after; WebGL2 2,735 before, 2,642 after.
+
+No frame-time regression: every percentile identical in all twelve runs, zero
+frames over 100 ms, the same draw count per view (the barn's weld adds no
+draws, 10 for the cluster, as its ledger says), and the Kiln barn costs about
+1,750 triangles against 3.97 million with the homestead filling the frame and
+15 with it out of frame. Two single frames stand out and neither is the
+candidate's: the 83.3 ms maximum in one after run is one frame in 7,187, the
+kind the before arm produced in the house receipt (75 ms), and the 3,625 ms
+ready in one after run sits beside 1,894 and 1,991 ms from the same build,
+with the boot-only medians of both arms within 100 ms of each other. The
+WebGL2 ready times of the before arm, 2.2 to 2.7 s here against 1.8 to 1.9 s
+for the same bytes in the house receipt, show how far that figure moves on
+the hub between sessions; only within one session is it a comparison. The
+probe's 2 s startup budget is missed by both arms alike, as every receipt
+since Release 1 has shown.
+
+Flipped on the strength of this: `BARN_SOURCE = 'kiln'`, with the grass
+rebake the bake test requires (barn walls and plinth 8 tufts; the house's
+cuts unchanged). Merged as pull request 125 (`e3642877`) with the window fix
+and the derived ledgers (`tools/glb-ledger.mjs`, which read "as exported"
+counts from the GLB after the rebake caught both ledgers stating typed-in
+numbers). The whole homestead is now the owner's Kiln work.
+
+Open, and the owner's call: the slate courses wave on both of the barn's
+pitches, from the shared slate graph's course wander (`ROOF_COURSE_WANDER`
+0.16, `farmhouse/surfaceMaterial.ts`), a world-space field about 11 m long
+that every roof carries, the reviewed house included. Zero wander gives
+straight courses (barn agent's diagnostic capture). Any change moves the
+house too, so none was made for this release;
+`docs/history/barn-kiln-2026-10-16.md` lays out the three options.
+
 ## Kiln house hub receipt - 2026-10-16, passed; `FARMHOUSE_SOURCE` flipped
 
 The owner passed the Kiln house on look review of the production build

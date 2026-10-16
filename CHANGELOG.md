@@ -4,6 +4,44 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.3.0] - 2026-10-16
+
+### Changed
+
+- The homestead is the owner's Kiln work. The farmhouse and the barn that the
+  game draws are the two buildings authored in Kiln (`assets/house/`,
+  `assets/barn/`), baked to GLB and re-banded through the shipped toon ramp:
+  a walk-in house with real reveals, joinery, a door on its hinges and a room
+  behind it, and a three-bay threshing barn under a gambrel with cart doors
+  standing open, a hay door under its hood, a cupola and a vane. Both are
+  welded into the cluster's own buffers, so the cluster still draws in ten
+  calls, and both stand on the pads, yaw and cast shadows the procedural
+  buildings used. `FARMHOUSE_SOURCE` and `BARN_SOURCE` are `kiln`; the
+  procedural builders remain in the tree behind those constants.
+- The bake carries the backdrop shader's two per-vertex surface channels in
+  `TEXCOORD_0` and says so in the GLB (`extras.surfaceChannels`); the loaders
+  refuse a bake without it. The barn's bake also writes its outline envelope
+  and footprint, and its loader refuses a bake without the envelope.
+- The grass bake reads both constants and cuts the footprints of the buildings
+  that ship, so no tuft grows through a floor; the manifest records which
+  sources it was baked for and `tests/grass-bake.spec.ts` fails a flip without
+  a rebake.
+- Both asset ledgers read their "as exported" counts (triangles, mesh nodes,
+  geometries, materials, extensions, bounds, per-surface split) from the GLB
+  through `tools/glb-ledger.mjs`, and the specs hold each loader to its
+  ledger.
+- The hub probe gained `--drive=homestead`, which holds the dog at the north
+  fence with both buildings in frame, because the default input never shows
+  them. The receipts for both flips, Classic and Follow, in and out of frame,
+  are in `docs/history/status-log.md`: frame percentiles identical to 3.2.1,
+  zero frames over 100 ms, no added draws.
+
+### Fixed
+
+- The asset lab no longer renders before the WebGPU backend has initialised
+  or while the scene is compiling: its frame loop is held until the renderer
+  stage and the scene-ready signal both allow it, as the game's is.
+
 ## [3.2.1] - 2026-10-16
 
 ### Changed
