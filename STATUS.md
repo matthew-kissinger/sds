@@ -191,11 +191,10 @@ From the renderer boot review
 (`docs/history/renderer-boot-review-2026-10-16.md`), done 2026-10-16: the
 asset lab stages its frame loop and scene mount on `rendererReady()`, the
 factory memo is gone, and spec/01's stack table and renderer section state the
-shipped contract. Open: tone mapping. Fiber's first configure has set
+shipped contract. Tone mapping: fiber's first configure has set
 `ACESFilmicToneMapping` over the factory's `NeutralToneMapping` since 3.1.0,
-so the approved look is ACES while the code says Neutral; the owner decides
-whether to keep ACES (and say so in code) or move to Neutral through the
-visual review gate.
+so the approved look was always ACES; the owner kept it and the factory no
+longer claims Neutral.
 
 
 - Adopt the `cf` CLI: `cloudflare.config.ts`, the Cloudflare Vite plugin, the

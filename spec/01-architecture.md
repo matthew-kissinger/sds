@@ -40,9 +40,11 @@ hub measured it at +300 ms renderer-to-capability on WebGL2 and +150 ms on
 WebGPU. The adversarial review of this design and the on-contract alternative
 worth an A/B are in `docs/history/renderer-boot-review-2026-10-16.md`.
 
-Known gap: fiber's first configure sets `ACESFilmicToneMapping` when `gl` is a
-factory, overriding the `NeutralToneMapping` the factory sets, so the shipped
-look has been ACES since 3.1.0. Which look is wanted is an open owner decision.
+Tone mapping is `ACESFilmicToneMapping`, applied by fiber's first configure
+(`flat` is false and `gl` is a factory). The factory once set Neutral and fiber
+overwrote it, so the approved look has always been ACES; the owner kept it on
+2026-10-16 and the code no longer claims otherwise. A different operator goes
+in `onCreated`, after configure, and through the visual review gate.
 
 WebGPURenderer carries its own WebGL2 backend and falls back automatically. That is the entire fallback story. Rules that follow:
 

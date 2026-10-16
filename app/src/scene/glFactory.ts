@@ -175,15 +175,13 @@ export function glFactory(props: GlProps): THREE.WebGPURenderer {
     try { onDeviceLost(info); }
     finally { useGameStore.getState().reportGraphicsLost(); }
   };
-  // Authored toon ramps are already the lighting model. Neutral preserves
-  // their hue/value relationships on both backends, including the low tier
-  // where the optional post chain is intentionally absent.
-  //
-  // Known to be overridden today: fiber's first configure sets
-  // ACESFilmicToneMapping when `gl` is a factory (its `glProps` is undefined
-  // and `flat` is false), so the shipped look has been ACES since 3.1.0. The
-  // owner decides which look is wanted; see docs/history/renderer-boot-review-2026-10-16.md.
-  created.toneMapping = THREE.NeutralToneMapping;
+  // Tone mapping is fiber's: its first configure sets ACESFilmicToneMapping
+  // when `gl` is a factory and `flat` is false. The factory used to set
+  // NeutralToneMapping here and fiber overwrote it, so the approved look has
+  // been ACES since 3.1.0; the owner chose on 2026-10-16 to keep that look and
+  // have the code say so (docs/history/renderer-boot-review-2026-10-16.md).
+  // Nothing sets toneMapping anywhere else; `flat` on the Canvas would switch
+  // it off, and a different operator belongs in onCreated, after configure.
   backendName = 'pending';
   activeRenderer = null;
   rendererInit = created.init().then(() => {
