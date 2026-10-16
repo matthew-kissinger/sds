@@ -52,79 +52,88 @@ receipt showing no frame-time regression on either backend with startup down
 The full report, its measurements and the two limits on what the hub receipt
 settles are in `docs/history/status-log.md`.
 
-## Master plan - agreed 2026-10-16
+## Master plan - agreed 2026-10-16, decisions settled the same day
 
 The sequence the owner chose, recorded so it is read rather than re-derived.
-Each cycle is independently shippable and nothing below is started.
+The decisions below were taken with the owner on 2026-10-16 and are not open.
+Measured facts behind them are in `docs/operations/deployment.md`.
 
-### Cycle 1 - Worker migration
+### End state
 
-Move hosting from the `sds-frontend` Pages project to a Worker serving static
-assets on `sheepdogsim.com`, with `/api/*` same-origin and `/r/*` left
-unclaimed for rooms. Retires the v2-era naming, the undisableable `pages.dev`
-hostname, the hand-maintained CORS allow-list, and the drift that lets
-`deploy.yml` and `deploy-worker.yml` ship a client and an API from different
-commits.
+One Worker on `sheepdogsim.com` serves the game and `/api/*`, deployed by one
+tag from one commit. The score service is a small identity-and-score Worker on
+the one-table schema in `spec/03-multiplayer.md`, carrying every player's
+`persistent_id`, secret, name and `field-v3` times across. The repository is
+one project described by `cloudflare.config.ts` and built by the Cloudflare
+Vite plugin. The v2 Durable Object code, the v2 `shared/` simulation, the
+cross-origin API and its CORS list, the `pages.dev` hostname and the misnamed
+analytics site are gone. The `sds-frontend` Pages project stays, dormant, for
+the immutable v2 rollback deployment. Multiplayer has a recorded Durable Object
+placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
 
-The analytics label rides with this cycle rather than being fixed separately:
-the Pages project is where the misnamed Web Analytics site is owned, so moving
-the beacon into `app/index.html` happens here, once, instead of twice.
+### Release 1 - 3.2.0: hosting, dependencies, farmhouse gate
 
-**No user-visible change, on one condition.** A player's name is a JWT in
-`localStorage` under `sheepdog.score-identity.v1`, keyed to the origin the game
-is served from; that origin stays `sheepdogsim.com`. Their times are in D1
-`sds-db`, which is not moved or rebound. Auth is a Bearer header and the Worker
-sets no cookies. The condition is that `JWT_SECRET` is copied verbatim to any
-Worker that verifies a token: if it drifts,
-`app/src/scores/controller.ts:39-41` reads the 401 as "re-register", so players
-are silently issued new names and their times are orphaned under the old
-`persistent_id`. Verify an existing identity resolves before sending traffic.
-One small gain: same-origin removes the CORS preflight on score submission.
+- Hosting moves from the `sds-frontend` Pages project onto the existing
+  `sds-worker`, which already holds `JWT_SECRET` and the `sds-db` binding, so
+  no secret is copied and the silent re-register trap in
+  `app/src/scores/controller.ts:39-41` cannot fire. Static assets from `dist/`
+  with single-page-application fallback, `run_worker_first` on `/api/*`,
+  `workers_dev = true` set explicitly, and a Worker route on
+  `sheepdogsim.com/*`. Cutover by route, never custom domain; rollback is
+  deleting the route. Configuration stays in `worker/wrangler.toml` for this
+  release. The `cf` CLI's `cloudflare.config.ts` is Release 2 work: `cf` is a
+  beta that rebuilds the project shape and does not run this repository's build
+  script, and that must not land in the same change as a live hostname cutover.
+- The v2 `RoomDO`, `LobbyDO`, `GameSim.js` and the `/r/:code/ws` upgrade leave
+  `sds-worker` with a `deleted_classes` migration. `spec/03` builds rooms as a
+  new Worker; the v2 code stays in history as reference for that rewrite.
+- `PROD_SCORE_API_BASE` becomes same-origin and the CORS allow-list goes.
+- The Web Analytics beacon moves into `app/index.html` with the token of the
+  existing `sheepdogsim.com` site. `scripts/verify-public-discovery.mjs:105`
+  requires it on the page, so it lands before the Pages toggle is turned off.
+- One tag-triggered deploy ships client and API from one commit. Pull-request
+  previews become version aliases on the preview Worker with its own D1, never
+  version previews of production, which would share the production bindings.
+- Dependencies go to latest stable on landing day, including the majors
+  Dependabot never raised: ESLint 10, `@types/node` 26, wrangler and
+  `@cloudflare/workers-types`. Batches per ecosystem, one commit each, taken
+  locally rather than merged from Dependabot. The Three.js bump needs genuine
+  WebGPU and forced-WebGL2 receipts. TypeScript 7 lands only if a supported
+  linter pairing exists; otherwise the root aligns with the worker on 6.0.x and
+  the TypeScript 7 pull requests close with that reason.
+- The Kiln farmhouse is wired behind the shipped `Farmhouse` component and
+  ships only if the hub receipt shows no load-time or frame-time regression on
+  either backend. The desk figures - +2.07% bytes, +0.087% triangles, 6 draw
+  calls against 40 - favour it and do not settle it. Not answered by
+  performance: the procedural backdrop is keyed to `uv.x`/`uv.y`, which a baked
+  mesh reconstructs only from world position, and
+  `tests/treeline-assets.spec.ts:329` records the standing choice not to load
+  GLBs at runtime, which shipping this reverses deliberately in its own commit.
+- Hub timing runs once, at the end, before the tag: both backends, before and
+  after, farmhouse in and out. Receipts go to `docs/history/status-log.md`.
+- Cleanups: revoke the unused `BROWSERSTACK_*` repository secrets, delete the
+  two stale GitHub environments, and turn off Web Analytics on the Pages
+  project after the cutover is verified. Dashboard actions are done in the
+  browser with the owner's approval at each one.
 
-Cutover is by Worker *route*, not custom domain, so it needs no downtime and
-rolls back by deleting the route. Keep the Pages project dormant, not deleted -
-it still serves the immutable v2 deployment. Full detail and the three measured
-traps are in `docs/operations/deployment.md`.
+### Release 2 - one project, new score service, multiplayer foundations
 
-### Cycle 2 - ship the Kiln farmhouse, gated on a hub receipt
+- Adopt the `cf` CLI: `cloudflare.config.ts`, the Cloudflare Vite plugin, the
+  Worker entrypoint imported into the one project, `worker/` as a separate
+  package retired, the build and release-manifest steps re-homed.
+- Rewrite the score service on `spec/03-multiplayer.md`'s one-table design,
+  from migration 0001, with a data migration that preserves identities and
+  `field-v3` times and is verified against production reads before cutover.
+  `shared/` goes with it.
+- Multiplayer foundations: the Durable Object placement decision recorded with
+  its reasoning, room D1 migration 0001, and a CI-tested realtime skeleton on
+  `/r/*`. Not deployed unless the owner says otherwise.
 
-Wire the walk-in house into the game in place of the procedural farmhouse.
-**The owner's gate: it ships only if a hub receipt shows no load-time or
-frame-time regression.** The desk figures favour it and do not settle it:
-174,588 bytes against an 8,420,670-byte artifact (+2.07%), zero textures and
-zero images so there is no decode cost, and 3,440 triangles against the
-3,959,384 the hub measured in the settled scene (+0.087%). The number that is
-not negligible is draw calls: 6 against the 40 the same receipt measured.
+### Standing rule
 
-Still open, and not answered by performance: the backdrop's look is a
-procedural surface keyed to `uv.x`/`uv.y`, which a baked mesh can only
-reconstruct from world position and which degrades wherever a surface is
-neither wall nor roof slope; and `tests/treeline-assets.spec.ts:329` records
-this project's standing choice not to load GLBs at runtime, which shipping this
-reverses deliberately rather than by accident.
-
-### Cycle 3 - multiplayer foundations
-
-Begin the realtime Worker, Durable Objects and room D1 per
-`spec/03-multiplayer.md`. Cycle 1 leaves `/r/*` free so routing is ready.
-Where the Durable Objects live relative to the release unit is recorded in that
-specification as a judgement rather than a rule, because it turns on release
-cadence, and the choice is reversible through a `transferred_classes` or
-`exports` transfer.
-
-`sim/` imports no Three.js, React, DOM, network or third-party math and uses
-seeded randomness with no clocks in tick paths, so it runs unmodified inside a
-Durable Object. The deterministic simulation is the expensive half of netcode
-and it is already paid for.
-
-### Running alongside
-
-- **Dependencies: fix all of them.** `npm audit --omit=dev` is clean, so none
-  of this reaches a player; the work is vitest 3 to 5, TypeScript 7, Vite 8,
-  plugin-react 6 and the actions v5 to v7 bump. Majors batch per ecosystem.
-- **Cleanups.** Revoke the unused `BROWSERSTACK_*` secrets, whose workflow no
-  longer exists, and drop the dead `.sheepdogsim.pages.dev` CORS entry on the
-  next Worker deploy rather than deploying for it.
+A v2 remnant or a stale pattern found along the way is re-architected to the
+current standard in service of the version 3 build, not patched. Scope changes
+and deploys remain the owner's call and are surfaced before they are made.
 
 ## Direction changes
 
