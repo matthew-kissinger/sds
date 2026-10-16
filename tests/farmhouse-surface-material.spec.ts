@@ -102,7 +102,10 @@ describe('farmhouse opaque surface shader template', () => {
       const wall = parameters(wallMaterial);
       expectBands(wall.primary, WALL);
       expectBands(wall.secondary, WALL_PATCH);
-      expect(wall.basePatch.scale.toArray()).toEqual([0.62, 0.2, 0.62]);
+      // Stretched 9:1 rather than 3:1 this pass: the limewash weathers in
+      // vertical RUNS, and at the feature size the authored scales ask for a
+      // 3:1 patch put an edge through the damp course every couple of metres.
+      expect(wall.basePatch.scale.toArray()).toEqual([0.62, 0.07, 0.62]);
       expect([wall.basePatch.threshold, wall.basePatch.edge, wall.basePatchWeight]).toEqual([
         0.3,
         0.012,

@@ -26,10 +26,12 @@
  * per material at build time (farmhouse/shell.ts), so adding a third outbuilding
  * later costs triangles and not calls.
  *
- * NOTHING HERE RUNS IN A FRAME. There is no useFrame in this file: the buildings
- * do not move, the lamps do not flicker, and the smoke is a held drift rather
- * than a particle system (farmhouse/smoke.ts explains why). The geometry is
- * built once behind the heightfield's Suspense gate and never touched again.
+ * NOTHING HERE RUNS IN A FRAME, AND THE SMOKE STILL DOES NOT. There is no
+ * useFrame in this file: the buildings do not move, the lamps do not flicker,
+ * and the plume rises entirely in its own vertex stage off the shared time node
+ * rather than through a particle system or a buffer update
+ * (farmhouse/smoke.ts explains how). The geometry is built once behind the
+ * heightfield's Suspense gate and never touched again.
  */
 
 import { useEffect, useMemo } from 'react';

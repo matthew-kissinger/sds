@@ -737,6 +737,70 @@ Still open, and now the oldest thing here:
   ramp takes over. The sit itself is solved against its contacts and measures
   0.950; it is the transition into it that is unmeasured, and it is next.
 
+### The homestead, and a walk-in house built with Kiln, 2026-10-15
+
+Two separate pieces of work, kept separate on purpose.
+
+**The shipped cluster was corrected in place.** The owner's reading - static
+smoke, an uncanny wall, a barn that needed love - resolved into three measured
+faults. The painted breakup in `farmhouse/surfaceMaterial.ts` was running at
+5.4x its authored feature size, measured over a 16.5 m run: boards came out
+6.6 m, wall patches 11 m, stone grain 16.5 m, so five different skins were flat
+fills and the building had no surface at all. `STROKE = 5.4` scales the sample
+point and the threshold edge together, so every step keeps its world width.
+The wall patch was then only 3:1 stretched against the boards' 14:1 and 21:1,
+which drew an arcade of arches along the foot of every wall; it is 9:1 now.
+Nine openings sat on two faces of the house and two of the barn, leaving the
+sunlit 18.6 x 5.8 m front and both 10.8 x 10.5 m barn gables blank - a roof says
+cottage and a blank wall says warehouse, and the eye believes the wall. There
+are 23 now, no two alike, for 44 triangles and no extra draw. `DRESS` was the
+most saturated band in the cluster at 41% and read as pink skirting; it lost a
+third of its chroma and kept its value ladder. The chimney smoke is a
+vertex-stage plume on a 7.2 s cycle instead of a static cone.
+
+**The walk-in house is a prototype, and it is lab-only.** `assets/house/` holds
+an editable Kiln program and the GLB it bakes to; `lab/src/kilnHouseAsset.ts`
+welds that GLB into one buffer per farmhouse band set and the shipped
+`makeFarmhouseSurfaceMaterial` draws it. Nothing under `app/` imports any of it
+and `dist/` contains no GLB. The point was to answer whether an outside asset
+can arrive inside this game's painting, and it can: the look lives in
+`bands.ts` and in the `uv.x`/`uv.y` channel convention, both of which the
+importer reconstructs from material name and world position, so no new shader
+and no texture were needed.
+
+Measured, with the ground off and both subjects at one camera: the Kiln house
+is 3,440 triangles in 6 draws; the whole shipped cluster - house, cross wing,
+two lean-tos, porch, barn, cupola, outshot, hood, 23 openings and the plume -
+is 4,874. One building with an interior costs two thirds of the homestead.
+
+Verified 2026-10-15: `npm run typecheck` and `npm run typecheck:lab` clean,
+`npm run lint` clean on every touched file (the 2 errors and 2 warnings it
+reports are inside another worktree under `.claude/worktrees/`), `npm test`
+940 passed in 113 files, `npm run build` exit 0 at 2,286.69 kB raw and
+637.46 kB gzip against 2,277.14 and 634.68 before: 9.55 kB raw and 2.78 kB
+gzipped, all of it the procedural pass, none of it the prototype.
+`node tools/record-house-asset.mjs --check` re-bakes from a scratch directory
+with no `.kiln/` cache and reproduces the recorded GLB byte for byte.
+
+Four faults were then found on owner review, and all four are fixed. The gable
+wall was not breaking through the roof, it was exactly coplanar with it: the
+gable triangles took the roof's own span and rise, so their top edge and the
+slate's top face both finished at y 10.72 and z-fought as a bright stripe down
+the pitch. They are built 200 mm inside the slab now. The eaves overhang was
+1.15 m, which on this pitch drops 1.23 m and put the eaves edge at 4.44 against
+first-floor window heads at 5.05 - the roof hung down past the top of the
+windows; at 450 mm it clears them by 338 mm. Every corner had a 275 mm square
+full-height hole, because `createGableShell` builds walls on their centrelines
+and the long walls stopped short of the end walls' outer face; four corner posts
+close them flush. And there was no first floor: the deck and the stair were
+right, but nothing made the deck a floor, so eight windows opened onto a lid
+with a 4.9 m void over it. It now has a railed landing, three bedrooms, a
+ceiling at the wall head and a loft hatch, and two first-floor windows are lit.
+The asset went from 3,224 triangles to 3,440.
+
+Not done: the barn has had no equivalent of the Kiln treatment, and no
+screenshot of this pass has been taken on the hub.
+
 ## Direction changes
 
 Owner-ordered changes that override an earlier specification line. Four files
@@ -928,6 +992,20 @@ each, described in `spec/12-my-times.md`.
   0.8 to 1.5, so it can render as a sub-pixel line. Checking the game's own
   Reduce Motion toggle on the reporting phone distinguishes them. Not yet
   measured on a device.
+- Whether the walk-in Kiln house becomes the real house. The prototype answers
+  the technical question - a GLB can be re-banded into this game's painting
+  with no new shader - and leaves the judgement open. Against it: the backdrop
+  cluster's look is a procedural surface keyed to `uv.x`/`uv.y`, and a baked
+  mesh can only have those channels reconstructed from world position, which
+  works for walls and roof slopes and degenerates wherever a surface is neither;
+  one building with an interior is 3,440 triangles against the whole present
+  homestead's 4,874; and `tests/treeline-assets.spec.ts:329` records this
+  project's standing choice not to load GLBs at runtime, which adopting this
+  would reverse. For it: an interior, a door and real reveals are not reachable
+  by growing `farmhouse/parts.ts`, and the render-and-revise loop caught a
+  twisted prism in the porch that no view of mine would have. The reversible
+  reading, and the one taken: keep the 90 m backdrop procedural, keep the
+  walk-in house in the lab, and decide when there is a scene to walk into.
 - Whether to build the grass on `threejs-field-grass`. The owner's condition is
   that it be at least as performant as what ships. It is not, yet, and the
   reason is narrow: only the interaction field differs, and it trades GPU work

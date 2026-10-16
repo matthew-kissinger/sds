@@ -234,3 +234,212 @@ export function logStack(shell: Shell, place: Stand, at: readonly [number, numbe
     );
   }
 }
+
+/**
+ * The porch over the front door, and the one piece of this cluster built for a
+ * distance it is not yet seen from.
+ *
+ * WHAT IT IS FOR AT NINETY METRES. The range's minusZ front is its longest plane
+ * and the one both gameplay cameras approach; until this pass the only thing on
+ * it that broke the eave line was the lean-to, four metres off at one end. A
+ * gabled porch is a second roof pitch crossing the first at the exact point the
+ * eye already goes - the door - and it costs fourteen triangles. It is also what
+ * stops the front door reading as a dark rectangle the same shape as the windows
+ * beside it: a door is a thing you walk through, and what says so at a distance
+ * is the roof somebody built over it.
+ *
+ * WHAT IT IS FOR LATER. The farmer is meant to walk in here eventually, and a
+ * threshold is the one part of that which cannot be retrofitted cheaply: the
+ * porch fixes where the door is in world space, gives it a floor at a known
+ * height, and puts a lit volume between the yard and the opening. The case round
+ * the door is the other half of it. Every other opening in this cluster is one
+ * dark panel and stays that way (farmhouse/openings.ts says why), but this one
+ * gets jambs and a head in bare board, because it is the only opening the player
+ * will ever stand in front of, and because board is DARKER than the limewash it
+ * sits in - it reads as the shadow in a reveal, not as the bright joinery that
+ * cost an earlier pass its silhouette.
+ *
+ * `at` is along the wall in the range's own frame; the porch stands on the
+ * minusZ side of it, like the lean-to.
+ */
+export function porch(
+  roof: Shell,
+  timber: Shell,
+  dress: Shell,
+  place: Stand,
+  spec: RoofSpec,
+  at: number,
+  door: { readonly width: number; readonly height: number },
+): void {
+  const back = -spec.width / 2;
+  const half = 1.32;
+  const over = 0.2;
+  const depth = 1.95;
+  const nose = 0.26;
+  const eaves = 2.72;
+  const apex = 3.74;
+  const front = back - depth;
+  const verge = front - nose;
+  const wide = half + over;
+
+  // The two slopes, from the wall out. No courses on a plane this small: uv.y
+  // of -1 is what turns the slate's course and sky ramps off (slope-free
+  // surfaces in the roof buffer all take it, including the lean-to).
+  roof.mark(0, -1);
+  roof.quad(
+    place,
+    [at - wide, eaves, verge],
+    [at - wide, eaves, back],
+    [at, apex, back],
+    [at, apex, verge],
+  );
+  roof.quad(
+    place,
+    [at + wide, eaves, back],
+    [at + wide, eaves, verge],
+    [at, apex, verge],
+    [at, apex, back],
+  );
+
+  timber.mark(0, OPEN_SKY);
+  // The tympanum, filling the triangle the two slopes leave at the front.
+  timber.tri(place, [at + wide, eaves, front], [at - wide, eaves, front], [at, apex, front]);
+  // Two posts, inboard of the verge and standing a little past the eave so the
+  // slope lands on timber rather than on air.
+  for (const side of [-1, 1] as const) {
+    timber.box(
+      place,
+      [at + side * (half - 0.12), (eaves + 0.22) / 2, front + 0.16],
+      [0.13, (eaves + 0.22) / 2, 0.13],
+    );
+  }
+
+  // The case round the door: two jambs and a head, each standing proud of the
+  // render by the same six centimetres the dark panel does.
+  const jamb = 0.17;
+  const reveal = door.width / 2 + jamb / 2;
+  const head = door.height + jamb / 2;
+  const wall = back + OPENING_OUT;
+  timber.quad(
+    place,
+    [at + reveal + jamb / 2, 0, wall],
+    [at - reveal - jamb / 2, 0, wall],
+    [at - reveal - jamb / 2, head + jamb / 2, wall],
+    [at + reveal + jamb / 2, head + jamb / 2, wall],
+  );
+
+  // The step. Stone, like the plinth it sits on, and the floor the farmer will
+  // one day stand on to open the door.
+  dress.mark(0, OPEN_SKY);
+  dress.taperedBox(
+    place,
+    [at, 0.09, back - 0.42],
+    [door.width / 2 + 0.45, 0.09, 0.46],
+    [door.width / 2 + 0.36, 0.09, 0.4],
+  );
+}
+
+/**
+ * A mono-pitch hood over an opening, on two brackets: the cart door's.
+ *
+ * A five-metre doorway in a flat board wall is a hole, and a hole has no front.
+ * What turns it into the front of a building is the one horizontal line above it
+ * that is not the eave - a hood throws its own shadow on the boards under it,
+ * which is the only thing in this asset that puts a hard edge across a barn wall
+ * where no roof edge is. `at` and `half` are along the wall, `head` is the top of
+ * the opening it covers.
+ */
+export function hood(
+  timber: Shell,
+  place: Stand,
+  spec: RoofSpec,
+  at: number,
+  half: number,
+  head: number,
+): void {
+  const back = -spec.width / 2;
+  const out = 1.15;
+  const front = back - out;
+  const high = head + 0.42;
+  const low = head + 0.02;
+  const fascia = 0.22;
+
+  timber.mark(0, OPEN_SKY);
+  timber.quad(
+    place,
+    [at + half, low, front],
+    [at - half, low, front],
+    [at - half, high, back],
+    [at + half, high, back],
+  );
+  timber.quad(
+    place,
+    [at + half, low - fascia, front],
+    [at - half, low - fascia, front],
+    [at - half, low, front],
+    [at + half, low, front],
+  );
+  // The brackets. Square posts raked back to the wall would be two more solids
+  // each; a flat board on edge reads the same at this distance for a quarter of
+  // the triangles, and it is what a barn bracket actually is.
+  for (const side of [-1, 1] as const) {
+    const x = at + side * (half - 0.26);
+    timber.quad(
+      place,
+      [x, low - fascia, front],
+      [x, high - 0.3, back],
+      [x, high - 1.25, back],
+      [x, low - fascia, front - 0.001],
+    );
+  }
+}
+
+/**
+ * The cupola on the barn ridge: a boarded collar, a dark louvre and a capped
+ * pyramid over it.
+ *
+ * IT IS A SILHOUETTE PART AND NOTHING ELSE. The barn is a rectangle with a
+ * triangle on it, which is exactly what a hundred-metre read reduces a barn to,
+ * and at that size the only thing separating it from a shed is what stands on the
+ * ridge. Two metres over a ten-and-a-half-metre ridge, off centre, and it is the
+ * one piece of this cluster that breaks a straight line against the sky other
+ * than the chimney - which is why it is off centre, so the two never align.
+ *
+ * It is sunk a metre into the slate, measured against the sagging ridge rather
+ * than the nominal one, so no angle shows daylight under it.
+ */
+export function cupola(
+  roof: Shell,
+  timber: Shell,
+  opening: Shell,
+  place: Stand,
+  spec: RoofSpec,
+  at: number,
+): void {
+  const seat = spec.ridgeHeight - ridgeSag(spec, (at + spec.length / 2) / spec.length);
+
+  timber.mark(0, OPEN_SKY);
+  timber.taperedBox(
+    place,
+    [at, seat - 0.3, 0],
+    [0.82, 0.66, 0.82],
+    [0.74, 0.66, 0.74],
+  );
+
+  opening.mark(0, 0);
+  opening.taperedBox(place, [at, seat + 0.92, 0], [0.62, 0.56, 0.62], [0.62, 0.56, 0.62]);
+
+  roof.mark(0, -1);
+  roof.taperedBox(
+    place,
+    [at, seat + 1.62, 0],
+    [0.94, 0.14, 0.94],
+    [0.86, 0.14, 0.86],
+  );
+  roof.taperedBox(
+    place,
+    [at, seat + 2.07, 0],
+    [0.86, 0.31, 0.86],
+    [0.12, 0.31, 0.12],
+  );
+}

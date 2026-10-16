@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "id": "kiln-walk-in-farmhouse",
+  "author": "Matthew Kissinger",
+  "license": "AGPL-3.0-or-later",
+  "licenseFile": "LICENSE",
+  "digestEncoding": "UTF-8 with LF line endings",
+  "artifactDigestEncoding": "raw bytes",
+  "toolchain": {
+    "name": "@instruktlabs/kiln",
+    "version": "1.2.3",
+    "license": "MIT",
+    "command": "kiln render assets/house/farmhouse.kiln.js --out assets/house/farmhouse.glb",
+    "note": "The tool is not a dependency of this repository. It bakes the artifact; nothing imports it."
+  },
+  "recipe": "assets/house/farmhouse.kiln.js",
+  "artifact": {
+    "path": "assets/house/farmhouse.glb",
+    "bytes": 174588,
+    "sha256": "6739d87790c70f36bc9d031555fc2a1511ae7f3ea1d03aee3e6e12b87728f1e7"
+  },
+  "triangles": 3440,
+  "exportedMeshNodes": 282,
+  "exportedGeometries": 173,
+  "materials": 7,
+  "textures": 0,
+  "images": 0,
+  "gltfExtensions": [
+    "KHR_materials_emissive_strength"
+  ],
+  "boundsMetres": {
+    "x": 20.05,
+    "y": 12.45,
+    "z": 11.87
+  },
+  "runtime": {
+    "draws": 6,
+    "trianglesPerSurface": {
+      "timber": 1964,
+      "wall": 908,
+      "dress": 288,
+      "opening": 160,
+      "lamp": 72,
+      "roof": 48
+    },
+    "note": "One draw per farmhouse band set. No texture is sampled; the ramp is computed."
+  },
+  "qa": {
+    "profile": "asset.requirements.v1",
+    "acceptance": "accepted",
+    "disposition": "pass",
+    "gltfErrors": 0,
+    "gltfWarnings": 0
+  },
+  "consumers": [
+    "lab/src/subjects.ts"
+  ],
+  "shipsInProductionBuild": false,
+  "sources": [
+    {
+      "path": "assets/house/farmhouse.kiln.js",
+      "sha256": "b77ea645f1395e576b63dea99987ebf4f4e252610d5f64fd55f0355cf500c72d"
+    },
+    {
+      "path": "lab/src/kilnHouseAsset.ts",
+      "sha256": "6a570a49c3956c145d47c20a91f9c38b0c2fc220602493db066722a0600ccfa5"
+    },
+    {
+      "path": "lab/src/KilnHouse.tsx",
+      "sha256": "3675ec720751f36481ab4cbc6049fbe0aba13d6e9e60c82d84fd7d816fce5c3e"
+    },
+    {
+      "path": "lab/src/glb-url.d.ts",
+      "sha256": "1607cb2fb629b16f453ec6fc3dcc42159d19e32668b2f06715d6e3eab8f701c0"
+    },
+    {
+      "path": "tools/record-house-asset.mjs",
+      "sha256": "3061d9b2469bc7503892192dcb9b8916904d0a972c49fe8c6b3e546ae54bfc92"
+    }
+  ]
+}

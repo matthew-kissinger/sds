@@ -24,11 +24,12 @@ import { Treeline } from '@app/scene/Treeline';
 import { HOME_FIELD } from '@sim/field';
 import { BARN_AT, HOUSE_AT } from '@app/scene/farmhouse/plan';
 import { GradedGrass } from './GradedGrass';
+import { KilnHouse } from './KilnHouse';
 import { LibraryGrass } from './LibraryGrass';
 
 export type LabPartId =
-  | 'terrain' | 'grass' | 'grass-lib' | 'fence' | 'pen' | 'farmhouse' | 'farmer'
-  | 'treeline' | 'scatter' | 'flock' | 'dog';
+  | 'terrain' | 'grass' | 'grass-lib' | 'fence' | 'pen' | 'farmhouse' | 'kiln-house'
+  | 'farmer' | 'treeline' | 'scatter' | 'flock' | 'dog';
 
 /** Draw order matters, so this record is ordered as `FieldScene` orders it. */
 export const LAB_PARTS: Record<LabPartId, ComponentType> = {
@@ -43,6 +44,10 @@ export const LAB_PARTS: Record<LabPartId, ComponentType> = {
   fence: FenceLine,
   pen: Pen,
   farmhouse: Farmhouse,
+  // The Kiln-authored walk-in house, on the same pad as the procedural range.
+  // Lab-only, like the grass library beside it: the production build never
+  // references lab/, so no GLB reaches dist/.
+  'kiln-house': KilnHouse,
   farmer: Farmer,
   treeline: Treeline,
   scatter: Scatter,
@@ -142,6 +147,17 @@ export const LAB_SUBJECTS = [
     target: { kind: 'fixed', x: FARM_MID_X, z: FARM_MID_Z },
     distance: 46,
     height: 17,
+  },
+  {
+    id: 'kiln-house',
+    label: 'House (Kiln)',
+    // The same pad, yaw and footprint as the subject above, so the panel holds
+    // the camera across the flip and the comparison is the asset alone.
+    note: 'The walk-in house authored in Kiln and re-banded through the shipped toon ramp. Real reveals, joinery, a door on its hinges and a room behind it. Drop the distance to walk up to it.',
+    parts: ['terrain', 'grass', 'kiln-house', 'farmer'],
+    target: { kind: 'fixed', x: HOUSE_AT.x, z: HOUSE_AT.z },
+    distance: 26,
+    height: 6,
   },
   {
     id: 'gate',
