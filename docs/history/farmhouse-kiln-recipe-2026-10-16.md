@@ -94,6 +94,71 @@ gables and the inverted hull drew it as a dark line across each gable at the
 wall head, in the Release 1 captures too. It is now the roof as built, ending
 at the gable faces.
 
+## The outline hull at the eave
+
+An adversarial review of this branch found the next defect in the same
+envelope. The roof looked like it was "hanging off" the house, and the wall
+corners seemed to vanish from just above the eave. Both were the outline hull,
+not the bake, the ramp or the channels. The review refuted each of those with
+measurements:
+- **Winding:** every triangle's winding agrees with its normal, and DoubleSide
+  changes no house pixel over 21 bearings.
+- **Eave shade band:** setting eaveGain to 1 moves about 1 px.
+- **Channel splits:** none mixes on-slope and off-slope values.
+- **Shadows:** there is no shadow map, and the cast mesh touches only ground
+  pixels.
+
+`roofHull` (`farmhouse/hull.ts`) builds the Kiln envelope from `KILN_ROOF` with
+two numbers that belong to the code-built roof:
+- **The eave sits too far out.** The hull puts its eave SLAB x ay (about
+  0.10 m) outside the structural line. `KILN_ROOF` corrected the slab offset
+  vertically but not horizontally, so the hull's eave stood at z 5.127 against
+  the slab edge at 5.03, before the outline's own 0.09 push.
+- **The underside hangs too low.** The hull closes its section 0.26 m below
+  the eave (`FASCIA`, the code-built fascia board), while the Kiln slab's cut
+  edge is about 0.15 m deep (its lowest point is y 5.19).
+
+So a ledge in the outline colour hung under and outside both long eaves. It was
+widest at the corners, and from slightly above it painted over the top of each
+wall corner.
+
+The fix is at the layer that owns it:
+- `RoofSpec` gains an optional `eaveDepth`, which `roofHull` reads in place of
+  `FASCIA`. It is 0.15 for `KILN_ROOF`.
+- `KILN_ROOF.eaveOverhang` is 0.2, which puts the hull's eave on the slab's
+  lower outer corner (z 4.88). The review's scratch test showed 0.35 still
+  hung a line below the slab.
+- `RoofSpec` also gains an optional `bow`, read by `slopeOf` and `roofHull`
+  alike. `roofHull` bowed the slope by rise x 0.055 even with `sag` 0, which
+  sank the envelope below the flat Kiln slab mid-slope and hid the rake's
+  outline along the middle of each verge. `KILN_ROOF` sets it to 0. The
+  code-built roofs keep `BOW` and are unchanged.
+
+Luminance down a pixel column across the front eave in the Classic framing
+(`07-from-field`, bearing -2.76, 90 m, 37 m up), top to bottom:
+
+| Column | Backend | Before | After |
+| --- | --- | --- | --- |
+| x 870 | WebGL2 | slate 165, 141, 184, **92, 92**, 185, wall 214 | slate 165, 141, 92, wall 213 |
+| x 870 | WebGPU | slate 165, 153, **92, 92**, 154, wall 214 | slate 165, 131, 92, wall 213 |
+| x 800 | WebGL2 | slate 155, 138, 156, **92, 92, 92**, wall 219 | slate 155, 138, 115, 163, 203, wall 219 |
+| x 800 | WebGPU | slate 155, 140, 177, **92, 92, 92**, wall 209 | slate 155, 140, 104, 189, 212, wall 219 |
+
+The two- and three-pixel ledge is gone. What remains is the one-pixel outline
+on the slab's own edge, which is the line the outline is for. Frames are under
+`captures/farmhouse/2026-10-16/hull/{before,after}/{webgl,webgpu}/kiln-house/`
+(front, east gable, field), with `hull/compare-*.png`. Neither backend logged a
+console error.
+
+**KILN_ROOF is a hand copy of the recipe's roof numbers, and it drifted.**
+These are the second and third envelope numbers found wrong on this branch. The
+first-principles version is to have the bake describe its roof. The recipe
+would write the slab's eave and verge corners into the GLB extras, beside
+`surfaceChannels`. `kilnHouse.ts` would read them, and the envelope would be
+derived from them rather than copied. That is the open follow-up. It is also a
+Kiln feedback item: the roof helpers' eave and verge geometry does not reach
+the GLB.
+
 ## The floor and the pad
 
 The hall floor fought the terrain. `createGableShell` builds its floor as a
@@ -320,4 +385,5 @@ and only a side-band record can say so.
 | fine | bake, `kiln render ... --json --detail lean` | Deterministic: a cold bake from a scratch directory reproduced the GLB byte for byte, in about 2.5 s. |
 | fine | bake, unsupported-attribute warning | The drop is reported per mesh with a code, as `docs/runtime.md` describes for `KILN_GEOMETRY_POLICY=warn`; `strict` would have failed it. |
 | fine | sandbox | `THREE.Raycaster`, double-sided probe meshes, `toNonIndexed` and hand-built `BufferGeometry` all worked inside a recipe, which is what made the bake-side fix possible. |
+| missing capability | export, `createGableRoof` and the GLB bridge | The roof's eave and verge geometry (eave corner, edge depth, oversail) is not available downstream. Only the triangles reach the GLB, so the game's outline envelope (`KILN_ROOF`) is a hand copy of the recipe's numbers, and it drifted twice. A roof helper that stamps its eave and verge lines into the node extras (`kilnSemantic` already names the roles) would let the envelope be derived. Until then the recipe could write them itself beside `surfaceChannels`. |
 | fine | QA | 0 glTF errors and warnings, `accepted`/`pass`, before and after. |

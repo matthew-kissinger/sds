@@ -203,6 +203,15 @@ export const KILN_STACK = {
 } as const;
 
 /**
+ * The Kiln house's porch, in the house's frame, from the recipe: centred on the
+ * front door at x 3.5, 1.38 m each side (the posts' outer faces at 1.33), and
+ * 2.05 m out from the front wall's outer face at z -4.575. The step stands
+ * under it. Repeated for the same reason as KILN_STACK: the grass bake cuts
+ * the house's footprint, and the GLB is not something a bake script reads.
+ */
+export const KILN_PORCH = { across: 3.5, half: 1.38, depth: 2.05 } as const;
+
+/**
  * The outline's envelope for the Kiln house: its roof as built, not HOUSE's.
  *
  * The Kiln roof bears on the walls' OUTER faces (19.15 by 9.15), oversails the
@@ -219,24 +228,35 @@ export const KILN_STACK = {
  * 18.6 by 8.6 with its eave at 5.8 - did, at wall-head height, on both gables
  * of the authored house. Ending the envelope at the gable face costs the
  * outline only the 0.45 m end of the verge.
+ *
+ * THESE ARE A HAND COPY of the recipe's roof, and they drifted: the eave
+ * overhang and the edge depth below were the procedural house's numbers until
+ * an adversarial review measured the ledge they drew. The first-principles
+ * version is for the bake to write the slab's eave and verge corners into the
+ * GLB extras beside `surfaceChannels` and for this envelope to be derived from
+ * them; that is the open follow-up.
  */
-/**
- * The Kiln house's porch, in the house's frame, from the recipe: centred on the
- * front door at x 3.5, 1.38 m each side (the posts' outer faces at 1.33), and
- * 2.05 m out from the front wall's outer face at z -4.575. The step stands
- * under it. Repeated for the same reason as KILN_STACK: the grass bake cuts
- * the house's footprint, and the GLB is not something a bake script reads.
- */
-export const KILN_PORCH = { across: 3.5, half: 1.38, depth: 2.05 } as const;
-
 export const KILN_ROOF: RoofSpec = {
   length: 19.15,
   width: 9.15,
   wallHeight: 5.338 - 0.0955,
   ridgeHeight: 10.72 - 0.0955,
-  eaveOverhang: 0.45,
+  // Not the slab's 0.45 m oversail. `roofHull` puts its eave SLAB x ay (about
+  // 0.10 m) further out than the structural line, then the outline pushes the
+  // envelope out again, so at 0.45 the hull's eave stood past the slab and its
+  // underside showed as a dark ledge in the outline colour under both long
+  // eaves, widest at the corners and painted over the wall corners from above.
+  // 0.2 lands the envelope's eave on the slab's lower outer corner (z 4.87);
+  // 0.35 still hung a line below the slab.
+  eaveOverhang: 0.2,
   endOverhang: 0,
   ridgeFlat: 0,
   settle: 0,
   sag: 0,
+  // The slab's cut edge is about 0.15 m deep (its lowest point is y 5.19), not
+  // the code-built roof's 0.26 m fascia.
+  eaveDepth: 0.15,
+  // A flat Kiln slab: the procedural bow sank the envelope mid-slope and hid the
+  // rake's outline along the middle of each verge.
+  bow: 0,
 };

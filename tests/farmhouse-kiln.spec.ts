@@ -7,7 +7,9 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildFarmhouse } from '@app/scene/farmhouse/cluster';
 import { parseKilnHouse, type KilnHouse } from '@app/scene/farmhouse/kilnHouse';
+import { roofHull } from '@app/scene/farmhouse/hull';
 import { HOUSE_AT, KILN_PORCH, KILN_ROOF, KILN_STACK } from '@app/scene/farmhouse/plan';
+import { Shell, stand } from '@app/scene/farmhouse/shell';
 import { FARMHOUSE_SOURCE } from '@app/scene/farmhouse/source';
 
 const GLB = new URL('../assets/house/farmhouse.glb', import.meta.url);
@@ -243,6 +245,38 @@ describe('Kiln farmhouse on its pad', () => {
       expect(tops.length).toBeGreaterThan(0);
       for (const y of tops) expect(y).toBeCloseTo(DECK, 4);
     }
+  });
+});
+
+describe('Kiln farmhouse outline envelope', () => {
+  // KILN_ROOF is a hand copy of the recipe's roof. Its eave once stood past the
+  // slab and its underside hung 0.26 m below the eave, and the outline drew
+  // that as a dark ledge under both long eaves. The envelope has to stay inside
+  // the slab it outlines, measured from the bake rather than from the copy.
+  it('keeps the hull eave on the slab, not under or outside it', async () => {
+    const { parts } = await parsed();
+    const roof = parts.roof!;
+    let slabLow = Infinity;
+    let slabOut = 0;
+    for (let i = 0; i < roof.positions.length / 3; i++) {
+      const [y, z] = [roof.positions[i * 3 + 1]!, roof.positions[i * 3 + 2]!];
+      // The main slabs only: the porch roof is over the door, far below. The
+      // slab is a box, so its vertices are its corners, at the verge ends.
+      if (Math.abs(z) < 4 || y < 4) continue;
+      slabLow = Math.min(slabLow, y);
+      slabOut = Math.max(slabOut, Math.abs(z));
+    }
+    const shell = new Shell();
+    roofHull(shell, stand(0, 0, 0, 0), KILN_ROOF);
+    const hull = shell.build()!.getAttribute('position');
+    let hullLow = Infinity;
+    let hullOut = 0;
+    for (let i = 0; i < hull.count; i++) {
+      hullLow = Math.min(hullLow, hull.getY(i));
+      hullOut = Math.max(hullOut, Math.abs(hull.getZ(i)));
+    }
+    expect(hullLow).toBeGreaterThan(slabLow - 0.01);
+    expect(hullOut).toBeLessThan(slabOut);
   });
 });
 

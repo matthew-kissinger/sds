@@ -16,6 +16,7 @@
  */
 
 import { NODES, SLAB, FASCIA, eaveDrop, hipCut, ridgeSag, type RoofOptions, type RoofSpec } from './roof';
+import { BOW } from './slope';
 import type { Local, Shell, Stand } from './shell';
 
 /** Steps across half the section. Three is enough for the bow to read. */
@@ -43,7 +44,7 @@ export function roofHull(
   const eaveZo = eaveZ + SLAB * ay;
   const ridgeZo = spec.ridgeFlat + SLAB * ay;
   const run = eaveZo - ridgeZo;
-  const bow = rise * 0.055;
+  const bow = rise * (spec.bow ?? BOW);
 
   const cutMinus = hipCut(spec, options, -1);
   const cutPlus = hipCut(spec, options, 1);
@@ -58,7 +59,7 @@ export function roofHull(
       cutPlus > 0 ? (span - x) / cutPlus : 1,
     );
     const k = Math.min(1, Math.max(0, near));
-    const base = eaveY - FASCIA;
+    const base = eaveY - (spec.eaveDepth ?? FASCIA);
     const flatten = (v: number): number => base + (v - base) * k;
     const y = (s: number): number =>
       flatten(eaveY + (ridgeY - eaveY) * s - bow * Math.sin(Math.PI * s));
