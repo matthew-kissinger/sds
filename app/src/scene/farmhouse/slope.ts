@@ -31,8 +31,9 @@ export const FASCIA = 0.26;
  * anything.
  */
 export const SLAB = 0.14;
-/** How far the slope bellies below the straight line from eave to ridge. */
-const BOW = 0.055;
+/** How far the slope bellies below the straight line from eave to ridge, as a
+ *  fraction of the rise. */
+export const BOW = 0.055;
 
 export interface RoofSpec {
   /** Along the ridge, metres. */
@@ -55,6 +56,15 @@ export interface RoofSpec {
   readonly sag: number;
   /** How far back from the end the hip climbs to the ridge. 0 for no hip. */
   readonly hipRun?: number;
+  /**
+   * How deep the roof's edge is below the eave line, metres: what the outline
+   * envelope closes its section at. Defaults to FASCIA, the code-built roof's
+   * fascia board; a roof without one (the Kiln slab's cut edge) says its own.
+   */
+  readonly eaveDepth?: number;
+  /** How far the slope bellies, as a fraction of the rise. Defaults to BOW; 0
+   *  for a flat slab. */
+  readonly bow?: number;
 }
 
 export interface RoofOptions {
@@ -107,7 +117,7 @@ export function slopeOf(spec: RoofSpec, side: number): Slope {
   const eaveZo = eaveZ + SLAB * ay;
   const ridgeZo = spec.ridgeFlat + SLAB * ay;
   const run = eaveZo - ridgeZo;
-  return { side, az, ay, run, eaveZo, ridgeZo, span: Math.hypot(run, rise), bow: rise * BOW };
+  return { side, az, ay, run, eaveZo, ridgeZo, span: Math.hypot(run, rise), bow: rise * (spec.bow ?? BOW) };
 }
 
 /** Height of the slate at `s` up the slope (0 eave, 1 ridge) at `t` along it. */

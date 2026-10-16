@@ -13,8 +13,10 @@ range, wing, porch and stack. It stands on the same pad at the same yaw either
 way. The value changes only after a hub timing receipt shows no load-time or
 frame-time regression: build once per value, probe both. In a `'procedural'`
 build no model reaches `dist/`. The asset lab's `House (Kiln)` subject mounts the
-Kiln source whatever the constant says, so the two can be flipped between with
-the camera held.
+Kiln source whatever the constant says, and `House (procedural)` mounts the
+code-built one at the same target and frame, so the two can be flipped between
+with the camera held. `node tools/farmhouse-lab-capture.mjs` takes the standard
+views of both into `captures/farmhouse/<label>/` (gitignored).
 
 ## What is authored, and what is baked
 
@@ -28,6 +30,10 @@ does not need it to run. It is a tool that turns the recipe into the artifact:
 kiln render assets/house/farmhouse.kiln.js --out assets/house/farmhouse.glb
 ```
 
+On the owner's PC `kiln` is the `@instruktlabs/kiln` checkout at
+`C:/Users/Mattm/X/kiln-oss` (`node C:/Users/Mattm/X/kiln-oss/dist/cli.mjs render ...`,
+or `KILN_CLI` set to that `dist/cli.mjs` for the ledger's cold bake below).
+
 That bake is deterministic, and the ledger tests the claim rather than making
 it. `node tools/record-house-asset.mjs --check` re-renders from a scratch
 directory - which has no `.kiln/` cache to answer from - and fails unless the
@@ -37,27 +43,76 @@ result is byte-identical to the recorded digest.
 
 The look here does not live in the asset. It lives in `farmhouse/bands.ts`,
 which solves backwards through the tone map and the grade so `palette.ts` can
-author the sRGB a screenshot should contain, and in a channel convention a glTF
-file has no way to carry: `uv.x` names *which* surface a triangle is, and `uv.y`
-carries a distance in metres - below a roof edge on a wall, up the slope on
-slate. A baked UV would be meaningless to it.
+author the sRGB a screenshot should contain, and in a per-vertex channel
+convention the shared surface graph (`farmhouse/surfaceMaterial.ts`) reads from
+`uv`:
 
-So `app/src/scene/farmhouse/kilnHouse.ts` does not import a look, it reconstructs one. Each
-of the seven material names in the GLB is the name of a farmhouse band set, and
-that binding is the whole interface: `limewash` is `wall`, `slate` is `roof`,
-`stone` and `masonry` are the two `dress` channels, and so on. The loader bakes
-each node's world matrix, derives `uv.x` from the material it was authored
-against and `uv.y` from world position, and sorts 282 mesh nodes into one list
-per band set, which `farmhouse/cluster.ts` welds into the cluster's own buffers. The shipped `makeFarmhouseSurfaceMaterial` then draws it. No new
-shader, no texture, nothing sampled.
+| Channel | Surface | Meaning |
+| --- | --- | --- |
+| `uv.x` | dress | 0 dressed stone (sills, step, threshold, hearth), 1 chimney masonry, which also turns on the half-metre course joints |
+| `uv.x` | every other | 0 |
+| `uv.y` | limewash, timber | metres below the underside of the roof edge directly over the face; the first 0.46 m is the shadow band under an eave or a rake. Negative where a face runs up inside a slab (hidden). 9 indoors and wherever no roof is over the face |
+| `uv.y` | slate | metres up the slope from that slope's own eave, which places the courses and the sky-occlusion ramp; -1 on every slate face that is not a slope (cut edges, undersides), which leaves it plain |
+| `uv.y` | stone, masonry | 9 |
+| both | opening, lamp | 0; neither material reads them |
 
-The cost of that: **3,440 triangles and no added draws** (the six band sets weld
-into buffers the cluster already draws), no textures. For comparison,
-the entire shipped procedural cluster - house, cross wing, two lean-tos, porch,
-barn, cupola, outshot, cart-door hood, all 23 openings and the smoke plume -
-measures 4,874 triangles. One building with an interior and a storey inside it
-is seven tenths of the whole homestead, which is the trade this route asks you
-to accept.
+**The recipe writes these, per face, from its own parts.** `writeSurfaceChannels`
+at the end of `farmhouse.kiln.js` casts a vertical ray from every exterior wall
+and timber vertex to the underside of the actual slab meshes above it - the main
+roof for the limewash, the main roof and the porch for timber - so the band
+follows the eave on the long walls, the rake on the gables and the porch's own
+slopes on its posts and tympanum. Exterior faces that straddle a ridge (z = 0, and
+the porch apex at x = 3.5) are split there so the distance is exactly linear
+across every triangle. Slate gets metres up its own top face, measured from that
+face's lowest edge.
+
+Kiln's GLB bridge has no named channel for this: it keeps position, normal,
+uv, tangent and its own `_EDGE` and `_CAVITY`, and drops any other attribute with
+an `EXPORT_ATTRIBUTE_UNSUPPORTED` warning. So the two channels ride in
+TEXCOORD_0, which the bridge writes as float32 verbatim, and the recipe records
+the convention on its root node (`extras.surfaceChannels`, version 1). Every Kiln
+part already has a TEXCOORD_0 of its own (box UVs), so that record is what tells
+a channel bake from an ordinary one.
+
+`app/src/scene/farmhouse/kilnHouse.ts` reads them and reconstructs nothing. Each
+of the seven material names in the GLB is the name of a farmhouse band set -
+`limewash` is `wall`, `slate` is `roof`, `stone` and `masonry` are both `dress`,
+and so on - and the loader bakes each node's world matrix, copies the channels
+across, and sorts 283 mesh nodes into one list per band set, which
+`farmhouse/cluster.ts` welds into the cluster's own buffers. It throws, naming
+what is missing, on a GLB without the `surfaceChannels` record or a mesh
+without TEXCOORD_0; `loadKilnHouse` logs that and the game draws the procedural
+house. No new shader, no texture, nothing sampled.
+
+Before 2026-10-16 the loader guessed `uv.y` from world height. That was right
+on the long walls and the main slopes and wrong everywhere else: the porch
+roof, wholly below the main eave, clamped to 0 and drew as one flat slab; the
+slab's cut edges and undersides took slope courses; and both gable triangles
+sat at 0, one flat band from wall head to ridge.
+`docs/history/farmhouse-kiln-recipe-2026-10-16.md` has the contract and the
+before-and-after numbers.
+
+## The ground floor is one step up
+
+The pad under the house is flat to under a millimetre, and the house stands on
+it at y = 0. The shell's floor slab is lifted by `FLOOR_LIFT`, 0.15 m, one
+riser above the yard: at 0 the ground showed through the hall in streaks, and
+0.12 is the height of the game's cast-shadow slab (`farmhouse/shadows.ts`),
+which striped a deck laid on it. The porch step, the front threshold and a new
+sill in the back door's reveal finish at the deck's level, so neither door has
+a lip. The door leaf, the stair and the ground-floor fittings stand on the
+deck. The walls, posts, door frame, partitions and chimney breast still start
+at 0, so the house stays seated. The grass bake cuts the house's footprint
+(`KILN_PORCH` and `KILN_ROOF` in `farmhouse/plan.ts` repeat the recipe's
+numbers for it). The measurements are in the history note above.
+
+The cost: **3,478 triangles and no added draws** (the six band sets weld into
+buffers the cluster already draws), no textures. 26 of those triangles are the
+ridge splits and 12 the back door's sill; the authored geometry was 3,440. For
+comparison, the entire shipped procedural cluster - house, cross wing, two lean-tos, porch, barn,
+cupola, outshot, cart-door hood, all 23 openings and the smoke plume - measures
+4,874 triangles. One building with an interior and a storey inside it is seven
+tenths of the whole homestead, which is the trade this route asks you to accept.
 
 ## Provenance
 

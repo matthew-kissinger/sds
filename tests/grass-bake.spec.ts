@@ -12,7 +12,8 @@
  *
  * Everything after the byte-compare is a promise the field makes to code that
  * cannot see the bake: that the two tiers tile the world without overlapping,
- * that nothing grows through the drawn pen floor, that every tuft sits on the
+ * that nothing grows through the drawn pen floor or up inside a building that
+ * ships, that every tuft sits on the
  * one committed ground, and - the one the reduced preset lives on - that ANY
  * PREFIX of a group is an evenly spread subset of it.
  */
@@ -23,6 +24,30 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  BARN,
+  BARN_AT,
+  BARN_LEANTO_AT,
+  BARN_LEANTO_HALF,
+  BARN_YAW,
+  HOUSE,
+  HOUSE_AT,
+  KILN_PORCH,
+  KILN_ROOF,
+  LEANTO_AT,
+  LEANTO_DEPTH,
+  LEANTO_HALF,
+  PLINTH_OUT,
+  PORCH,
+  WING,
+  WING_ALONG,
+  WING_OUT,
+  WING_SKEW,
+  YAW,
+} from '@app/scene/farmhouse/plan';
+import { FRONT_DOOR } from '@app/scene/farmhouse/openings';
+import { FARMHOUSE_SOURCE } from '@app/scene/farmhouse/source';
+import { offsetStand, stand, type Stand } from '@app/scene/farmhouse/shell';
 import { GRASS_PRESETS } from '@app/scene/grass/density';
 import {
   Heightfield,
@@ -41,6 +66,7 @@ interface GrassManifest {
   format: string;
   stride: number;
   terrainSeed: number;
+  farmhouseSource: string;
   encoding: { xzRange: number; yRange: number; heightMin: number; heightMax: number };
   footprint: {
     fieldHalf: number;
@@ -178,6 +204,63 @@ describe('the committed scatter', () => {
       if (inPen || inCorridor) trespassers++;
     }
     expect(trespassers).toBe(0);
+  });
+
+  /**
+   * The bake cuts the footprints of the buildings that ship, and which house
+   * ships is FARMHOUSE_SOURCE. Flipping it without rebaking would leave grass
+   * growing up through the new house's floor and bare ground where the old one
+   * stood, so the flip and the grass rebake are one commit.
+   */
+  it('was baked for the farmhouse that ships', () => {
+    expect(
+      manifest.farmhouseSource,
+      `assets/grass/ was baked for the '${manifest.farmhouseSource}' farmhouse but ` +
+        `FARMHOUSE_SOURCE is '${FARMHOUSE_SOURCE}': run node tools/bake-grass.mjs and commit it with the flip`,
+    ).toBe(FARMHOUSE_SOURCE);
+  });
+
+  it('grows nothing up inside a building that ships', () => {
+    const house = stand(HOUSE_AT.x, 0, HOUSE_AT.z, YAW);
+    const barn = stand(BARN_AT.x, 0, BARN_AT.z, BARN_YAW);
+    type Rect = { id: string; place: Stand; minX: number; maxX: number; minZ: number; maxZ: number };
+    const centred = (id: string, place: Stand, hx: number, hz: number): Rect => ({
+      id, place, minX: -hx, maxX: hx, minZ: -hz, maxZ: hz,
+    });
+    const against = (id: string, place: Stand, width: number, along: number, half: number, depth: number): Rect => ({
+      id, place, minX: along - half, maxX: along + half, minZ: -width / 2 - depth, maxZ: -width / 2,
+    });
+    const rects: Rect[] =
+      FARMHOUSE_SOURCE === 'procedural'
+        ? [
+            centred('house', house, HOUSE.length / 2 + PLINTH_OUT, HOUSE.width / 2 + PLINTH_OUT),
+            centred('wing', offsetStand(house, WING_ALONG, WING_OUT, WING_SKEW), WING.length / 2 + PLINTH_OUT, WING.width / 2 + PLINTH_OUT),
+            against('porch', house, HOUSE.width, FRONT_DOOR.across, PORCH.half, PORCH.depth),
+            against('lean-to', house, HOUSE.width, LEANTO_AT, LEANTO_HALF, LEANTO_DEPTH),
+          ]
+        : [
+            centred('house', house, KILN_ROOF.length / 2, KILN_ROOF.width / 2),
+            against('porch', house, KILN_ROOF.width, KILN_PORCH.across, KILN_PORCH.half, KILN_PORCH.depth),
+          ];
+    rects.push(
+      centred('barn', barn, BARN.length / 2 + PLINTH_OUT, BARN.width / 2 + PLINTH_OUT),
+      against('barn lean-to', barn, BARN.width, BARN_LEANTO_AT, BARN_LEANTO_HALF, LEANTO_DEPTH),
+    );
+    const inside: string[] = [];
+    for (let i = 0; i < bytes.byteLength / stride; i++) {
+      const t = tuftAt(i);
+      for (const r of rects) {
+        // Into the building's frame: the inverse of offsetStand's rotation.
+        const sin = Math.sin(r.place.yaw);
+        const cos = Math.cos(r.place.yaw);
+        const dx = t.x - r.place.x;
+        const dz = t.z - r.place.z;
+        const lx = dx * cos - dz * sin;
+        const lz = dx * sin + dz * cos;
+        if (lx > r.minX && lx < r.maxX && lz > r.minZ && lz < r.maxZ) inside.push(r.id);
+      }
+    }
+    expect(inside).toEqual([]);
   });
 
   it('stands every tuft on the one committed ground', () => {

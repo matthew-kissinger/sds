@@ -5,6 +5,7 @@
   "format": "tuft12",
   "stride": 12,
   "terrainSeed": 20260821,
+  "farmhouseSource": "procedural",
   "encoding": {
     "xzRange": 200,
     "yRange": 8,
@@ -21,12 +22,12 @@
     {
       "id": "field",
       "offset": 0,
-      "count": 81752
+      "count": 81731
     },
     {
       "id": "surround",
-      "offset": 81752,
-      "count": 16595
+      "offset": 81731,
+      "count": 16527
     }
   ]
 }

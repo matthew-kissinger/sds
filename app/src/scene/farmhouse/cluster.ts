@@ -59,6 +59,7 @@ import {
   LEANTO_HALF,
   LOGS_AT,
   LOGS_YAW,
+  PLINTH_OUT,
   WING,
   WING_ALONG,
   WING_OUT,
@@ -90,7 +91,7 @@ function plinth(shell: Shell, place: Stand, spec: RoofSpec): void {
   shell.taperedBox(
     place,
     [0, 0.2, 0],
-    [spec.length / 2 + 0.22, 0.2, spec.width / 2 + 0.22],
+    [spec.length / 2 + PLINTH_OUT, 0.2, spec.width / 2 + PLINTH_OUT],
     [spec.length / 2 + 0.1, 0.2, spec.width / 2 + 0.1],
   );
 }

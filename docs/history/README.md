@@ -20,4 +20,5 @@ rules that outlived the work below.
 | `studio-mobile-review.md` | The responsive Studio fix. Its layout rule is in `tests/studio-layout.spec.ts`. |
 | `audio-balance-audit.md` | The calm-soundscape audit, closed by owner approval. |
 | `audio-source-review.md` | The rejected deterministic PCM synthesis experiment. |
+| `farmhouse-kiln-recipe-2026-10-16.md` | The Kiln farmhouse's per-vertex surface channels: the backdrop shader's contract, the bake that writes it, before-and-after evidence and the Kiln feedback list. |
 | `progress-2026-08.md` | An early running log, superseded by `STATUS.md` and `CHANGELOG.md`. |

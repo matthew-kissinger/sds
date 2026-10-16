@@ -56,6 +56,32 @@ const ROOF_LIFT = 0.02;
 // there is no reveal in a 0.15 m wall.
 const WALL_T = 0.55;
 const FLOOR_T = 0.18;
+/**
+ * The ground floor stands one step above the yard. The shell's floor is a slab
+ * whose top was y 0 - exactly the terrain under it, since the pad is flat to
+ * under a millimetre - so the ground showed through the hall in streaks. A
+ * floor a real step up cannot fight the ground at any camera, and it is where
+ * a house's floor is: one 150 mm riser from the yard, with the porch step, the
+ * threshold and the deck finishing at one level so the door has no lip.
+ *
+ * Not 0.12, though that was the step's authored height: the game lays its cast
+ * shadows as a slab 0.12 m above the ground (farmhouse/shadows.ts, LIFT), and
+ * the house's own shadow starts under its footprint, so a deck at 0.12 was
+ * coplanar with it and striped. 0.15 clears it by 30 mm.
+ *
+ * What moves with it: the slab, the step, the threshold stones (front, and a
+ * sill in the back door's reveal, which had none), the door leaf, which hangs
+ * over the deck and so is shortened by the lift under the same lintel, the
+ * stair, whose twelve risers now share the rise from the deck to the ceiling,
+ * and the ground-floor fittings in ON_DECK. What does not: the walls, the
+ * corner and porch posts, the door frame, the partitions and the chimney
+ * breast, which all still start at 0 and run through the deck, so the house
+ * stays seated on the ground. Measured in the lab:
+ * docs/history/farmhouse-kiln-recipe-2026-10-16.md.
+ */
+const FLOOR_LIFT = 0.15;
+/** The ground-floor fittings that stand on the deck rather than on the pad. */
+const ON_DECK = /^(Mesh_)?(Table|Bench|Settle|Dresser|Parlour|Fire_Hearth|Fire_Log|Fire_Burning)/;
 
 // Inner faces of the four walls, which everything indoors is measured from.
 const IN_X = SPAN_X / 2 - WALL_T / 2;
@@ -171,6 +197,7 @@ function build() {
     },
   );
   shell.roof.root.removeFromParent();
+  shell.floor.position.y += FLOOR_LIFT;
 
   // The roof, bearing on the outer faces: span plus one wall thickness, so the
   // slate crosses the eaves line exactly where the render stops. The ridge still
@@ -328,7 +355,7 @@ function build() {
   const doorH = 2.6;
   const doorZ = -(SPAN_Z / 2 - WALL_T / 2) - 0.07;
   const leaf = createRoot('FrontDoor');
-  leaf.position.set(doorX - doorW / 2 + 0.03, 0, doorZ);
+  leaf.position.set(doorX - doorW / 2 + 0.03, FLOOR_LIFT, doorZ);
   // Forty degrees, swung inward. At sixty-two the leaf stood almost square to
   // the approach and read as a strip of nothing from the yard; at forty its face
   // is visible from outside and the hall is still open behind it.
@@ -336,11 +363,12 @@ function build() {
   root.add(leaf);
   // Five boards and two ledges, hung off the hinge stile at local x = 0.
   const leafW = doorW - 0.06;
+  const leafH = doorH - 0.08 - FLOOR_LIFT;
   for (let plank = 0; plank < 5; plank++) {
-    box(`Door_Board${plank}`, [leafW / 5 - 0.012, doorH - 0.08, 0.055],
-      [leafW / 10 + (plank * leafW) / 5, (doorH - 0.08) / 2, 0], timber, leaf);
+    box(`Door_Board${plank}`, [leafW / 5 - 0.012, leafH, 0.055],
+      [leafW / 10 + (plank * leafW) / 5, leafH / 2, 0], timber, leaf);
   }
-  for (const y of [0.45, doorH - 0.55]) {
+  for (const y of [0.45, leafH - 0.47]) {
     box(`Door_Ledge${y < 1 ? 'Low' : 'High'}`, [leafW - 0.06, 0.16, 0.045],
       [leafW / 2, y, -0.045], timber, leaf);
   }
@@ -355,7 +383,17 @@ function build() {
       [doorX + side * (doorW / 2 - 0.06), (doorH + 0.06) / 2, doorZ], timber);
   }
   box('Door_Lintel', [doorW + 0.24, 0.2, 0.3], [doorX, doorH + 0.09, doorZ - 0.05], timber);
-  box('Door_Threshold', [doorW + 0.3, 0.09, 0.62], [doorX, 0.03, doorZ - 0.16], stone);
+  // From the wall's outer face, where the step meets it, to the deck's edge on
+  // the wall's centreline: the stone and the deck finish at one level and never
+  // overlap, because two coplanar tops fight for depth.
+  const sillDepth = WALL_T / 2;
+  box('Door_Threshold', [doorW + 0.3, FLOOR_LIFT + 0.015, sillDepth],
+    [doorX, (FLOOR_LIFT - 0.015) / 2, -(SPAN_Z / 2 + sillDepth / 2)], stone);
+  // The back door's reveal had the bare deck edge in it; it gets the same stone.
+  const backDoorX = -5.1;
+  const backDoorW = 1.05;
+  box('BackDoor_Sill', [backDoorW + 0.3, FLOOR_LIFT + 0.015, sillDepth],
+    [backDoorX, (FLOOR_LIFT - 0.015) / 2, SPAN_Z / 2 + sillDepth / 2], stone);
 
   // ---------------------------------------------------------------- porch
   // A gabled porch over the door: a second roof pitch crossing the first at the
@@ -367,7 +405,7 @@ function build() {
   const porchEaves = 2.78;
   const porchApex = 3.82;
   const porchNose = 0.28;
-  box('Porch_Step', [doorW + 1.1, 0.12, 0.72], [doorX, 0.06, porchZ - 0.36], stone);
+  box('Porch_Step', [doorW + 1.1, FLOOR_LIFT, 0.72], [doorX, FLOOR_LIFT / 2, porchZ - 0.36], stone);
   for (const side of [-1, 1]) {
     box(`Porch_Post${side < 0 ? 'A' : 'B'}`,
       [0.15, porchEaves + 0.2, 0.15],
@@ -377,8 +415,9 @@ function build() {
   // rather than being a plane with a lit side and a black one.
   const porchRun = Math.hypot(porchHalf + 0.18, porchApex - porchEaves);
   const porchTilt = (Math.atan2(porchApex - porchEaves, porchHalf + 0.18) * 180) / Math.PI;
+  const porchSlopes = [];
   for (const side of [-1, 1]) {
-    box(`Porch_Slope${side < 0 ? 'A' : 'B'}`,
+    porchSlopes.push(box(`Porch_Slope${side < 0 ? 'A' : 'B'}`,
       [porchRun, 0.14, porchOut + porchNose],
       [doorX + side * (porchHalf + 0.18) / 2, (porchEaves + porchApex) / 2,
         porchZ - (porchOut + porchNose) / 2 + 0.06],
@@ -386,7 +425,7 @@ function build() {
       // the +X side needs the opposite sign to fall outward. With the sign the
       // other way round the first contact sheet drew the porch as two wings
       // rising off a low centre.
-      slate, root, [0, 0, -side * porchTilt]);
+      slate, root, [0, 0, -side * porchTilt]));
   }
   // The tympanum under them.
   createPart('Porch_Tympanum',
@@ -482,18 +521,18 @@ function build() {
   // The stair, twelve solid treads climbing the back wall into the well.
   const treads = 12;
   const going = 0.28;
-  const riser = CEIL / treads;
+  const riser = (CEIL - FLOOR_LIFT) / treads;
   const stairX0 = -1.2;
   for (let step = 0; step < treads; step++) {
-    const top = (step + 1) * riser;
+    const top = FLOOR_LIFT + (step + 1) * riser;
     box(`Stair_Tread${step}`, [going, top, 1.05],
       [stairX0 + going * (step + 0.5), top / 2, IN_Z - 0.56], timber);
   }
-  box('Stair_RailPostA', [0.1, 1, 0.1], [stairX0 + 0.2, 0.5 + riser, IN_Z - 1.06], timber);
+  box('Stair_RailPostA', [0.1, 1, 0.1], [stairX0 + 0.2, FLOOR_LIFT + 0.5 + riser, IN_Z - 1.06], timber);
   box('Stair_RailPostB', [0.1, 1, 0.1], [stairX0 + going * treads - 0.2, CEIL + 0.5, IN_Z - 1.06], timber);
   box('Stair_Rail', [going * treads, 0.09, 0.09],
-    [stairX0 + (going * treads) / 2, (riser + CEIL) / 2 + 1, IN_Z - 1.06], timber,
-    root, [0, 0, (Math.atan2(CEIL - riser, going * treads) * 180) / Math.PI]);
+    [stairX0 + (going * treads) / 2, (FLOOR_LIFT + riser + CEIL) / 2 + 1, IN_Z - 1.06], timber,
+    root, [0, 0, (Math.atan2(CEIL - riser - FLOOR_LIFT, going * treads) * 180) / Math.PI]);
 
   // ----------------------------------------------------------- first floor
   // THE STOREY THE ELEVATIONS WERE ALREADY PROMISING. Until now the ceiling
@@ -594,7 +633,286 @@ function build() {
     }
   }
 
-  return shell.root === root ? root : root;
+  root.traverse((node) => {
+    if (node.isMesh && ON_DECK.test(node.name)) node.position.y += FLOOR_LIFT;
+  });
+
+  writeSurfaceChannels(root, {
+    materials: { limewash, slate, timber, stone, masonry },
+    eaves: roof.root,
+    porch: porchSlopes,
+    porchApexX: doorX,
+  });
+  return root;
+}
+
+// ------------------------------------------------------- surface channels
+/**
+ * THE TWO CHANNELS THE GAME'S BACKDROP SHADER READS, written by the bake.
+ *
+ * The game does not shade this house with the PBR materials above. It welds
+ * every triangle into the farmhouse cluster's band-set buffers and draws them
+ * with one shared toon graph (app/src/scene/farmhouse/surfaceMaterial.ts),
+ * which reads `uv` as two numbers that are not texture coordinates:
+ *
+ *  - `uv.x` selects a surface inside a band set. Only the dress set uses it:
+ *    0 is the dressed stone (sills, step, threshold, hearth), 1 the chimney
+ *    masonry, which also turns on
+ *    its half-metre course joints. Everything else carries 0.
+ *  - `uv.y` is a distance in metres. On limewash and timber it is how far the
+ *    face sits below the underside of the roof edge directly over it, and the
+ *    first 0.46 m of that is drawn as the shadow band under an eave or a rake;
+ *    it is negative where a face runs up inside a slab, which is hidden, and 9
+ *    (no roof edge, nothing drawn) indoors or where nothing roofs the face. On
+ *    slate it is metres up the slope from that slope's own eave, which places
+ *    the courses parallel to the eave and the sky-occlusion ramp; -1 marks a
+ *    slate face that is not a slope (the slab's cut edges - the fascia line,
+ *    the verges, the ridge - and its underside) and leaves it plain.
+ *
+ * glTF has no channel for this, and Kiln's GLB bridge keeps only position,
+ * normal, uv, tangent and its own two baked attributes (`_EDGE`, `_CAVITY`): a
+ * named `_SURFACE` attribute is dropped with an EXPORT_ATTRIBUTE_UNSUPPORTED
+ * warning. So the channels ride in TEXCOORD_0, which the bridge writes as
+ * float32 verbatim, and the root node's extras say so (`surfaceChannels`), so
+ * the loader can tell this bake from one whose TEXCOORD_0 is Kiln's own
+ * texture mapping and refuse the latter.
+ *
+ * Every number here is computed from the parts themselves. The distance below
+ * a roof edge is a vertical ray from the vertex to the underside of the actual
+ * slab meshes above it, so it follows the eave on the long walls, the rake on
+ * the gables and the porch's own slopes on its posts and tympanum, with no
+ * second copy of the roof's arithmetic to drift. A rake's distance changes
+ * slope at the ridge, so faces under the main roof are split along z = 0 and
+ * faces under the porch along its apex, and every triangle then carries a
+ * distance that is exactly linear across it.
+ */
+const SURFACE_CHANNELS = {
+  version: 1,
+  attribute: 'TEXCOORD_0',
+  u: 'surface selector inside the band set: 1 chimney masonry (dress), otherwise 0',
+  v: 'metres: below the roof edge over the face (limewash, timber; 9 none, negative inside a slab); '
+    + 'up the slope from its own eave (slate; -1 off the slope); 9 on stone and masonry; 0 on openings and lamps',
+};
+const OPEN_SKY = 9;
+const OFF_SLOPE = -1;
+
+function writeSurfaceChannels(root, spec) {
+  root.updateMatrixWorld(true);
+  const m = spec.materials;
+  const meshesOf = (objects) => {
+    const out = [];
+    for (const object of objects) object.traverse((node) => { if (node.isMesh) out.push(node); });
+    return out;
+  };
+
+  // Hit-test copies of the slabs, taken before any geometry is replaced, and
+  // double-sided so a ray can tell an underside (facing down) from the inside
+  // of a slab's top face.
+  const probes = (meshes) => meshes.map((mesh) => {
+    const probe = new THREE.Mesh(mesh.geometry, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+    probe.matrixAutoUpdate = false;
+    probe.matrixWorld.copy(mesh.matrixWorld);
+    return probe;
+  });
+  const eaves = probes(meshesOf([spec.eaves]).filter((mesh) => mesh.material === m.slate));
+  const porch = probes(meshesOf(spec.porch));
+  const rules = {
+    // The render is roofed by the house slabs only. The porch is left out on
+    // purpose: its slopes meet the front wall along a line no triangle of the
+    // wall follows, and a band that jumped from one roof to the other mid-face
+    // would be a smear, not a shadow.
+    limewash: { roofs: eaves, splits: [['z', 0]] },
+    timber: { roofs: [...eaves, ...porch], splits: [['z', 0], ['x', spec.porchApexX]] },
+  };
+
+  const raycaster = new THREE.Raycaster();
+  const up = new THREE.Vector3(0, 1, 0);
+  const normal = new THREE.Matrix3();
+
+  /** Signed metres from `p` up to the first roof underside over it, or null. */
+  const belowRoof = (p, roofs) => {
+    raycaster.set(new THREE.Vector3(p.x, p.y - 1, p.z), up);
+    for (const hit of raycaster.intersectObjects(roofs, false)) {
+      normal.getNormalMatrix(hit.object.matrixWorld);
+      const facing = hit.face.normal.clone().applyMatrix3(normal);
+      if (facing.y < 0) return hit.point.y - p.y;
+    }
+    return null;
+  };
+
+  const meshes = meshesOf([root]);
+  for (const mesh of meshes) {
+    if (Array.isArray(mesh.material)) throw new Error(`${mesh.name}: one material per part`);
+    const material = mesh.material;
+    const u = material === m.masonry ? 1 : 0;
+    const name = Object.keys(m).find((key) => m[key] === material);
+    let geometry;
+    let v;
+    if (material === m.stone || material === m.masonry || (name !== 'slate' && !rules[name])) {
+      geometry = mesh.geometry.clone();
+      // Dressings take no eave band (their gain is neutral) and carry OPEN_SKY,
+      // as the procedural plinth and stack do; openings and lamps read nothing
+      // and carry 0, as `openingPanel` marks them.
+      const fill = material === m.stone || material === m.masonry ? OPEN_SKY : 0;
+      v = new Float32Array(geometry.getAttribute('position').count).fill(fill);
+    } else if (name === 'slate') {
+      geometry = mesh.geometry.clone();
+      v = slopeChannel(mesh, geometry);
+    } else {
+      const rule = rules[name];
+      geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+      for (const [axis, value] of rule.splits) geometry = splitAcross(geometry, mesh.matrixWorld, axis, value);
+      v = belowChannel(mesh.matrixWorld, geometry, rule.roofs, belowRoof);
+    }
+    const uv = new Float32Array(v.length * 2);
+    for (let i = 0; i < v.length; i += 1) {
+      uv[i * 2] = u;
+      uv[i * 2 + 1] = v[i];
+    }
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    mesh.geometry = geometry;
+  }
+  root.userData.surfaceChannels = SURFACE_CHANNELS;
+}
+
+/**
+ * Metres up a slab's top face from its lowest edge; -1 on every other face.
+ *
+ * The top face is the LARGEST upward face, not the most upward one: on this
+ * 47 degree pitch the slab's cut face at the ridge points further up (0.73)
+ * than the slope itself (0.68), and choosing by normal alone put the courses
+ * on a 220 mm strip under the ridge and none on the roof.
+ */
+function slopeChannel(mesh, geometry) {
+  const position = geometry.getAttribute('position');
+  const normals = geometry.getAttribute('normal');
+  const matrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
+  const world = [];
+  for (let i = 0; i < position.count; i += 1) {
+    const n = new THREE.Vector3().fromBufferAttribute(normals, i).applyMatrix3(matrix).normalize();
+    const p = new THREE.Vector3().fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+    world.push({ n, p });
+  }
+  const index = geometry.index;
+  const corners = index === null ? world.length : index.count;
+  const faces = [];
+  for (let t = 0; t < corners; t += 3) {
+    const [a, b, c] = [0, 1, 2].map((k) => world[index === null ? t + k : index.getX(t + k)]);
+    const area = b.p.clone().sub(a.p).cross(c.p.clone().sub(a.p)).length() / 2;
+    const face = faces.find((f) => f.n.dot(a.n) > 0.999);
+    if (face) face.area += area;
+    else faces.push({ n: a.n, area });
+  }
+  const top = faces.filter((f) => f.n.y > 0.1).sort((x, y) => y.area - x.area)[0].n;
+  const onTop = ({ n }) => n.dot(top) > 0.999;
+  const eave = Math.min(...world.filter(onTop).map(({ p }) => p.y));
+  const run = Math.sqrt(Math.max(0, 1 - top.y * top.y));
+  return Float32Array.from(world, (vertex) => (onTop(vertex) && run > 0.05
+    ? (vertex.p.y - eave) / run
+    : OFF_SLOPE));
+}
+
+/**
+ * Whether a triangle, given in the house's frame, faces out of the house: a
+ * step off it along its own normal lands outside the walls' outer faces. The
+ * window joinery set back in its reveals, the partitions, the reveals and the
+ * inside of every wall do not.
+ */
+function facesOut(a, b, c) {
+  const outX = SPAN_X / 2 + WALL_T / 2;
+  const outZ = SPAN_Z / 2 + WALL_T / 2;
+  const face = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
+  const step = a.clone().add(b).add(c).divideScalar(3).addScaledVector(face, 0.02);
+  return Math.abs(step.x) > outX - 0.005 || Math.abs(step.z) > outZ - 0.005;
+}
+
+/** Metres below the roof over each exterior face; OPEN_SKY on every other. */
+function belowChannel(matrixWorld, geometry, roofs, belowRoof) {
+  const position = geometry.getAttribute('position');
+  const v = new Float32Array(position.count);
+  const corner = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  for (let t = 0; t < position.count; t += 3) {
+    for (let k = 0; k < 3; k += 1) corner[k].fromBufferAttribute(position, t + k).applyMatrix4(matrixWorld);
+    const exterior = facesOut(corner[0], corner[1], corner[2]);
+    for (let k = 0; k < 3; k += 1) {
+      const below = exterior ? belowRoof(corner[k], roofs) : null;
+      v[t + k] = below === null ? OPEN_SKY : below;
+    }
+  }
+  return v;
+}
+
+/**
+ * Cut every exterior triangle of a non-indexed geometry that crosses the world
+ * plane `axis = value`, keeping its winding, so a channel that bends at that
+ * plane stays linear across each triangle. Indoor faces carry a constant and
+ * are left whole. Positions and normals are interpolated in the part's own
+ * frame; the plane test is in the house's.
+ */
+function splitAcross(geometry, matrixWorld, axis, value) {
+  const position = geometry.getAttribute('position');
+  const normals = geometry.getAttribute('normal');
+  const side = (i) => {
+    const s = new THREE.Vector3().fromBufferAttribute(position, i).applyMatrix4(matrixWorld)[axis] - value;
+    return Math.abs(s) < 1e-6 ? 0 : s;
+  };
+  const corners = [];
+  let crosses = false;
+  for (let i = 0; i < position.count; i += 1) {
+    corners.push({
+      p: new THREE.Vector3().fromBufferAttribute(position, i),
+      n: new THREE.Vector3().fromBufferAttribute(normals, i),
+      w: new THREE.Vector3().fromBufferAttribute(position, i).applyMatrix4(matrixWorld),
+      s: side(i),
+    });
+  }
+  const cut = (tri) => {
+    const s = tri.map((c) => c.s);
+    return Math.min(...s) < 0 && Math.max(...s) > 0 && facesOut(tri[0].w, tri[1].w, tri[2].w);
+  };
+  for (let t = 0; t < corners.length; t += 3) {
+    if (cut([corners[t], corners[t + 1], corners[t + 2]])) crosses = true;
+  }
+  if (!crosses) return geometry;
+
+  const p = [];
+  const n = [];
+  const emit = (polygon) => {
+    for (let k = 1; k + 1 < polygon.length; k += 1) {
+      for (const c of [polygon[0], polygon[k], polygon[k + 1]]) {
+        p.push(c.p.x, c.p.y, c.p.z);
+        n.push(c.n.x, c.n.y, c.n.z);
+      }
+    }
+  };
+  for (let t = 0; t < corners.length; t += 3) {
+    const tri = [corners[t], corners[t + 1], corners[t + 2]];
+    if (!cut(tri)) {
+      emit(tri);
+      continue;
+    }
+    for (const keep of [1, -1]) {
+      const polygon = [];
+      for (let k = 0; k < 3; k += 1) {
+        const a = tri[k];
+        const b = tri[(k + 1) % 3];
+        if (a.s * keep >= 0) polygon.push(a);
+        if (a.s * b.s < 0) {
+          const f = a.s / (a.s - b.s);
+          polygon.push({
+            p: a.p.clone().lerp(b.p, f),
+            n: a.n.clone().lerp(b.n, f).normalize(),
+            s: 0,
+          });
+        }
+      }
+      if (polygon.length >= 3) emit(polygon);
+    }
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3));
+  return out;
 }
 
 /**

@@ -260,12 +260,14 @@ longer claims Neutral.
   0.15 m above the pad with step, thresholds and a new back-door sill moved
   with it, and `tools/bake-grass.mjs` reads the plan and the source constant
   to hard-cut the footprints of the buildings that ship (a flip now requires
-  a grass rebake, enforced by `tests/grass-bake.spec.ts`). Outstanding on the
-  branch: the outline hull, whose envelope was a hand copy of the procedural
-  roof and hangs 0.1 m outside and 0.2 m below the Kiln eave; the fix is an
-  eave depth on `RoofSpec` and the Kiln overhang, with the recipe writing
-  the eave corner into the GLB as the follow-up. The owner's look review and
-  the hub receipt remain.
+  a grass rebake, enforced by `tests/grass-bake.spec.ts`). The outline hull
+  fix is in: `RoofSpec` takes an eave depth and a bow, and `KILN_ROOF` (a
+  hand copy of the recipe's roof that had drifted) now lands its eave on the
+  slab's lower outer corner, so no ledge hangs under the eaves; a test holds
+  the envelope inside the baked slab. Follow-up: the recipe writes the slab's
+  eave and verge corners into the GLB extras beside `surfaceChannels` and the
+  envelope is derived from them rather than copied. The owner's look review
+  and the hub receipt remain.
 - Kiln barn, right after the farmhouse (added 2026-10-16; the status log had
   recorded "the barn has had no equivalent of the Kiln treatment" and the plan
   had left it out): a second recipe under `assets/barn/`, baked with the same

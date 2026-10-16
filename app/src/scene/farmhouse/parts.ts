@@ -31,6 +31,7 @@
  */
 
 import { hipCut, ridgeSag, type RoofOptions, type RoofSpec } from './roof';
+import { LEANTO_DEPTH, PORCH } from './plan';
 import type { Local, Shell, Stand, UV } from './shell';
 
 /** Which wall an opening sits on, in the building's own frame. */
@@ -182,7 +183,7 @@ export function leanTo(
   half: number,
 ): void {
   const back = -spec.width / 2;
-  const depth = 2.8;
+  const depth = LEANTO_DEPTH;
   const high = 3.6;
   const low = 2.35;
   const front = back - depth;
@@ -272,9 +273,8 @@ export function porch(
   door: { readonly width: number; readonly height: number },
 ): void {
   const back = -spec.width / 2;
-  const half = 1.32;
+  const { half, depth } = PORCH;
   const over = 0.2;
-  const depth = 1.95;
   const nose = 0.26;
   const eaves = 2.72;
   const apex = 3.74;
