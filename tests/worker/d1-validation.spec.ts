@@ -3,7 +3,7 @@
 /**
  * Cycle 27 Phase I — worker-side validation coverage.
  *
- * RoomDO + LobbyDO have a thick layer of pure validation/utility
+ * The score service has a thick layer of pure validation/utility
  * functions in worker/src/d1.ts that gate score submissions. Those
  * functions had effectively zero coverage before this spec — the
  * worker either accepts or rejects, and a regression in any of them

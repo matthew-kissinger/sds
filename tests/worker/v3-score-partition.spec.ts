@@ -16,8 +16,6 @@ function readEnv() {
     async all() { return { results: [] }; },
   };
   return {
-    ROOM_DO: {},
-    LOBBY_DO: {},
     DB: { prepare: () => statement },
     JWT_SECRET: 'test-secret',
   } as any;

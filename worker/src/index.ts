@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-// Main worker router: HTTP API + WS upgrade routing to RoomDO.
-// Contracts come from docs/archive/c-retry/contract.md and docs/archive/c-retry/authority.md.
+// Main worker router: the identity and score REST API.
+//
+// The version 2 multiplayer Durable Objects (RoomDO, LobbyDO), their
+// simulation and the /r/:code/ws upgrade were removed in Release 1; the
+// deleted_classes migration in wrangler.toml retires the classes. Rooms return
+// as a separate realtime Worker under spec/03-multiplayer.md, with the v2 code
+// in git history as reference.
 
-import { RoomDO } from './RoomDO';
-import { LobbyDO } from './LobbyDO';
-import { signJwt, verifyJwt, signTicket, verifyTicket } from './jwt';
+import { signJwt, verifyJwt } from './jwt';
 import { log, errStr } from './log';
 import {
   registerPlayer,
@@ -38,11 +41,7 @@ import {
   EVENT_PROPS_JSON_CAP,
 } from './eventProps';
 
-export { RoomDO, LobbyDO };
-
 interface Env {
-  ROOM_DO: DurableObjectNamespace;
-  LOBBY_DO: DurableObjectNamespace;
   DB: D1Database;
   JWT_SECRET: string;
   // Cycle 35 Phase 2: optional admin secret for /api/score-errors readout.
@@ -70,7 +69,7 @@ const ALLOWED_ORIGINS = new Set([
 // counter: a determined distributed flood needs Cloudflare's edge WAF, not app
 // code. Buckets refill continuously at REFILL_PER_SEC up to BUCKET_CAPACITY.
 // The cap is generous: a real client makes a handful of these calls per session
-// (register once, create/join a room, poll leaderboards), nowhere near 60/min.
+// (register once, poll leaderboards), nowhere near 60/min.
 const RATE_BUCKET_CAPACITY = 60;       // burst allowance per IP
 const RATE_REFILL_PER_SEC = 1;         // sustained 60/min steady-state
 const RATE_BUCKET_MAX_ENTRIES = 10_000; // cap the map so it can't grow unbounded
@@ -88,8 +87,9 @@ const SCORE_REFILL_PER_SEC = 0.2;       // sustained 12/min steady-state
 const scoreBuckets = new Map<string, TokenBucket>();
 
 // P-SEC-5: modes the public POST /api/score must never accept. 'competitive'
-// and 'timed' are multiplayer outcomes written ONLY by RoomDO.onSubmitScores
-// after a DO-validated match; a client posting them is forging a result.
+// and 'timed' are multiplayer outcomes. Their only writer was the retired v2
+// RoomDO after a DO-validated match, so no route writes them now; a client
+// posting them is forging a result.
 const PUBLIC_SCORE_FORBIDDEN_MODES: ReadonlySet<string> = new Set(['competitive', 'timed']);
 
 // Shared token-bucket arithmetic. Refills `bucket` continuously since its last
@@ -200,52 +200,11 @@ export async function readJsonObject(request: Request): Promise<any> {
   }
 }
 
-function lobbyStub(env: Env): DurableObjectStub {
-  const id = env.LOBBY_DO.idFromName('global');
-  return env.LOBBY_DO.get(id);
-}
-
-function roomStub(env: Env, roomCode: string): DurableObjectStub {
-  const id = env.ROOM_DO.idFromName(roomCode.toUpperCase());
-  return env.ROOM_DO.get(id);
-}
-
-// P-SEC-4 (e): release a previously-claimed room slot on the singleton lobby.
-// Best-effort; a swallowed failure only means a slot lingers until the lobby's
-// stale sweep reclaims it.
-async function releaseRoomClaim(env: Env, roomCode: string): Promise<void> {
-  try {
-    await lobbyStub(env).fetch(
-      new Request('https://do/release-room', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ roomCode }),
-      }),
-    );
-  } catch {
-    /* best-effort */
-  }
-}
-
 async function extractToken(request: Request, env: Env, body: any): Promise<any | null> {
   const auth = request.headers.get('Authorization');
   const token = (auth?.startsWith('Bearer ') ? auth.slice(7) : body?.token) ?? null;
   if (!token) return null;
   return verifyJwt(token, env.JWT_SECRET);
-}
-
-function makeSessionId(): string {
-  // 16 hex chars — ephemeral per-WS session id. Not to be confused with persistent_id.
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// P-SEC-2: mint the WS admission ticket that binds the just-authenticated
-// persistent_id to the room + session the REST handler allocated. The client
-// rides it on the /ws upgrade URL; the upgrade router verifies it before
-// forwarding. Short TTL — it's consumed at the immediately-following upgrade.
-function makeWsTicket(env: Env, persistentId: string, sessionId: string, roomCode: string): Promise<string> {
-  return signTicket({ persistent_id: persistentId, sessionId, roomCode }, env.JWT_SECRET);
 }
 
 export default {
@@ -260,41 +219,11 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
-    // --- WebSocket upgrade on /r/:code/ws ---
-    const wsMatch = path.match(/^\/r\/([A-Z0-9]{3,8})\/ws$/i);
-    if (wsMatch) {
-      const code = wsMatch[1].toUpperCase();
-      // P-SEC-2: the upgrade must carry the WS admission ticket minted by the
-      // REST create/join handler. A browser WebSocket can't set an Authorization
-      // header, so the ticket rides the query string. We verify signature +
-      // expiry + that it was minted for this exact (room, session) BEFORE
-      // forwarding to the DO, then hand the DO the verified persistent_id via an
-      // internal header so it never has to re-derive identity from a bare id.
-      const sessionId = url.searchParams.get('playerId');
-      const ticket = url.searchParams.get('ticket');
-      if (!sessionId) return err('missing playerId', 401, cors);
-      if (!ticket) return err('missing ticket', 401, cors);
-      const claims = await verifyTicket(ticket, env.JWT_SECRET, { roomCode: code, sessionId });
-      if (!claims) return err('invalid ticket', 401, cors);
-
-      const stub = roomStub(env, code);
-      // Forward with original URL so DO sees query params, plus the verified
-      // persistent_id on an internal header the client can't forge (the DO is
-      // only reachable through this Worker).
-      const doUrl = new URL(url);
-      doUrl.pathname = '/ws';
-      const fwd = new Request(doUrl.toString(), request);
-      fwd.headers.set('X-Auth-Persistent-Id', claims.persistent_id);
-      return stub.fetch(fwd);
-    }
-
     // P-SEC-4 (g): front-door rate limit on the public mutation + heavy-read
-    // endpoints. Applied AFTER the WS upgrade (which has its own per-connection
-    // limiter) and the OPTIONS preflight, but before any route work or D1 hit,
-    // so a flood is rejected at the cheapest point. Scoped to the abuse-prone
-    // routes: register (account creation), event (telemetry firehose), rooms*
-    // (room creation / join / quick-match — each spins up DO work), and
-    // leaderboards (the heavy GROUP-BY read). Healthz + the admin readout are
+    // endpoints. Applied after the OPTIONS preflight but before any route work
+    // or D1 hit, so a flood is rejected at the cheapest point. Scoped to the
+    // abuse-prone routes: register (account creation), rename, event (telemetry
+    // firehose), and the leaderboard and my-scores reads. Healthz + the admin readout are
     // intentionally exempt. Returns 429 with a Retry-After hint.
     const rateLimited =
       path === '/api/register' ||
@@ -302,8 +231,7 @@ export default {
       path === '/api/event' ||
       path === '/api/leaderboard' ||
       path === '/api/leaderboards' ||
-      path === '/api/my-scores' ||
-      path.startsWith('/api/rooms');
+      path === '/api/my-scores';
     if (rateLimited) {
       const clientIp = request.headers.get('cf-connecting-ip');
       if (!frontDoorAllowed(clientIp)) {
@@ -392,285 +320,6 @@ export default {
         }
       }
 
-      if (path === '/api/lobbies' && method === 'GET') {
-        const res = await lobbyStub(env).fetch(new Request('https://do/list'));
-        const data = await res.json<{ lobbies: any[] }>();
-        return json({ lobbies: data.lobbies || [] }, 200, cors);
-      }
-
-      if (path === '/api/rooms' && method === 'POST') {
-        const body = await readJsonObject(request);
-        const payload = await extractToken(request, env, body);
-        if (!payload) return err('missing or invalid token', 401, cors);
-        const pid = payload.persistent_id;
-        const profile = await getPlayer(env.DB, pid);
-        if (!profile) return err('player not found', 404, cors);
-
-        const playerName = body.playerName || profile.display_name || 'Host';
-        const dogType = body.dogType || 'jep';
-        const roomSettings = body.roomSettings || {};
-
-        // Allocate a unique code via LobbyDO.
-        const codeRes = await lobbyStub(env).fetch(
-          new Request('https://do/allocate-code', { method: 'POST', body: '{}' }),
-        );
-        const { roomCode } = await codeRes.json<{ roomCode: string }>();
-
-        // P-SEC-4 (e): charge this room against the host's per-pid concurrent-
-        // room cap BEFORE spinning up the DO. A 429 here means the identity
-        // already holds the max open rooms — refuse the create rather than leak
-        // another live DO.
-        const claimRes = await lobbyStub(env).fetch(
-          new Request('https://do/claim-room', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ persistentId: pid, roomCode }),
-          }),
-        );
-        if (!claimRes.ok) {
-          log.warn('rate_limit_429', { scope: 'room_cap', path, persistentId: pid, roomCode });
-          return err('too many open rooms for this player', 429, cors);
-        }
-
-        const sessionId = makeSessionId();
-        const initRes = await roomStub(env, roomCode).fetch(
-          new Request('https://do/init', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              roomCode,
-              hostId: sessionId,
-              hostName: playerName,
-              hostDogType: dogType,
-              hostPersistentId: pid,
-              hostDisplayName: profile.display_name,
-              // P2-DELTA: forward the host's protocol version so the DO can
-              // place this session in the right broadcast cohort. The join
-              // handler already forwarded it (Cycle 67 P5); the create path
-              // dropped it until now.
-              hostProtocolVersion: body.protocolVersion,
-              roomSettings,
-            }),
-          }),
-        );
-
-        if (!initRes.ok) {
-          // P-SEC-4 (e): init failed after we charged the claim — release it so
-          // the failed create doesn't permanently consume one of the host's
-          // concurrent-room slots.
-          await releaseRoomClaim(env, roomCode);
-          const body = await initRes.text();
-          return err(body || 'room init failed', initRes.status, cors);
-        }
-
-        const initBody = await initRes.json<any>();
-        // Register with lobby if public.
-        if (initBody.room?.isPublic) {
-          await lobbyStub(env).fetch(
-            new Request('https://do/register', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({
-                roomCode: initBody.roomCode,
-                hostName: playerName,
-                gameMode: initBody.room.gameMode,
-                // Cycle 8 Phase 5: surface scene + sheep count to lobby browsers.
-                sceneId: initBody.room.sceneId,
-                sheepCount: initBody.room.sheepCount,
-                playerCount: initBody.room.playerCount,
-                maxPlayers: initBody.room.maxPlayers,
-                state: initBody.room.state,
-                isPublic: true,
-                updatedAt: Date.now(),
-              }),
-            }),
-          );
-        }
-
-        const wsTicket = await makeWsTicket(env, pid, sessionId, roomCode);
-        return json({ ...initBody, sessionId, wsTicket }, 200, cors);
-      }
-
-      const joinMatch = path.match(/^\/api\/rooms\/([A-Z0-9]{3,8})\/join$/i);
-      if (joinMatch && method === 'POST') {
-        const code = joinMatch[1].toUpperCase();
-        const body = await readJsonObject(request);
-        const payload = await extractToken(request, env, body);
-        if (!payload) return err('missing or invalid token', 401, cors);
-        const pid = payload.persistent_id;
-        const profile = await getPlayer(env.DB, pid);
-        if (!profile) return err('player not found', 404, cors);
-
-        const sessionId = makeSessionId();
-        const joinRes = await roomStub(env, code).fetch(
-          new Request('https://do/join', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              playerId: sessionId,
-              playerName: body.playerName || profile.display_name || 'Player',
-              dogType: body.dogType || 'jep',
-              persistentId: pid,
-              displayName: profile.display_name,
-              // Cycle 67 P5: forward the client protocol version so the DO can
-              // refuse a too-old client from a survival room.
-              protocolVersion: body.protocolVersion,
-            }),
-          }),
-        );
-        if (!joinRes.ok) {
-          const text = await joinRes.text();
-          return err(text || 'join failed', joinRes.status, cors);
-        }
-        const joinBody = await joinRes.json<any>();
-        if (joinBody.room?.isPublic) {
-          await lobbyStub(env).fetch(
-            new Request('https://do/update', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({
-                roomCode: joinBody.room.roomCode,
-                hostName: joinBody.room.players.find((p: any) => p.isHost)?.name || 'Host',
-                gameMode: joinBody.room.gameMode,
-                sceneId: joinBody.room.sceneId,
-                sheepCount: joinBody.room.sheepCount,
-                playerCount: joinBody.room.playerCount,
-                maxPlayers: joinBody.room.maxPlayers,
-                state: joinBody.room.state,
-                isPublic: true,
-                updatedAt: Date.now(),
-              }),
-            }),
-          );
-        }
-
-        const wsTicket = await makeWsTicket(env, pid, sessionId, code);
-        return json({ ...joinBody, sessionId, wsTicket }, 200, cors);
-      }
-
-      if (path === '/api/rooms/quick-match' && method === 'POST') {
-        const body = await readJsonObject(request);
-        const payload = await extractToken(request, env, body);
-        if (!payload) return err('missing or invalid token', 401, cors);
-        const pid = payload.persistent_id;
-        const profile = await getPlayer(env.DB, pid);
-        if (!profile) return err('player not found', 404, cors);
-        const gameMode = body.gameMode || 'cooperative';
-
-        const matchRes = await lobbyStub(env).fetch(
-          new Request('https://do/quick-match', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ gameMode }),
-          }),
-        );
-        const { match } = await matchRes.json<any>();
-
-        if (match) {
-          // Join that room via the internal join flow.
-          const sessionId = makeSessionId();
-          const joinRes = await roomStub(env, match.roomCode).fetch(
-            new Request('https://do/join', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({
-                playerId: sessionId,
-                playerName: body.playerName || profile.display_name || 'Player',
-                dogType: body.dogType || 'jep',
-                persistentId: pid,
-                displayName: profile.display_name,
-                // P2-DELTA: forward for the broadcast cohort split (absent =>
-                // legacy full frames; today's quick-match client sends none).
-                protocolVersion: body.protocolVersion,
-              }),
-            }),
-          );
-          if (joinRes.ok) {
-            const joinBody = await joinRes.json<any>();
-            await lobbyStub(env).fetch(
-              new Request('https://do/update', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  roomCode: joinBody.room.roomCode,
-                  hostName: joinBody.room.players.find((p: any) => p.isHost)?.name || 'Host',
-                  gameMode: joinBody.room.gameMode,
-                  playerCount: joinBody.room.playerCount,
-                  maxPlayers: joinBody.room.maxPlayers,
-                  state: joinBody.room.state,
-                  isPublic: true,
-                  updatedAt: Date.now(),
-                }),
-              }),
-            );
-            const wsTicket = await makeWsTicket(env, pid, sessionId, match.roomCode);
-            return json({ ...joinBody, sessionId, wsTicket, isQuickMatch: true }, 200, cors);
-          }
-        }
-
-        // No match or join failed — create a new public room.
-        const codeRes = await lobbyStub(env).fetch(
-          new Request('https://do/allocate-code', { method: 'POST', body: '{}' }),
-        );
-        const { roomCode } = await codeRes.json<{ roomCode: string }>();
-        // P-SEC-4 (e): charge the per-pid concurrent-room cap before init.
-        const qmClaimRes = await lobbyStub(env).fetch(
-          new Request('https://do/claim-room', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ persistentId: pid, roomCode }),
-          }),
-        );
-        if (!qmClaimRes.ok) {
-          log.warn('rate_limit_429', { scope: 'room_cap', path, persistentId: pid, roomCode });
-          return err('too many open rooms for this player', 429, cors);
-        }
-        const sessionId = makeSessionId();
-        const initRes = await roomStub(env, roomCode).fetch(
-          new Request('https://do/init', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              roomCode,
-              hostId: sessionId,
-              hostName: body.playerName || profile.display_name || 'Host',
-              hostDogType: body.dogType || 'jep',
-              hostPersistentId: pid,
-              hostDisplayName: profile.display_name,
-              // P2-DELTA: forward for the broadcast cohort split (absent =>
-              // legacy full frames; today's quick-match client sends none).
-              hostProtocolVersion: body.protocolVersion,
-              roomSettings: { maxPlayers: 4, isPublic: true, gameMode, name: 'Quick Match Game' },
-            }),
-          }),
-        );
-        if (!initRes.ok) {
-          await releaseRoomClaim(env, roomCode);
-          return err('quick-match init failed', 500, cors);
-        }
-        const initBody = await initRes.json<any>();
-        await lobbyStub(env).fetch(
-          new Request('https://do/register', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              roomCode: initBody.roomCode,
-              hostName: body.playerName || profile.display_name || 'Host',
-              gameMode: initBody.room.gameMode,
-              sceneId: initBody.room.sceneId,
-              sheepCount: initBody.room.sheepCount,
-              playerCount: initBody.room.playerCount,
-              maxPlayers: initBody.room.maxPlayers,
-              state: initBody.room.state,
-              isPublic: true,
-              updatedAt: Date.now(),
-            }),
-          }),
-        );
-        const wsTicket = await makeWsTicket(env, pid, sessionId, roomCode);
-        return json({ ...initBody, sessionId, wsTicket, isQuickMatch: true }, 200, cors);
-      }
-
       if (path === '/api/score' && method === 'POST') {
         const body = await readJsonObject(request);
         const payload = await extractToken(request, env, body);
@@ -680,12 +329,9 @@ export default {
         const score = Number(body.score);
         if (!gameMode || Number.isNaN(score)) return err('missing gameMode or score', 400, cors);
 
-        // P-SEC-5: 'competitive' and 'timed' are MULTIPLAYER outcomes. The only
-        // legitimate writer of those rows is RoomDO.onSubmitScores, after the
-        // authoritative DO has validated the match. A client posting them on
-        // the public route is forging a multiplayer result, so refuse them
-        // here outright (the DO path calls submitScore() directly, never this
-        // HTTP route, so this does not affect real MP score writes).
+        // P-SEC-5: 'competitive' and 'timed' are MULTIPLAYER outcomes, only
+        // ever written by an authoritative room after it validated the match.
+        // A client posting them on the public route is forging a result.
         if (PUBLIC_SCORE_FORBIDDEN_MODES.has(gameMode)) {
           return err('mode not accepted on public score endpoint', 403, cors);
         }

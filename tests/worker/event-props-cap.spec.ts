@@ -60,7 +60,7 @@ function makeFakeDb() {
 const noopCtx = { waitUntil() {}, passThroughOnException() {} } as any;
 
 function makeEnv(db: any) {
-  return { ROOM_DO: {}, LOBBY_DO: {}, DB: db, JWT_SECRET: 'test-secret' } as any;
+  return { DB: db, JWT_SECRET: 'test-secret' } as any;
 }
 
 async function postEvent(db: any, name: string, props: Record<string, unknown>): Promise<Response> {

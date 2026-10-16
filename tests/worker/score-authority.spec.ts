@@ -6,8 +6,8 @@
  * Closes three holes on the score surface:
  *
  *   1. The public POST /api/score must refuse 'competitive' and 'timed' —
- *      those are multiplayer outcomes written ONLY by RoomDO.onSubmitScores
- *      after a DO-validated match. A client posting them is forging a result.
+ *      those are multiplayer outcomes, only ever written by an authoritative
+ *      room after it validated the match. A client posting them is forging a result.
  *   2. The public leaderboard READ hides anomaly-flagged rows by default
  *      (score_anomalies IS NOT NULL), so a forged-but-bounds-passing time
  *      that tripped a heuristic never displays.
@@ -20,7 +20,7 @@
  *
  * The route-level tests drive the worker's default `fetch` export with a fake
  * Env + a stateful fake D1 in the spirit of tests/worker/auth-register.spec.ts
- * and tests/worker/dos-caps.spec.ts. A valid session token is minted with the
+ * and tests/worker/rename-route.spec.ts. A valid session token is minted with the
  * real signJwt against the fake Env's JWT_SECRET.
  */
 import { describe, it, expect } from 'vitest';
@@ -145,7 +145,7 @@ function makeFakeDb(opts: {
 const JWT_SECRET = 'test-secret-p-sec-5';
 
 function makeEnv(db: any) {
-  return { ROOM_DO: {}, LOBBY_DO: {}, DB: db, JWT_SECRET } as any;
+  return { DB: db, JWT_SECRET } as any;
 }
 
 const noopCtx = { waitUntil() {}, passThroughOnException() {} } as any;
