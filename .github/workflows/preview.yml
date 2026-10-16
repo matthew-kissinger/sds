@@ -1,38 +1,92 @@
-name: Pages Preview
+name: Preview
+
+# Each pull request uploads a version of the preview Worker, sds-worker-preview,
+# under the stable alias pr-<number>. The alias serves that build's game and
+# API on one origin against the preview environment's own D1 and JWT_SECRET:
+#   https://pr-<number>-sds-worker-preview.matt-m-kissinger.workers.dev
+# It never uploads a version of production: a version preview of sds-worker
+# would share production's D1 and secrets.
 
 on:
   pull_request:
     branches: [main]
 
 concurrency:
-  group: pages-preview-${{ github.event.pull_request.number }}
+  group: preview-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:
   contents: read
-  deployments: write
 
 jobs:
-  preview-worker:
-    name: Deploy isolated score preview
+  preview:
+    name: Upload pull request preview
     # Dependabot pull requests do not receive repository secrets, so every step
     # below would run with an empty CF_API_TOKEN and fail in about 14 seconds.
     # Skip rather than fail: a job that cannot pass teaches people to ignore a
     # red check.
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]' &&
-      vars.CF_PREVIEW_D1_ID != ''
+      github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    env:
+      PREVIEW_ALIAS: pr-${{ github.event.pull_request.number }}
+      PREVIEW_URL: https://pr-${{ github.event.pull_request.number }}-sds-worker-preview.matt-m-kissinger.workers.dev
     steps:
+      - name: Require the preview D1 database
+        id: gate
+        env:
+          PREVIEW_D1_ID: ${{ vars.CF_PREVIEW_D1_ID }}
+        run: |
+          if [[ -z "$PREVIEW_D1_ID" ]]; then
+            echo "::notice::Repository variable CF_PREVIEW_D1_ID is unset, so no preview is uploaded. See the env.preview notes in worker/wrangler.toml."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v5
+        if: steps.gate.outputs.ready == 'true'
       - uses: actions/setup-node@v5
+        if: steps.gate.outputs.ready == 'true'
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: worker/package-lock.json
-      - run: npm ci --prefix worker
+          cache-dependency-path: |
+            package-lock.json
+            worker/package-lock.json
+      - if: steps.gate.outputs.ready == 'true'
+        run: npm ci
+      - if: steps.gate.outputs.ready == 'true'
+        run: npm ci --prefix worker
+
+      - name: Acquire approved game audio
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          node tools/prepare-approved-audio.mjs --download
+      # No VITE_SCORE_API_BASE: the preview calls its own origin's /api, as
+      # production does.
+      - name: Build the client
+        if: steps.gate.outputs.ready == 'true'
+        run: npm run build
+        env:
+          SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+          SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
+      - if: steps.gate.outputs.ready == 'true'
+        run: npm run check:discovery
+      - name: Write preview release identity
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+          SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
+        run: |
+          node scripts/write-release-manifest.mjs
+          node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA"
+
       - name: Bind the preview D1 database
+        if: steps.gate.outputs.ready == 'true'
         env:
           PREVIEW_D1_ID: ${{ vars.CF_PREVIEW_D1_ID }}
         run: |
@@ -43,64 +97,32 @@ jobs:
             exit 1
           fi
       - name: Migrate preview D1 only
+        if: steps.gate.outputs.ready == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           D1_TARGET: preview
         run: node scripts/d1-migrate-remote.mjs
-      - name: Deploy preview Worker
+
+      # A version upload leaves the preview Worker's deployed version and every
+      # other pull request's alias alone. It refuses a Durable Object lifecycle
+      # change; such a change needs `wrangler deploy --env preview` once first.
+      - name: Upload preview version
+        if: steps.gate.outputs.ready == 'true'
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           workingDirectory: worker
-          command: deploy --env preview
-      - name: Verify preview identity and solo times
-        run: |
-          node -e "fetch('https://sds-worker-preview.matt-m-kissinger.workers.dev/healthz').then(r=>{if(!r.ok)throw new Error('healthz '+r.status);return r.text()}).then(console.log)"
-          node -e "fetch('https://sds-worker-preview.matt-m-kissinger.workers.dev/api/leaderboard?mode=solo&scene=field-v3&sheepCount=25&limit=1').then(r=>{if(!r.ok)throw new Error('field-v3 '+r.status);return r.text()}).then(console.log)"
-          node -e "fetch('https://sds-worker-preview.matt-m-kissinger.workers.dev/api/register',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(r=>{if(!r.ok)throw new Error('register '+r.status);return r.text()}).then(console.log)"
+          command: versions upload --env preview --preview-alias ${{ env.PREVIEW_ALIAS }} --message ${{ github.event.pull_request.head.sha }}
 
-  pages-preview:
-    name: Build and deploy Pages preview
-    needs: preview-worker
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm ci --prefix worker
-      - run: npm run lint --if-present
-      - run: npm run typecheck --if-present
-      - run: npm run typecheck:worker
-      - name: Acquire approved game audio
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
-          node tools/prepare-approved-audio.mjs --download
-      - run: npm run build
+      - name: Verify the preview's game, API and identity
+        if: steps.gate.outputs.ready == 'true'
         env:
           SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
-          SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
-          VITE_SCORE_API_BASE: https://sds-worker-preview.matt-m-kissinger.workers.dev
-      - run: npm run check:discovery
-      - run: npm test --if-present
-      - name: Write preview release identity
-        env:
-          SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
-          SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
         run: |
-          node scripts/write-release-manifest.mjs
-          node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA"
-      - name: Deploy Pages preview
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=sds-frontend --branch=${{ github.head_ref }} --commit-hash=${{ github.event.pull_request.head.sha }}
+          set -euo pipefail
+          node scripts/verify-worker-origin.mjs --url "$PREVIEW_URL" --sha "$SDS_RELEASE_SHA" --retries 12
+          node scripts/verify-identity.mjs --url "$PREVIEW_URL" --save "$RUNNER_TEMP/preview-identity.json"
+          node scripts/verify-identity.mjs --url "$PREVIEW_URL" --check "$RUNNER_TEMP/preview-identity.json"
+          echo "Preview: $PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"

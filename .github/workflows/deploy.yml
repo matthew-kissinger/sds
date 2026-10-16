@@ -1,4 +1,9 @@
-name: Deploy Pages
+name: Deploy
+
+# One release, one commit, one deploy. The sds-worker Worker serves the game's
+# static assets and the score API on sheepdogsim.com, so a single
+# `wrangler deploy` ships both halves from the same checkout.
+# docs/operations/deployment.md is the procedure.
 
 on:
   # Normal path: push an annotated release tag. The tag names the commit, so
@@ -15,7 +20,7 @@ on:
         type: string
 
 concurrency:
-  group: pages-production
+  group: production
   cancel-in-progress: false
 
 permissions:
@@ -23,8 +28,8 @@ permissions:
   deployments: write
 
 jobs:
-  deploy-pages:
-    name: Deploy exact commit to Pages
+  deploy:
+    name: Deploy exact commit to sds-worker
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -61,12 +66,23 @@ jobs:
             echo "$actual_sha is not contained in origin/main." >&2
             exit 1
           fi
+          # A commit from before the one-Worker hosting has a wrangler.toml
+          # with no assets and with the v2 Durable Objects. Deploying it would
+          # replace the game with a bare API and try to resurrect deleted
+          # classes. Older releases roll back by deleting the route instead.
+          if ! grep -q '^\[assets\]' worker/wrangler.toml; then
+            echo "$actual_sha predates sds-worker serving the game. See docs/operations/deployment.md, Rolling back." >&2
+            exit 1
+          fi
           echo "sha=$actual_sha" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            worker/package-lock.json
 
       - run: npm ci
       - run: npm ci --prefix worker
@@ -83,6 +99,7 @@ jobs:
           SDS_RELEASE_SHA: ${{ steps.source.outputs.sha }}
           SDS_RELEASE_REF: ${{ inputs.commit_sha || github.ref_name }}
       - run: npm run check:discovery
+      # The full suite, which includes tests/worker and its configuration test.
       - run: npm test --if-present
 
       - name: Write and verify release identity
@@ -93,23 +110,35 @@ jobs:
           node scripts/write-release-manifest.mjs
           node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA" --require-v3-static
 
-      - name: Archive exact Pages artifact
+      - name: Archive exact release artifact
         uses: actions/upload-artifact@v5
         with:
-          name: pages-${{ steps.source.outputs.sha }}
+          name: release-${{ steps.source.outputs.sha }}
           path: dist/
           if-no-files-found: error
           retention-days: 90
 
-      - name: Deploy Pages artifact
+      # `wrangler deploy`, never `versions upload`: only deploy applies Durable
+      # Object lifecycle migrations and the route. It uploads ../dist as the
+      # Worker's assets, so it must run after the build and manifest above.
+      - name: Deploy sds-worker with the game's assets
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=sds-frontend --branch=main --commit-hash=${{ steps.source.outputs.sha }}
+          workingDirectory: worker
+          command: deploy --message ${{ steps.source.outputs.sha }}
 
       - name: Verify live release identity
         run: node scripts/verify-release-manifest.mjs --url https://sheepdogsim.com/release.json --sha "${{ steps.source.outputs.sha }}" --retries 12
+
+      # Content types, not status codes: an unrouted sheepdogsim.com/api/*
+      # answers 200 text/html from the Pages fallback.
+      - name: Verify the game and API share sheepdogsim.com
+        run: node scripts/verify-worker-origin.mjs --url https://sheepdogsim.com --sha "${{ steps.source.outputs.sha }}" --retries 12
+
+      - name: Verify the workers.dev host still answers
+        run: node scripts/verify-worker-origin.mjs --url https://sds-worker.matt-m-kissinger.workers.dev --sha "${{ steps.source.outputs.sha }}" --retries 12
 
       - name: Verify live discovery and analytics
         run: node scripts/verify-public-discovery.mjs --url https://sheepdogsim.com --require-analytics --retries 12
