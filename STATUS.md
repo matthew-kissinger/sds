@@ -17,10 +17,10 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.3.0 (tag `v3.3.0`, the Kiln homestead) is the release at the head
-  of `main`; 3.2.1 (`c5964ff2`, tag `v3.2.1`) is live until its tag is pushed
-  and the `Deploy` run passes its live checks. Served at
-  `https://sheepdogsim.com` by the `sds-worker` Worker through the `sheepdogsim.com/*` route since
+- Version 3.3.0 (`6a605e16`, tag `v3.3.0`, the Kiln homestead) is live at
+  `https://sheepdogsim.com` since 2026-10-16 22:31 UTC (`Deploy` run
+  38976103808; `docs/history/status-log.md`), served by the `sds-worker`
+  Worker through the `sheepdogsim.com/*` route since
   the 2026-10-16 cutover (`docs/history/status-log.md`). `release.json` is the
   authority for the exact deployed source commit and artifact digest.
   `www.sheepdogsim.com` redirects to the apex at the zone edge.

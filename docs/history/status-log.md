@@ -5,6 +5,36 @@
 
 # Status log
 
+## Release 3.3.0 - 2026-10-16, live (tag `v3.3.0`, the Kiln homestead)
+
+The owner's go: "once main's CI is green on 6a605e16, push the v3.3.0 tag,
+watch Deploy, run the live verifiers and record the result."
+
+- Release commit `6a605e16` (`release: 3.3.0`: CHANGELOG, STATUS, the two hub
+  receipts in this log, `package.json` 3.3.0) on `main` after pull requests
+  124 (house flip) and 125 (barn flip, house window fix, derived ledgers).
+  Client CI green on it (run 38975545133).
+- Annotated tag `v3.3.0` on `6a605e16`, pushed 22:27 UTC. `Deploy` run
+  38976103808 completed with every step green: lint, the typechecks, the
+  build, discovery check, release identity, deploy configuration, artifact
+  archive, `wrangler deploy`, and the four live checks.
+- Live, read from this PC afterwards: `release.json` names 3.3.0 at
+  `6a605e16`, 36 files, artifact `2b64a94f…`, built 22:31:03 UTC; the four
+  verifiers (`verify-release-manifest --url`, `verify-worker-origin` on the
+  apex and on `workers.dev`, `verify-public-discovery --require-analytics`)
+  pass against the live site; the live artifact digest equals the deploy
+  run's archived `release-6a605e16…` artifact; and the two GLBs served
+  (`farmhouse-BmlYMey9.glb` 188,020 bytes, `barn-DmIE3qzV.glb` 162,772
+  bytes) match their ledgers' recorded SHA-256 byte for byte.
+- Seen live: the Kiln house and barn from the north fence in both cameras
+  (`captures/stability/hub-receipts/live-3.3.0/framing/`, gitignored).
+- Worker settings, read from the dashboard API after the deploy and diffed
+  against the 3.2.1 snapshot field by field: bindings (`ASSETS`, D1 `DB`,
+  `JWT_SECRET`), observability, placement, tail consumers, the one route
+  `sheepdogsim.com/*`, the subdomain flags, compatibility date and flags and
+  the migration tag all identical; only `modified_on` moved. The settings'
+  `annotations["workers/message"]` names `6a605e16`, the deployed commit.
+
 ## Kiln barn hub receipt - 2026-10-16, passed; `BARN_SOURCE` flipped
 
 The owner passed the Kiln barn, and the house with its window over the door
