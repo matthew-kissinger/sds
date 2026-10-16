@@ -45,7 +45,10 @@ export function LabApp() {
       <Canvas
         gl={glFactory as never}
         dpr={renderDprForTier(quality)}
-        frameloop={sceneReady ? 'always' : 'never'}
+        // Both gates: the renderer must be initialised AND the scene ready. The
+        // store outlives a hot reload of this tree, so sceneReady alone could be
+        // true before the new renderer has finished init().
+        frameloop={stage === 'scene' && sceneReady ? 'always' : 'never'}
         camera={{ position: [-20, 12, -40], fov: 45, near: 0.5, far: 1200 }}
         onCreated={() => {
           rendererReady().then(
