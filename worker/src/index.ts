@@ -42,6 +42,10 @@ import {
 } from './eventProps';
 
 interface Env {
+  // The built client in ../dist. wrangler.toml runs this script first only for
+  // /api/*, so every other path is answered by the asset layer before the
+  // script is invoked; ASSETS is the fallback should the script ever see one.
+  ASSETS: Fetcher;
   DB: D1Database;
   JWT_SECRET: string;
   // Cycle 35 Phase 2: optional admin secret for /api/score-errors readout.
@@ -212,6 +216,10 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+
+    // Only /api/* is the API. Anything else is the game's static surface.
+    if (!path.startsWith('/api/')) return env.ASSETS.fetch(request);
+
     const origin = request.headers.get('Origin');
     const cors = corsHeaders(origin);
 
@@ -508,7 +516,10 @@ export default {
         return json({ ok: true }, 200, cors);
       }
 
-      if (path === '/' || path === '/healthz') {
+      // Under /api so that it can only ever be answered by this script. The
+      // asset layer answers every other unmatched path with index.html and a
+      // 200, so a health check anywhere else would pass with the API down.
+      if (path === '/api/healthz' && method === 'GET') {
         return json({ ok: true, worker: 'sds-worker' }, 200, cors);
       }
 

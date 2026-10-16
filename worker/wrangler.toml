@@ -3,6 +3,27 @@ main = "src/index.ts"
 compatibility_date = "2026-04-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Explicit, never inferred. Cloudflare infers workers_dev = false as soon as a
+# config declares routes, and sds-worker.matt-m-kissinger.workers.dev must keep
+# answering: every client built before Release 1 has it baked in as the score
+# API (the old PROD_SCORE_API_BASE), and an open tab keeps calling it.
+workers_dev = true
+# Version preview URLs of production would serve production's D1 and secrets
+# from a throwaway hostname. Pull-request previews use env.preview instead.
+preview_urls = false
+
+# The game. dist/ is written by `npm run build` at the repository root, plus
+# dist/release.json from scripts/write-release-manifest.mjs, so build before
+# deploying. Only /api/* runs this script first; every other path is served by
+# the asset layer, with index.html for anything unmatched (the array form of
+# run_worker_first also stops Sec-Fetch-Mode from deciding that). _headers and
+# _redirects from app/public are honoured natively.
+[assets]
+directory = "../dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
 # Observability
 [observability]
 enabled = true
@@ -29,28 +50,6 @@ binding = "DB"
 database_name = "sds-db"
 database_id = "513aa937-e60a-4fb6-b499-9f3814149e88"
 
-# Route bindings for the custom domain. DNS has been configured since the v3
-# cutover; these stay commented out deliberately, not pending.
-#
-# Enabling them REQUIRES adding `workers_dev = true` as a top-level key in the
-# same change. Cloudflare infers `workers_dev` as false once a config declares
-# routes, which would take sds-worker.matt-m-kissinger.workers.dev offline - the
-# origin every already-built client calls, because PROD_SCORE_API_BASE is baked
-# into the bundle.
-#
-# Note also that sheepdogsim.com/api/* already answers 200 today: that is the
-# Pages SPA fallback returning index.html, not this Worker. Verify a route took
-# effect by asserting Content-Type: application/json, never the status code.
-#
-# See docs/operations/deployment.md.
-# [[routes]]
-# pattern = "sheepdogsim.com/api/*"
-# zone_name = "sheepdogsim.com"
-#
-# [[routes]]
-# pattern = "sheepdogsim.com/r/*"
-# zone_name = "sheepdogsim.com"
-
 # ---------------------------------------------------------------------------
 # P2-STAGING: per-PR preview environment. Deployed by
 # .github/workflows/preview.yml as sds-worker-preview, with its OWN D1 so a
@@ -70,6 +69,11 @@ database_id = "513aa937-e60a-4fb6-b499-9f3814149e88"
 # ---------------------------------------------------------------------------
 [env.preview]
 name = "sds-worker-preview"
+# Each pull request uploads a version here with --preview-alias pr-<number>, so
+# its build answers on pr-<number>-sds-worker-preview.matt-m-kissinger.workers.dev
+# against this environment's own D1 and JWT_SECRET. Assets are inherited.
+workers_dev = true
+preview_urls = true
 
 [[env.preview.d1_databases]]
 binding = "DB"
