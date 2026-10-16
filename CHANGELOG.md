@@ -4,14 +4,14 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [3.2.1] - 2026-10-16
 
 ### Changed
 
-- 3.2.1 (not yet tagged) carries two kinds of change. The build restructure
-  below changes no served byte: built from the same sources, the old and the new
-  build produce the same artifact digest (`docs/history/status-log.md`). The
-  renderer fixes already on `main` are the only client change.
+- 3.2.1 carries two kinds of change. The build restructure below changes no
+  served byte: built from the same sources, the old and the new build produce
+  the same artifact digest (`docs/history/status-log.md`). The renderer fixes
+  are the only client change.
 - Build: one root package. The Worker is built and served by
   `@cloudflare/vite-plugin` from the root `wrangler.toml`; `worker/` keeps its
   source and migrations but loses its `package.json`, lockfile and

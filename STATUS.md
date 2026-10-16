@@ -176,10 +176,11 @@ plain directory, one `wrangler.toml` at the root with the preview D1 id
 committed, the release manifest written by a Vite plugin into the uploaded
 directory, the client kept at `dist/`, `vite dev` serving game and API with a
 local D1 and no proxy, the workflows deploying with wrangler from the root.
-Stage A ships alone as 3.2.1 with no client change.
+Stage A ships alone as 3.2.1, whose only client change is the two renderer
+fixes.
 
-**Stage A is in review** (pull request `release2/stage-a-vite-plugin`, not
-tagged). The plugin forces the client to `dist/client`, always emits
+**Stage A is merged** (pull request 117, merge `58f2be74`, 2026-10-16) and
+3.2.1 is prepared for the tag. The plugin forces the client to `dist/client`, always emits
 `dist/.assetsignore`, and writes its deploy redirect under the Vite root
 `app/`, where wrangler will not follow it; the measurements, the artifact
 digest comparison and the decisions that followed are in
