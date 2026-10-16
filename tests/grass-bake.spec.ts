@@ -32,6 +32,7 @@ import {
   BARN_YAW,
   HOUSE,
   HOUSE_AT,
+  KILN_BARN_FOOTPRINT,
   KILN_PORCH,
   KILN_ROOF,
   LEANTO_AT,
@@ -46,6 +47,7 @@ import {
   YAW,
 } from '@app/scene/farmhouse/plan';
 import { FRONT_DOOR } from '@app/scene/farmhouse/openings';
+import { BARN_SOURCE } from '@app/scene/farmhouse/barnSource';
 import { FARMHOUSE_SOURCE } from '@app/scene/farmhouse/source';
 import { offsetStand, stand, type Stand } from '@app/scene/farmhouse/shell';
 import { GRASS_PRESETS } from '@app/scene/grass/density';
@@ -67,6 +69,7 @@ interface GrassManifest {
   stride: number;
   terrainSeed: number;
   farmhouseSource: string;
+  barnSource: string;
   encoding: { xzRange: number; yRange: number; heightMin: number; heightMax: number };
   footprint: {
     fieldHalf: number;
@@ -220,6 +223,15 @@ describe('the committed scatter', () => {
     ).toBe(FARMHOUSE_SOURCE);
   });
 
+  /** The same coupling for the barn, which has its own source constant. */
+  it('was baked for the barn that ships', () => {
+    expect(
+      manifest.barnSource,
+      `assets/grass/ was baked for the '${manifest.barnSource}' barn but ` +
+        `BARN_SOURCE is '${BARN_SOURCE}': run node tools/bake-grass.mjs and commit it with the flip`,
+    ).toBe(BARN_SOURCE);
+  });
+
   it('grows nothing up inside a building that ships', () => {
     const house = stand(HOUSE_AT.x, 0, HOUSE_AT.z, YAW);
     const barn = stand(BARN_AT.x, 0, BARN_AT.z, BARN_YAW);
@@ -242,10 +254,14 @@ describe('the committed scatter', () => {
             centred('house', house, KILN_ROOF.length / 2, KILN_ROOF.width / 2),
             against('porch', house, KILN_ROOF.width, KILN_PORCH.across, KILN_PORCH.half, KILN_PORCH.depth),
           ];
-    rects.push(
-      centred('barn', barn, BARN.length / 2 + PLINTH_OUT, BARN.width / 2 + PLINTH_OUT),
-      against('barn lean-to', barn, BARN.width, BARN_LEANTO_AT, BARN_LEANTO_HALF, LEANTO_DEPTH),
-    );
+    if (BARN_SOURCE === 'procedural') {
+      rects.push(
+        centred('barn', barn, BARN.length / 2 + PLINTH_OUT, BARN.width / 2 + PLINTH_OUT),
+        against('barn lean-to', barn, BARN.width, BARN_LEANTO_AT, BARN_LEANTO_HALF, LEANTO_DEPTH),
+      );
+    } else {
+      rects.push(...KILN_BARN_FOOTPRINT.map((rect) => ({ ...rect, place: barn })));
+    }
     const inside: string[] = [];
     for (let i = 0; i < bytes.byteLength / stride; i++) {
       const t = tuftAt(i);

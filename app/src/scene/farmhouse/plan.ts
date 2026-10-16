@@ -260,3 +260,24 @@ export const KILN_ROOF: RoofSpec = {
   // rake's outline along the middle of each verge.
   bow: 0,
 };
+
+/**
+ * The ground the Kiln barn covers at its foot, in the barn's own frame, from
+ * assets/barn/barn.kiln.js: the walls with their plinth (16.66 by 10.96, the
+ * stone standing 0.08 m proud of the boards), the stone apron under the swing of
+ * the cart doors, and the step at the stable door.
+ *
+ * Repeated for the same reason as KILN_PORCH: the grass bake cuts the footprint
+ * of the barn that ships, and a bake script does not read a GLB. The bake also
+ * writes this list into its root node's extras (`footprint`), and
+ * tests/barn-kiln.spec.ts holds this copy to that record and to the geometry.
+ *
+ * Nothing else about the Kiln barn is copied here. It stands in BARN's box on
+ * BARN_AT at BARN_YAW and throws BARN's shadow, and its outline envelope is
+ * derived from the masses the bake records (farmhouse/hull.ts `envelopeHull`).
+ */
+export const KILN_BARN_FOOTPRINT = [
+  { id: 'barn', minX: -8.33, maxX: 8.33, minZ: -5.48, maxZ: 5.48 },
+  { id: 'barn apron', minX: -3.1, maxX: 4, minZ: -7.5, maxZ: -5.48 },
+  { id: 'barn step', minX: 4.6, maxX: 6, minZ: -5.9, maxZ: -5.48 },
+] as const;

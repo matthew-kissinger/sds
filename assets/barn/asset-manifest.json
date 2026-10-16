@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "id": "kiln-threshing-barn",
+  "author": "Matthew Kissinger",
+  "license": "AGPL-3.0-or-later",
+  "licenseFile": "LICENSE",
+  "digestEncoding": "UTF-8 with LF line endings",
+  "artifactDigestEncoding": "raw bytes",
+  "toolchain": {
+    "name": "@instruktlabs/kiln",
+    "version": "1.2.3",
+    "license": "MIT",
+    "command": "kiln render assets/barn/barn.kiln.js --out assets/barn/barn.glb",
+    "note": "The tool is not a dependency of this repository. It bakes the artifact; nothing imports it."
+  },
+  "recipe": "assets/barn/barn.kiln.js",
+  "artifact": {
+    "path": "assets/barn/barn.glb",
+    "bytes": 162772,
+    "sha256": "eaada895d44c01b1092ed415881ff389b40c63fb98e7fc55514e47afcf0f00f5"
+  },
+  "triangles": 2350,
+  "triangleBudget": 2800,
+  "exportedMeshNodes": 42,
+  "exportedGeometries": 42,
+  "materials": 6,
+  "textures": 0,
+  "images": 0,
+  "gltfExtensions": [
+    "KHR_materials_emissive_strength"
+  ],
+  "boundsMetres": {
+    "x": 18.78,
+    "y": 13.45,
+    "z": 13.5
+  },
+  "surfaceChannels": {
+    "attribute": "TEXCOORD_0",
+    "record": "nodes[root].extras.surfaceChannels",
+    "version": 1
+  },
+  "outlineEnvelope": {
+    "record": "nodes[root].extras.outlineEnvelope",
+    "version": 1
+  },
+  "footprint": {
+    "record": "nodes[root].extras.footprint",
+    "repeatedAs": "app/src/scene/farmhouse/plan.ts KILN_BARN_FOOTPRINT"
+  },
+  "runtime": {
+    "addedDraws": 0,
+    "trianglesPerSurface": {
+      "timber": 1301,
+      "barn": 658,
+      "opening": 301,
+      "dress": 48,
+      "roof": 32,
+      "lamp": 10
+    },
+    "note": "Welded into the cluster barn, roof, timber, dress, opening and lamp buffers, so the cluster stays at ten draws. No texture is sampled; the ramp is computed.",
+    "loader": "app/src/scene/farmhouse/kilnBarn.ts",
+    "distPath": "assets/barn-<hash>.glb"
+  },
+  "qa": {
+    "profile": "asset.requirements.v1",
+    "acceptance": "accepted",
+    "disposition": "pass",
+    "gltfErrors": 0,
+    "gltfWarnings": 0
+  },
+  "consumers": [
+    "app/src/scene/Farmhouse.tsx",
+    "lab/src/subjects.ts"
+  ],
+  "shipsInProductionBuildWhen": "BARN_SOURCE === 'kiln'",
+  "sources": [
+    {
+      "path": "assets/barn/barn.kiln.js",
+      "sha256": "f27b35919703862628783da71d89e71cd127547c3825554c49c77355535ceb27"
+    },
+    {
+      "path": "app/src/scene/farmhouse/kilnBarn.ts",
+      "sha256": "9a57c122753aabe760413accb4cb03b1382718d6957f10ce227d12cec3f5e05a"
+    },
+    {
+      "path": "lab/src/KilnBarn.tsx",
+      "sha256": "3d5bd863271aedb5130b1c3e45e2754e68f2e5c4b3a599c3ab218eb79d0d4dfe"
+    },
+    {
+      "path": "tools/record-barn-asset.mjs",
+      "sha256": "3a71d4ab4fde1aee4bfe81155015e0974ce094c45fc934fc0bd73f63e5786f0d"
+    }
+  ]
+}

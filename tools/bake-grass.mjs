@@ -25,17 +25,19 @@
 //    pads in that manifest are read as the scatter keep-out rects they are
 //    declared to be. So a terrain rebake changes these bytes, the grass
 //    byte-compare goes red, and the two assets cannot silently part ways.
-//  - app/src/scene/farmhouse/plan.ts and source.ts are the authority for the
-//    buildings (spec/04: "structures get ... declared scatter keep-out rects").
-//    The footprints that SHIP are hard-cut, as oriented rectangles in each
-//    building's own frame, so no tuft grows up through a floor or a wall. What
-//    ships depends on FARMHOUSE_SOURCE - the code-built range, wing, porch and
-//    lean-to, or the Kiln house and its porch - and that coupling is
-//    deliberate: flipping the constant changes which ground is under a
-//    building, so the flip REQUIRES A GRASS REBAKE, committed with it. The
-//    manifest records the source it was baked for and tests/grass-bake.spec.ts
-//    fails, naming the rebake, when the two disagree - the same discipline this
-//    bake already applies to the terrain.
+//  - app/src/scene/farmhouse/plan.ts, source.ts and barnSource.ts are the
+//    authority for the buildings (spec/04: "structures get ... declared scatter
+//    keep-out rects"). The footprints that SHIP are hard-cut, as oriented
+//    rectangles in each building's own frame, so no tuft grows up through a
+//    floor or a wall. What ships depends on FARMHOUSE_SOURCE - the code-built
+//    range, wing, porch and lean-to, or the Kiln house and its porch - and on
+//    BARN_SOURCE - the code-built barn and its lean-to, or the Kiln barn with
+//    its apron and step - and that coupling is deliberate: flipping either
+//    constant changes which ground is under a building, so the flip REQUIRES A
+//    GRASS REBAKE, committed with it. The manifest records both sources it was
+//    baked for and tests/grass-bake.spec.ts fails, naming the rebake, when
+//    either disagrees - the same discipline this bake already applies to the
+//    terrain.
 //
 // TUFTS, NOT BLADES. A record here is a clump; the blades inside it are the
 // tuft mesh (app/src/scene/grass/tuftGeometry.ts), which is one small
@@ -160,10 +162,11 @@ writeFileSync(
     "export { Heightfield } from '@app/world/heightfieldSampler';",
     'export {',
     '  BARN, BARN_AT, BARN_LEANTO_AT, BARN_LEANTO_HALF, BARN_YAW, HOUSE, HOUSE_AT,',
-    '  KILN_PORCH, KILN_ROOF, LEANTO_AT, LEANTO_DEPTH, LEANTO_HALF, PLINTH_OUT, PORCH,',
-    '  WING, WING_ALONG, WING_OUT, WING_SKEW, YAW,',
+    '  KILN_BARN_FOOTPRINT, KILN_PORCH, KILN_ROOF, LEANTO_AT, LEANTO_DEPTH, LEANTO_HALF,',
+    '  PLINTH_OUT, PORCH, WING, WING_ALONG, WING_OUT, WING_SKEW, YAW,',
     "} from '@app/scene/farmhouse/plan';",
     "export { FARMHOUSE_SOURCE } from '@app/scene/farmhouse/source';",
+    "export { BARN_SOURCE } from '@app/scene/farmhouse/barnSource';",
     "export { FRONT_DOOR } from '@app/scene/farmhouse/openings';",
     '',
   ].join('\n'),
@@ -300,13 +303,14 @@ if (FARMYARD_RECTS.length !== 2) {
  * footprint centre and a yaw, and a local point (lx, lz) is at world
  *   x = sx + lx cos(yaw) + lz sin(yaw),  z = sz - lx sin(yaw) + lz cos(yaw)
  * (farmhouse/shell.ts `offsetStand`). Each rect is the ground the building
- * covers at its foot: walls plus plinth, and the covered ground under a porch.
+ * covers at its foot: walls plus plinth, the covered ground under a porch, and
+ * the stone laid before the Kiln barn's doors.
  */
 function structureFootprints() {
   const {
-    BARN, BARN_AT, BARN_LEANTO_AT, BARN_LEANTO_HALF, BARN_YAW, HOUSE, HOUSE_AT, KILN_PORCH,
-    KILN_ROOF, LEANTO_AT, LEANTO_DEPTH, LEANTO_HALF, PLINTH_OUT, PORCH, WING, WING_ALONG,
-    WING_OUT, WING_SKEW, YAW, FARMHOUSE_SOURCE, FRONT_DOOR,
+    BARN, BARN_AT, BARN_LEANTO_AT, BARN_LEANTO_HALF, BARN_YAW, HOUSE, HOUSE_AT, KILN_BARN_FOOTPRINT,
+    KILN_PORCH, KILN_ROOF, LEANTO_AT, LEANTO_DEPTH, LEANTO_HALF, PLINTH_OUT, PORCH, WING,
+    WING_ALONG, WING_OUT, WING_SKEW, YAW, FARMHOUSE_SOURCE, BARN_SOURCE, FRONT_DOOR,
   } = inputs;
   const at = (x, z, yaw) => ({ x, z, yaw });
   const offset = (base, dx, dz, dyaw) => {
@@ -339,11 +343,19 @@ function structureFootprints() {
   } else {
     throw new Error(`bake-grass does not know FARMHOUSE_SOURCE ${JSON.stringify(FARMHOUSE_SOURCE)}`);
   }
-  footprints.push(
-    centred('barn', barn, BARN.length / 2 + PLINTH_OUT, BARN.width / 2 + PLINTH_OUT),
-    against('barn lean-to', barn, BARN.width, BARN_LEANTO_AT, BARN_LEANTO_HALF, LEANTO_DEPTH),
-  );
-  return { source: FARMHOUSE_SOURCE, footprints };
+  if (BARN_SOURCE === 'procedural') {
+    footprints.push(
+      centred('barn', barn, BARN.length / 2 + PLINTH_OUT, BARN.width / 2 + PLINTH_OUT),
+      against('barn lean-to', barn, BARN.width, BARN_LEANTO_AT, BARN_LEANTO_HALF, LEANTO_DEPTH),
+    );
+  } else if (BARN_SOURCE === 'kiln') {
+    // The Kiln barn's walls and plinth, the apron under its cart doors and the
+    // step at its stable door, as its recipe records them.
+    footprints.push(...KILN_BARN_FOOTPRINT.map((rect) => ({ ...rect, place: barn })));
+  } else {
+    throw new Error(`bake-grass does not know BARN_SOURCE ${JSON.stringify(BARN_SOURCE)}`);
+  }
+  return { source: FARMHOUSE_SOURCE, barnSource: BARN_SOURCE, footprints };
 }
 const STRUCTURES = structureFootprints();
 
@@ -583,6 +595,9 @@ const manifest = {
   /** The farmhouse whose footprint was cut. A mismatch with
    *  farmhouse/source.ts is a rebake. */
   farmhouseSource: STRUCTURES.source,
+  /** The barn whose footprint was cut. A mismatch with
+   *  farmhouse/barnSource.ts is a rebake. */
+  barnSource: STRUCTURES.barnSource,
   encoding: {
     xzRange: RECIPE.xzRange,
     yRange: RECIPE.yRange,
@@ -608,5 +623,5 @@ console.log(
   `baked ${total} tufts (${bytes.length} bytes, ${STRIDE} B each)\n` +
     `${report}\n` +
     `  footprint ${RECIPE.fieldHalf} m field, ${RECIPE.surroundOuter} m surround\n` +
-    `  buildings cut (${STRUCTURES.source} farmhouse): ${cuts} tufts`,
+    `  buildings cut (${STRUCTURES.source} farmhouse, ${STRUCTURES.barnSource} barn): ${cuts} tufts`,
 );
