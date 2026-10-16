@@ -52,10 +52,18 @@ mullioned windows read well; the long limewash wall is flatter and paler than
 the shipped one; the gable is baked in timber rather than limewash; the porch
 roof, fascia and rake boards collapse to flat dark slabs because they sit below
 the main eave and the reconstructed `uv.y` clamps to zero; and the house is a
-single gabled box, losing the cross wing, lean-to and hipped end. The interior
-is visible from neither production camera. Verdict: not shippable as baked;
-the fix is in the Kiln recipe (write the surface channels in the bake, add the
-wing and lean-to), scheduled for Release 2. Captures and notes under
+single gabled box where the procedural one had a cross wing, lean-to and hip.
+The interior is visible from neither production camera.
+
+Owner's correction the same day: the procedural house is not the reference.
+Its silhouette was not proper architecture and its painterly surface was
+sloppy, with worn, wavy wall colour, so the flatter wall and the simpler
+massing are not defects and the comparison against it was the wrong test. The
+one real defect is the shader mapping: the bake carries no surface channels,
+so every roof below the main eave collapses. Verdict: not shippable as baked;
+the fix is in the Kiln recipe (write the surface channels in the bake) and in
+grading the house's look in-game against spec/05 with the owner's review,
+scheduled for Release 2. Captures and notes under
 `captures/farmhouse-compare/`.
 
 ## Asset polish pass - 2026-10-14 to 2026-10-16, shipped

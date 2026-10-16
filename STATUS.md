@@ -109,11 +109,13 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   settled the open question against shipping it as baked: the bake carries
   none of the two surface channels the backdrop shader needs, so the loader
   guesses them from world height, and every roof below the main eave - the
-  porch roof, fascia and rake boards - collapses to a flat slab. The house is
-  also a single gabled box where the shipped homestead has the cross wing,
-  lean-to and hipped end that `spec/05` asks for, and its interior is visible
-  from neither production camera. The fix belongs in the Kiln recipe, not the
-  loader, and is Release 2 work. Release 1 ships the code-built house.
+  porch roof, fascia and rake boards - collapses to a flat slab. That is the
+  defect. The standard is the house's own look in the game's grade against
+  `spec/05`, judged by the owner on the production build; the procedural
+  house is not the reference, its silhouette and worn, wavy wall surface were
+  never the target, so losing its wing and lean-to is not a defect. The fix
+  belongs in the Kiln recipe and the surface grade, not the loader, and is
+  Release 2 work. Release 1 ships the code-built house.
   `tests/treeline-assets.spec.ts` now permits exactly one runtime GLB, the
   farmhouse, digest-checked against `assets/house/asset-manifest.json`.
 - Hub timing runs once, at the end, before the tag: both backends, before and
@@ -135,8 +137,11 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   `shared/` goes with it.
 - Kiln farmhouse: amend the recipe under `assets/house/` so the bake writes the
   backdrop shader's two surface channels per face from its own authoring data,
-  and add the cross wing and lean-to. Re-bake, flip `FARMHOUSE_SOURCE`, and
-  gate on the hub. The agent does this with Kiln available on the owner's PC.
+  then grade the house's look in-game - massing, roof, wall surface - against
+  `spec/05` and the owner's review, not against the old procedural house.
+  Regrade the farmhouse surface material where it reads sloppy. Re-bake, flip
+  `FARMHOUSE_SOURCE`, and gate on the hub. The agent does this with Kiln
+  available on the owner's PC.
 - Multiplayer foundations: the Durable Object placement decision recorded with
   its reasoning, room D1 migration 0001, and a CI-tested realtime skeleton on
   `/r/*`. Not deployed unless the owner says otherwise.
