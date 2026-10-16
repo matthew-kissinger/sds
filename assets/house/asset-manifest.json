@@ -16,12 +16,12 @@
   "recipe": "assets/house/farmhouse.kiln.js",
   "artifact": {
     "path": "assets/house/farmhouse.glb",
-    "bytes": 192980,
-    "sha256": "e98cb50a54fd35ddb2987dc623907eddb846d8e370c9d7dfd9032ad94c434315"
+    "bytes": 193888,
+    "sha256": "5f93b32a34a774ca575014bff491a3e4d0494fea44bec14a27c4d793e51376fa"
   },
-  "triangles": 3466,
-  "exportedMeshNodes": 282,
-  "exportedGeometries": 189,
+  "triangles": 3478,
+  "exportedMeshNodes": 283,
+  "exportedGeometries": 190,
   "materials": 7,
   "textures": 0,
   "images": 0,
@@ -30,7 +30,7 @@
   ],
   "boundsMetres": {
     "x": 20.05,
-    "y": 12.42,
+    "y": 12.3,
     "z": 11.87
   },
   "surfaceChannels": {
@@ -43,7 +43,7 @@
     "trianglesPerSurface": {
       "timber": 1970,
       "wall": 928,
-      "dress": 288,
+      "dress": 300,
       "opening": 160,
       "lamp": 72,
       "roof": 48
@@ -67,7 +67,7 @@
   "sources": [
     {
       "path": "assets/house/farmhouse.kiln.js",
-      "sha256": "df3f1abf0fb963facd592c8ac356678e7341180994d1c5ec2660a379f9f1f7e1"
+      "sha256": "c2e21945e468e0f813c0f18aae4fa139d1293881bd5e3f4eb000f2ef1eeb1cc7"
     },
     {
       "path": "app/src/scene/farmhouse/kilnHouse.ts",
@@ -79,7 +79,7 @@
     },
     {
       "path": "tools/record-house-asset.mjs",
-      "sha256": "a628738f0f7e312822512ae4ea4f754d65e3cb02d6c78426a8fb13eb4580c9d6"
+      "sha256": "80d17b915e3b208faef35486cffda1e6a38689527dda09f65c711628a65f9312"
     }
   ]
 }

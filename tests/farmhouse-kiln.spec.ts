@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildFarmhouse } from '@app/scene/farmhouse/cluster';
 import { parseKilnHouse, type KilnHouse } from '@app/scene/farmhouse/kilnHouse';
-import { HOUSE_AT, KILN_STACK } from '@app/scene/farmhouse/plan';
+import { HOUSE_AT, KILN_PORCH, KILN_ROOF, KILN_STACK } from '@app/scene/farmhouse/plan';
 import { FARMHOUSE_SOURCE } from '@app/scene/farmhouse/source';
 
 const GLB = new URL('../assets/house/farmhouse.glb', import.meta.url);
@@ -79,10 +79,10 @@ describe('Kiln farmhouse import', () => {
     expect(['procedural', 'kiln']).toContain(FARMHOUSE_SOURCE);
   });
 
-  it('welds the 282 baked meshes into one triangle list per band set', async () => {
+  it('welds the 283 baked meshes into one triangle list per band set', async () => {
     const kiln = await parsed();
-    expect(kiln.sourceNodes).toBe(282);
-    expect(kiln.triangles).toBe(3466);
+    expect(kiln.sourceNodes).toBe(283);
+    expect(kiln.triangles).toBe(3478);
     expect(Object.keys(kiln.parts).sort()).toEqual(
       ['dress', 'lamp', 'opening', 'roof', 'timber', 'wall'],
     );
@@ -187,22 +187,62 @@ describe('Kiln farmhouse surface channels, as baked', () => {
 
 describe('Kiln farmhouse on its pad', () => {
   // The pad is flat, so the house's y = 0 is the terrain. A floor whose top is
-  // also y = 0 fights the ground for depth through every opening.
-  it('stands the hall floor a few centimetres proud of the pad, with the walls on it', async () => {
-    const { parts } = await parsed();
-    const timber = parts.timber!;
-    const decks: number[] = [];
-    for (let i = 0; i < timber.positions.length / 3; i++) {
-      const [x, y, z] = [timber.positions[i * 3]!, timber.positions[i * 3 + 1]!, timber.positions[i * 3 + 2]!];
-      if (timber.normals[i * 3 + 1]! > 0.99 && Math.abs(x) <= 9.31 && Math.abs(z) <= 4.31 && y < 0.06) decks.push(y);
+  // also y = 0 fights the ground for depth through every opening; the recipe
+  // stands the ground floor one step (FLOOR_LIFT, 0.15 m) above it.
+  const DECK = 0.15;
+
+  /** Heights of the upward faces of one band set inside an x/z window, below 0.3 m. */
+  const upward = (part: { positions: Float32Array; normals: Float32Array }, inside: (x: number, z: number) => boolean): number[] => {
+    const out: number[] = [];
+    for (let i = 0; i < part.positions.length / 3; i++) {
+      const [x, y, z] = [part.positions[i * 3]!, part.positions[i * 3 + 1]!, part.positions[i * 3 + 2]!];
+      if (part.normals[i * 3 + 1]! > 0.99 && y < 0.3 && inside(x, z)) out.push(y);
     }
-    expect(decks.length).toBeGreaterThan(0);
-    for (const y of decks) expect(Math.abs(y)).toBeGreaterThan(0.02);
-    expect(decks.some((y) => Math.abs(y - 0.03) < 1e-4)).toBe(true);
+    return out;
+  };
+
+  it('stands the hall floor a step above the pad, with the walls still on it', async () => {
+    const { parts } = await parsed();
+    // The slab's top corners sit on the walls' centrelines.
+    const deck = upward(parts.timber!, (x, z) => Math.abs(x) <= 9.31 && Math.abs(z) <= 4.31);
+    expect(deck.length).toBeGreaterThan(0);
+    expect(Math.min(...deck)).toBeCloseTo(DECK, 4);
 
     let foot = Infinity;
     for (let i = 1; i < parts.wall!.positions.length; i += 3) foot = Math.min(foot, parts.wall!.positions[i]!);
     expect(foot).toBeCloseTo(0, 4);
+  });
+
+  // The grass bake cuts the house's footprint from plan.ts, which repeats the
+  // recipe's numbers; this is where a drift between the two would show.
+  it('touches the ground only inside the footprint the grass bake cuts', async () => {
+    const { parts } = await parsed();
+    const outside: string[] = [];
+    for (const [surface, part] of Object.entries(parts)) {
+      for (let i = 0; i < part.positions.length / 3; i++) {
+        const [x, y, z] = [part.positions[i * 3]!, part.positions[i * 3 + 1]!, part.positions[i * 3 + 2]!];
+        if (y > 0.3) continue;
+        const walls = Math.abs(x) <= KILN_ROOF.length / 2 + 1e-3 && Math.abs(z) <= KILN_ROOF.width / 2 + 1e-3;
+        const porch =
+          Math.abs(x - KILN_PORCH.across) <= KILN_PORCH.half + 1e-3 &&
+          z <= -KILN_ROOF.width / 2 + 1e-3 &&
+          z >= -KILN_ROOF.width / 2 - KILN_PORCH.depth - 1e-3;
+        if (!walls && !porch) outside.push(`${surface} (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
+      }
+    }
+    expect(outside).toEqual([]);
+  });
+
+  it('finishes the step, both thresholds and the deck at one level', async () => {
+    const { parts } = await parsed();
+    // Front: the porch step and the threshold stone, x 2.25..4.75, z -5.3..-3.94.
+    const front = upward(parts.dress!, (x, z) => x > 2 && x < 5 && z < -3.9 && z > -5.4);
+    // Back: the new sill in the back door's reveal, x -5.78..-4.42.
+    const back = upward(parts.dress!, (x, z) => x > -6 && x < -4.2 && z > 3.9 && z < 4.6);
+    for (const tops of [front, back]) {
+      expect(tops.length).toBeGreaterThan(0);
+      for (const y of tops) expect(y).toBeCloseTo(DECK, 4);
+    }
   });
 });
 

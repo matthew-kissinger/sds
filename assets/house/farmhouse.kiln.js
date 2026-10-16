@@ -57,16 +57,31 @@ const ROOF_LIFT = 0.02;
 const WALL_T = 0.55;
 const FLOOR_T = 0.18;
 /**
- * How far the ground-floor deck stands above the pad. The shell's floor is a
- * slab whose top is y 0, which is exactly the terrain under it (the pad is flat
- * to under a millimetre), so the two were coplanar and fought for depth across
- * the hall wherever the floor showed - through the open front door most of all.
- * Only the slab is raised: the walls, posts and step still start at 0, so the
- * house stays seated on the ground, and the deck now sits on the wall footings
- * the way a boarded floor sits on its joists. Measured in the lab, not guessed:
- * see docs/history/farmhouse-kiln-recipe-2026-10-16.md.
+ * The ground floor stands one step above the yard. The shell's floor is a slab
+ * whose top was y 0 - exactly the terrain under it, since the pad is flat to
+ * under a millimetre - so the ground showed through the hall in streaks. A
+ * floor a real step up cannot fight the ground at any camera, and it is where
+ * a house's floor is: one 150 mm riser from the yard, with the porch step, the
+ * threshold and the deck finishing at one level so the door has no lip.
+ *
+ * Not 0.12, though that was the step's authored height: the game lays its cast
+ * shadows as a slab 0.12 m above the ground (farmhouse/shadows.ts, LIFT), and
+ * the house's own shadow starts under its footprint, so a deck at 0.12 was
+ * coplanar with it and striped. 0.15 clears it by 30 mm.
+ *
+ * What moves with it: the slab, the step, the threshold stones (front, and a
+ * sill in the back door's reveal, which had none), the door leaf, which hangs
+ * over the deck and so is shortened by the lift under the same lintel, the
+ * stair, whose twelve risers now share the rise from the deck to the ceiling,
+ * and the ground-floor fittings in ON_DECK. What does not: the walls, the
+ * corner and porch posts, the door frame, the partitions and the chimney
+ * breast, which all still start at 0 and run through the deck, so the house
+ * stays seated on the ground. Measured in the lab:
+ * docs/history/farmhouse-kiln-recipe-2026-10-16.md.
  */
-const FLOOR_LIFT = 0.03;
+const FLOOR_LIFT = 0.15;
+/** The ground-floor fittings that stand on the deck rather than on the pad. */
+const ON_DECK = /^(Mesh_)?(Table|Bench|Settle|Dresser|Parlour|Fire_Hearth|Fire_Log|Fire_Burning)/;
 
 // Inner faces of the four walls, which everything indoors is measured from.
 const IN_X = SPAN_X / 2 - WALL_T / 2;
@@ -340,7 +355,7 @@ function build() {
   const doorH = 2.6;
   const doorZ = -(SPAN_Z / 2 - WALL_T / 2) - 0.07;
   const leaf = createRoot('FrontDoor');
-  leaf.position.set(doorX - doorW / 2 + 0.03, 0, doorZ);
+  leaf.position.set(doorX - doorW / 2 + 0.03, FLOOR_LIFT, doorZ);
   // Forty degrees, swung inward. At sixty-two the leaf stood almost square to
   // the approach and read as a strip of nothing from the yard; at forty its face
   // is visible from outside and the hall is still open behind it.
@@ -348,11 +363,12 @@ function build() {
   root.add(leaf);
   // Five boards and two ledges, hung off the hinge stile at local x = 0.
   const leafW = doorW - 0.06;
+  const leafH = doorH - 0.08 - FLOOR_LIFT;
   for (let plank = 0; plank < 5; plank++) {
-    box(`Door_Board${plank}`, [leafW / 5 - 0.012, doorH - 0.08, 0.055],
-      [leafW / 10 + (plank * leafW) / 5, (doorH - 0.08) / 2, 0], timber, leaf);
+    box(`Door_Board${plank}`, [leafW / 5 - 0.012, leafH, 0.055],
+      [leafW / 10 + (plank * leafW) / 5, leafH / 2, 0], timber, leaf);
   }
-  for (const y of [0.45, doorH - 0.55]) {
+  for (const y of [0.45, leafH - 0.47]) {
     box(`Door_Ledge${y < 1 ? 'Low' : 'High'}`, [leafW - 0.06, 0.16, 0.045],
       [leafW / 2, y, -0.045], timber, leaf);
   }
@@ -367,7 +383,17 @@ function build() {
       [doorX + side * (doorW / 2 - 0.06), (doorH + 0.06) / 2, doorZ], timber);
   }
   box('Door_Lintel', [doorW + 0.24, 0.2, 0.3], [doorX, doorH + 0.09, doorZ - 0.05], timber);
-  box('Door_Threshold', [doorW + 0.3, 0.09, 0.62], [doorX, 0.03, doorZ - 0.16], stone);
+  // From the wall's outer face, where the step meets it, to the deck's edge on
+  // the wall's centreline: the stone and the deck finish at one level and never
+  // overlap, because two coplanar tops fight for depth.
+  const sillDepth = WALL_T / 2;
+  box('Door_Threshold', [doorW + 0.3, FLOOR_LIFT + 0.015, sillDepth],
+    [doorX, (FLOOR_LIFT - 0.015) / 2, -(SPAN_Z / 2 + sillDepth / 2)], stone);
+  // The back door's reveal had the bare deck edge in it; it gets the same stone.
+  const backDoorX = -5.1;
+  const backDoorW = 1.05;
+  box('BackDoor_Sill', [backDoorW + 0.3, FLOOR_LIFT + 0.015, sillDepth],
+    [backDoorX, (FLOOR_LIFT - 0.015) / 2, SPAN_Z / 2 + sillDepth / 2], stone);
 
   // ---------------------------------------------------------------- porch
   // A gabled porch over the door: a second roof pitch crossing the first at the
@@ -379,7 +405,7 @@ function build() {
   const porchEaves = 2.78;
   const porchApex = 3.82;
   const porchNose = 0.28;
-  box('Porch_Step', [doorW + 1.1, 0.12, 0.72], [doorX, 0.06, porchZ - 0.36], stone);
+  box('Porch_Step', [doorW + 1.1, FLOOR_LIFT, 0.72], [doorX, FLOOR_LIFT / 2, porchZ - 0.36], stone);
   for (const side of [-1, 1]) {
     box(`Porch_Post${side < 0 ? 'A' : 'B'}`,
       [0.15, porchEaves + 0.2, 0.15],
@@ -495,18 +521,18 @@ function build() {
   // The stair, twelve solid treads climbing the back wall into the well.
   const treads = 12;
   const going = 0.28;
-  const riser = CEIL / treads;
+  const riser = (CEIL - FLOOR_LIFT) / treads;
   const stairX0 = -1.2;
   for (let step = 0; step < treads; step++) {
-    const top = (step + 1) * riser;
+    const top = FLOOR_LIFT + (step + 1) * riser;
     box(`Stair_Tread${step}`, [going, top, 1.05],
       [stairX0 + going * (step + 0.5), top / 2, IN_Z - 0.56], timber);
   }
-  box('Stair_RailPostA', [0.1, 1, 0.1], [stairX0 + 0.2, 0.5 + riser, IN_Z - 1.06], timber);
+  box('Stair_RailPostA', [0.1, 1, 0.1], [stairX0 + 0.2, FLOOR_LIFT + 0.5 + riser, IN_Z - 1.06], timber);
   box('Stair_RailPostB', [0.1, 1, 0.1], [stairX0 + going * treads - 0.2, CEIL + 0.5, IN_Z - 1.06], timber);
   box('Stair_Rail', [going * treads, 0.09, 0.09],
-    [stairX0 + (going * treads) / 2, (riser + CEIL) / 2 + 1, IN_Z - 1.06], timber,
-    root, [0, 0, (Math.atan2(CEIL - riser, going * treads) * 180) / Math.PI]);
+    [stairX0 + (going * treads) / 2, (FLOOR_LIFT + riser + CEIL) / 2 + 1, IN_Z - 1.06], timber,
+    root, [0, 0, (Math.atan2(CEIL - riser - FLOOR_LIFT, going * treads) * 180) / Math.PI]);
 
   // ----------------------------------------------------------- first floor
   // THE STOREY THE ELEVATIONS WERE ALREADY PROMISING. Until now the ceiling
@@ -606,6 +632,10 @@ function build() {
       box(`Parlour_ChairLeg${dx}${dz}`, [0.06, 0.42, 0.06], [parlourX - 1.1 + dx, 0.21, -1.3 + dz], timber);
     }
   }
+
+  root.traverse((node) => {
+    if (node.isMesh && ON_DECK.test(node.name)) node.position.y += FLOOR_LIFT;
+  });
 
   writeSurfaceChannels(root, {
     materials: { limewash, slate, timber, stone, masonry },

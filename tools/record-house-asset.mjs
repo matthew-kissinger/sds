@@ -59,14 +59,14 @@ const ledger = {
   recipe,
   artifact: { path: artifact, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') },
   // As exported. The game welds these into the farmhouse cluster's buffers.
-  triangles: 3466,
-  exportedMeshNodes: 282,
-  exportedGeometries: 189,
+  triangles: 3478,
+  exportedMeshNodes: 283,
+  exportedGeometries: 190,
   materials: 7,
   textures: 0,
   images: 0,
   gltfExtensions: ['KHR_materials_emissive_strength'],
-  boundsMetres: { x: 20.05, y: 12.42, z: 11.87 },
+  boundsMetres: { x: 20.05, y: 12.30, z: 11.87 },
   // The backdrop shader's two per-vertex channels, which the recipe computes per
   // face and writes into TEXCOORD_0 (assets/house/README.md). The loader refuses a
   // bake without this record on its root node, and a mesh without the attribute.
@@ -79,7 +79,7 @@ const ledger = {
   // farmhouse/cluster.ts has welded it into the cluster's own buffers.
   runtime: {
     addedDraws: 0,
-    trianglesPerSurface: { timber: 1970, wall: 928, dress: 288, opening: 160, lamp: 72, roof: 48 },
+    trianglesPerSurface: { timber: 1970, wall: 928, dress: 300, opening: 160, lamp: 72, roof: 48 },
     note: 'Welded into the cluster wall, roof, timber, dress, opening and lamp buffers, so the cluster stays at ten draws. No texture is sampled; the ramp is computed.',
     loader: 'app/src/scene/farmhouse/kilnHouse.ts',
     distPath: 'assets/farmhouse-<hash>.glb',

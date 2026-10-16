@@ -101,47 +101,110 @@ The hall floor fought the terrain. `createGableShell` builds its floor as a
 one terrain sample at its centre (`farmhouse/cluster.ts`, `stand`). The baked
 heightfield under the footprint is flat: sampled every 0.25 m it reads the pad
 level (-0.616) to within 0.42 mm inside the walls and 2.7 mm across the whole
-footprint. So the deck and the ground were the same plane, and the terrain
-showed through the floor in streaks.
+footprint. So the deck and the ground were one plane, and the terrain showed
+through the floor in streaks.
 
-The fix is in the recipe, because the recipe authors the floor:
-`shell.floor.position.y += FLOOR_LIFT`, `FLOOR_LIFT = 0.03`. Only the slab moves.
-The walls, corner posts, porch posts, step and threshold still start at 0, so
-the house stays seated on the ground and nothing outside changes; the deck now
-bears on the wall footings. The pad or `stand` was the other candidate, but
-lifting there lifts the walls with the floor and leaves a 3 cm gap under every
-wall on a flat pad. A loader offset would have been a correction to an asset
-in code. Nothing else in the house had an upward face at 0: the threshold top
-is 0.075, the step 0.12, the hearth 0.09, and the faces that do sit at 0 (wall
-and post feet) face down. Furniture legs, the stair's first riser and the
-partitions now start 3 cm inside the deck, which is unseen. The back door's
-reveal shows the deck's edge as a 3 cm lip at the wall's centreline, where
-there is no threshold stone.
+**The floor now stands one 150 mm step above the yard** (`FLOOR_LIFT` in the
+recipe). The fix is in the recipe because the recipe authors the floor; lifting
+at the pad or `stand` would lift the walls with it and open a gap under every
+wall, and a loader offset would be a correction to an asset made in code. What
+moves with the deck:
 
-Measured in the lab, not guessed. A new `10-hall` view stands in the hall
-(2.2 m from the centre, 1.7 m up) with the whole deck in frame; the share of
-the floor (rows 200 to 900) whose colour is the terrain's green rather than
-the boards':
+- The porch step and the front threshold stone finish at the deck's level, so
+  the door has no lip. The threshold now runs from the wall's outer face (where
+  the step meets it) to the deck's edge on the wall centreline: it used to
+  reach 80 mm into the hall, and two coplanar tops fight for depth.
+- The back door's reveal, which showed the deck's raw edge, gets the same stone
+  sill.
+- The door leaf hangs over the deck, so it stands on it and is shortened by the
+  lift under the same lintel (2.37 m, was 2.52).
+- The stair rises from the deck: twelve equal risers of 0.226 m to the ceiling,
+  was 0.238 from the pad.
+- The ground-floor fittings (`ON_DECK`: table, benches, settle, dresser, the
+  parlour's table and chair, the hearth and the fire) stand on the deck.
 
-| Lift | WebGL2 | WebGPU |
+What does not move: the walls, the corner and porch posts, the door frame, the
+partitions and the chimney breast. They still start at 0 and run through the
+deck, so the house stays seated on the ground.
+
+Why 0.15 and not 0.12, which was the porch step's authored height: the game lays
+its cast shadows as an alpha slab 0.12 m above the ground
+(`farmhouse/shadows.ts`, `LIFT`), and the house's own shadow starts under its
+footprint. A deck at 0.12 was coplanar with that slab and striped across the
+hall in the lab. At 0.03 the slab stood 90 mm above the deck and darkened the
+whole hall floor, which no capture had flagged. At 0.15 the deck occludes it.
+
+Measured in the lab, not guessed, on the share of pixels that are the terrain's
+green (G - R > 4) in three frames:
+- `10-hall`, which stands in the hall and frames the whole deck: rows 200 to 900.
+- `09-doorway`, from 9.5 m: the floor seen through the door.
+- `07-from-field`, the Classic camera's line at about 90 m: a box on the door.
+
+| Lift | Hall, WebGL2 | Hall, WebGPU | Doorway | From the field |
+| --- | --- | --- | --- | --- |
+| 0 | 19.39% | 3.87% | 0.00% | 0.00% |
+| 1 cm | 0.28% | 0.28% | 0.00% | - |
+| 3 cm | 0.24% | 0.24% | 0.00% | 0.00% |
+| **15 cm** | **0.00%** | **0.00%** | **0.00%** | **0.00%** |
+
+The doorway and far-view boxes read clean at every lift in a still frame. Only
+the hall view tells the lifts apart. The residue at 1 and 3 cm was the grass:
+tufts stood up through the floor because the grass bake did not cut the
+buildings. That is fixed in the grass bake, not the house (below). The 15 cm
+captures are taken over the grass baked for the Kiln house, which is what
+ships once the constant flips.
+
+## Grass under the buildings
+
+`tools/bake-grass.mjs` had two authorities, HOME_FIELD and the terrain pads.
+The farmhouse and barn pads are thinned farmyard, which is right for a yard,
+but nothing cut the buildings themselves, so tufts grew inside them. The bake
+now reads a third authority, the one spec/04 names ("structures get ... declared
+scatter keep-out rects"): `farmhouse/plan.ts` and `source.ts`, bundled through
+esbuild as the other two are.
+
+The bake hard-cuts the footprints that ship. Each is an oriented rectangle in
+its building's own frame (`HOUSE_AT`/`YAW`, `BARN_AT`/`BARN_YAW`, the wing
+through `offsetStand`), using the existing `cutRim`:
+
+- **`'procedural'`:** the range's walls plus the plinth's 0.22 m, the wing the
+  same way, the porch's covered ground and the lean-to.
+- **`'kiln'`:** the Kiln house's outer walls (19.15 by 9.15; its thresholds lie
+  inside them) and its porch out to the posts.
+- **Either way:** the barn plus plinth, and its lean-to.
+
+The porch, lean-to and plinth sizes moved from function bodies into `plan.ts`
+(`PORCH`, `LEANTO_DEPTH`, `PLINTH_OUT`, `KILN_PORCH`), so the geometry and the
+bake read one number.
+
+The coupling to the source constant is deliberate. Flipping `FARMHOUSE_SOURCE`
+changes which ground is under a building, so the flip requires a grass rebake
+in the same commit. The manifest records `farmhouseSource`, and
+`tests/grass-bake.spec.ts` fails, naming the rebake, when the two disagree.
+That is the discipline the bake already applies to the terrain seed. The
+manifest's format version is unchanged; the byte layout did not move.
+
+Tufts each cut removed, from the bake's own count (candidates the rest of the
+density field kept and the building cut rejected, rim included):
+
+| Footprint | `'procedural'` (committed) | `'kiln'` |
 | --- | --- | --- |
-| 0 | 19.39% | 3.87% |
-| 1 cm | 0.28% | 0.28% |
-| 3 cm | 0.24% | 0.24% |
+| House (range or Kiln walls) | 27 | 30 |
+| Wing | 19 | - |
+| Porch | 2 | 3 |
+| Lean-to | 9 | - |
+| Barn | 8 | 7 |
+| Barn lean-to | 1 | 2 |
 
-The residue at 1 and 3 cm is the stems of the grass blades below (see below),
-not the terrain. 1 cm was already clean at that range; 3 cm was chosen for the
-far camera. With a 24-bit depth buffer and near 0.5 m (`App.tsx`), the resolvable
-step is about z^2 / (0.5 x 2^24): 1 mm at the Classic camera's 90 m, 1 cm at
-290 m. A 1 cm lift would start to fight again within the field's far reach; 3
-cm holds to about 500 m. From the field (`07-from-field`) the deck is a few
-pixels through the door, and the frame is unchanged apart from the wind in
-the grass.
+The counts are small because the farmyard pads already thin the grass to 0.2.
+Inside the walls, strictly, the old bake had 22 tufts in the range, 14 in the
+wing, 7 in the lean-to and 6 in the barn, and 23 inside the Kiln house's
+footprint. Both new bakes have none inside any footprint that ships.
 
-Found while measuring, not fixed: the game's grass is not cleared from under
-the house, so blades stand up through the floor. Only the open door shows the
-inside today, and only close to; it belongs to the grass layer
-(`app/src/scene/grass/`), which the code-built house shares.
+The committed bake has 98,258 tufts (was 98,347). The field tier is the same
+candidate set less the cut. Its shuffled order changes, and the surround tier
+re-rolls, because the shuffle consumes the one seeded stream. The cut runs in
+`density()` before placement, so the prefix test holds.
 
 ## Re-baking
 
@@ -152,11 +215,11 @@ KILN_CLI=C:/Users/Mattm/X/kiln-oss/dist/cli.mjs node tools/record-house-asset.mj
 ```
 
 The bake is 2.5 s and reproduces byte for byte from a cold directory:
-192,980 bytes, SHA-256 `e98cb50a...434315`, 282 mesh nodes, 189 meshes,
-3,466 triangles, 20.05 by 12.42 by 11.87 m, 0 glTF errors or warnings, Kiln QA
-`accepted`/`pass`. With `FLOOR_LIFT` at 0 the same recipe bakes
-`eab29911...f25310`, the channels-only bake, so the lift is the only
-difference between the two.
+193,888 bytes, SHA-256 `5f93b32a...1376fa`, 283 mesh nodes, 190 meshes,
+3,478 triangles (12 are the back door's new sill), 20.05 by 12.30 by 11.87 m,
+0 glTF errors or warnings, Kiln QA `accepted`/`pass`. With the floor work taken
+out (`FLOOR_LIFT` 0, before the sill and the threshold change) the recipe
+baked `eab29911...f25310`, the channels-only bake.
 
 ## Evidence
 
@@ -165,23 +228,28 @@ subject (front, front-west, front-east, porch, east gable, back-west, from the
 field at 90 m, silhouette with the ground off) and two close-ups for the floor
 (`09-doorway`, `10-hall`), WebGL2 (`?debug=webgl`) and
 WebGPU, 1600 by 900. Headless WebGPU drew the frame, so the WebGL2 fallback was
-not needed for it. Every WebGPU run logged one `Async render pipeline creation
-failed ... [Texture "output"] usage` error, the code-built house and the
-Release 1 tree included, so it predates this change; WebGL2 logged none.
+not needed for it. Before the rebase onto 1eabfa34 every WebGPU run logged
+one `Async render pipeline creation failed ... [Texture "output"] usage`
+error, the code-built house and the Release 1 tree included. That was the
+lab mounting with its loop running, fixed on main; the 15 cm and final
+captures log none on either backend.
 
 - `captures/farmhouse/2026-10-16/before/{webgl,webgpu}/kiln-house/`: the
   Release 1 bake and loader, from a `git archive` of 86fe175f.
 - `captures/farmhouse/2026-10-16/after/{webgl,webgpu}/kiln-house/`: this bake,
-  floor lift included.
+  floor included, over the grass baked for the Kiln house.
 - `captures/farmhouse/2026-10-16/after/{webgl,webgpu}/house/`: the code-built
   house at the same frames, for context only. The lab gained a
   `House (procedural)` subject so the two share target and frame.
 - `captures/farmhouse/2026-10-16/compare/`: before beside after, WebGL2, and
   `porch-*.png` at 3x on the porch.
-- `captures/farmhouse/2026-10-16/floor/lift-{0,1cm,3cm}/{webgl,webgpu}/kiln-house/`:
-  the floor close-ups at each lift (`09-doorway`, `10-hall`; `04-porch` and
-  `07-from-field` at 0 and 3 cm), and `floor/compare/` with the three lifts
+- `captures/farmhouse/2026-10-16/floor/lift-{0,1cm,3cm,15cm}/{webgl,webgpu}/kiln-house/`:
+  the floor views at each lift (`09-doorway`, `10-hall`, and `04-porch` and
+  `07-from-field` at 0, 3 and 15 cm), and `floor/compare/` with 0, 1 and 3 cm
   side by side.
+- `captures/farmhouse/2026-10-16/grass-cut/{before,after}/webgl/house/` and
+  `grass-cut/compare-*.png`: the code-built house over the old and the new
+  grass bake.
 
 `captures/` is gitignored; the files are on the owner's PC.
 
@@ -193,19 +261,23 @@ is gone.
 
 Verification on this PC: lint, typecheck and `typecheck:lab` clean; the build
 exits 0 and ships no model with `'procedural'`; a temporary `'kiln'` build
-shipped exactly one, `assets/farmhouse-DeFEL4ID.glb`, digest-equal to the
-ledger, and `tests/treeline-assets.spec.ts` passed against it; discovery exit 0.
-The full suite: 806 of 807 pass; the one failure, `tests/audio-manifest.spec.ts`,
+shipped exactly one, `assets/farmhouse-WGhzLvo6.glb`, digest-equal to the
+ledger, and `tests/treeline-assets.spec.ts` passed against it, while
+`tests/grass-bake.spec.ts` failed as intended, naming the grass rebake the flip
+needs; discovery exit 0.
+The full suite: 821 of 822 pass; the one failure, `tests/audio-manifest.spec.ts`,
 is environmental: `assets/audio/licensed/` is absent from a fresh worktree.
 
 ## For the owner
 
 1. The look review on the production build, desktop and phone, WebGPU and
-   WebGL2, with `FARMHOUSE_SOURCE` set to `'kiln'` locally.
+   WebGL2, with `FARMHOUSE_SOURCE` set to `'kiln'` locally and the grass rebaked
+   for it.
 2. The hub receipt: build once per value, `tools/hub-presentation-probe.mjs`
-   against both `dist/` copies. The kiln arm's main chunk is 2,416.74 kB raw /
-   668.33 kB gzip against 2,369.62 / 653.51 for procedural, plus the 193 kB GLB.
-3. Then the constant flips, in its own commit.
+   against both `dist/` copies. The kiln arm's main chunk is 2,416.80 kB raw /
+   668.44 kB gzip against 2,369.69 / 653.57 for procedural, plus the 193 kB GLB.
+3. Then the constant flips, in its own commit, with the grass rebake
+   (`node tools/bake-grass.mjs`) that cuts the Kiln footprint instead.
 
 Suggestions only - nothing below was changed, because the design is the owner's.
 A prototype of each was built and looked at in the lab, then reverted:

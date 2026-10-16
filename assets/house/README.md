@@ -78,7 +78,7 @@ a channel bake from an ordinary one.
 of the seven material names in the GLB is the name of a farmhouse band set -
 `limewash` is `wall`, `slate` is `roof`, `stone` and `masonry` are both `dress`,
 and so on - and the loader bakes each node's world matrix, copies the channels
-across, and sorts 282 mesh nodes into one list per band set, which
+across, and sorts 283 mesh nodes into one list per band set, which
 `farmhouse/cluster.ts` welds into the cluster's own buffers. It throws, naming
 what is missing, on a GLB without the `surfaceChannels` record or a mesh
 without TEXCOORD_0; `loadKilnHouse` logs that and the game draws the procedural
@@ -92,20 +92,24 @@ sat at 0, one flat band from wall head to ridge.
 `docs/history/farmhouse-kiln-recipe-2026-10-16.md` has the contract and the
 before-and-after numbers.
 
-## The floor stands 30 mm proud of the pad
+## The ground floor is one step up
 
 The pad under the house is flat to under a millimetre, and the house stands on
-it at y = 0. The shell's floor slab is lifted by `FLOOR_LIFT` (0.03 m) so its
-top is not the terrain's plane; at 0 the ground showed through the hall floor
-in streaks. Only the slab moves: walls, posts, step and threshold still start
-at 0, so the house stays seated. 1 cm was clean close to; 3 cm keeps a margin
-of depth precision out to the far camera. The measurement is in the history
-note above.
+it at y = 0. The shell's floor slab is lifted by `FLOOR_LIFT`, 0.15 m, one
+riser above the yard: at 0 the ground showed through the hall in streaks, and
+0.12 is the height of the game's cast-shadow slab (`farmhouse/shadows.ts`),
+which striped a deck laid on it. The porch step, the front threshold and a new
+sill in the back door's reveal finish at the deck's level, so neither door has
+a lip. The door leaf, the stair and the ground-floor fittings stand on the
+deck. The walls, posts, door frame, partitions and chimney breast still start
+at 0, so the house stays seated. The grass bake cuts the house's footprint
+(`KILN_PORCH` and `KILN_ROOF` in `farmhouse/plan.ts` repeat the recipe's
+numbers for it). The measurements are in the history note above.
 
-The cost: **3,466 triangles and no added draws** (the six band sets weld into
+The cost: **3,478 triangles and no added draws** (the six band sets weld into
 buffers the cluster already draws), no textures. 26 of those triangles are the
-ridge splits; the authored geometry is 3,440. For comparison, the entire
-shipped procedural cluster - house, cross wing, two lean-tos, porch, barn,
+ridge splits and 12 the back door's sill; the authored geometry was 3,440. For
+comparison, the entire shipped procedural cluster - house, cross wing, two lean-tos, porch, barn,
 cupola, outshot, cart-door hood, all 23 openings and the smoke plume - measures
 4,874 triangles. One building with an interior and a storey inside it is seven
 tenths of the whole homestead, which is the trade this route asks you to accept.
