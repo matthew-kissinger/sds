@@ -15,8 +15,13 @@ permissions:
 jobs:
   preview-worker:
     name: Deploy isolated score preview
+    # Dependabot pull requests do not receive repository secrets, so every step
+    # below would run with an empty CF_API_TOKEN and fail in about 14 seconds.
+    # Skip rather than fail: a job that cannot pass teaches people to ignore a
+    # red check.
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]' &&
       vars.CF_PREVIEW_D1_ID != ''
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +64,9 @@ jobs:
   pages-preview:
     name: Build and deploy Pages preview
     needs: preview-worker
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

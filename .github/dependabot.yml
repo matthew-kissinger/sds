@@ -24,6 +24,13 @@ updates:
         update-types:
           - minor
           - patch
+      # Majors are decisions, but four separate pull requests for them is noise.
+      # One batch per ecosystem keeps them visible without burying the list.
+      client-major:
+        patterns:
+          - '*'
+        update-types:
+          - major
 
   - package-ecosystem: npm
     directory: /worker
@@ -37,6 +44,11 @@ updates:
         update-types:
           - minor
           - patch
+      worker-major:
+        patterns:
+          - '*'
+        update-types:
+          - major
 
   - package-ecosystem: github-actions
     directory: /
@@ -46,3 +58,9 @@ updates:
       actions:
         patterns:
           - '*'
+        # Minor and patch only. A major bump of actions/checkout or
+        # upload-artifact changes the production deploy path, and that belongs
+        # in its own pull request where it can be read, not in a batch.
+        update-types:
+          - minor
+          - patch
