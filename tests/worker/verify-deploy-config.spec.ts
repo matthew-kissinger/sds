@@ -151,7 +151,7 @@ const cfWorker = (preview = false) => ({
   observability: { enabled: true },
   workersDev: true,
   previewUrls: preview,
-  ...(preview ? {} : { triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] }),
+  ...(preview ? { domains: ['stage.sheepdogsim.com'] } : { triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] }),
   env: {
     ASSETS: { type: 'assets' },
     DB: { type: 'd1', name: preview ? 'sds-db-preview' : 'sds-db', id: preview ? PREVIEW_D1 : PRODUCTION_D1 },
@@ -202,6 +202,12 @@ describe('verify-deploy-config --cf', () => {
     expect(check(previewRoute, 'preview', { preview: true }).join('\n')).toMatch(/^triggers:/m);
     const withExports = { ...cfWorker(), exports: { RoomDO: { type: 'durable-object', storage: 'sqlite' } } };
     expect(check(withExports, 'production').join('\n')).toMatch(/^exports:/m);
+    // A Custom Domain on production is the declarative-hosting cutover and is
+    // not declared yet; the preview Worker's is the rehearsal hostname only.
+    const apexDomain = { ...cfWorker(), domains: ['sheepdogsim.com'] };
+    expect(check(apexDomain, 'production').join('\n')).toMatch(/^domains:/m);
+    const wrongStage = { ...cfWorker(true), domains: ['sheepdogsim.com'] };
+    expect(check(wrongStage, 'preview', { preview: true }).join('\n')).toMatch(/^domains:/m);
   });
 
   it('fails a missing bundle entry and a missing release.json', () => {
