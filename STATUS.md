@@ -179,12 +179,12 @@ Release 1.
 3.2.1 with the live settings diffed; the lab's WebGPU boot error fixed at its
 cause (the lab now gates its loop on renderer stage and `sceneReady` as the
 game does; `docs/history/status-log.md`); the surface atlas spike concluded
-(below). In flight: pull request 121 (Kiln farmhouse channel contract, floor
-one step above the pad, grass hard-cut under the footprints that ship, CI
-green; one defect fix outstanding, the outline hull sized for the procedural
-roof, found by an adversarial review and handed back to the branch) and the
-Kiln barn (an agent authoring the recipe on its own branch against the
-channel convention of 121). Next in order: the owner's look review of both on
+(below). Merged: pull request 121 (Kiln farmhouse channel contract, floor one step
+above the pad, grass hard-cut under the footprints that ship, the outline
+hull fitted to the Kiln eave; merge `00fdc295`, 2026-10-16), with
+`FARMHOUSE_SOURCE` still procedural. In flight: the Kiln barn (an agent
+authoring the recipe on its own branch against the merged channel
+convention). Next in order: the owner's look review of both on
 the production build, hub receipts, the two constant flips each with its grass
 rebake, a release, then Stage B.
 
