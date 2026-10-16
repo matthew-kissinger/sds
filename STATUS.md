@@ -94,23 +94,31 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
 - One tag-triggered deploy ships client and API from one commit. Pull-request
   previews become version aliases on the preview Worker with its own D1, never
   version previews of production, which would share the production bindings.
-- Dependencies go to latest stable on landing day, including the majors
-  Dependabot never raised: ESLint 10, `@types/node` 26, wrangler and
-  `@cloudflare/workers-types`. Batches per ecosystem, one commit each, taken
-  locally rather than merged from Dependabot. The Three.js bump needs genuine
-  WebGPU and forced-WebGL2 receipts. TypeScript 7 lands only if a supported
-  linter pairing exists; otherwise the root aligns with the worker on 6.0.x and
-  the TypeScript 7 pull requests close with that reason.
-- The Kiln farmhouse is wired behind the shipped `Farmhouse` component and
-  ships only if the hub receipt shows no load-time or frame-time regression on
-  either backend. The desk figures - +2.07% bytes, +0.087% triangles, 6 draw
-  calls against 40 - favour it and do not settle it. Not answered by
-  performance: the procedural backdrop is keyed to `uv.x`/`uv.y`, which a baked
-  mesh reconstructs only from world position, and
-  `tests/treeline-assets.spec.ts:329` records the standing choice not to load
-  GLBs at runtime, which shipping this reverses deliberately in its own commit.
+- Dependencies: done 2026-10-16, all to latest stable, five batches plus the
+  TypeScript alignment. TypeScript 7 did not land: the 7.0 package ships no
+  compiler API and typescript-eslint 8.71.2 refuses it, so the root sits on
+  6.0.3 with the worker and PRs #111 and #106 are closed with that reason.
+  Three 0.186.1 needed no code change; WebGPU and forced-WebGL2 desk receipts
+  match the previous build in draw calls and triangles. Desktop boot read
+  about 300 ms slower on the desk, which only the hub can confirm or dismiss.
+  Evidence in `docs/history/status-log.md`.
+- The Kiln farmhouse loader is merged behind one build constant,
+  `FARMHOUSE_SOURCE` in `app/src/scene/farmhouse/source.ts`, shipped as
+  `procedural`. The weld adds zero draw calls, so the earlier "6 against 40"
+  figure no longer applies. The visual comparison on the production build
+  settled the open question against shipping it as baked: the bake carries
+  none of the two surface channels the backdrop shader needs, so the loader
+  guesses them from world height, and every roof below the main eave - the
+  porch roof, fascia and rake boards - collapses to a flat slab. The house is
+  also a single gabled box where the shipped homestead has the cross wing,
+  lean-to and hipped end that `spec/05` asks for, and its interior is visible
+  from neither production camera. The fix belongs in the Kiln recipe, not the
+  loader, and is Release 2 work. Release 1 ships the code-built house.
+  `tests/treeline-assets.spec.ts` now permits exactly one runtime GLB, the
+  farmhouse, digest-checked against `assets/house/asset-manifest.json`.
 - Hub timing runs once, at the end, before the tag: both backends, before and
-  after, farmhouse in and out. Receipts go to `docs/history/status-log.md`.
+  after, with the dependency bump and the Worker migration in. Receipts go to
+  `docs/history/status-log.md`.
 - Cleanups: revoke the unused `BROWSERSTACK_*` repository secrets, delete the
   two stale GitHub environments, and turn off Web Analytics on the Pages
   project after the cutover is verified. Dashboard actions are done in the
@@ -125,6 +133,10 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   from migration 0001, with a data migration that preserves identities and
   `field-v3` times and is verified against production reads before cutover.
   `shared/` goes with it.
+- Kiln farmhouse: amend the recipe under `assets/house/` so the bake writes the
+  backdrop shader's two surface channels per face from its own authoring data,
+  and add the cross wing and lean-to. Re-bake, flip `FARMHOUSE_SOURCE`, and
+  gate on the hub. The agent does this with Kiln available on the owner's PC.
 - Multiplayer foundations: the Durable Object placement decision recorded with
   its reasoning, room D1 migration 0001, and a CI-tested realtime skeleton on
   `/r/*`. Not deployed unless the owner says otherwise.

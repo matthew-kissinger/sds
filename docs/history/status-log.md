@@ -5,6 +5,59 @@
 
 # Status log
 
+## Release 1, Phase 1 - 2026-10-16: dependencies and farmhouse wiring
+
+Two parallel worktree passes, merged to `main` the same day. Desk lane only;
+no hub timing.
+
+**Dependencies, all to latest stable.** vitest 3.2.7 to 5.0.5 (tinypool gone,
+js-yaml gone with ESLint 10's dropped eslintrc), eslint 9.39.5 to 10.13.0,
+vite 7.3.6 to 8.3.4, @vitejs/plugin-react 5.2.0 to 6.1.2, three 0.185.1 to
+0.186.1 with @types/three 0.186.0, react and react-dom 19.2.8 to 19.3.1,
+@react-three/fiber 9.7.0 to 9.8.2, @types/node 24 to 26.6.5, wrangler 4.151.1,
+@cloudflare/workers-types 5.20261016.1, playwright 1.64.1, typescript ~5.9.3 to
+~6.0.3 with `"types": ["node"]` added to `tsconfig.json` because TypeScript 6
+no longer auto-includes @types/node. 940 tests in 113 files after every batch.
+Main chunk: 2,286.69 kB raw / 637.46 kB gzip before; 2,266.38 / 626.67 after
+Vite 8; 2,368.43 / 653.18 after the Three and React batch.
+
+TypeScript 7.0.2 was tried and is blocked: `require('typescript')` exposes only
+`version` and `versionMajorMinor` (the 7.0 announcement defers the API to 7.1),
+and @typescript-eslint/parser 8.71.2 throws "typescript-eslint does not support
+TS 7.0", so lint exits 2 while typecheck, build and all 940 tests pass. The
+documented workaround is a second TypeScript aliased into the tree, which this
+repository does not accept.
+
+**Three.js 0.186 receipts, desk lane.** No API change was needed; the r186
+renames and removals were grepped against app/, lab/, sim/ and tools/ with no
+hits. `tools/art-review.mjs` ran three scenarios on genuine WebGPU and three on
+forced WebGL2 against both the old and new builds: identical draw calls and
+triangles in every scenario, no console errors, same composition. The review's
+boot-budget checks fail identically on both builds on this PC. Desktop boot
+read about 2.7 s against 2.4 s before, single runs, not a measurement. Captures
+under `captures/deps-three-0186/`.
+
+**Kiln farmhouse wiring.** Loader moved from the lab into
+`app/src/scene/farmhouse/kilnHouse.ts`; GLB emitted by Vite as
+`assets/farmhouse-<hash>.glb` from a `new URL` literal, the same path the
+terrain and grass bakes take; a Vite plugin drops the model from a build whose
+chunks never name it. Welded into the cluster's own buffers, so zero added
+draws. Artifact: main 34 files / 8,420,670 bytes; procedural arm 34 /
+8,421,608; kiln arm 35 / 8,642,571 (+2.6%), main JS 2,334.01 kB raw / 652.94 kB
+gzip on the kiln arm. 947 tests with the five new farmhouse tests.
+
+Visual comparison, production build, desktop, WebGPU and forced WebGL2, matched
+cameras at the pen's east end and the Follow rig: main slate courses and the
+mullioned windows read well; the long limewash wall is flatter and paler than
+the shipped one; the gable is baked in timber rather than limewash; the porch
+roof, fascia and rake boards collapse to flat dark slabs because they sit below
+the main eave and the reconstructed `uv.y` clamps to zero; and the house is a
+single gabled box, losing the cross wing, lean-to and hipped end. The interior
+is visible from neither production camera. Verdict: not shippable as baked;
+the fix is in the Kiln recipe (write the surface channels in the bake, add the
+wing and lean-to), scheduled for Release 2. Captures and notes under
+`captures/farmhouse-compare/`.
+
 ## Asset polish pass - 2026-10-14 to 2026-10-16, shipped
 
 Owner-directed pass to take the shipped assets to hero quality: sheep, dog,
