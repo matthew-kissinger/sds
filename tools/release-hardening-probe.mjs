@@ -185,14 +185,24 @@ for (const path of [
     fail(`procedural foliage source absent: ${String(path)}`);
   }
 }
+// The one model the runtime may load is the Kiln farmhouse
+// (app/src/scene/farmhouse/kilnHouse.ts), and only when FARMHOUSE_SOURCE is
+// 'kiln'. It must be the recorded bake, byte for byte. Anything else is a model
+// the licence ledger does not cover.
+const houseLedger = JSON.parse(readFileSync(join(repo, 'assets/house/asset-manifest.json'), 'utf8'));
 const builtExternalModels = distFiles.filter((path) => {
   const lower = path.toLowerCase();
   if (lower.endsWith('.font.glb')) return false;
+  if (/(^|[\\/])farmhouse-[\w-]+\.glb$/.test(lower)
+    && createHash('sha256').update(readFileSync(path)).digest('hex') === houseLedger.artifact.sha256) {
+    return false;
+  }
   return ['.glb', '.gltf', '.obj', '.mtl'].includes(extname(lower));
 });
 if (builtExternalModels.length > 0) {
   fail(`external model entered dist: ${builtExternalModels.map((path) => relative(dist, path))}`);
 }
+const farmhouseModels = distFiles.filter((path) => extname(path).toLowerCase() === '.glb').length;
 
 const authoringConcepts = distFiles.filter((path) => {
   const name = relative(dist, path).toLowerCase();
@@ -258,6 +268,7 @@ const result = {
   foliageSource: foliageManifest.id,
   foliageExternalModels: foliageManifest.field.externalModels,
   builtExternalModels: builtExternalModels.length,
+  farmhouseModels,
   launchBoundary: 'solo 25/75/200 with local bests and fail-soft online times',
   clientSecretScan: 'clean',
 };

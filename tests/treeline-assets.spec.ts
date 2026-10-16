@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /** Original procedural foliage source, geometry and release contracts. */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -327,5 +327,61 @@ describe('authored sculpted foliage chain', () => {
     ].join('\n');
     expect(runtime).not.toContain('foliageAssets');
     expect(runtime).not.toMatch(/GLTFLoader|\.glb/);
+  });
+
+  // The recorded decision was that the game never loads a GLB at runtime. The
+  // owner ordered the Kiln farmhouse shipped, gated on a hub timing receipt, and
+  // that reverses it for exactly one file and one loader. Anything wider fails.
+  it('lets the runtime load the Kiln farmhouse GLB, and only that', () => {
+    const loader = join('app', 'src', 'scene', 'farmhouse', 'kilnHouse.ts');
+    const code = (path: string): string => readFileSync(join(repo, path), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|\s)\/\/.*$/gm, '');
+    const files = (dir: string): string[] => readdirSync(join(repo, dir), { withFileTypes: true })
+      .flatMap((entry) => entry.isDirectory()
+        ? files(join(dir, entry.name))
+        : /\.(ts|tsx)$/.test(entry.name) ? [join(dir, entry.name)] : []);
+
+    // No other runtime file names a model loader or a model file.
+    const loading = files('app/src').filter((path) => /GLTFLoader|\.gltf\b|\.glb\b/.test(code(path)));
+    expect(loading).toEqual([loader]);
+
+    // That file names exactly one model path, and it is the recorded farmhouse.
+    const referenced = [...code(loader).matchAll(/['"`]([^'"`]*\/[^'"`]*\.glb)['"`]/g)]
+      .map((match) => match[1]!);
+    expect(referenced).toHaveLength(1);
+    const resolved = join(repo, 'app', 'src', 'scene', 'farmhouse', referenced[0]!);
+    expect(resolved).toBe(join(repo, 'assets', 'house', 'farmhouse.glb'));
+
+    // The bytes the loader names are the bytes the ledger records.
+    const ledger = JSON.parse(readFileSync(join(repo, 'assets', 'house', 'asset-manifest.json'), 'utf8')) as {
+      license: string;
+      artifact: { path: string; bytes: number; sha256: string };
+    };
+    const source = readFileSync(resolved);
+    expect(ledger.license).toBe('AGPL-3.0-or-later');
+    expect(ledger.artifact.path).toBe('assets/house/farmhouse.glb');
+    expect(source.byteLength).toBe(ledger.artifact.bytes);
+    expect(createHash('sha256').update(source).digest('hex')).toBe(ledger.artifact.sha256);
+
+    // A built copy, if a build is present, is that same file and no other model.
+    const built = join(repo, 'dist', 'assets');
+    if (existsSync(built)) {
+      const models = readdirSync(built).filter((name) => /\.(glb|gltf|obj|mtl)$/i.test(name));
+      expect(models.length).toBeLessThanOrEqual(1);
+      for (const name of models) {
+        expect(name).toMatch(/^farmhouse-[\w-]+\.glb$/);
+        expect(createHash('sha256').update(readFileSync(join(built, name))).digest('hex'))
+          .toBe(ledger.artifact.sha256);
+      }
+    }
+  });
+
+  it('keeps the farmhouse ledger in step with its recipe and loader', () => {
+    const result = spawnSync(process.execPath, ['tools/record-house-asset.mjs', '--check'], {
+      cwd: repo, encoding: 'utf8', windowsHide: true, timeout: 60_000,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr || result.stdout).toBe(0);
   });
 });
