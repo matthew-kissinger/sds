@@ -13,6 +13,7 @@ import { Shell, stand } from '@app/scene/farmhouse/shell';
 import { FARMHOUSE_SOURCE } from '@app/scene/farmhouse/source';
 
 const GLB = new URL('../assets/house/farmhouse.glb', import.meta.url);
+const LEDGER = new URL('../assets/house/asset-manifest.json', import.meta.url);
 const LEVEL = -0.6;
 const flat = (): number => LEVEL;
 
@@ -81,10 +82,8 @@ describe('Kiln farmhouse import', () => {
     expect(['procedural', 'kiln']).toContain(FARMHOUSE_SOURCE);
   });
 
-  it('welds the 283 baked meshes into one triangle list per band set', async () => {
+  it('welds the baked meshes into one triangle list per band set', async () => {
     const kiln = await parsed();
-    expect(kiln.sourceNodes).toBe(283);
-    expect(kiln.triangles).toBe(3478);
     expect(Object.keys(kiln.parts).sort()).toEqual(
       ['dress', 'lamp', 'opening', 'roof', 'timber', 'wall'],
     );
@@ -98,6 +97,28 @@ describe('Kiln farmhouse import', () => {
       }
     }
     expect(triangles).toBe(kiln.triangles);
+  });
+
+  // The ledger reads its counts from the GLB (tools/glb-ledger.mjs); this holds
+  // what the loader welds to what the ledger says the bake exported, so the
+  // two cannot drift apart silently as a typed-in count once did.
+  it('keeps the ledger to the bake: its triangles, meshes, materials and surface split', async () => {
+    const kiln = await parsed();
+    const ledger = JSON.parse(readFileSync(LEDGER, 'utf8')) as {
+      triangles: number;
+      exportedMeshNodes: number;
+      materials: number;
+      textures: number;
+      runtime: { addedDraws: number; trianglesPerSurface: Record<string, number> };
+    };
+    expect(ledger.triangles).toBe(kiln.triangles);
+    expect(ledger.exportedMeshNodes).toBe(kiln.sourceNodes);
+    expect(ledger.textures).toBe(0);
+    expect(ledger.runtime.addedDraws).toBe(0);
+    const perSurface = Object.fromEntries(
+      Object.entries(kiln.parts).map(([surface, part]) => [surface, vertices(part.positions) / 3]),
+    );
+    expect(perSurface).toEqual(ledger.runtime.trianglesPerSurface);
   });
 
   it('refuses a bake that does not record its surface channels', async () => {

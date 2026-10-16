@@ -16,12 +16,12 @@
   "recipe": "assets/house/farmhouse.kiln.js",
   "artifact": {
     "path": "assets/house/farmhouse.glb",
-    "bytes": 193888,
-    "sha256": "5f93b32a34a774ca575014bff491a3e4d0494fea44bec14a27c4d793e51376fa"
+    "bytes": 188020,
+    "sha256": "47a6b9637457ad8441499c550f3016482a18e0397882666afc7ff313011c50af"
   },
-  "triangles": 3478,
-  "exportedMeshNodes": 283,
-  "exportedGeometries": 190,
+  "triangles": 3346,
+  "exportedMeshNodes": 272,
+  "exportedGeometries": 184,
   "materials": 7,
   "textures": 0,
   "images": 0,
@@ -41,11 +41,11 @@
   "runtime": {
     "addedDraws": 0,
     "trianglesPerSurface": {
-      "timber": 1970,
-      "wall": 928,
-      "dress": 300,
+      "timber": 1898,
+      "wall": 892,
+      "dress": 288,
       "opening": 160,
-      "lamp": 72,
+      "lamp": 60,
       "roof": 48
     },
     "note": "Welded into the cluster wall, roof, timber, dress, opening and lamp buffers, so the cluster stays at ten draws. No texture is sampled; the ramp is computed.",
@@ -67,7 +67,7 @@
   "sources": [
     {
       "path": "assets/house/farmhouse.kiln.js",
-      "sha256": "c2e21945e468e0f813c0f18aae4fa139d1293881bd5e3f4eb000f2ef1eeb1cc7"
+      "sha256": "fb1398dee871d857839add5eee0bcb5c2fb3667b79e4e703b57b396ab8646a9f"
     },
     {
       "path": "app/src/scene/farmhouse/kilnHouse.ts",
@@ -79,7 +79,11 @@
     },
     {
       "path": "tools/record-house-asset.mjs",
-      "sha256": "80d17b915e3b208faef35486cffda1e6a38689527dda09f65c711628a65f9312"
+      "sha256": "4145507ad1ffd31a534a3d5e72c3440f9459e32b4e562e6113ad04213b798927"
+    },
+    {
+      "path": "tools/glb-ledger.mjs",
+      "sha256": "951eb035f63ace573c18fd2666a190be22b0f6fa8a4d660a48eade8b3505664f"
     }
   ]
 }

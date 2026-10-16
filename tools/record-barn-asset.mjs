@@ -29,6 +29,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { exportedCounts } from './glb-ledger.mjs';
 
 const repo = new URL('../', import.meta.url);
 const artifact = 'assets/barn/barn.glb';
@@ -40,11 +41,27 @@ const sources = [
   'app/src/scene/farmhouse/kilnBarn.ts',
   'lab/src/KilnBarn.tsx',
   'tools/record-barn-asset.mjs',
+  'tools/glb-ledger.mjs',
 ];
+
+/**
+ * Authored material to band set, the loader's own table (kilnBarn.ts
+ * BINDING), repeated so the per-surface split can be read from the GLB;
+ * tests/barn-kiln.spec.ts holds the loader's welded parts equal to it.
+ */
+const BINDING = {
+  boards: 'barn',
+  slate: 'roof',
+  timber: 'timber',
+  stone: 'dress',
+  opening: 'opening',
+  lamp: 'lamp',
+};
 
 const textDigest = (path) => createHash('sha256')
   .update(readFileSync(new URL(path, repo), 'utf8').replace(/\r\n/g, '\n')).digest('hex');
 const bytes = readFileSync(new URL(artifact, repo));
+const exported = exportedCounts(bytes, BINDING);
 
 const ledger = {
   version: 1,
@@ -63,16 +80,17 @@ const ledger = {
   },
   recipe,
   artifact: { path: artifact, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') },
-  // As exported. The game welds these into the farmhouse cluster's buffers.
-  triangles: 2350,
+  // As exported, read from the GLB (tools/glb-ledger.mjs). The game welds
+  // these into the farmhouse cluster's buffers.
+  triangles: exported.triangles,
   triangleBudget: 2800,
-  exportedMeshNodes: 42,
-  exportedGeometries: 42,
-  materials: 6,
-  textures: 0,
-  images: 0,
-  gltfExtensions: ['KHR_materials_emissive_strength'],
-  boundsMetres: { x: 18.78, y: 13.45, z: 13.5 },
+  exportedMeshNodes: exported.exportedMeshNodes,
+  exportedGeometries: exported.exportedGeometries,
+  materials: exported.materials,
+  textures: exported.textures,
+  images: exported.images,
+  gltfExtensions: exported.gltfExtensions,
+  boundsMetres: exported.boundsMetres,
   // The backdrop shader's two per-vertex channels, which the recipe computes per
   // face and writes into TEXCOORD_0 (assets/barn/README.md). The loader refuses a
   // bake without this record on its root node, and a mesh without the attribute.
@@ -97,7 +115,7 @@ const ledger = {
   // farmhouse/cluster.ts has welded it into the cluster's own buffers.
   runtime: {
     addedDraws: 0,
-    trianglesPerSurface: { timber: 1301, barn: 658, opening: 301, dress: 48, roof: 32, lamp: 10 },
+    trianglesPerSurface: exported.trianglesPerSurface,
     note: 'Welded into the cluster barn, roof, timber, dress, opening and lamp buffers, so the cluster stays at ten draws. No texture is sampled; the ramp is computed.',
     loader: 'app/src/scene/farmhouse/kilnBarn.ts',
     distPath: 'assets/barn-<hash>.glb',

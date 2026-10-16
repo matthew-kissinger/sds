@@ -78,7 +78,8 @@ a channel bake from an ordinary one.
 of the seven material names in the GLB is the name of a farmhouse band set -
 `limewash` is `wall`, `slate` is `roof`, `stone` and `masonry` are both `dress`,
 and so on - and the loader bakes each node's world matrix, copies the channels
-across, and sorts 283 mesh nodes into one list per band set, which
+across, and sorts the bake's mesh nodes (272 at this writing; the ledger
+carries the current count) into one list per band set, which
 `farmhouse/cluster.ts` welds into the cluster's own buffers. It throws, naming
 what is missing, on a GLB without the `surfaceChannels` record or a mesh
 without TEXCOORD_0; `loadKilnHouse` logs that and the game draws the procedural
@@ -106,7 +107,7 @@ at 0, so the house stays seated. The grass bake cuts the house's footprint
 (`KILN_PORCH` and `KILN_ROOF` in `farmhouse/plan.ts` repeat the recipe's
 numbers for it). The measurements are in the history note above.
 
-The cost: **3,478 triangles and no added draws** (the six band sets weld into
+The cost: **3,346 triangles and no added draws** (the six band sets weld into
 buffers the cluster already draws), no textures. 26 of those triangles are the
 ridge splits and 12 the back door's sill; the authored geometry was 3,440. For
 comparison, the entire shipped procedural cluster - house, cross wing, two lean-tos, porch, barn,

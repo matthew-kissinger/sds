@@ -88,7 +88,11 @@
     },
     {
       "path": "tools/record-barn-asset.mjs",
-      "sha256": "3a71d4ab4fde1aee4bfe81155015e0974ce094c45fc934fc0bd73f63e5786f0d"
+      "sha256": "6d62028df5ee94f53f3b84cb990b3e72c4a052ed831438f3b39ec30548411656"
+    },
+    {
+      "path": "tools/glb-ledger.mjs",
+      "sha256": "951eb035f63ace573c18fd2666a190be22b0f6fa8a4d660a48eade8b3505664f"
     }
   ]
 }
