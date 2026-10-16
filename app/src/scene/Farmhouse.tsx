@@ -33,6 +33,11 @@
  * outline and smoke stay as described. A Kiln house that fails to load falls back
  * to the procedural one.
  *
+ * THE BARN HAS TWO SOURCES TOO, on its own constant (farmhouse/barnSource.ts):
+ * `kiln` welds the threshing barn baked from assets/barn/barn.kiln.js into the
+ * same buffers and grows its outline from the masses the bake recorded. Still
+ * ten draw calls, and the same fallback.
+ *
  * NOTHING HERE RUNS IN A FRAME, AND THE SMOKE STILL DOES NOT. There is no
  * useFrame in this file: the buildings do not move, the lamps do not flicker,
  * and the plume rises entirely in its own vertex stage off the shared time node
@@ -43,7 +48,9 @@
 
 import { use, useEffect, useMemo } from 'react';
 import { useHeightfield } from '@app/world/heightfield';
+import { BARN_SOURCE } from './farmhouse/barnSource';
 import { buildFarmhouse, type Farmstead } from './farmhouse/cluster';
+import { loadKilnBarn } from './farmhouse/kilnBarn';
 import { loadKilnHouse } from './farmhouse/kilnHouse';
 import { FARMHOUSE_SOURCE } from './farmhouse/source';
 import {
@@ -63,32 +70,38 @@ import { makeSmokeMaterial } from './farmhouse/smoke';
  * Start the Kiln house's download with the other cold field assets
  * (FieldScene.preloadFieldSceneAssets), so the one outer Suspense boundary does
  * not wait on a request that began only when this component mounted. With the
- * procedural house there is nothing to fetch.
+ * procedural house and barn there is nothing to fetch.
  */
 export function preloadFarmhouse(): void {
   if (FARMHOUSE_SOURCE === 'kiln') void loadKilnHouse();
+  if (BARN_SOURCE === 'kiln') void loadKilnBarn();
 }
 
 export function Farmhouse() {
   const field = useHeightfield();
-  // Suspends until the GLB is parsed. A null result is a failed load, already
-  // logged, and draws the procedural house.
+  // Each suspends until its GLB is parsed. A null result is a failed load,
+  // already logged, and draws that building's procedural source.
   const kiln = FARMHOUSE_SOURCE === 'kiln' ? use(loadKilnHouse()) : null;
+  const kilnBarn = BARN_SOURCE === 'kiln' ? use(loadKilnBarn()) : null;
 
   // The pad is flat, so the buildings need one sample; the cast shadows run off
   // it onto the rim, so those sample per vertex through the same
   // function every ground-sitting object in the game reads (spec/04). It is
   // called through the field rather than detached from it: `groundY` is a method
   // and reads its own decoded array.
-  const built = useMemo(() => buildFarmhouse((x, z) => field.groundY(x, z), kiln), [field, kiln]);
+  const built = useMemo(
+    () => buildFarmhouse((x, z) => field.groundY(x, z), kiln, kilnBarn),
+    [field, kiln, kilnBarn],
+  );
 
   return <FarmhouseMeshes built={built} />;
 }
 
 /**
  * The built cluster and its ten materials, as meshes. Split from `Farmhouse` so
- * the asset lab can mount the Kiln house through the same materials whatever
- * `FARMHOUSE_SOURCE` says (lab/src/KilnHouse.tsx).
+ * the asset lab can mount the Kiln house and the Kiln barn through the same
+ * materials whatever the source constants say (lab/src/KilnHouse.tsx,
+ * lab/src/KilnBarn.tsx).
  */
 export function FarmhouseMeshes({ built }: { readonly built: Farmstead }) {
   const materials = useMemo(

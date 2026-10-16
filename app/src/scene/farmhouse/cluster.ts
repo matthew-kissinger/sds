@@ -16,9 +16,16 @@
  * THE HOUSE HAS TWO SOURCES (farmhouse/source.ts). Given a parsed Kiln house, the
  * range, its wing, porch, lean-to, stack and openings are not built: the baked
  * mesh is welded into the same wall, roof, timber, dress, opening and lamp
- * buffers instead, so the draw count does not move. The barn, the log stack, the
- * cast shadows, the outline hull and the smoke stay procedural and are placed
- * from the plan.
+ * buffers instead, so the draw count does not move. The log stack, the cast
+ * shadows, the outline hull and the smoke stay procedural and are placed from
+ * the plan, and the barn keeps whichever source its own constant names.
+ *
+ * SO DOES THE BARN, independently (farmhouse/barnSource.ts). Given a parsed Kiln
+ * barn, the gabled barn, its outshot, hood, cupola, plinth and openings are not
+ * built: the baked barn is welded into the board, roof, timber, dress, opening
+ * and lamp buffers on the same stand, and its outline envelope is derived from
+ * the masses the bake recorded (farmhouse/hull.ts `envelopeHull`). Its cast
+ * shadow is the procedural barn's: the same box, the same ridge.
  */
 
 import * as THREE from 'three/webgpu';
@@ -35,9 +42,10 @@ import {
   type Opening,
 } from './parts';
 import { BASE_X as CHIMNEY_HALF_X, BASE_Z as CHIMNEY_HALF_Z, chimney, potLocal } from './chimney';
-import { roofHull } from './hull';
+import { envelopeHull, roofHull } from './hull';
 import { BARN_OPENINGS, CART_DOOR, FRONT_DOOR, HOUSE_OPENINGS, WING_OPENINGS } from './openings';
 import { courseRoof, roofSurfaceLocal, type RoofSpec } from './roof';
+import type { KilnBarn, KilnBarnSurface } from './kilnBarn';
 import type { KilnHouse, KilnSurface } from './kilnHouse';
 import { buildSmoke } from './smoke';
 import { LENGTH, boxCaster, buildShadows, type Caster } from './shadows';
@@ -133,9 +141,14 @@ function buildCasters(house: Stand, wing: Stand, barn: Stand, kiln: boolean): re
  * Build the whole cluster against the one `groundY` every ground-sitting object
  * in the game reads (spec/04). The pad is flat, so the buildings take a single
  * sample; the cast shadows leave the pad, so those sample per
- * vertex.
+ * vertex. `kiln` and `kilnBarn` are the parsed bakes, each null for that
+ * building's procedural source.
  */
-export function buildFarmhouse(sample: GroundSample, kiln: KilnHouse | null = null): Farmstead {
+export function buildFarmhouse(
+  sample: GroundSample,
+  kiln: KilnHouse | null = null,
+  kilnBarn: KilnBarn | null = null,
+): Farmstead {
   const wall = new Shell();
   const roof = new Shell();
   const barnShell = new Shell();
@@ -170,15 +183,27 @@ export function buildFarmhouse(sample: GroundSample, kiln: KilnHouse | null = nu
     }
   }
 
-  gableWalls(barnShell, barn, BARN);
-  courseRoof(roof, barn, BARN, { tag: 1 });
-  leanTo(roof, timber, barn, BARN, BARN_LEANTO_AT, BARN_LEANTO_HALF);
-  hood(timber, barn, BARN, CART_DOOR.across, CART_DOOR.width / 2 + 0.55, CART_DOOR.height);
-  cupola(roof, timber, opening, barn, BARN, BARN_CUPOLA_AT);
+  if (kilnBarn === null) {
+    gableWalls(barnShell, barn, BARN);
+    courseRoof(roof, barn, BARN, { tag: 1 });
+    leanTo(roof, timber, barn, BARN, BARN_LEANTO_AT, BARN_LEANTO_HALF);
+    hood(timber, barn, BARN, CART_DOOR.across, CART_DOOR.width / 2 + 0.55, CART_DOOR.height);
+    cupola(roof, timber, opening, barn, BARN, BARN_CUPOLA_AT);
+  } else {
+    // Its plinth, apron, doors and windows are in the bake; nothing below is
+    // built for it.
+    const shells: Readonly<Record<KilnBarnSurface, Shell>> = {
+      barn: barnShell, roof, timber, dress, opening, lamp,
+    };
+    for (const [surface, part] of Object.entries(kilnBarn.parts)) {
+      shells[surface as KilnBarnSurface].append(barn, part.positions, part.normals, part.uvs);
+    }
+  }
 
   dress.mark(0, 0);
-  plinth(dress, barn, BARN);
-  const openings: (readonly [Stand, readonly Opening[]])[] = [[barn, BARN_OPENINGS]];
+  if (kilnBarn === null) plinth(dress, barn, BARN);
+  const openings: (readonly [Stand, readonly Opening[]])[] =
+    kilnBarn === null ? [[barn, BARN_OPENINGS]] : [];
   if (kiln === null) {
     plinth(dress, house, HOUSE);
     plinth(dress, wing, WING);
@@ -193,8 +218,12 @@ export function buildFarmhouse(sample: GroundSample, kiln: KilnHouse | null = nu
 
   // The outline hull is a plain envelope of the same masses. See
   // farmhouse/hull.ts for why it is not the real geometry.
-  gableWalls(hull, barn, BARN);
-  roofHull(hull, barn, BARN);
+  if (kilnBarn === null) {
+    gableWalls(hull, barn, BARN);
+    roofHull(hull, barn, BARN);
+  } else {
+    envelopeHull(hull, barn, kilnBarn.envelope);
+  }
   if (kiln === null) {
     gableWalls(hull, house, HOUSE, { hipEnd: 1 });
     roofHull(hull, house, HOUSE, { hipEnd: 1 });

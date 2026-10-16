@@ -331,9 +331,27 @@ describe('authored sculpted foliage chain', () => {
 
   // The recorded decision was that the game never loads a GLB at runtime. The
   // owner ordered the Kiln farmhouse shipped, gated on a hub timing receipt, and
-  // that reverses it for exactly one file and one loader. Anything wider fails.
-  it('lets the runtime load the Kiln farmhouse GLB, and only that', () => {
-    const loader = join('app', 'src', 'scene', 'farmhouse', 'kilnHouse.ts');
+  // that reversed it for exactly one file and one loader. The Kiln barn is a
+  // second building under the same terms, so the exception is now this table:
+  // one file per building, named by one loader, pinned by its own ledger, each
+  // shipping under its own source constant. Anything wider fails.
+  const KILN_BUILDINGS = [
+    {
+      loader: 'kilnHouse.ts',
+      model: 'assets/house/farmhouse.glb',
+      ledger: 'assets/house/asset-manifest.json',
+      built: /^farmhouse-[\w-]+\.glb$/,
+    },
+    {
+      loader: 'kilnBarn.ts',
+      model: 'assets/barn/barn.glb',
+      ledger: 'assets/barn/asset-manifest.json',
+      built: /^barn-[\w-]+\.glb$/,
+    },
+  ] as const;
+
+  it('lets the runtime load the Kiln farmhouse and barn GLBs, and only those', () => {
+    const loaders = KILN_BUILDINGS.map(({ loader }) => join('app', 'src', 'scene', 'farmhouse', loader));
     const code = (path: string): string => readFileSync(join(repo, path), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/(^|\s)\/\/.*$/gm, '');
@@ -341,44 +359,53 @@ describe('authored sculpted foliage chain', () => {
       .flatMap((entry) => entry.isDirectory()
         ? files(join(dir, entry.name))
         : /\.(ts|tsx)$/.test(entry.name) ? [join(dir, entry.name)] : []);
+    const digest = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex');
 
     // No other runtime file names a model loader or a model file.
     const loading = files('app/src').filter((path) => /GLTFLoader|\.gltf\b|\.glb\b/.test(code(path)));
-    expect(loading).toEqual([loader]);
+    expect([...loading].sort()).toEqual([...loaders].sort());
 
-    // That file names exactly one model path, and it is the recorded farmhouse.
-    const referenced = [...code(loader).matchAll(/['"`]([^'"`]*\/[^'"`]*\.glb)['"`]/g)]
-      .map((match) => match[1]!);
-    expect(referenced).toHaveLength(1);
-    const resolved = join(repo, 'app', 'src', 'scene', 'farmhouse', referenced[0]!);
-    expect(resolved).toBe(join(repo, 'assets', 'house', 'farmhouse.glb'));
+    const ledgers = KILN_BUILDINGS.map((building, i) => {
+      // Each loader names exactly one model path, and it is its own building's.
+      const referenced = [...code(loaders[i]!).matchAll(/['"`]([^'"`]*\/[^'"`]*\.glb)['"`]/g)]
+        .map((match) => match[1]!);
+      expect(referenced).toHaveLength(1);
+      const resolved = join(repo, 'app', 'src', 'scene', 'farmhouse', referenced[0]!);
+      expect(resolved).toBe(join(repo, ...building.model.split('/')));
 
-    // The bytes the loader names are the bytes the ledger records.
-    const ledger = JSON.parse(readFileSync(join(repo, 'assets', 'house', 'asset-manifest.json'), 'utf8')) as {
-      license: string;
-      artifact: { path: string; bytes: number; sha256: string };
-    };
-    const source = readFileSync(resolved);
-    expect(ledger.license).toBe('AGPL-3.0-or-later');
-    expect(ledger.artifact.path).toBe('assets/house/farmhouse.glb');
-    expect(source.byteLength).toBe(ledger.artifact.bytes);
-    expect(createHash('sha256').update(source).digest('hex')).toBe(ledger.artifact.sha256);
+      // The bytes the loader names are the bytes its ledger records.
+      const ledger = JSON.parse(readFileSync(join(repo, building.ledger), 'utf8')) as {
+        license: string;
+        artifact: { path: string; bytes: number; sha256: string };
+      };
+      const source = readFileSync(resolved);
+      expect(ledger.license).toBe('AGPL-3.0-or-later');
+      expect(ledger.artifact.path).toBe(building.model);
+      expect(source.byteLength).toBe(ledger.artifact.bytes);
+      expect(digest(source)).toBe(ledger.artifact.sha256);
+      return ledger;
+    });
 
-    // A built copy, if a build is present, is that same file and no other model.
+    // A built copy, if a build is present, is one of those files - at most one
+    // of each, at its ledger's digest - and no other model.
     const built = join(repo, 'dist', 'assets');
     if (existsSync(built)) {
       const models = readdirSync(built).filter((name) => /\.(glb|gltf|obj|mtl)$/i.test(name));
-      expect(models.length).toBeLessThanOrEqual(1);
+      expect(models.length).toBeLessThanOrEqual(KILN_BUILDINGS.length);
       for (const name of models) {
-        expect(name).toMatch(/^farmhouse-[\w-]+\.glb$/);
-        expect(createHash('sha256').update(readFileSync(join(built, name))).digest('hex'))
-          .toBe(ledger.artifact.sha256);
+        const i = KILN_BUILDINGS.findIndex((building) => building.built.test(name));
+        expect(i, `${name} in dist/assets is not a recorded Kiln building`).toBeGreaterThanOrEqual(0);
+        expect(models.filter((other) => KILN_BUILDINGS[i]!.built.test(other))).toEqual([name]);
+        expect(digest(readFileSync(join(built, name)))).toBe(ledgers[i]!.artifact.sha256);
       }
     }
   });
 
-  it('keeps the farmhouse ledger in step with its recipe and loader', () => {
-    const result = spawnSync(process.execPath, ['tools/record-house-asset.mjs', '--check'], {
+  it.each([
+    ['farmhouse', 'tools/record-house-asset.mjs'],
+    ['barn', 'tools/record-barn-asset.mjs'],
+  ])('keeps the %s ledger in step with its recipe and loader', (_building, tool) => {
+    const result = spawnSync(process.execPath, [tool, '--check'], {
       cwd: repo, encoding: 'utf8', windowsHide: true, timeout: 60_000,
     });
     expect(result.error).toBeUndefined();

@@ -24,12 +24,13 @@ import { Treeline } from '@app/scene/Treeline';
 import { HOME_FIELD } from '@sim/field';
 import { BARN_AT, HOUSE_AT } from '@app/scene/farmhouse/plan';
 import { GradedGrass } from './GradedGrass';
+import { KilnBarn } from './KilnBarn';
 import { KilnHouse } from './KilnHouse';
 import { LibraryGrass } from './LibraryGrass';
 
 export type LabPartId =
   | 'terrain' | 'grass' | 'grass-lib' | 'fence' | 'pen' | 'farmhouse' | 'kiln-house'
-  | 'farmer' | 'treeline' | 'scatter' | 'flock' | 'dog';
+  | 'kiln-barn' | 'farmer' | 'treeline' | 'scatter' | 'flock' | 'dog';
 
 /** Draw order matters, so this record is ordered as `FieldScene` orders it. */
 export const LAB_PARTS: Record<LabPartId, ComponentType> = {
@@ -47,6 +48,9 @@ export const LAB_PARTS: Record<LabPartId, ComponentType> = {
   // The Kiln-authored walk-in house on the procedural range's pad, whatever
   // FARMHOUSE_SOURCE says, so the two can be flipped between at one camera.
   'kiln-house': KilnHouse,
+  // The Kiln-authored threshing barn on the barn's pad, whatever BARN_SOURCE
+  // says, with the house FARMHOUSE_SOURCE ships.
+  'kiln-barn': KilnBarn,
   farmer: Farmer,
   treeline: Treeline,
   scatter: Scatter,
@@ -170,6 +174,27 @@ export const LAB_SUBJECTS = [
     target: { kind: 'fixed', x: HOUSE_AT.x, z: HOUSE_AT.z },
     distance: 26,
     height: 6,
+  },
+  {
+    id: 'barn',
+    label: 'Barn (procedural)',
+    // The code-built barn at the Kiln barn's frame, target and part list, so
+    // flipping between the two holds the camera and changes only the barn.
+    note: 'The shipped, code-built barn (farmhouse/cluster.ts): gabled, with its outshot and cupola. Context for the Kiln barn, not its reference.',
+    parts: ['terrain', 'grass', 'farmhouse', 'farmer'],
+    target: { kind: 'fixed', x: BARN_AT.x, z: BARN_AT.z },
+    distance: 30,
+    height: 9,
+  },
+  {
+    id: 'kiln-barn',
+    label: 'Barn (Kiln)',
+    // The same pad, yaw, box, target and frame as the subject above.
+    note: 'The threshing barn authored in Kiln: a gambrel over three bays, cart doors standing open on a dark threshing floor, a hay door under its hood, a lit loft window and a louvred cupola. Re-banded through the shipped toon ramp and welded into the farm cluster (house, shadows, smoke unchanged). Drop the distance to walk up to the doors.',
+    parts: ['terrain', 'grass', 'kiln-barn', 'farmer'],
+    target: { kind: 'fixed', x: BARN_AT.x, z: BARN_AT.z },
+    distance: 30,
+    height: 9,
   },
   {
     id: 'gate',

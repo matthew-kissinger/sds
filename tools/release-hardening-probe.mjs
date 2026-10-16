@@ -185,24 +185,35 @@ for (const path of [
     fail(`procedural foliage source absent: ${String(path)}`);
   }
 }
-// The one model the runtime may load is the Kiln farmhouse
-// (app/src/scene/farmhouse/kilnHouse.ts), and only when FARMHOUSE_SOURCE is
-// 'kiln'. It must be the recorded bake, byte for byte. Anything else is a model
-// the licence ledger does not cover.
-const houseLedger = JSON.parse(readFileSync(join(repo, 'assets/house/asset-manifest.json'), 'utf8'));
+// The models the runtime may load are the Kiln buildings: the farmhouse
+// (app/src/scene/farmhouse/kilnHouse.ts) when FARMHOUSE_SOURCE is 'kiln', and the
+// barn (kilnBarn.ts) when BARN_SOURCE is 'kiln'. Each must be its recorded bake,
+// byte for byte. Anything else is a model the licence ledger does not cover.
+const kilnBuildings = [
+  { name: 'farmhouse', ledger: 'assets/house/asset-manifest.json' },
+  { name: 'barn', ledger: 'assets/barn/asset-manifest.json' },
+].map(({ name, ledger }) => ({
+  name,
+  pattern: new RegExp(`(^|[\\\\/])${name}-[\\w-]+\\.glb$`),
+  sha256: JSON.parse(readFileSync(join(repo, ledger), 'utf8')).artifact.sha256,
+}));
+const recordedBuilding = (path) => kilnBuildings.find(({ pattern, sha256 }) => pattern.test(path.toLowerCase())
+  && createHash('sha256').update(readFileSync(path)).digest('hex') === sha256)?.name;
 const builtExternalModels = distFiles.filter((path) => {
   const lower = path.toLowerCase();
   if (lower.endsWith('.font.glb')) return false;
-  if (/(^|[\\/])farmhouse-[\w-]+\.glb$/.test(lower)
-    && createHash('sha256').update(readFileSync(path)).digest('hex') === houseLedger.artifact.sha256) {
-    return false;
-  }
+  if (recordedBuilding(path) !== undefined) return false;
   return ['.glb', '.gltf', '.obj', '.mtl'].includes(extname(lower));
 });
 if (builtExternalModels.length > 0) {
   fail(`external model entered dist: ${builtExternalModels.map((path) => relative(dist, path))}`);
 }
-const farmhouseModels = distFiles.filter((path) => extname(path).toLowerCase() === '.glb').length;
+const builtBuildings = distFiles.map(recordedBuilding);
+const farmhouseModels = builtBuildings.filter((name) => name === 'farmhouse').length;
+const barnModels = builtBuildings.filter((name) => name === 'barn').length;
+if (farmhouseModels > 1 || barnModels > 1) {
+  fail(`a Kiln building entered dist more than once: ${farmhouseModels} farmhouse, ${barnModels} barn`);
+}
 
 const authoringConcepts = distFiles.filter((path) => {
   const name = relative(dist, path).toLowerCase();
@@ -272,6 +283,7 @@ const result = {
   foliageExternalModels: foliageManifest.field.externalModels,
   builtExternalModels: builtExternalModels.length,
   farmhouseModels,
+  barnModels,
   launchBoundary: 'solo 25/75/200 with local bests and fail-soft online times',
   clientSecretScan: 'clean',
 };
