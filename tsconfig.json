@@ -10,6 +10,9 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    // TypeScript 6 no longer includes every @types package on its own; the tests
+    // and tools use Node built-ins, and vite/client types come from vite-env.d.ts.
+    "types": ["node"],
     "isolatedModules": true,
     "noEmit": true,
     // assets/terrain/manifest.json is imported by app/src/world/heightfield.ts:
