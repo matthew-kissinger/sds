@@ -29,7 +29,10 @@ rollback. Keep that service isolated from the client.
   the version 3.0 client.
 - Preserve the `field-v3` score partition and exact 25, 75 and 200 flock-size
   allow-list.
-- Do not change production infrastructure from a contribution.
+- Production infrastructure - hosting, routes, bindings, secrets, analytics and
+  deploy workflows - changes only in an owner-directed cycle named under the
+  master plan in `STATUS.md`, never as a side effect of a feature or dependency
+  change.
 - A production deploy runs on the owner's explicit approval. Approval given in
   conversation is sufficient authorization and needs no separate sign-off.
   Deploying is pushing a `v*` tag: the tag names the commit, so what shipped is
