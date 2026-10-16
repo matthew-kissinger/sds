@@ -6,7 +6,7 @@
   "stride": 12,
   "terrainSeed": 20260821,
   "farmhouseSource": "kiln",
-  "barnSource": "procedural",
+  "barnSource": "kiln",
   "encoding": {
     "xzRange": 200,
     "yRange": 8,
@@ -28,7 +28,7 @@
     {
       "id": "surround",
       "offset": 81736,
-      "count": 16555
+      "count": 16556
     }
   ]
 }

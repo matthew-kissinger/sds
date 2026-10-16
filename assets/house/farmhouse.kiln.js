@@ -178,7 +178,8 @@ function build() {
         { id: 'front-w3', wall: 'left', kind: 'window', offset: 7.2, width: 1.1, height: 1.6, sill: 1.25 },
         { id: 'front-u1', wall: 'left', kind: 'window', offset: -6.4, width: 1.2, height: 1.35, sill: 3.5 },
         { id: 'front-u2', wall: 'left', kind: 'window', offset: -2.5, width: 1.2, height: 1.35, sill: 3.5 },
-        { id: 'front-u3', wall: 'left', kind: 'window', offset: 3.5, width: 1.1, height: 1.25, sill: 3.65 },
+        // No window over the door: the porch gable rises into that bay, and a
+        // sill meeting a ridge read as a collision from the field. Wall there.
         { id: 'front-u4', wall: 'left', kind: 'window', offset: 7.2, width: 1, height: 1.15, sill: 3.7 },
         // The back: a scullery door and three windows, deliberately not a
         // mirror of the front.
@@ -320,20 +321,21 @@ function build() {
       at(along, sill - 0.04, outer - outward * 0.08), stone);
   }
 
-  // The front elevation, and four lamps burning. An upstairs lamp over a dark
+  // The front elevation, and three lamps burning. An upstairs lamp over a dark
   // ground floor reads as the wrong house, so the rule here is that the first
   // floor is only ever lit alongside the ground floor, never instead of it, and
-  // the lit bays alternate between the storeys: -6.4 and -2.5 below, 3.5 and
-  // 7.2 above. A lit window directly over a lit window makes one bright column
-  // and says one room; four spread across the elevation say a house with
-  // people in it. Nothing on the gable ends is lit - they take the key almost
-  // square on, and glass driven above 1.0 on a sunlit wall is a white rectangle.
+  // the lit bays alternate between the storeys: -6.4 and -2.5 below, 7.2
+  // above. A lit window directly over a lit window makes one bright column
+  // and says one room; lamps spread across the elevation say a house with
+  // people in it. The bay over the door has no window (the porch gable rises
+  // into it), so the upper storey's second lamp went with it. Nothing on the
+  // gable ends is lit - they take the key almost square on, and glass driven
+  // above 1.0 on a sunlit wall is a white rectangle.
   casement('W_FrontA', true, -6.4, 1.25, 1.75, 1.1, -1, lamp);
   casement('W_FrontB', true, -2.5, 1.35, 1.85, 1, -1, lamp);
   casement('W_FrontC', true, 7.2, 1.1, 1.6, 1.25, -1);
   casement('W_FrontUA', true, -6.4, 1.2, 1.35, 3.5, -1);
   casement('W_FrontUB', true, -2.5, 1.2, 1.35, 3.5, -1);
-  casement('W_FrontUC', true, 3.5, 1.1, 1.25, 3.65, -1, lamp);
   casement('W_FrontUD', true, 7.2, 1, 1.15, 3.7, -1, lamp);
   // The back.
   casement('W_BackA', true, -1.4, 1.2, 1.6, 1.2, 1);
