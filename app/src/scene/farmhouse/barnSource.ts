@@ -26,4 +26,4 @@
  */
 export type BarnSource = 'procedural' | 'kiln';
 
-export const BARN_SOURCE: BarnSource = 'procedural';
+export const BARN_SOURCE: BarnSource = 'kiln';
