@@ -22,6 +22,17 @@ const phone = viewportName === 'phone';
 const viewport = phone ? { width: 390, height: 844 } : viewportName === 'desktop'
   ? { width: 2560, height: 1440 } : viewportName === 'hidpi' ? { width: 1707, height: 960 } : { width: 1440, height: 900 };
 const follow = arg('camera', 'classic') === 'follow';
+// Where the dog is driven for the measured minute. `wander` is the original
+// pattern: W, D, S, A in five-second legs around the spawn, which nets no
+// travel and keeps the homestead 170 m off and out of Classic's frame.
+// `homestead` walks the dog to world x 30 and up the field to the north fence,
+// between the house (x 45.6) and the barn (x 12), then holds it there facing
+// them, so both buildings fill the frame for the whole window. Classic is
+// world-locked looking down +z, so W is north and screen-left (A) is world +x;
+// Follow is entered only once the dog faces north, so its bearing is north too
+// and the homestead is what the camera looks at.
+const drive = arg('drive', 'wander');
+if (!['wander', 'homestead'].includes(drive)) throw new Error('Invalid drive');
 const bootOnly = process.argv.includes('--boot-only');
 const seconds = Number(arg('seconds', '60'));
 if (!dependency || !['webgpu', 'webgl2'].includes(backend) || seconds < 60 || seconds > 600) throw new Error('Supply --playwright, valid backend and 60–600 seconds');
@@ -37,7 +48,7 @@ const activity = () => ({ at: new Date().toISOString(), load: loadavg(),
   gpu: command('nvidia-smi', ['--query-gpu=name,utilization.gpu,utilization.memory,memory.used', '--format=csv,noheader']),
   processes: command('ps', ['-eo', 'pid,ppid,comm,pcpu', '--sort=-pcpu']).split('\n').slice(0, 18),
 });
-const report = { host: hostname(), backend, phoneEmulation: phone, viewportName, viewport, camera: follow ? 'follow' : 'classic', seconds,
+const report = { host: hostname(), backend, phoneEmulation: phone, viewportName, viewport, camera: follow ? 'follow' : 'classic', drive, seconds,
   measurement: bootOnly ? 'startup diagnostic only; no frame-budget acceptance' : '60-second-or-longer runtime',
   power: command('powerprofilesctl', ['get']), before: activity(), samples: [],
   build: collectBuiltFiles(root), errors: [], requestsFailed: [],
@@ -152,8 +163,16 @@ try {
   if (!bootOnly) {
   await page.locator('.herd-size').filter({ hasText: '200' }).click();
   await page.locator('.herd-title-actions > .herd-button--primary').click();
-  if (follow) await page.keyboard.press('KeyC');
+  const hold = async (key, ms) => { await page.keyboard.down(key); await page.waitForTimeout(ms); await page.keyboard.up(key); };
+  if (follow && drive === 'wander') await page.keyboard.press('KeyC');
   await page.waitForTimeout(3000);
+  if (drive === 'homestead') {
+    // 15 m/s: 3.4 s of A is about 50 m (x -20 -> 30), 11 s of W is more than
+    // the 160 m to the fence line at z = 100, which clamps the dog there.
+    await hold('KeyA', 3400);
+    await hold('KeyW', 11000);
+    if (follow) { await page.keyboard.press('KeyC'); await page.waitForTimeout(2000); }
+  }
   report.initialVisual = await analyzeScreenshot(page, await page.screenshot({ path: resolve(out, 'initial-play.png') }));
   const framesPromise = page.evaluate(duration => new Promise(resolveFrames => {
     const frames = []; let previous; const start = performance.now();
@@ -166,7 +185,7 @@ try {
     requestAnimationFrame(tick);
   }), seconds * 1000);
   for (let elapsed = 0; elapsed < seconds; elapsed += 5) {
-    const key = ['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(elapsed / 5) % 4];
+    const key = drive === 'homestead' ? 'KeyW' : ['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(elapsed / 5) % 4];
     await page.keyboard.down(key);
     if (elapsed % 15 === 0) await page.keyboard.press('Space');
     await page.waitForTimeout(Math.min(5, seconds - elapsed) * 1000);
