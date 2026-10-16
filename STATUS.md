@@ -52,6 +52,80 @@ receipt showing no frame-time regression on either backend with startup down
 The full report, its measurements and the two limits on what the hub receipt
 settles are in `docs/history/status-log.md`.
 
+## Master plan - agreed 2026-10-16
+
+The sequence the owner chose, recorded so it is read rather than re-derived.
+Each cycle is independently shippable and nothing below is started.
+
+### Cycle 1 - Worker migration
+
+Move hosting from the `sds-frontend` Pages project to a Worker serving static
+assets on `sheepdogsim.com`, with `/api/*` same-origin and `/r/*` left
+unclaimed for rooms. Retires the v2-era naming, the undisableable `pages.dev`
+hostname, the hand-maintained CORS allow-list, and the drift that lets
+`deploy.yml` and `deploy-worker.yml` ship a client and an API from different
+commits.
+
+The analytics label rides with this cycle rather than being fixed separately:
+the Pages project is where the misnamed Web Analytics site is owned, so moving
+the beacon into `app/index.html` happens here, once, instead of twice.
+
+**No user-visible change, on one condition.** A player's name is a JWT in
+`localStorage` under `sheepdog.score-identity.v1`, keyed to the origin the game
+is served from; that origin stays `sheepdogsim.com`. Their times are in D1
+`sds-db`, which is not moved or rebound. Auth is a Bearer header and the Worker
+sets no cookies. The condition is that `JWT_SECRET` is copied verbatim to any
+Worker that verifies a token: if it drifts,
+`app/src/scores/controller.ts:39-41` reads the 401 as "re-register", so players
+are silently issued new names and their times are orphaned under the old
+`persistent_id`. Verify an existing identity resolves before sending traffic.
+One small gain: same-origin removes the CORS preflight on score submission.
+
+Cutover is by Worker *route*, not custom domain, so it needs no downtime and
+rolls back by deleting the route. Keep the Pages project dormant, not deleted -
+it still serves the immutable v2 deployment. Full detail and the three measured
+traps are in `docs/operations/deployment.md`.
+
+### Cycle 2 - ship the Kiln farmhouse, gated on a hub receipt
+
+Wire the walk-in house into the game in place of the procedural farmhouse.
+**The owner's gate: it ships only if a hub receipt shows no load-time or
+frame-time regression.** The desk figures favour it and do not settle it:
+174,588 bytes against an 8,420,670-byte artifact (+2.07%), zero textures and
+zero images so there is no decode cost, and 3,440 triangles against the
+3,959,384 the hub measured in the settled scene (+0.087%). The number that is
+not negligible is draw calls: 6 against the 40 the same receipt measured.
+
+Still open, and not answered by performance: the backdrop's look is a
+procedural surface keyed to `uv.x`/`uv.y`, which a baked mesh can only
+reconstruct from world position and which degrades wherever a surface is
+neither wall nor roof slope; and `tests/treeline-assets.spec.ts:329` records
+this project's standing choice not to load GLBs at runtime, which shipping this
+reverses deliberately rather than by accident.
+
+### Cycle 3 - multiplayer foundations
+
+Begin the realtime Worker, Durable Objects and room D1 per
+`spec/03-multiplayer.md`. Cycle 1 leaves `/r/*` free so routing is ready.
+Where the Durable Objects live relative to the release unit is recorded in that
+specification as a judgement rather than a rule, because it turns on release
+cadence, and the choice is reversible through a `transferred_classes` or
+`exports` transfer.
+
+`sim/` imports no Three.js, React, DOM, network or third-party math and uses
+seeded randomness with no clocks in tick paths, so it runs unmodified inside a
+Durable Object. The deterministic simulation is the expensive half of netcode
+and it is already paid for.
+
+### Running alongside
+
+- **Dependencies: fix all of them.** `npm audit --omit=dev` is clean, so none
+  of this reaches a player; the work is vitest 3 to 5, TypeScript 7, Vite 8,
+  plugin-react 6 and the actions v5 to v7 bump. Majors batch per ecosystem.
+- **Cleanups.** Revoke the unused `BROWSERSTACK_*` secrets, whose workflow no
+  longer exists, and drop the dead `.sheepdogsim.pages.dev` CORS entry on the
+  next Worker deploy rather than deploying for it.
+
 ## Direction changes
 
 Owner-ordered changes that override an earlier specification line. Four files
