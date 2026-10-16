@@ -5,6 +5,44 @@
 
 # Status log
 
+## Lab WebGPU synchronisation error - 2026-10-16, fixed
+
+Once per lab boot under WebGPU: `[Texture "output"] usage includes writable
+usage and another usage in the same synchronization scope`, attributed to a
+sky-dome pipeline. Bisected against `ccda34a1` (before the renderer staging):
+10 of 10 boots on both, so it predates the renderer fixes, and `86fe175f` fixed
+only the render-before-init errors it was meant to.
+
+- The label was misattribution: three wraps each async pipeline compile in a
+  validation error scope that stays open about 800 ms, and the stray error
+  landed in whichever scope was open. The error text names the
+  `renderContext_0` command encoder, a render pass.
+- The mechanism, confirmed in the installed fiber 9.8.2 bundle (`loop.ts`):
+  `setFrameloop('never')` changes the mode and the clock only; the frames that
+  mounting the field requested through `invalidate()` stay in
+  `internal.frames`, and `loop()` runs a root while that count is above zero.
+  So `SceneReadySignal`'s pause let one or two frames draw into the scene
+  target while `compileAsync` was mid-flight. three r186 has no pre-compile
+  state guard (r187's #34506 adds one), so the frame shared the compiler's
+  renderer state and WebGPU rejected the read and write of `output`.
+- The game was never affected: `App.tsx` holds `frameloop="never"` until
+  `sceneReady`, so `invalidate()` is a no-op during the mount and nothing is
+  queued. The lab mounted with the loop running and relied on the imperative
+  pause: that was the misimplementation, not the gate.
+- Fix: the lab gates its loop on `sceneReady` as the game does and loses the
+  intermediate stage the earlier comment justified with a mechanism that does
+  not exist (fiber reapplies the prop only when its value changes).
+  `SceneReadySignal` documents the host contract. No fiber internals touched.
+- Verified: 5 fresh boots of the lab in headed Chromium with WebGPU
+  (`--enable-unsafe-webgpu`), backend row `webgpu`, zero synchronisation
+  errors at startup and after the "House (Kiln)" switch, zero page errors,
+  29 draw calls after the switch.
+- Checked against the trackers: no fiber report of the pending-frame gap (worth
+  filing upstream); three #34681 (passes rendered inside a RenderPipeline
+  precompile at the wrong call depth) does not apply, since the post chain
+  renders the scene itself at depth 0 into its target; three #28549 is the
+  general rule the error states.
+
 ## Release 2 Stage A - 2026-10-16, live as 3.2.1 (pull request 117, tag `v3.2.1`)
 
 One root package on `@cloudflare/vite-plugin` 1.64.0 with wrangler 4.151.0 (the

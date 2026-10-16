@@ -5,6 +5,21 @@ import * as THREE from 'three/webgpu';
 import { useGameStore } from '@app/state/store';
 import { compileMountedScene } from './compileScene';
 
+/**
+ * Owns the compile window: pauses the loop, compiles everything the camera
+ * can submit against `target`, resumes, and marks the scene ready two frames
+ * later.
+ *
+ * Host contract: the Canvas must hold `frameloop="never"` until
+ * `sceneReady` (as App.tsx and the lab do). Fiber's `setFrameloop('never')`
+ * only changes the mode; frames that mounting the field already requested
+ * through `invalidate()` stay queued and still run (fiber 9.8.2 loop.ts). A
+ * frame drawn while `compileAsync` is mid-flight shares its renderer state
+ * (three r186 has no pre-compile state guard; r187's #34506 adds one) and
+ * WebGPU rejects the scene target as a read and a write of "output" in one
+ * synchronisation scope. With the prop on `never`, `invalidate()` is a no-op
+ * during the mount and nothing is queued (lab bisect, 2026-10-16).
+ */
 export function SceneReadySignal({ target }: {
   target?: THREE.RenderTarget;
 }) {
