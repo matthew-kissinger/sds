@@ -19,7 +19,7 @@ investigations are in `docs/history/`.
   the player chooses Edit, and the board read path does not require identity.
 - Version 3 is live at `https://sheepdogsim.com`. `release.json` is the
   authority for the exact deployed source commit and artifact digest; it
-  currently reports `b242552d41fd72871e30fea421866c5c275913a5`, built
+  currently reports `1dbd01507eec15eabf31486e2a8b78909a26abc5`, built
   2026-10-16, 34 files and 8,420,670 bytes - the same file count and size
   `npm run probe:release` measures locally.
 - The production Worker was deployed first without a D1 migration. Health and

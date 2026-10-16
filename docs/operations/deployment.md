@@ -7,10 +7,11 @@ what is live now, not a cutover that was once planned.
 
 There is exactly one way the game reaches players:
 
-`Deploy Pages` (`.github/workflows/deploy.yml`) is manual. It takes a full
-40-character commit SHA, refuses any SHA not already contained in `origin/main`,
-rebuilds from that exact commit, archives the `dist/` artifact for 90 days, and
-uploads it with
+`Deploy Pages` (`.github/workflows/deploy.yml`) runs when an annotated `v*` tag
+is pushed, and keeps a `workflow_dispatch` escape hatch that takes a full
+40-character commit SHA for redeploying an older commit. Either way it refuses a
+commit not already contained in `origin/main`, rebuilds from that exact commit,
+archives the `dist/` artifact for 90 days, and uploads it with
 `wrangler pages deploy dist --project-name=sds-frontend --branch=main`. It then
 verifies the live `/release.json` reports that same SHA and that the discovery
 pages and the analytics beacon are present. If any check fails the deploy fails.
@@ -53,18 +54,19 @@ Until they are deleted, read `production` as the only live one.
 2. Confirm `Client CI` is green on the merge commit. A push to `main` cancels an
    in-flight run for the same ref, so check the run for the commit you intend to
    deploy, not an earlier one.
-3. Copy that commit's full 40-character SHA.
-4. Run `Deploy Pages` manually with that SHA. The owner's approval in
-   conversation is the authorization; see `AGENTS.md`.
+3. Bump `package.json` and add the `CHANGELOG.md` entry in the commit you intend
+   to tag. `release.json` takes its `version` from `package.json`, so the tag,
+   the package version and the live manifest will then agree.
+4. Tag that commit and push the tag. The owner's approval in conversation is
+   the authorization; see `AGENTS.md`.
+   `git tag -a vX.Y.Z <sha> -m "Sheepdog Sim X.Y.Z" && git push origin vX.Y.Z`
+   The tag push triggers `Deploy Pages`.
 5. Confirm the workflow's live identity and discovery checks pass.
-6. Confirm `https://sheepdogsim.com/release.json` reports that commit.
-7. Tag the deployed commit and push the tag:
-   `git tag -a vX.Y.Z <sha> -m "Sheepdog Sim X.Y.Z" && git push origin vX.Y.Z`.
+6. Confirm `https://sheepdogsim.com/release.json` reports that commit and
+   version.
 
-Step 7 is what makes a release nameable later. `release.json` takes its
-`version` from `package.json`, so bump `package.json` and add the `CHANGELOG.md`
-entry in the commit you intend to tag, and the tag, the package version and the
-live manifest will all agree.
+The tag is what makes a release nameable later: it names the commit, so a
+rollback is dispatching the workflow with an older one.
 
 ## Rolling back
 
