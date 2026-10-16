@@ -5,11 +5,16 @@
 
 # Status log
 
-## Release 2 Stage B cutover - 2026-10-16, prepared on pull request 126, awaiting the owner's go
+## Release 2 Stage B cutover - 2026-10-16, merged (pull request 126, `37154931`)
 
 The owner: "Do this task here: Release 2 Stage B cutover: production Deploy
-on cf". Same branch and pull request as the attempt below; nothing deployed,
-tagged or changed on the live Worker.
+on cf", then "mark pull request 126 ready for review and merge it on green.
+No tag yet." Same branch and pull request as the attempt below. Merged with a
+merge commit, branch deleted, Client CI green on `37154931` (run
+38982582508). Nothing deployed or tagged: the live Worker runs the
+wrangler-deployed 3.3.0 until the next tag, which is the first `cf` deploy of
+production and the place to read the source-map question below off the
+dashboard.
 
 - `deploy.yml` deploys the Build Output with `cf deploy --prebuilt
   --no-provision --message <sha>` from `app/`, after the unchanged gates

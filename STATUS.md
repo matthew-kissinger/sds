@@ -196,10 +196,11 @@ hub receipt passed (twelve runs, same shape), and the flip merged (pull
 request 125, `e3642877`). The whole homestead is Kiln and live as 3.3.0
 (`6a605e16`, tag `v3.3.0`). Open from the barn review: the slate course
 wander (owner's call, see the status log). Stage B was then attempted on the
-preview Worker and its four checks passed, and the same pull request now
-carries the production cutover, ready for the owner's go (pull request 126,
-draft, below). Next: that go, then declarative hosting and the Pages
-retirement.
+preview Worker and its four checks passed, and the same pull request carried
+the production cutover, which the owner approved and which is merged (pull
+request 126, merge `37154931`, Client CI green on it; below). The next `v*`
+tag deploys with `cf`; the live Worker still runs the wrangler-deployed
+3.3.0. Next: declarative hosting and the Pages retirement.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -235,9 +236,10 @@ review's reasons: `cf` is beta and only accepts the Vite plugin's v2 beta;
 its `exports` map replaces the migrations array and is documented as one-way
 once deployed; and `cf deploy` provisions missing resources by default.
 
-**Stage B's four checks passed on the preview Worker, 2026-10-16** (pull
-request 126, kept as a draft; the measurements are in
-`docs/history/status-log.md`, Release 2 Stage B). `cf` 1.0.0-beta.18 and the
+**Stage B's four checks passed on the preview Worker, 2026-10-16, and the
+cutover is merged** (pull request 126, merge `37154931`, the owner's go the
+same evening; the measurements are in `docs/history/status-log.md`, Release 2
+Stage B). `cf` 1.0.0-beta.18 and the
 Vite plugin 2.0.0-beta.v.1 built the same artifact as Stage A (digest
 `2b64a94f...`), and the pull request's own Preview run uploaded the `pr-126`
 alias and deployed to `sds-worker-preview` with `cf`: the served asset set,
@@ -266,10 +268,9 @@ dispatch takes the workflow file from `main`. `wrangler.toml` stays while a
 rollback to a wrangler-built release (3.2.1 to 3.3.0) is wanted, held equal
 to the cf declaration by `tests/worker/cloudflare-config.spec.ts`; it and
 that test go together when that is no longer true. The production dry run
-passes locally with the same artifact digest as 3.3.0. What merging does:
-the next tag deploys with `cf`; nothing changes on the live Worker until
-then. Production stays on Stage A until the owner gives the go; a change in
-either beta before then reopens the checks.
+passed locally with the same artifact digest as 3.3.0. Merged `37154931`:
+the next tag deploys with `cf`, and nothing changes on the live Worker until
+then. A change in either beta before that tag reopens the checks.
 
 From the renderer boot review
 (`docs/history/renderer-boot-review-2026-10-16.md`), done 2026-10-16: the
