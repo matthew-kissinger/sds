@@ -280,10 +280,18 @@ longer claims Neutral.
   per-vertex surface channels the farmhouse fix establishes, welded into the
   same board, roof and opening buffers so the draw count does not move, graded
   in-game by the same standard, Kiln feedback logged the same way. **In
-  progress** since 2026-10-16 on its own branch, adopting the channel
-  convention from pull request 121 and shipping behind a `BARN_SOURCE`
-  constant set to procedural; the grass bake will read that constant too once
-  121 has merged. Its floor takes the same step above the pad.
+  review** (pull request 123, 2026-10-16): a three-bay threshing barn under a
+  gambrel, its cart doors open onto a dark interior, a hay door under a hood,
+  a lit loft window and a cupola; 2,350 triangles, no added draws, no
+  textures, standing in `BARN`'s box on `BARN_AT`. `BARN_SOURCE` stays
+  procedural. The bake also writes its outline envelope and ground footprint
+  into the GLB extras, and the game derives the barn's outline from them. The
+  grass bake reads `BARN_SOURCE` and records it (rebaked for what main ships,
+  the Kiln house and the procedural barn, its tufts are byte-identical to
+  main's). Its floor takes the same step above the pad.
+  `docs/history/barn-kiln-2026-10-16.md` has the design, the numbers and the
+  Kiln feedback. The owner's look review and the hub receipt remain; then the
+  flip with its grass rebake, and folding the two Kiln loaders into one.
 - Surfaces stay procedural (decided 2026-10-16 on a measured spike,
   `docs/history/spike-surface-atlas-2026-10-16.md`, branch
   `experiment/surface-atlas`, pull request 122, not for merge). The owner

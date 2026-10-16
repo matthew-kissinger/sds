@@ -138,8 +138,9 @@ hanging a ledge under the eaves. The loader refuses a bake without it.
 weld into buffers the cluster already draws, so it stays at ten. No textures.
 By set: timber 1,301, boards 658, opening 301, stone 48, slate 32, lamp 10.
 The procedural barn it replaces is 496 triangles, and its outline 194 against
-the envelope's 78, so the whole cluster goes from 4,874 to 6,612 triangles with
-this barn (8,958 with the Kiln house as well).
+the envelope's 78, so beside the Kiln house that ships the whole cluster goes
+from 7,220 to 8,958 triangles with this barn (4,874 to 6,612 beside the
+procedural house).
 
 ## Not in this asset
 

@@ -21,4 +21,5 @@ rules that outlived the work below.
 | `audio-balance-audit.md` | The calm-soundscape audit, closed by owner approval. |
 | `audio-source-review.md` | The rejected deterministic PCM synthesis experiment. |
 | `farmhouse-kiln-recipe-2026-10-16.md` | The Kiln farmhouse's per-vertex surface channels: the backdrop shader's contract, the bake that writes it, before-and-after evidence and the Kiln feedback list. |
+| `barn-kiln-2026-10-16.md` | The Kiln barn behind `BARN_SOURCE`: the gambrel and why, its numbers, the channel convention it adopted, the outline envelope and footprint the bake writes, the grass and route evidence, and its Kiln feedback list. |
 | `progress-2026-08.md` | An early running log, superseded by `STATUS.md` and `CHANGELOG.md`. |
