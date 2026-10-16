@@ -148,10 +148,23 @@ export const LAB_SUBJECTS = [
     height: 17,
   },
   {
+    id: 'house',
+    label: 'House (procedural)',
+    // The code-built house at the Kiln subject's own frame, target and part
+    // list, so flipping between the two holds the camera and changes nothing
+    // but the house. `farm` cannot do that: it aims between house and barn.
+    note: 'The shipped, code-built house (farmhouse/cluster.ts) at the same frame as House (Kiln). Context for the Kiln house, not its reference.',
+    parts: ['terrain', 'grass', 'farmhouse', 'farmer'],
+    target: { kind: 'fixed', x: HOUSE_AT.x, z: HOUSE_AT.z },
+    distance: 26,
+    height: 6,
+  },
+  {
     id: 'kiln-house',
     label: 'House (Kiln)',
-    // The same pad, yaw and footprint as the subject above, so the panel holds
-    // the camera across the flip and the comparison is the asset alone.
+    // The same pad, yaw, footprint, target and frame as the subject above, so
+    // the panel holds the camera across the flip and the comparison is the
+    // asset alone.
     note: 'The walk-in house authored in Kiln, re-banded through the shipped toon ramp and welded into the farm cluster (barn, shadows, smoke unchanged). Real reveals, joinery, a door on its hinges and a room behind it. Drop the distance to walk up to it.',
     parts: ['terrain', 'grass', 'kiln-house', 'farmer'],
     target: { kind: 'fixed', x: HOUSE_AT.x, z: HOUSE_AT.z },

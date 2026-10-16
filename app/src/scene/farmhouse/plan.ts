@@ -179,9 +179,6 @@ export const BARN_CUPOLA_AT = -2.45;
  * module, so these are repeated: they place the three things the baked mesh
  * cannot say for itself, which are where the smoke leaves, where the stack
  * throws its shadow and how big the outline's envelope is.
- *
- * The range is the same 18.6 by 8.6 box as HOUSE with a gable at both ends, and
- * it carries no sag or settle, so the hull is HOUSE with the Kiln eaves.
  */
 export const KILN_STACK = {
   x: -8.1,
@@ -194,10 +191,31 @@ export const KILN_STACK = {
   mouth: { x: -7.84, y: 12.28, z: -1.45 },
 } as const;
 
+/**
+ * The outline's envelope for the Kiln house: its roof as built, not HOUSE's.
+ *
+ * The Kiln roof bears on the walls' OUTER faces (19.15 by 9.15), oversails the
+ * long walls by 0.45 m, and its slate runs from 5.338 m at the eave edge to
+ * 10.72 m at the ridge with no sag or settle. `roofHull` puts the slate's top
+ * SLAB above the structural line, so the two heights here are the slate's less
+ * that offset (0.14 x 0.682 on this pitch).
+ *
+ * THE ENVELOPE STOPS AT THE GABLES, though the verge oversails them by 0.45 m.
+ * `roofHull` closes its section with a flat underside at fascia depth below the
+ * eave, and wherever that plate stands outside a gable it is seen from above,
+ * so the outline drew it as a dark line straight across each gable from eave
+ * to eave. That is what the earlier envelope - HOUSE with the eaves trimmed,
+ * 18.6 by 8.6 with its eave at 5.8 - did, at wall-head height, on both gables
+ * of the authored house. Ending the envelope at the gable face costs the
+ * outline only the 0.45 m end of the verge.
+ */
 export const KILN_ROOF: RoofSpec = {
-  ...HOUSE,
-  eaveOverhang: 0.55,
-  endOverhang: 0.55,
+  length: 19.15,
+  width: 9.15,
+  wallHeight: 5.338 - 0.0955,
+  ridgeHeight: 10.72 - 0.0955,
+  eaveOverhang: 0.45,
+  endOverhang: 0,
   ridgeFlat: 0,
   settle: 0,
   sag: 0,
