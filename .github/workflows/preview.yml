@@ -33,66 +33,41 @@ jobs:
       PREVIEW_ALIAS: pr-${{ github.event.pull_request.number }}
       PREVIEW_URL: https://pr-${{ github.event.pull_request.number }}-sds-worker-preview.matt-m-kissinger.workers.dev
     steps:
-      - name: Require the preview D1 database
-        id: gate
-        env:
-          PREVIEW_D1_ID: ${{ vars.CF_PREVIEW_D1_ID }}
-        run: |
-          if [[ -z "$PREVIEW_D1_ID" ]]; then
-            echo "::notice::Repository variable CF_PREVIEW_D1_ID is unset, so no preview is uploaded. See the env.preview notes in worker/wrangler.toml."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v5
-        if: steps.gate.outputs.ready == 'true'
       - uses: actions/setup-node@v5
-        if: steps.gate.outputs.ready == 'true'
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            worker/package-lock.json
-      - if: steps.gate.outputs.ready == 'true'
-        run: npm ci
-      - if: steps.gate.outputs.ready == 'true'
-        run: npm ci --prefix worker
+      - run: npm ci
 
       - name: Acquire approved game audio
-        if: steps.gate.outputs.ready == 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
           node tools/prepare-approved-audio.mjs --download
       # No VITE_SCORE_API_BASE: the preview calls its own origin's /api, as
-      # production does.
-      - name: Build the client
-        if: steps.gate.outputs.ready == 'true'
+      # production does. CLOUDFLARE_ENV makes the Vite plugin generate the
+      # [env.preview] configuration; it is set on this step only, because
+      # wrangler also reads it and would warn on a config that is already
+      # resolved.
+      - name: Build the client and the preview Worker
         run: npm run build
         env:
+          CLOUDFLARE_ENV: preview
           SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
           SDS_RELEASE_REF: refs/pull/${{ github.event.pull_request.number }}/head
-      - if: steps.gate.outputs.ready == 'true'
-        run: npm run check:discovery
+      - run: npm run check:discovery
       - name: Verify preview release identity
-        if: steps.gate.outputs.ready == 'true'
         run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ github.event.pull_request.head.sha }}"
+      - name: Verify the generated preview configuration
+        run: node scripts/verify-deploy-config.mjs --preview
 
-      - name: Bind the preview D1 database
-        if: steps.gate.outputs.ready == 'true'
-        env:
-          PREVIEW_D1_ID: ${{ vars.CF_PREVIEW_D1_ID }}
-        run: |
-          set -euo pipefail
-          sed -i "s/00000000-0000-0000-0000-000000000000/$PREVIEW_D1_ID/" worker/wrangler.toml
-          if grep -q "00000000-0000-0000-0000-000000000000" worker/wrangler.toml; then
-            echo "Preview D1 placeholder substitution failed." >&2
-            exit 1
-          fi
+      # The script names wrangler.toml and --env preview itself. The plugin's
+      # redirect file lands under app/, where wrangler never sees it, so a build
+      # on disk does not change which configuration this uses. The preview
+      # database id is committed in wrangler.toml; the script refuses to run
+      # against the production id.
       - name: Migrate preview D1 only
-        if: steps.gate.outputs.ready == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -101,18 +76,16 @@ jobs:
 
       # A version upload leaves the preview Worker's deployed version and every
       # other pull request's alias alone. It refuses a Durable Object lifecycle
-      # change; such a change needs `wrangler deploy --env preview` once first.
+      # change; such a change needs a `wrangler deploy` of the generated config
+      # once first.
       - name: Upload preview version
-        if: steps.gate.outputs.ready == 'true'
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          workingDirectory: worker
-          command: versions upload --env preview --preview-alias ${{ env.PREVIEW_ALIAS }} --message ${{ github.event.pull_request.head.sha }}
+          command: versions upload --config .wrangler/build/sds_worker/wrangler.json --preview-alias ${{ env.PREVIEW_ALIAS }} --message ${{ github.event.pull_request.head.sha }}
 
       - name: Verify the preview's game, API and identity
-        if: steps.gate.outputs.ready == 'true'
         env:
           SDS_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
         run: |

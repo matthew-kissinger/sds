@@ -9,6 +9,12 @@ conversation. Every check asserts a content type or a body, never a status
 alone: before the route exists, `https://sheepdogsim.com/api/anything` answers
 200 `text/html` from the Pages fallback.
 
+This is the record of a completed one-time cutover, written for the layout
+before Release 2 Stage A, when `worker/` was its own package with its own
+`wrangler.toml`. Commands naming `worker/`, `npm ci --prefix worker` or
+`worker/wrangler.toml` now mean the repository root; the deploy is
+`docs/operations/deployment.md`.
+
 Commands are PowerShell 7, run from the repository root unless a step says
 `worker/`. `$sha` is the full commit being cut over.
 

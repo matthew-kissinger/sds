@@ -82,8 +82,8 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   with single-page-application fallback, `run_worker_first` on `/api/*`,
   `workers_dev = true` set explicitly, and a Worker route on
   `sheepdogsim.com/*`. Cutover by route, never custom domain; rollback is
-  deleting the route. Configuration stays in `worker/wrangler.toml` for this
-  release. The `cf` CLI's `cloudflare.config.ts` is Release 2 work: `cf` is a
+  deleting the route. Configuration stayed in `worker/wrangler.toml` for this
+  release and moved to the root in Release 2 Stage A. The `cf` CLI's `cloudflare.config.ts` is Release 2 work: `cf` is a
   beta that rebuilds the project shape and does not run this repository's build
   script, and that must not land in the same change as a live hostname cutover.
   Code merged 2026-10-16: assets block, route, `workers_dev = true`,
@@ -176,7 +176,21 @@ plain directory, one `wrangler.toml` at the root with the preview D1 id
 committed, the release manifest written by a Vite plugin into the uploaded
 directory, the client kept at `dist/`, `vite dev` serving game and API with a
 local D1 and no proxy, the workflows deploying with wrangler from the root.
-Stage A ships alone as 3.2.1 with no client change. Stage B: `cf` and
+Stage A ships alone as 3.2.1 with no client change.
+
+**Stage A is in review** (pull request `release2/stage-a-vite-plugin`, not
+tagged). The plugin forces the client to `dist/client`, always emits
+`dist/.assetsignore`, and writes its deploy redirect under the Vite root
+`app/`, where wrangler will not follow it; the measurements, the artifact
+digest comparison and the decisions that followed are in
+`docs/history/status-log.md` (Release 2 Stage A). 3.2.1 will carry the build
+restructure and the two renderer fixes already on `main`, so its artifact
+differs from 3.2.0's by those fixes alone. Rolling back to the 3.2.0 commit
+dispatches `Deploy` at the `v3.2.0` ref. After the tag, the first production
+deploy is the check that wrangler publishes the same route, bindings and
+migrations from the generated file.
+
+Stage B: `cf` and
 `cloudflare.config.ts`, attempted on the preview Worker only, and cut to
 production only if four checks pass (identical asset set and headers, identical
 bindings and route list, the Durable Object migration tag untouched by a

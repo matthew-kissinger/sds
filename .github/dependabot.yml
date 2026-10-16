@@ -32,24 +32,6 @@ updates:
         update-types:
           - major
 
-  - package-ecosystem: npm
-    directory: /worker
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      worker:
-        patterns:
-          - '*'
-        update-types:
-          - minor
-          - patch
-      worker-major:
-        patterns:
-          - '*'
-        update-types:
-          - major
-
   - package-ecosystem: github-actions
     directory: /
     schedule:

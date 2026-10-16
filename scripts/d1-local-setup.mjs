@@ -1,24 +1,22 @@
-// Apply every worker/migrations/*.sql to the LOCAL D1, in sequence order.
+// Apply every worker/migrations/*.sql to the LOCAL D1, in sequence order, in
+// the state directory `vite dev` and `vite preview` read (.wrangler/state; see
+// persistState in vite.config.ts).
 //
 // Intended for a fresh local D1: `wrangler d1 execute` has no IF-NOT-EXISTS
 // guard for CREATE TABLE / ADD COLUMN, so re-running against an already-populated
-// local DB will error. Delete worker/.wrangler/state/v3/d1 to reset, then re-run.
+// local DB will error. Delete .wrangler/state/v3/d1 to reset, then re-run.
 //
-// Remote migrations are NOT applied here. They are applied automatically on
-// deploy by the `migrate` job in .github/workflows/deploy.yml (which runs
-// `wrangler d1 execute --remote` for each migration file newly added in a push).
-//
-// Used by `npm run dev:setup` and by the CI perf jobs so the local-migration
-// list lives in exactly one place (the migrations dir itself), not a hand-kept
-// chain that drifts every time a migration is added.
+// Remote migrations are NOT applied here: scripts/d1-migrate-remote.mjs applies
+// them deliberately, and the preview workflow applies them to the preview D1.
+// The migration list lives in exactly one place, the migrations directory.
 
 import { readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const workerDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'worker');
-const migrationsDir = join(workerDir, 'migrations');
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const migrationsDir = join(repoRoot, 'worker', 'migrations');
 
 const files = readdirSync(migrationsDir)
   .filter((f) => f.endsWith('.sql'))
@@ -32,8 +30,8 @@ if (files.length === 0) {
 console.log(`Applying ${files.length} migration(s) to LOCAL sds-db...`);
 for (const file of files) {
   console.log(`>> ${file}`);
-  execSync(`npx wrangler d1 execute sds-db --local --file=migrations/${file}`, {
-    cwd: workerDir,
+  execSync(`npx wrangler d1 execute sds-db --local --config wrangler.toml --persist-to .wrangler/state --file=worker/migrations/${file}`, {
+    cwd: repoRoot,
     stdio: 'inherit',
   });
 }

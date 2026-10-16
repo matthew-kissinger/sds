@@ -1,5 +1,9 @@
+# The one Wrangler configuration, at the repository root. The Cloudflare Vite
+# plugin (vite.config.ts) reads it to build the Worker beside the client and to
+# serve both in `vite dev`; wrangler deploys what the build generates from it.
+# docs/operations/deployment.md explains the handoff.
 name = "sds-worker"
-main = "src/index.ts"
+main = "worker/src/index.ts"
 compatibility_date = "2026-04-01"
 compatibility_flags = ["nodejs_compat"]
 
@@ -12,14 +16,19 @@ workers_dev = true
 # from a throwaway hostname. Pull-request previews use env.preview instead.
 preview_urls = false
 
-# The game. dist/ is written by `npm run build` at the repository root, plus
-# dist/release.json from scripts/write-release-manifest.mjs, so build before
-# deploying. Only /api/* runs this script first; every other path is served by
-# the asset layer, with index.html for anything unmatched (the array form of
+# Source-mapped stack traces in Workers observability; the maps are uploaded to
+# Cloudflare, not served. The Vite plugin defaults this on; stated here so the
+# deploy configuration is not at its mercy.
+upload_source_maps = true
+
+# The game. There is no `directory` here on purpose: the Vite plugin supplies
+# the client build output (dist/, with dist/release.json written into it by the
+# releaseManifest plugin in vite.config.ts) when it generates the deploy
+# config. Only /api/* runs the Worker script first; every other path is served
+# by the asset layer, with index.html for anything unmatched (the array form of
 # run_worker_first also stops Sec-Fetch-Mode from deciding that). _headers and
 # _redirects from app/public are honoured natively.
 [assets]
-directory = "../dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = ["/api/*"]
@@ -70,19 +79,13 @@ pattern = "sheepdogsim.com/*"
 zone_name = "sheepdogsim.com"
 
 # ---------------------------------------------------------------------------
-# P2-STAGING: per-PR preview environment. Deployed by
-# .github/workflows/preview.yml as sds-worker-preview, with its OWN D1 so a
-# preview can never touch the production leaderboard.
-#
-# !!! The database_id below is a PLACEHOLDER (all zeros), not a real database.
-# !!! The preview workflow substitutes the repo Actions variable
-# !!! CF_PREVIEW_D1_ID before deploying, and scripts/d1-migrate-remote.mjs
-# !!! refuses to run against the placeholder or the production id.
-# Operator setup (one time):
-#   1. npx wrangler d1 create sds-db-preview
-#   2. Set repo Actions variable CF_PREVIEW_D1_ID to the new database id
-#      (until it is set, the preview-worker job is skipped with a notice).
-#   3. npx wrangler secret put JWT_SECRET --env preview
+# Per-pull-request preview environment. Built with CLOUDFLARE_ENV=preview and
+# uploaded by .github/workflows/preview.yml as sds-worker-preview, with its OWN
+# D1 so a preview can never touch the production leaderboard. A database id is
+# an identifier, not a secret, so it is committed;
+# scripts/d1-migrate-remote.mjs refuses to run a preview migration against the
+# production id. Its JWT_SECRET is a Worker secret set once with
+#   npx wrangler secret put JWT_SECRET --env preview
 # Environments do not inherit bindings, so D1 is redeclared here. The Durable
 # Object [[migrations]] history above is top-level and shared.
 # ---------------------------------------------------------------------------
@@ -100,4 +103,4 @@ routes = []
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "sds-db-preview"
-database_id = "00000000-0000-0000-0000-000000000000" # PLACEHOLDER - see above
+database_id = "6d5b0fce-952f-4d94-8936-b51fc559496c"

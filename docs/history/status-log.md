@@ -5,6 +5,44 @@
 
 # Status log
 
+## Release 2 Stage A - 2026-10-16, in review (pull request `release2/stage-a-vite-plugin`)
+
+One root package on `@cloudflare/vite-plugin` 1.64.0 with wrangler 4.151.0 (the
+version the plugin pins).
+
+- Plugin behaviour measured: the client output defaults to `dist/client`, and
+  `environments.client.build.outDir` keeps it at `dist/`; the Worker builds to
+  `.wrangler/build/sds_worker` so it cannot be wiped by or uploaded with the
+  client; `dist/.assetsignore` is always emitted; the deploy redirect is written
+  to `<Vite root>/.wrangler/deploy/config.json`, which is `app/.wrangler/...`.
+  From the repository root wrangler does not find it (`wrangler deploy` fails
+  with "missing the required `directory` property"); from `app/` it refuses the
+  mismatch with the root `wrangler.toml`. Both workflows therefore deploy the
+  generated file with `--config .wrangler/build/sds_worker/wrangler.json`;
+  `--env=""` is accepted with it.
+- Artifact digest, both builds on the rebased tree (`08c595ae`, licensed audio
+  present, `SDS_RELEASE_SHA` and `SDS_RELEASE_REF` identical): old build (the
+  `worker/` package and `node scripts/write-release-manifest.mjs`) and new build
+  (plugin) both give 34 files, 8,501,460 bytes, sha256
+  `83db6d4457016684f23876d5fc60fd98e58cf1cdc1fb8e289def86f40adbcd12`. Live
+  3.2.0 is 34 files, 8,501,487 bytes, sha256 `0f4585fc...`; the 27-byte
+  difference is the two renderer fixes on `main` (`86fe175f`, `08c595ae`), which
+  3.2.1 will ship. Before the rebase, without the licensed audio: 32 files,
+  6,588,591 bytes, sha256 `25134c99fecb050cef627cdf0059bf364e4aa0c23d43c0e3b07873eefb1002f4`
+  for both. Without the manifest skipping `.assetsignore` the new build had one
+  extra file (33 files, 24 bytes more).
+- Generated config against the old `worker/wrangler.toml`, field by field (name,
+  compatibility, `workers_dev`, `preview_urls`, routes, D1 binding and id,
+  migrations, Durable Object bindings, assets settings, observability):
+  identical for production and for the `CLOUDFLARE_ENV=preview` build. The one
+  addition is `upload_source_maps: true`, the plugin's default, now stated in
+  `wrangler.toml` on purpose. `wrangler deploy --config ... --env="" --dry-run`
+  and `versions upload --config ... --dry-run` read the same 37 asset files and
+  the same bindings as the old config.
+- Dev loop: `vite dev` with the local D1 answered `/api/healthz`, a register
+  and a leaderboard read through the Worker with no proxy; `vite preview`
+  passes `verify-worker-origin.mjs`.
+
 ## Release 1 production cutover - 2026-10-16, complete
 
 Per `docs/operations/worker-cutover.md`, owner go for steps 1 and 2.

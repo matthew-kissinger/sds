@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
+// Builds and writes dist/release.json. Imported by the releaseManifest plugin
+// in vite.config.ts, which calls it at the end of the client build; it has no
+// command-line entry because nothing else writes the manifest.
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, relative, resolve, sep } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 
@@ -52,7 +55,11 @@ export function createReleaseManifest({
   if (!existsSync(distDir)) throw new Error(`Build output not found: ${distDir}`)
   const pkg = JSON.parse(readFileSync(packagePath, 'utf8'))
   const manifestPath = resolve(distDir, 'release.json')
-  const files = filesUnder(distDir).filter((path) => resolve(path) !== manifestPath)
+  // .assetsignore is emitted by the Cloudflare Vite plugin for wrangler's upload
+  // step. It is never uploaded or served, so it is not part of the artifact.
+  const files = filesUnder(distDir).filter(
+    (path) => resolve(path) !== manifestPath && basename(path) !== '.assetsignore',
+  )
   const artifactHash = createHash('sha256')
   let bytes = 0
 
@@ -88,13 +95,3 @@ export function writeReleaseManifest(options = {}) {
   writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`)
   return { manifest, output }
 }
-
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const distArg = process.argv[2]
-  const { manifest, output } = writeReleaseManifest({
-    ...(distArg ? { distDir: resolve(distArg) } : {}),
-  })
-  console.log(`Wrote ${output}`)
-  console.log(`Release ${manifest.version} ${manifest.commit} ${manifest.artifact.sha256}`)
-}
-

@@ -24,7 +24,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm ci --prefix worker
       - run: npm run lint --if-present
       - run: npm run typecheck --if-present
       - run: npm run typecheck:worker
@@ -39,13 +38,11 @@ jobs:
           SDS_RELEASE_REF: ${{ github.ref }}
       - run: npm run check:discovery
       - run: npm test --if-present
+      # The build wrote dist/release.json and the Worker's deploy config itself.
       - name: Verify packaged release identity
-        env:
-          SDS_RELEASE_SHA: ${{ github.sha }}
-          SDS_RELEASE_REF: ${{ github.ref }}
-        run: |
-          node scripts/write-release-manifest.mjs
-          node scripts/verify-release-manifest.mjs --path dist/release.json --sha "$SDS_RELEASE_SHA"
+        run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ github.sha }}"
+      - name: Verify the generated deploy configuration
+        run: node scripts/verify-deploy-config.mjs
       - uses: actions/upload-artifact@v5
         with:
           name: pages-candidate-${{ github.sha }}

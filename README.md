@@ -64,18 +64,17 @@ npm run dev
 
 Open the local URL printed by Vite.
 
-The client runs without a local score server; the online boards then report
-unavailable. It calls the score API at `/api` on its own origin, and the Vite
-server proxies `/api` to `wrangler dev` on port 8787. To run the API locally,
-and to run the full test suite including the score-service tests, install its
-dependencies too:
+`npm run dev` also runs the score API: the Cloudflare Vite plugin serves the
+Worker from `wrangler.toml` beside the client on the same origin, with no proxy
+and a local D1 under `.wrangler/state`. The API needs a local secret and
+database once:
 
 ```bash
-npm ci --prefix worker
-cp worker/.dev.vars.example worker/.dev.vars
+cp .dev.vars.example .dev.vars         # local JWT_SECRET, gitignored
 node scripts/d1-local-setup.mjs        # once, for a fresh local database
-npm run dev --prefix worker            # wrangler dev on http://127.0.0.1:8787
 ```
+
+Without them the game runs and the online boards report unavailable.
 
 [docs/operations/deployment.md](docs/operations/deployment.md) has the local
 workflow in full.
