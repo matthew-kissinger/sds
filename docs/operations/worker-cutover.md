@@ -57,7 +57,7 @@ Commands are PowerShell 7, run from the repository root unless a step says
    $env:SDS_RELEASE_SHA = $sha
    $env:SDS_RELEASE_REF = 'main'
    npm run build
-   node scripts/verify-release-manifest.mjs --path dist/release.json --sha $sha --require-v3-static
+   node scripts/verify-release-manifest.mjs --sha $sha --require-v3-static   # reads the build's release.json
    npm run check:discovery
    ```
 

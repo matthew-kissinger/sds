@@ -193,9 +193,13 @@ with its grass rebake. The Kiln barn followed the same evening: merged behind
 `BARN_SOURCE` (pull request 123), the owner's look review passed on the
 production build together with a house fix (no window over the door), its
 hub receipt passed (twelve runs, same shape), and the flip merged (pull
-request 125, `e3642877`). The whole homestead is Kiln. Release 3.3.0 is the
-head of `main`, awaiting its tag. Open from the barn review: the slate course
-wander (owner's call, see the status log). Next: Stage B.
+request 125, `e3642877`). The whole homestead is Kiln and live as 3.3.0
+(`6a605e16`, tag `v3.3.0`). Open from the barn review: the slate course
+wander (owner's call, see the status log). Stage B was then attempted on the
+preview Worker and its four checks passed, and the same pull request now
+carries the production cutover, ready for the owner's go (pull request 126,
+draft, below). Next: that go, then declarative hosting and the Pages
+retirement.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -230,6 +234,42 @@ preview and production steps, keeps production on Stage A. The planning
 review's reasons: `cf` is beta and only accepts the Vite plugin's v2 beta;
 its `exports` map replaces the migrations array and is documented as one-way
 once deployed; and `cf deploy` provisions missing resources by default.
+
+**Stage B's four checks passed on the preview Worker, 2026-10-16** (pull
+request 126, kept as a draft; the measurements are in
+`docs/history/status-log.md`, Release 2 Stage B). `cf` 1.0.0-beta.18 and the
+Vite plugin 2.0.0-beta.v.1 built the same artifact as Stage A (digest
+`2b64a94f...`), and the pull request's own Preview run uploaded the `pr-126`
+alias and deployed to `sds-worker-preview` with `cf`: the served asset set,
+headers and bodies are identical to the Stage A baseline except
+`release.json`'s commit; the versions' bindings, runtime and `migration_tag`
+(`v2`) are identical and the zone's route list is unchanged; a wrangler
+deploy of the older Stage A build and a wrangler rollback across the `cf`
+deploy both left the tag at `v2`; and every earlier alias still answers. Two
+costs the attempt measured, both in the status log: the plugin reads
+`cloudflare.config.ts` from the Vite root only, so the file lives in `app/`
+and `cf` runs from there; and the plugin forces the build to
+`app/.cloudflare/output/v0`, so `dist/` and the generated `wrangler.json` are
+no longer written, which means the branch cannot deploy production with
+wrangler. Merging it is therefore the cutover, and the pull request is now
+that cutover, prepared the same evening: `deploy.yml` deploys the Build
+Output with `cf deploy --prebuilt --no-provision` from `app/` after the same
+gates as before plus a dry run, and refuses a commit without
+`app/cloudflare.config.ts`; every reader of `dist/` (the verifiers' defaults,
+the probes, `vite.config.ts`, the hub copy step) takes the path from
+`scripts/build-output.mjs`; `docs/operations/deployment.md` describes the
+`cf` path, and its Rolling back section says what still reaches an older
+release: `wrangler rollback <version> --name sds-worker` (or `cf workers
+deployments create`) for any version from Release 1 on, and `gh workflow run
+deploy.yml --ref <tag>` for a commit built for an earlier deploy path, since a
+dispatch takes the workflow file from `main`. `wrangler.toml` stays while a
+rollback to a wrangler-built release (3.2.1 to 3.3.0) is wanted, held equal
+to the cf declaration by `tests/worker/cloudflare-config.spec.ts`; it and
+that test go together when that is no longer true. The production dry run
+passes locally with the same artifact digest as 3.3.0. What merging does:
+the next tag deploys with `cf`; nothing changes on the live Worker until
+then. Production stays on Stage A until the owner gives the go; a change in
+either beta before then reopens the checks.
 
 From the renderer boot review
 (`docs/history/renderer-boot-review-2026-10-16.md`), done 2026-10-16: the

@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BUILT_CLIENT } from './build-output.mjs';
 
 const repo = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = process.argv.slice(2);
@@ -132,7 +133,9 @@ function verifyPages(files) {
 }
 
 function readLocal() {
-  const dist = join(repo, sourceFiles ? 'app/public' : 'dist');
+  // --dist names a built directory other than the one `npm run build` writes
+  // (scripts/build-output.mjs).
+  const dist = join(repo, sourceFiles ? 'app/public' : option('dist', BUILT_CLIENT));
   const paths = {
     '/': 'index.html',
     '/about': 'about.html',
@@ -188,7 +191,7 @@ async function run() {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const result = verifyPages(baseUrl ? await readRemote() : readLocal());
-      console.log(JSON.stringify({ source: baseUrl || (sourceFiles ? 'app source (not built or deployed)' : 'dist'), ...result }, null, 2));
+      console.log(JSON.stringify({ source: baseUrl || (sourceFiles ? 'app source (not built or deployed)' : option('dist', BUILT_CLIENT)), ...result }, null, 2));
       return;
     } catch (error) {
       lastError = error;

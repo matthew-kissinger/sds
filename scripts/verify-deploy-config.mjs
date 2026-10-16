@@ -14,10 +14,11 @@
 // and that the build selected the environment the deploy step expects.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { pathToFileURL } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
+import { BUILD_OUTPUT, BUILT_CLIENT, repo as root } from './build-output.mjs'
 
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+export { BUILD_OUTPUT, BUILT_CLIENT }
 
 const PRODUCTION = {
   name: 'sds-worker',
@@ -36,15 +37,76 @@ const MIGRATIONS = [
   { tag: 'v2', deleted_classes: ['RoomDO', 'LobbyDO'] },
 ]
 
+
 function parseArgs(args) {
-  const options = { preview: false, config: '.wrangler/build/sds_worker/wrangler.json' }
+  const options = { preview: false, cf: false, config: '.wrangler/build/sds_worker/wrangler.json' }
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
     if (arg === '--preview') options.preview = true
+    else if (arg === '--cf') options.cf = true
     else if (arg === '--config') options.config = args[++index]
     else throw new Error(`Unknown argument: ${arg}`)
   }
+  if (options.cf && options.config === '.wrangler/build/sds_worker/wrangler.json') options.config = BUILD_OUTPUT
   return options
+}
+
+/**
+ * The same facts, read from the Build Output `cf deploy` ships instead of the
+ * wrangler file: `<output>/config.json` names the mode the build was made in,
+ * `<output>/workers/default/worker.config.json` is the Worker as
+ * app/cloudflare.config.ts resolved for that mode, `bundle/` holds the script
+ * and `assets/` the game. Returns the list of failed assertions.
+ */
+export function checkBuildOutput(outputDir, { preview = false } = {}) {
+  const expected = preview ? PREVIEW : PRODUCTION
+  const failures = []
+  const expect = (label, actual, wanted) => {
+    if (!isDeepStrictEqual(actual, wanted)) {
+      failures.push(`${label}: expected ${JSON.stringify(wanted)}, got ${JSON.stringify(actual)}`)
+    }
+  }
+  const read = (file) => JSON.parse(readFileSync(resolve(outputDir, file), 'utf8'))
+  const rootConfig = read('config.json')
+  expect('buildContext.mode', rootConfig.buildContext?.mode, preview ? 'preview' : 'production')
+  expect('buildContext.isPreview', rootConfig.buildContext?.isPreview, false)
+
+  const workerDir = resolve(outputDir, 'workers', 'default')
+  const worker = read('workers/default/worker.config.json')
+  expect('name', worker.name, expected.name)
+  expect('compatibilityDate', worker.compatibilityDate, '2026-04-01')
+  expect('compatibilityFlags', worker.compatibilityFlags, ['nodejs_compat'])
+  expect('observability', worker.observability, { enabled: true })
+  expect('workersDev', worker.workersDev, true)
+  expect('previewUrls', worker.previewUrls, expected.previewUrls)
+  expect('triggers', worker.triggers ?? [], expected.routes.map(({ pattern, zone_name }) => ({ type: 'fetch', pattern, zone: zone_name })))
+  expect('domains', worker.domains, undefined)
+  // The applied v1/v2 history deleted every Durable Object class; the exports
+  // map carries live classes only, so there must be none.
+  expect('exports', worker.exports, undefined)
+  expect('env', worker.env, {
+    ASSETS: { type: 'assets' },
+    DB: { type: 'd1', name: expected.database.name, id: expected.database.id },
+    JWT_SECRET: { type: 'secret' },
+  })
+  expect('assets', worker.assets, { notFoundHandling: 'single-page-application', runWorkerFirst: ['/api/*'] })
+
+  const main = worker.manifest?.mainModule
+  if (!main || !existsSync(resolve(workerDir, 'bundle', main))) {
+    failures.push(`manifest.mainModule: ${JSON.stringify(main)} is not a file under ${resolve(workerDir, 'bundle')}`)
+  }
+  const assetsDir = resolve(workerDir, 'assets')
+  if (!existsSync(assetsDir) || !statSync(assetsDir).isDirectory()) {
+    failures.push(`assets ${assetsDir} is not a directory`)
+  } else {
+    const present = new Set(readdirSync(assetsDir))
+    if (!present.has('release.json')) failures.push(`assets ${assetsDir} has no release.json`)
+    if (!present.has('index.html')) failures.push(`assets ${assetsDir} has no index.html`)
+    for (const name of ['wrangler.json', 'worker.config.json', '.dev.vars']) {
+      if (present.has(name)) failures.push(`assets ${assetsDir} contains ${name}`)
+    }
+  }
+  return failures
 }
 
 /**
@@ -109,7 +171,20 @@ function main() {
   const options = parseArgs(process.argv.slice(2))
   const configPath = resolve(root, options.config)
   if (!existsSync(configPath)) {
-    throw new Error(`${configPath} does not exist. Run npm run build${options.preview ? ' with CLOUDFLARE_ENV=preview' : ''} first.`)
+    throw new Error(`${configPath} does not exist. Run npm run build${options.preview ? (options.cf ? ':preview' : ' with CLOUDFLARE_ENV=preview') : ''} first.`)
+  }
+  if (options.cf) {
+    const failures = checkBuildOutput(configPath, options)
+    if (failures.length > 0) {
+      for (const failure of failures) console.error(`verify-deploy-config: ${failure}`)
+      throw new Error(`${failures.length} Build Output check(s) failed.`)
+    }
+    const worker = JSON.parse(readFileSync(resolve(configPath, 'workers/default/worker.config.json'), 'utf8'))
+    console.log(
+      `Verified Build Output ${options.config} (${options.preview ? 'preview' : 'production'}): ` +
+        `${worker.name}, triggers ${JSON.stringify(worker.triggers ?? [])}, D1 ${worker.env.DB.id}, no exports`,
+    )
+    return
   }
   const config = JSON.parse(readFileSync(configPath, 'utf8'))
   const failures = checkDeployConfig(config, configPath, options)

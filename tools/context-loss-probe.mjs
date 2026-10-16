@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { repo, startPreviewServer, stopServer } from './probe-lib.mjs';
+import { startPreviewServer, stopServer } from './probe-lib.mjs';
+import { builtClientDir } from '../scripts/build-output.mjs';
 import { collectBuiltFiles } from './playtest-profile-receipt.mjs';
 const mobile = process.argv.includes('--mobile');
 const title = process.argv.includes('--title');
@@ -11,7 +12,7 @@ const settings = process.argv.includes('--settings');
 const boot = process.argv.includes('--boot');
 const out = join(repo, `captures/stability/context-loss${mobile ? '-mobile' : ''}${title ? '-title' : ''}${settings ? '-settings' : ''}${boot ? '-boot' : ''}`);
 mkdirSync(out, { recursive: true });
-const report = { beforeBuild: collectBuiltFiles(join(repo, 'dist')), samples: [], errors: [], limitation: 'Forced WebGL2 loss through WEBGL_lose_context on desktop; not spontaneous GPU failure or physical mobile.' };
+const report = { beforeBuild: collectBuiltFiles(builtClientDir), samples: [], errors: [], limitation: 'Forced WebGL2 loss through WEBGL_lose_context on desktop; not spontaneous GPU failure or physical mobile.' };
 let browser; let server;
 try {
   server = await startPreviewServer(5366);
@@ -125,7 +126,7 @@ try {
   report.reloaded = true;
 } catch (error) { report.failure = String(error.stack ?? error); }
 finally { await browser?.close(); stopServer(server); }
-report.afterBuild = collectBuiltFiles(join(repo, 'dist'));
+report.afterBuild = collectBuiltFiles(builtClientDir);
 report.stable = JSON.stringify(report.beforeBuild) === JSON.stringify(report.afterBuild);
 writeFileSync(join(out, 'report.json'), JSON.stringify(report, null, 2));
 console.log(JSON.stringify({ samples: report.samples, failure: report.failure, errors: report.errors, stable: report.stable }));

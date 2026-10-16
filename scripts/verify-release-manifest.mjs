@@ -3,6 +3,7 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { BUILT_CLIENT } from './build-output.mjs'
 
 function parseArgs(args) {
   const options = { retries: 1 }
@@ -15,7 +16,7 @@ function parseArgs(args) {
     else if (arg === '--retries') options.retries = Number(args[++index])
     else throw new Error(`Unknown argument: ${arg}`)
   }
-  if (!options.path && !options.url) options.path = 'dist/release.json'
+  if (!options.path && !options.url) options.path = `${BUILT_CLIENT}/release.json`
   if (options.path && options.url) throw new Error('Use either --path or --url, not both.')
   if (!Number.isInteger(options.retries) || options.retries < 1) throw new Error('--retries must be a positive integer.')
   return options

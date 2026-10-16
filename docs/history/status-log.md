@@ -5,6 +5,146 @@
 
 # Status log
 
+## Release 2 Stage B cutover - 2026-10-16, prepared on pull request 126, awaiting the owner's go
+
+The owner: "Do this task here: Release 2 Stage B cutover: production Deploy
+on cf". Same branch and pull request as the attempt below; nothing deployed,
+tagged or changed on the live Worker.
+
+- `deploy.yml` deploys the Build Output with `cf deploy --prebuilt
+  --no-provision --message <sha>` from `app/`, after the unchanged gates
+  (lint, typechecks, build, discovery, the suite, `--require-v3-static` on
+  the output's `release.json`, `verify-deploy-config --cf`, the 90-day
+  archive of `app/.cloudflare/output/v0`) and a `cf deploy --dry-run`. The
+  source-commit guard now requires `app/cloudflare.config.ts` instead of an
+  `[assets]` block in `wrangler.toml`. `--no-provision` because `cf deploy`
+  provisions by default and every binding here names an existing resource.
+- `scripts/build-output.mjs` is the one place that names the Build Output,
+  the Worker directory and the built game; the verifiers' defaults,
+  `write-release-manifest.mjs`, `vite.config.ts`, `tools/probe-lib.mjs`,
+  `art-review`, the release-hardening, context-loss, touch-interruption and
+  playtest-profile probes and the treeline test import it. The hub probe
+  stays standalone (it is copied to the hub) and takes `--dist=`, defaulting
+  to the hub-side name `dist`; `docs/art-review.md` and `AGENTS.md` say what
+  to copy. The two record tools were left alone: the ledgers digest them, so
+  a comment change there would have meant re-recording both ledgers.
+- `docs/operations/deployment.md` describes the `cf` path (Build Output
+  table, the plugin's two fixed paths, no Durable Object export,
+  `wrangler.toml`'s remaining role) and the rollback that still works:
+  `wrangler rollback <version> --name sds-worker` or `cf workers deployments
+  create` for any version from Release 1 on, `gh workflow run deploy.yml
+  --ref <tag>` for a commit built for an earlier deploy path (3.2.1 to 3.3.0
+  and 3.2.0), because a dispatch takes the workflow file from `main`.
+- Measured locally on the branch: `npm run build` writes the Build Output
+  with the same artifact digest as 3.3.0 (`2b64a94f...`, 36 files);
+  `verify-deploy-config --cf`, the manifest and discovery checks with their
+  new defaults pass; `cf deploy --dry-run --prebuilt --no-provision` from
+  `app/` reads 40 files and the two bindings for `sds-worker`; lint,
+  typecheck and the suite pass.
+- Not measured: whether `cf` uploads the bundle's source map as wrangler's
+  `upload_source_maps = true` did. The Build Output carries `index.js.map`;
+  the first production deploy is the place to read it off the dashboard.
+
+## Release 2 Stage B - 2026-10-16, four checks passed on the preview Worker (pull request 126, draft)
+
+The owner's task: "Release 2 Stage B: cf CLI on the preview Worker, four
+checks". Branch `release2/stage-b-cf` off `main` at `909bcf2f`; nothing here
+touched production, the Deploy workflow or any secret. `cf` 1.0.0-beta.18 and
+`@cloudflare/vite-plugin` 2.0.0-beta.v.1, both pinned.
+
+**The attempt.** `app/cloudflare.config.ts` declares the two Workers that
+`wrangler.toml` declares, with a `preview` mode in place of `[env.preview]`
+and no `exports` map (the applied v1/v2 history deleted every Durable Object
+class, and the docs say not to copy applied deletions; `cf migrate` was tried
+and refused the migrations with a `throw new Error("Migration incomplete")`
+stub, so the file was written by hand). `tests/worker/cloudflare-config.spec.ts`
+holds every hosting fact in it equal to `wrangler.toml` while both exist.
+`scripts/verify-deploy-config.mjs --cf` is the same gate over the Build Output
+(`config.json` mode, `worker.config.json` name, runtime, triggers, bindings,
+assets rules, no exports, bundle entry, `release.json` present, no config in
+the assets). The Preview workflow is the attempt: `npm run build:preview`,
+the verifiers over the Build Output, `cf deploy --dry-run --prebuilt --mode
+preview`, `cf workers versions create --prebuilt --mode preview
+--preview-alias pr-<n>`, then `cf deploy --prebuilt --mode preview`, so the
+checks read a live `cf`-made deployment. Baseline: the Stage A build of
+`909bcf2f` uploaded from this PC with wrangler as alias `stageb-a`, version
+`430169ee...`.
+
+Preview run 38978481493 on `4bd61623` passed in 82 s: the dry run read 40
+files and a 68.37 KiB script; the aliased version is `a48c3630...` (`pr-126`,
+one new asset uploaded, `release.json`); the deployed version is
+`755d9e11...` (`metadata.source` `cf_cli`); `verify-worker-origin` passed on
+the alias and on the deployed root.
+
+**Check 1, asset set and headers: passed.** `scripts/snapshot-served-assets.mjs`
+(status, kept headers and body SHA-256 of every built file plus `/`,
+`/index.html` and a missing path) against `stageb-a` and against `pr-126`:
+37 files, three differences, all in `/release.json` (body digest, etag and
+content-length: the commit, source ref and build time). Everything else,
+including the root, the `/index.html` redirect and the single-page fallback,
+is identical. The deployed root and the alias are identical on all 37.
+
+**Check 2, bindings and route list: passed.** `wrangler versions view` of
+`430169ee...` (Stage A), `a48c3630...` and `755d9e11...`: bindings
+`assets:ASSETS`, `d1:DB` (preview id), `secret_text:JWT_SECRET`;
+`compatibility_date` 2026-04-01, `nodejs_compat`; handler `fetch`;
+`migration_tag` `v2` on all three. With ids, timestamps, etags and
+annotations stripped, the JSON has no other difference. Read from the
+dashboard API afterwards (a Sonnet agent in Chrome, GETs only): the zone's
+Workers route list is still the one route, `sheepdogsim.com/*` to
+`sds-worker`; `sds-worker-preview`'s settings carry the three bindings,
+2026-04-01, `nodejs_compat`, observability on; its `workers.dev` subdomain is
+enabled with previews enabled; the account's custom domains list has no sds
+entry; and its deployment list shows the `cf_cli` deployment of `755d9e11...`
+at 22:55:41 UTC followed by the two wrangler deployments of check 3.
+
+**Check 3, the migration tag across a wrangler deploy of an older commit and a
+rollback: passed.** The saved Stage A build (`909bcf2f`, its generated
+`wrangler.json` naming `sds-worker-preview`, migrations v1 and v2) deployed
+with `wrangler deploy` onto the `cf`-made deployment: version `6ac47137...`,
+`metadata.source` `wrangler`, `migration_tag` `v2`, no migration re-sent, the
+root serving `909bcf2f`. `wrangler rollback 755d9e11... --name
+sds-worker-preview`: active version `755d9e11...`, `migration_tag` `v2`, root
+serving `4bd61623`. No Durable Object class reappeared in either direction.
+
+**Check 4, preview aliases: passed.** `pr-123` (`129520a5`), `pr-124`
+(`1bf01bf6`), `pr-125` (`0adc5ce8`), `pr-126` (`4bd61623`) and `stageb-a`
+(`909bcf2f`) each answer 200 with their own `release.json`.
+
+**What the attempt cost, for the cutover decision.**
+
+- The plugin reads `cloudflare.config.ts` from the Vite root and nowhere else
+  (`path.resolve(root, 'cloudflare.config.ts')`, no walk-up, no option), and
+  `cf` finds it by walking up from its working directory. This project's
+  Vite root is `app/`, so the file lives there with `entrypoint:
+  '../worker/src/index.ts'`, and `cf` runs from `app/`. A first attempt with
+  the file at the repository root built an autoconfigured Worker named `app`
+  with no script.
+- The plugin forces the Build Output location (`forceBuildOutputDirs` runs
+  after Vite's merge and overrides any `build.outDir`): the build is
+  `app/.cloudflare/output/v0`, the game `workers/default/assets` inside it,
+  and nothing is written to `dist/` or to `.wrangler/build/sds_worker/`. So
+  the branch cannot deploy production with wrangler, and merging it is the
+  cutover. Re-homed in the pull request: Client CI, the discovery and release
+  manifest verifiers' defaults (one constant, `BUILT_CLIENT`), the treeline
+  test's built-copy check. Still reading `dist/`: `deploy.yml`, the hub and
+  release probes and `tools/art-review.mjs` (`tools/probe-lib.mjs`),
+  `docs/operations/deployment.md`.
+- `cf` keeps its own credentials and does not read wrangler's login; in CI the
+  existing `CF_API_TOKEN` works for it (`author_email` empty on its versions).
+  Local `cf` runs stayed at `--dry-run`.
+- One pull request now uploads two versions, the aliased one and the deployed
+  one, because `cf deploy` always creates its own version.
+- `cf migrate` does not convert `[[migrations]]`; the Durable Object history
+  is carried by the account, not the config, and check 3 is the measurement
+  that `cf`'s uploads leave it alone.
+
+**Verdict.** Stage B can proceed to production, as its own pull request on
+the owner's go: `deploy.yml` to `cf deploy --prebuilt` in production mode
+with the same verifiers, the `dist/` readers above moved to the Build Output,
+the runbook updated, and `wrangler.toml` kept only while a rollback to Stage A
+is wanted. Pull request 126 stays a draft until then.
+
 ## Release 3.3.0 - 2026-10-16, live (tag `v3.3.0`, the Kiln homestead)
 
 The owner's go: "once main's CI is green on 6a605e16, push the v3.3.0 tag,

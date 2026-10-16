@@ -109,7 +109,9 @@ Which machine produced a number decides whether the number counts.
 
 - **The hub is the timing lane.** Frame times, percentiles and startup timing
   come from the hub over the `hub` SSH alias, running
-  `tools/hub-presentation-probe.mjs` against a copied production `dist/`.
+  `tools/hub-presentation-probe.mjs` against a copy of the production build
+  (`app/.cloudflare/output/v0/workers/default/assets`, copied to the hub as
+  `dist`).
   Preflight requires two consecutive samples at or under 5% GPU and 15%
   aggregate CPU. Runs are 60 to 600 seconds. Receipts land under
   `captures/stability/hub-receipts/`. Use isolated working directories there and

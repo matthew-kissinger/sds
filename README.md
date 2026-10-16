@@ -65,8 +65,8 @@ npm run dev
 Open the local URL printed by Vite.
 
 `npm run dev` also runs the score API: the Cloudflare Vite plugin serves the
-Worker from `wrangler.toml` beside the client on the same origin, with no proxy
-and a local D1 under `.wrangler/state`. The API needs a local secret and
+Worker from `app/cloudflare.config.ts` beside the client on the same origin,
+with no proxy and a local D1 under `.wrangler/state`. The API needs a local secret and
 database once:
 
 ```bash

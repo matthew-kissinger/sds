@@ -8,6 +8,8 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+// @ts-expect-error plain ES module without declarations
+import { builtClientDir } from '../scripts/build-output.mjs';
 import * as THREE from 'three/webgpu';
 import {
   makeCanopyMaterial,
@@ -388,13 +390,13 @@ describe('authored sculpted foliage chain', () => {
 
     // A built copy, if a build is present, is one of those files - at most one
     // of each, at its ledger's digest - and no other model.
-    const built = join(repo, 'dist', 'assets');
+    const built = join(builtClientDir, 'assets');
     if (existsSync(built)) {
       const models = readdirSync(built).filter((name) => /\.(glb|gltf|obj|mtl)$/i.test(name));
       expect(models.length).toBeLessThanOrEqual(KILN_BUILDINGS.length);
       for (const name of models) {
         const i = KILN_BUILDINGS.findIndex((building) => building.built.test(name));
-        expect(i, `${name} in dist/assets is not a recorded Kiln building`).toBeGreaterThanOrEqual(0);
+        expect(i, `${name} in the built assets is not a recorded Kiln building`).toBeGreaterThanOrEqual(0);
         expect(models.filter((other) => KILN_BUILDINGS[i]!.built.test(other))).toEqual([name]);
         expect(digest(readFileSync(join(built, name)))).toBe(ledgers[i]!.artifact.sha256);
       }

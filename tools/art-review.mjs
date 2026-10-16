@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { repo } from './probe-lib.mjs';
+import { builtClientDir } from '../scripts/build-output.mjs';
 import { collectBuiltFiles } from './playtest-profile-receipt.mjs';
 import { renderArtReview, compareReports } from './art-review-report.mjs';
 
@@ -34,7 +34,7 @@ async function run(script, arguments_ = []) {
   });
 }
 
-// Always rebuild: a candidate must not silently capture a stale dist directory.
+// Always rebuild: a candidate must not silently capture a stale build.
 if (await run('node_modules/typescript/bin/tsc', ['-b'])) throw new Error('TypeScript build failed.');
 if (await run('node_modules/vite/bin/vite.js', ['build'])) throw new Error('Production build failed.');
 const releaseExit = await run('tools/release-hardening-probe.mjs');
@@ -58,7 +58,7 @@ const sourceStable = sources.every((system) => system.files.every(({ file, sha25
   createHash('sha256').update(readFileSync(join(repo, file))).digest('hex') === sha256));
 const review = {
   label, baseline: baseline || null, duration: seconds, releaseExit, profileExit, sourceStable,
-  buildFiles: collectBuiltFiles(join(repo, 'dist')), comparison,
+  buildFiles: collectBuiltFiles(builtClientDir), comparison,
   artVerdict: 'UNREVIEWED', physicalMobile: 'NOT_TESTED',
   note: 'Browser emulation shares the host GPU. Stills are not frame-locked; compare composition, not pixel differences. Motion strips are not motion acceptance.',
 };

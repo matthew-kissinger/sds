@@ -2,9 +2,10 @@ name: Deploy
 
 # One release, one commit, one deploy. The sds-worker Worker serves the game's
 # static assets and the score API on sheepdogsim.com, so a single
-# `wrangler deploy` of the configuration the build generated ships both halves
-# from the same checkout.
-# docs/operations/deployment.md is the procedure.
+# `cf deploy --prebuilt` of the Build Output the build wrote ships both halves
+# from the same checkout (Release 2 Stage B; docs/operations/deployment.md is
+# the procedure). Production stayed on wrangler until the four Stage B checks
+# passed on the preview Worker (docs/history/status-log.md, Release 2 Stage B).
 
 on:
   # Normal path: push an annotated release tag. The tag names the commit, so
@@ -35,6 +36,14 @@ jobs:
     environment:
       name: production
       url: https://sheepdogsim.com
+    env:
+      # Where the Cloudflare Vite plugin writes the build (scripts/build-output.mjs):
+      # the Build Output Specification under the Vite root, the game under its
+      # workers/default/assets. `cf deploy --prebuilt` uploads it as it stands.
+      BUILD_OUTPUT: app/.cloudflare/output/v0
+      # `cf` keeps its own credentials; the token and account are the ones the
+      # wrangler path used. Telemetry off, as for any tool in CI here.
+      CF_SEND_TELEMETRY: 'false'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -67,15 +76,14 @@ jobs:
             echo "$actual_sha is not contained in origin/main." >&2
             exit 1
           fi
-          # A commit from before the one-Worker hosting has a wrangler.toml
-          # with no assets and with the v2 Durable Objects. Deploying it would
-          # replace the game with a bare API and try to resurrect deleted
-          # classes. Older releases roll back by deleting the route instead.
-          # The configuration lives at the repository root from 3.2.1; a commit
-          # from before that deploys with the workflow at its own tag (see
-          # Rolling back in docs/operations/deployment.md).
-          if ! grep -q '^\[assets\]' wrangler.toml; then
-            echo "$actual_sha has no root wrangler.toml serving the game. See docs/operations/deployment.md, Rolling back." >&2
+          # This workflow deploys the Build Output that app/cloudflare.config.ts
+          # describes. A commit from before it (3.2.1 to 3.3.0) built for
+          # wrangler and deploys with the workflow at its own tag; one from
+          # before the one-Worker hosting would replace the game with a bare
+          # API and try to resurrect deleted Durable Object classes. See
+          # Rolling back in docs/operations/deployment.md.
+          if [[ ! -f app/cloudflare.config.ts ]]; then
+            echo "$actual_sha has no app/cloudflare.config.ts. See docs/operations/deployment.md, Rolling back." >&2
             exit 1
           fi
           echo "sha=$actual_sha" >> "$GITHUB_OUTPUT"
@@ -94,44 +102,53 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
           node tools/prepare-approved-audio.mjs --download
+      # No --mode: app/cloudflare.config.ts returns sds-worker for the default.
       - run: npm run build
         env:
           SDS_RELEASE_SHA: ${{ steps.source.outputs.sha }}
           SDS_RELEASE_REF: ${{ inputs.commit_sha || github.ref_name }}
       - run: npm run check:discovery
-      # The full suite, which includes tests/worker and its configuration test.
+      # The full suite, which includes tests/worker and its configuration tests.
       - run: npm test --if-present
 
-      # The build wrote dist/release.json itself; this proves it names this SHA.
+      # The build wrote the release manifest itself; this proves it names this SHA.
       - name: Verify release identity
-        run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ steps.source.outputs.sha }}" --require-v3-static
+        run: node scripts/verify-release-manifest.mjs --path "$BUILD_OUTPUT/workers/default/assets/release.json" --sha "${{ steps.source.outputs.sha }}" --require-v3-static
 
-      # The deploy ships exactly this generated file, so prove it carries the
-      # production name, route, D1 id, migrations and an assets directory that
-      # holds release.json, before anything is uploaded.
-      - name: Verify the generated deploy configuration
-        run: node scripts/verify-deploy-config.mjs
+      # The deploy ships exactly this Build Output, so prove it carries the
+      # production name, route, D1 id, no Durable Object export and an assets
+      # directory that holds release.json, before anything is uploaded.
+      - name: Verify the Build Output
+        run: node scripts/verify-deploy-config.mjs --cf
 
       - name: Archive exact release artifact
         uses: actions/upload-artifact@v7
         with:
           name: release-${{ steps.source.outputs.sha }}
-          path: dist/
+          path: app/.cloudflare/output/v0/
           if-no-files-found: error
           retention-days: 90
 
-      # `wrangler deploy`, never `versions upload`: only deploy applies Durable
-      # Object lifecycle migrations and the route. It deploys the configuration
-      # the build generated (the Vite root is app/, so the plugin's own redirect
-      # file is not used) and uploads the dist/ it names as the Worker's assets,
-      # so it must run after the build above.
+      # `cf` finds app/cloudflare.config.ts by walking up from its working
+      # directory, so it runs from app/. `--prebuilt` uploads the Build Output
+      # verified above without building again; `--no-provision` because every
+      # binding names an existing resource and nothing may be created here. Dry
+      # run first: it validates the output and prints the bindings it would
+      # deploy, with no API request.
+      - name: Dry-run the deploy
+        working-directory: app
+        run: npx cf deploy --dry-run --prebuilt --no-provision
+
+      # `cf deploy`, never `versions create`: only a deploy publishes the route
+      # and becomes the Worker's active deployment. It uploads the game as the
+      # Worker's assets and the API code as one version, so it must run after
+      # the build and the checks above.
       - name: Deploy sds-worker with the game's assets
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          # --env="" is accepted with a generated config and kept from before.
-          command: deploy --config .wrangler/build/sds_worker/wrangler.json --env="" --message ${{ steps.source.outputs.sha }}
+        working-directory: app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx cf deploy --prebuilt --no-provision --message "${{ steps.source.outputs.sha }}"
 
       - name: Verify live release identity
         run: node scripts/verify-release-manifest.mjs --url https://sheepdogsim.com/release.json --sha "${{ steps.source.outputs.sha }}" --retries 12

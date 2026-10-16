@@ -6,9 +6,10 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { builtClientDir } from '../scripts/build-output.mjs';
 
 const repo = resolve(import.meta.dirname, '..');
-const dist = join(repo, 'dist');
+const dist = builtClientDir;
 const MIB = 1024 * 1024;
 const INITIAL_JS_GZIP_LIMIT = 1.5 * MIB;
 const FIRST_LOAD_LIMIT = 8 * MIB;
@@ -29,7 +30,7 @@ function fail(message) {
   throw new Error(message);
 }
 
-if (!existsSync(dist)) fail('dist is absent; run npm run build first');
+if (!existsSync(dist)) fail(`${dist} is absent; run npm run build first`);
 
 const distFiles = filesUnder(dist);
 const jsFiles = distFiles.filter((path) => extname(path) === '.js');

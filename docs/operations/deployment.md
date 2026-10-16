@@ -3,8 +3,12 @@
 This is the single answer to "how does a change reach production". It describes
 the shape the repository deploys, from Release 1 (3.2.0) on: one Worker serves
 the game and its API on `sheepdogsim.com`. From 3.2.1 it is one package: the
-Worker is built beside the client by the Cloudflare Vite plugin. The one-time move from the Pages
-project is `docs/operations/worker-cutover.md`.
+Worker is built beside the client by the Cloudflare Vite plugin. From Release 2
+Stage B the project is described by `app/cloudflare.config.ts`, the plugin
+writes the Build Output Specification, and the `cf` CLI deploys it. The
+one-time move from the Pages project is `docs/operations/worker-cutover.md`;
+the measurements behind the `cf` move are in `docs/history/status-log.md`
+(Release 2 Stage B).
 
 ## One production path
 
@@ -15,20 +19,21 @@ pushed, and keeps a `workflow_dispatch` escape hatch that takes a full
 40-character commit SHA for redeploying an older commit. Either way it:
 
 1. refuses a commit not already contained in `origin/main`, and refuses a
-   commit whose root `wrangler.toml` has no `[assets]` block - one from before
-   this Worker served the game, or from before the configuration moved to the
-   root (see Rolling back);
+   commit without `app/cloudflare.config.ts` - one built for wrangler (3.2.1
+   to 3.3.0), which deploys with the workflow at its own tag, or one from
+   before this Worker served the game (see Rolling back);
 2. runs lint, both typechecks, the build with `SDS_RELEASE_SHA` and
    `SDS_RELEASE_REF`, the discovery check and the full test suite, which
-   includes `tests/worker` and the Wrangler configuration test;
-3. verifies the `dist/release.json` the build wrote, with `--require-v3-static`,
-   and the deploy configuration the build generated
-   (`scripts/verify-deploy-config.mjs`);
-4. archives `dist/` as `release-<sha>` for 90 days;
-5. runs `wrangler deploy --config .wrangler/build/sds_worker/wrangler.json`
-   from the repository root, which uploads `dist/` as the Worker's static
-   assets, deploys the API code, applies any Durable Object migration and
-   publishes the route - one commit, one deploy, both halves;
+   includes `tests/worker` and the two configuration tests;
+3. verifies the `release.json` the build wrote into the Build Output's assets,
+   with `--require-v3-static`, and the Build Output itself
+   (`scripts/verify-deploy-config.mjs --cf`);
+4. archives the Build Output as `release-<sha>` for 90 days;
+5. runs `cf deploy --dry-run --prebuilt --no-provision` and then
+   `cf deploy --prebuilt --no-provision` from `app/`, which uploads the game as
+   the Worker's static assets and the API code as one version, makes it the
+   active deployment and publishes the route - one commit, one deploy, both
+   halves;
 6. verifies the live `https://sheepdogsim.com/release.json` reports that SHA;
    that `sheepdogsim.com` serves `index.html` at `/` and JSON at
    `/api/healthz` (`scripts/verify-worker-origin.mjs`); that the `workers.dev`
@@ -45,9 +50,15 @@ is exactly what the two workflows call, nothing more:
 | Scope | Permission | Why |
 | --- | --- | --- |
 | Account | Workers Scripts, Edit | upload the Worker and its assets, create preview versions |
-| Account | D1, Read | wrangler validates the `DB` binding at deploy |
-| Account | Account Settings, Read | wrangler's account resolution |
-| Zone `sheepdogsim.com` only | Workers Routes, Edit | every deploy re-publishes the route from `wrangler.toml`; deleting it is the rollback |
+| Account | D1, Read | the `DB` binding is validated at deploy |
+| Account | Account Settings, Read | account resolution |
+| Zone `sheepdogsim.com` only | Workers Routes, Edit | every deploy re-publishes the route from `app/cloudflare.config.ts`; deleting it is the rollback |
+
+`cf` keeps its own credentials and does not read wrangler's login; it takes the
+same token from `CLOUDFLARE_API_TOKEN`, and the workflows pass the same two
+secrets. The deploy runs with `--no-provision` because `cf deploy` would
+otherwise create a resource for a binding that names none; every binding here
+names an existing one by id.
 
 Nothing for Pages: the dormant Pages project is never deployed to. The v3.2.0
 tag deploy is the record of why the zone permission matters: the previous
@@ -62,9 +73,9 @@ same day.
 | --- | --- |
 | `sheepdogsim.com` | The game. A proxied Cloudflare zone with a Worker **route** `sheepdogsim.com/*` to `sds-worker`. The only URL to publish. |
 | `www.sheepdogsim.com` | A proxied DNS record and a zone redirect rule to the apex, 301 with path and query kept. Never served; see Zone configuration. |
-| `sds-worker` | The production Worker. Serves `dist/` as static assets and the identity and score API under `/api/*`. Holds `JWT_SECRET` and the `DB` binding to D1 `sds-db`. |
+| `sds-worker` | The production Worker. Serves the built game as static assets and the identity and score API under `/api/*`. Holds `JWT_SECRET` and the `DB` binding to D1 `sds-db`. |
 | `sds-worker.matt-m-kissinger.workers.dev` | The same Worker on its own hostname. Kept on (`workers_dev = true`) because every client built before Release 1 calls the API here; it serves the game too, under its own origin and therefore its own `localStorage`. Not a URL to publish. |
-| `sds-worker-preview` | The preview Worker (`[env.preview]`), with its own D1 `sds-db-preview` and its own `JWT_SECRET`. Pull requests upload versions here. |
+| `sds-worker-preview` | The preview Worker (the `preview` mode of `app/cloudflare.config.ts`; `[env.preview]` in `wrangler.toml`), with its own D1 `sds-db-preview` and its own `JWT_SECRET`. Pull requests upload versions here and deploy to it. |
 | `pr-<n>-sds-worker-preview.matt-m-kissinger.workers.dev` | Pull request `<n>`'s preview: a version alias of `sds-worker-preview`, game and API on one origin. |
 | `sds-frontend` | The Cloudflare Pages project that served the game until Release 1. **Dormant**: nothing deploys to it, and it is not deleted, because it holds the immutable v2 deployment and is what answers `sheepdogsim.com` if the route is removed. |
 | `sds-frontend.pages.dev` | The Pages project's own hostname. It cannot be disabled and keeps serving the last Pages deployment (3.1.0), which carries `<link rel="canonical">` to `sheepdogsim.com`. |
@@ -74,49 +85,61 @@ The only GitHub environment is `production`, used by `Deploy`.
 
 ## Where the configuration lives
 
-There is one package and one `wrangler.toml`, at the repository root. `worker/`
-is a plain directory of source (`worker/src`) and D1 migrations
-(`worker/migrations`); it has no `package.json`. `vite build` runs two build
-environments through `@cloudflare/vite-plugin`:
+There is one package. The project is `app/cloudflare.config.ts`: a function of
+the build mode that returns the production Worker (`sds-worker`, the route, D1
+`sds-db`) for the default and the preview Worker (`sds-worker-preview`, no
+route, D1 `sds-db-preview`) for `--mode preview`. Modes replace wrangler's
+environments: each mode returns its whole Worker, nothing is inherited.
+`worker/` is a plain directory of source (`worker/src`) and D1 migrations
+(`worker/migrations`); it has no `package.json`. `vite build` runs the two
+build environments through `@cloudflare/vite-plugin` 2.0 and writes the Build
+Output Specification under the Vite root, `app/`:
 
-| Environment | Output | Contents |
-| --- | --- | --- |
-| client | `dist/` | the game, `app/public`, `release.json`, and `.assetsignore` |
-| `sds_worker` | `.wrangler/build/sds_worker/` | `index.js` and `wrangler.json`, the configuration generated from `wrangler.toml` |
+| Path under `app/.cloudflare/output/v0/` | Contents |
+| --- | --- |
+| `config.json` | the mode the build was made in |
+| `workers/default/worker.config.json` | the Worker as the config resolved for that mode: name, runtime, triggers, bindings, assets rules |
+| `workers/default/bundle/` | `index.js` and its source map |
+| `workers/default/assets/` | the game, `app/public` and `release.json`: the served artifact |
 
-Four consequences:
+`scripts/build-output.mjs` is the one place that names these paths; the
+verifiers, the probes and `vite.config.ts` import it. Four consequences:
 
-- **The deploy ships exactly the configuration the build produced.**
-  `wrangler.toml` declares `main = "worker/src/index.ts"` and `[assets]`
-  without a `directory`; the plugin writes the generated `wrangler.json` with
-  `main` pointing at the built script and `assets.directory` at `dist/`, and
-  the workflows pass it with `--config`. `CLOUDFLARE_ENV=preview` at build time
-  generates the `[env.preview]` configuration instead, so the Preview workflow
-  sets it on its build step and nowhere else (wrangler also reads it).
-  `--env=""` is still accepted with a generated config; `--env preview` is not
-  needed and is not used.
-- **The plugin's own redirect file is not used.** The plugin writes
-  `.wrangler/deploy/config.json` under the Vite root, which is `app/` here, and
-  wrangler only follows that file when it sits beside the user configuration at
-  the repository root: from the root it is not found, and from `app/` wrangler
-  refuses the mismatch. Measured with the plugin 1.64.0 and wrangler 4.151.1;
-  nothing writes a redirect at the root, and a plain `wrangler deploy` at the
-  root fails on the missing assets directory rather than shipping anything.
-- **One wrangler generates and deploys the configuration.** The root `wrangler`
-  pin equals the version the plugin pins for itself (4.151.0 with plugin
-  1.64.0), so `npm ls wrangler` shows one copy. A wrangler bump follows the
-  plugin's pin, in the same change as the plugin bump; bumping it alone would
-  install a second copy that deploys what the first generated.
-- **`dist/` is the served artifact and nothing else.** The Worker build is kept
-  out of it (`build.outDir` is `.wrangler/build` in `vite.config.ts`), and the
-  plugin's `.assetsignore` (emitted for wrangler's upload step, never uploaded
-  or served) is left out of the manifest's digest.
+- **The deploy ships exactly the Build Output the build produced.**
+  `cf deploy --prebuilt` reads it as it stands and builds nothing; the
+  workflows build with this repository's own `npm run build` (or
+  `build:preview`), verify the output, then hand it to `cf`. There is no
+  generated `wrangler.json` and no `--config`.
+- **The paths are the plugin's, not ours.** The plugin reads
+  `cloudflare.config.ts` from the Vite root and nowhere else, which is why the
+  file lives in `app/` with `entrypoint: '../worker/src/index.ts'`, and `cf`
+  runs from `app/` because it finds the file by walking up from its working
+  directory. The plugin also forces every environment's `build.outDir` into the
+  Build Output after Vite has merged the user config, so nothing is written to
+  `dist/` and no Vite option can put it back. Measured with the plugin
+  2.0.0-beta.v.1 and `cf` 1.0.0-beta.18 (status log, Release 2 Stage B).
+- **No Durable Object export.** `cf` carries Durable Object classes in an
+  `exports` map and has no migrations array; the applied v1/v2 history deleted
+  every class, and the docs say not to copy applied deletions. The config
+  declares no export, the verifier fails one, and the account keeps the
+  `migration_tag` (`v2`) across `cf`'s uploads: measured by a wrangler deploy
+  of an older commit and a rollback across a `cf` deploy on the preview
+  Worker.
+- **`wrangler.toml` stays while a rollback to the wrangler path is wanted.**
+  It is the configuration the 3.2.1 to 3.3.0 tags deploy with, and local
+  wrangler commands (`versions view`, `rollback`, `deployments list`) still read
+  it. `tests/worker/cloudflare-config.spec.ts` holds every hosting fact in the
+  two files equal, so they cannot drift while both exist; when the last
+  wrangler-built release is no longer a rollback target, the file and that test
+  go together, and `tests/worker/wrangler-config.spec.ts`'s facts move onto the
+  cf declaration.
 
 ## One origin
 
-The root `wrangler.toml` declares `[assets]` with
-`not_found_handling = "single-page-application"` and
-`run_worker_first = ["/api/*"]`, over the `dist/` the build supplies:
+`app/cloudflare.config.ts` declares `assets` with
+`notFoundHandling: 'single-page-application'` and
+`runWorkerFirst: ['/api/*']` (`wrangler.toml` says the same), over the built
+game the Build Output supplies:
 
 - `/api/*` always runs the Worker script. An unknown API path is a JSON 404
   from the script, never HTML.
@@ -132,12 +155,14 @@ The root `wrangler.toml` declares `[assets]` with
 **Assert content types, never status codes.** Every unmatched path answers 200
 `text/html`, including the retired `/healthz` and, before the route existed,
 `https://sheepdogsim.com/api/*` (the Pages fallback). A check on status alone
-passes with the API down. Likewise a missing `dist/release.json` is served as
+passes with the API down. Likewise a missing `release.json` is served as
 `index.html`: build, then write the manifest, then deploy.
 
 ## Routes and hostnames
 
-Four measured facts govern `wrangler.toml`:
+Four measured facts govern the hosting declaration (`workersDev`,
+`triggers` and `previewUrls` in `app/cloudflare.config.ts`; `workers_dev`,
+`routes` and `preview_urls` in `wrangler.toml`):
 
 - **`workers_dev` is set explicitly.** Cloudflare infers it as false as soon
   as a config declares routes, which would take the `workers.dev` host off
@@ -152,9 +177,11 @@ Four measured facts govern `wrangler.toml`:
   are none (Wrangler 4.151.1 source). So removing the `[[routes]]` block does
   not remove the route, and while the block is on `main` every deploy puts it
   back.
-- **`routes` is inheritable.** Without `routes = []` under `[env.preview]`, a
-  preview deploy would try to claim `sheepdogsim.com/*` for the preview
-  Worker. `tests/worker/wrangler-config.spec.ts` pins this and the rest.
+- **`routes` is inheritable in wrangler.** Without `routes = []` under
+  `[env.preview]`, a preview deploy would try to claim `sheepdogsim.com/*` for
+  the preview Worker. The cf modes inherit nothing, and the preview mode
+  declares no trigger. `tests/worker/wrangler-config.spec.ts` and
+  `tests/worker/cloudflare-config.spec.ts` pin this and the rest.
 
 `/r/*` is left unclaimed on purpose. Routes match most-specific first, so a
 realtime Worker can take `sheepdogsim.com/r/*` later
@@ -204,17 +231,25 @@ rollback is dispatching the workflow with an older one.
 
 **A bad release on the Worker.** Dispatch `Deploy` with the previous good SHA.
 Every deploy is a rebuild of a named commit, so a rollback is the same
-operation with an older argument. `wrangler rollback <version-id>` from
-the repository root is the faster equivalent for any version from Release 1 on.
-Neither can reach a commit or version from before Release 1: the workflow
-refuses the commit, and the platform refuses to cross the Durable Object
-deletion.
+operation with an older argument. The faster equivalent, for any version from
+Release 1 on, is to make an earlier version the active deployment:
+`npx wrangler rollback <version-id> --name sds-worker` from the repository
+root with a logged-in wrangler, or `cf workers deployments create --worker
+sds-worker --versions <version-id>`; `npx wrangler deployments list --name
+sds-worker` names the versions. Neither can reach a commit or version from
+before Release 1: the workflow refuses the commit, and the platform refuses to
+cross the Durable Object deletion.
 
-A commit between Release 1 and 3.2.1 (3.2.0) has its configuration in
-`worker/wrangler.toml` and deploys with the workflow of its own tag, so the
-current `Deploy` refuses it. Dispatch the workflow at that tag's ref instead:
-`gh workflow run deploy.yml --ref v3.2.0 -f commit_sha=<sha>`. That runs the
-tag's own workflow file against the tag's own tree.
+A dispatch runs the workflow file from `main` against the named commit's
+tree, so a commit built for an earlier deploy path needs the workflow of its
+own tag: `gh workflow run deploy.yml --ref <tag> -f commit_sha=<sha>`. That is
+every commit before the `cf` move (3.2.1 to 3.3.0, which deploy with
+wrangler from the generated `wrangler.json`; the current `Deploy` refuses
+them for lack of `app/cloudflare.config.ts`) and 3.2.0, whose configuration
+was in `worker/wrangler.toml`. The platform does not care which tool uploaded
+a version: a wrangler deploy over a `cf` deployment and a rollback across it
+were measured on the preview Worker to leave the bindings and the migration
+tag as they were.
 
 **The hosting itself.** Delete the `sheepdogsim.com/*` route (dashboard:
 Workers & Pages > `sds-worker` > Settings > Domains & Routes; or the API, as in
@@ -229,28 +264,30 @@ its multiplayer, which went with the Durable Objects.
 
 ## Build identity
 
-The `release-manifest` plugin in `vite.config.ts` writes `dist/release.json`
-(through `scripts/write-release-manifest.mjs`) at the end of the client build,
+The `release-manifest` plugin in `vite.config.ts` writes `release.json` into
+the Build Output's assets (through `scripts/write-release-manifest.mjs`) at
+the end of the client build,
 in `writeBundle` with `order: 'post'` so it runs after `app/public` has been
 copied in. It records the package version, the exact source
 commit and ref (`SDS_RELEASE_SHA` and `SDS_RELEASE_REF`, else the checkout's
 HEAD and branch), the UTC build time, the `release-capabilities.json`
 declaration, and the file count, byte count and SHA-256 digest over the whole
-artifact except the manifest itself and the plugin's `.assetsignore`. It is part
-of the build because a `dist/` without it is served as the single-page
-fallback: at the Release 1 cutover a plain rebuild shipped once without the
+artifact except the manifest itself. It is part of the build because a build
+without it is served as the single-page fallback: at the Release 1 cutover a plain rebuild shipped once without the
 manifest and the live `/release.json` answered with `index.html` for a few
 minutes. There is no separate command to write it.
 
 `scripts/verify-release-manifest.mjs` checks the local artifact before the
-deploy and the live manifest after it. `scripts/verify-deploy-config.mjs`
-checks the generated `wrangler.json` (production, or `--preview` for a build
-made with `CLOUDFLARE_ENV=preview`): name, route list, `workers_dev`,
-`preview_urls`, compatibility date and flags, observability, source-map upload,
-the D1 id, the Durable Object migrations, the assets settings, and an assets
-directory that is this repository's `dist/` and holds `release.json` and
-`index.html`. `tests/worker/verify-deploy-config.spec.ts` breaks each fact and
-expects the check to fail naming it. `npm run probe:release` runs the same
+deploy and the live manifest after it. `scripts/verify-deploy-config.mjs --cf`
+checks the Build Output (production, or `--preview` for a build made with
+`--mode preview`): the mode in `config.json`, and in `worker.config.json` the
+name, triggers, `workersDev`, `previewUrls`, compatibility date and flags,
+observability, the bindings with the D1 id, no Durable Object export, the
+assets settings, a bundle entry that exists, and an assets directory that holds
+`release.json` and `index.html` and no configuration file. Without `--cf` the
+same script checks a generated `wrangler.json`, which the 3.2.1 to 3.3.0 tags
+still produce. `tests/worker/verify-deploy-config.spec.ts` breaks each fact in
+both shapes and expects the check to fail naming it. `npm run probe:release` runs the same
 measurement locally, so the file count and byte count can be compared against
 the live site by hand.
 
@@ -308,8 +345,8 @@ next deploy. Dashboard changes are owner-approved, one at a time.
 - Web Analytics site `sheepdogsim.com`, mode "JS Snippet installation".
 
 End state, Release 2: once the Pages project is retired, both hostnames become
-Worker custom domains in `wrangler.toml` and the DNS records are created
-by `wrangler deploy`, leaving the redirect rule and the analytics mode as the
+Worker custom domains in `app/cloudflare.config.ts` and the DNS records are
+created by the deploy, leaving the redirect rule and the analytics mode as the
 only zone settings. Until then the apex record must stay as it is, because a
 custom domain would force the hostname off Pages.
 
@@ -350,28 +387,31 @@ a caching service worker or a Vite plugin that writes one.
 ## Previews
 
 `Preview` (`.github/workflows/preview.yml`) runs for pull requests from this
-repository, skipping Dependabot, which receives no secrets. It builds `dist/`
-with no `VITE_SCORE_API_BASE`, so the preview calls its own origin. The order
-matters: it builds with `CLOUDFLARE_ENV=preview`, verifies the generated
-config with `verify-deploy-config.mjs --preview`, migrates the preview D1 only
-(the script names `wrangler.toml` and `--env preview` itself; the plugin's
-redirect file lands under `app/`, where wrangler never sees it, so a build on
-disk does not change which configuration it uses), and runs
-`wrangler versions upload --config .wrangler/build/sds_worker/wrangler.json
---preview-alias pr-<n>`. The preview D1 id (`6d5b0fce-952f-4d94-8936-b51fc559496c`)
-is committed in `wrangler.toml`: a database id is an identifier, not a secret,
-and `d1-migrate-remote.mjs` refuses to run a preview migration against the
-production id. The upload leaves the preview Worker's deployed version and
-every other pull request's alias alone. It then verifies the alias by content
-type and a register round trip.
+repository, skipping Dependabot, which receives no secrets. It builds with
+`npm run build:preview` (`vite build --mode preview`) and no
+`VITE_SCORE_API_BASE`, so the preview calls its own origin. The order matters:
+it verifies the Build Output with `verify-deploy-config.mjs --cf --preview`,
+migrates the preview D1 only (the script names `wrangler.toml` and `--env
+preview` itself), dry-runs `cf`, uploads the aliased version with `cf workers
+versions create --prebuilt --mode preview --preview-alias pr-<n>`, and then
+deploys the same output to the preview Worker with `cf deploy --prebuilt
+--mode preview`, so every pull request also exercises the deploy path
+production uses. One pull request therefore creates two versions. The preview
+D1 id (`6d5b0fce-952f-4d94-8936-b51fc559496c`) is committed in both
+configuration files: a database id is an identifier, not a secret, and
+`d1-migrate-remote.mjs` refuses to run a preview migration against the
+production id. The upload leaves every other pull request's alias alone. It
+then verifies the alias and the deployed root by content type and a register
+round trip.
 
 Previews never upload a version of `sds-worker`: a version preview of
 production would answer on a throwaway hostname with production's D1 and
 secrets. `preview_urls = false` on production makes that impossible.
 
-A pull request that changes Durable Object classes cannot preview this way;
-apply the lifecycle change first with `wrangler deploy --config
-.wrangler/build/sds_worker/wrangler.json` after a `CLOUDFLARE_ENV=preview` build.
+A pull request that adds a Durable Object class declares it in the config's
+`exports` map; `cf` has no migrations array, the map is the live set of
+classes, and the docs call it one-way once deployed. Measure such a change on
+the preview Worker first, as Release 2 Stage B measured the tag.
 
 ## Local development
 
@@ -382,7 +422,7 @@ npm run dev                      # http://localhost:5199
 ```
 
 `vite dev` serves the game and the Worker together through the Cloudflare
-plugin: the Worker runs from the root `wrangler.toml` in the same process,
+plugin: the Worker runs from `app/cloudflare.config.ts` in the same process,
 `/api/*` reaches it on the same origin with no proxy, and the local D1 lives in
 `.wrangler/state` (`persistState` in `vite.config.ts`; the setup script and
 `d1-migrate-remote.mjs` with `D1_LOCAL=1` write to the same place). Without
@@ -393,7 +433,7 @@ unavailable.
 origin from the built artifact - the Worker bundle, the assets layer and the
 local D1 - and `node scripts/verify-worker-origin.mjs --url http://localhost:4173`
 checks it. The browser probes in `tools/` do not use it: `startPreviewServer`
-serves `dist/` as plain files with a single-page fallback, the way the hub does,
+serves the built game as plain files with a single-page fallback, the way the hub does,
 and `tools/harness-stubs.mjs` stubs the API and the analytics beacon, so a
 receipt measures the built client alone. `VITE_SCORE_API_BASE` still points a
 build at any other API origin.
