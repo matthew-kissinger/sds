@@ -1,22 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * The hosting invariants of worker/wrangler.toml, read through Wrangler's own
+ * The hosting invariants of the root wrangler.toml, read through Wrangler's own
  * config reader so environment inheritance is measured rather than assumed.
  * Each assertion names a failure that was found while moving sheepdogsim.com
  * onto this Worker; see docs/operations/deployment.md.
  */
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { unstable_readConfig as readConfig } from 'wrangler';
 import { describe, expect, it } from 'vitest';
 
-const workerDir = fileURLToPath(new URL('../../worker/', import.meta.url));
-const require = createRequire(`${workerDir}package.json`);
-const { unstable_readConfig: readConfig } = require('wrangler') as {
-  unstable_readConfig: (args: { config: string; env?: string }, options: { hideWarnings: boolean }) => any;
-};
+const configPath = fileURLToPath(new URL('../../wrangler.toml', import.meta.url));
 
-const read = (env?: string) => readConfig({ config: `${workerDir}wrangler.toml`, env }, { hideWarnings: true });
+const read = (env?: string) => readConfig({ config: configPath, env }, { hideWarnings: true }) as any;
 const production = read();
 const preview = read('preview');
 
@@ -43,10 +39,16 @@ describe('sds-worker hosting configuration', () => {
     expect(preview.preview_urls).toBe(true);
   });
 
-  it('serves dist/ with the API first and a single-page fallback for the rest', () => {
+  it('runs the Worker entry from worker/src and leaves the assets directory to the Vite plugin', () => {
+    for (const config of [production, preview]) {
+      expect(String(config.main).replaceAll('\\', '/').endsWith('/worker/src/index.ts')).toBe(true);
+      expect(config.assets.directory).toBeUndefined();
+    }
+  });
+
+  it('serves the game with the API first and a single-page fallback for the rest', () => {
     for (const config of [production, preview]) {
       expect(config.assets).toMatchObject({
-        directory: '../dist',
         binding: 'ASSETS',
         not_found_handling: 'single-page-application',
         run_worker_first: ['/api/*'],
@@ -58,7 +60,9 @@ describe('sds-worker hosting configuration', () => {
     expect(production.d1_databases).toEqual([
       expect.objectContaining({ binding: 'DB', database_name: 'sds-db', database_id: '513aa937-e60a-4fb6-b499-9f3814149e88' }),
     ]);
-    expect(preview.d1_databases).toEqual([expect.objectContaining({ binding: 'DB', database_name: 'sds-db-preview' })]);
+    expect(preview.d1_databases).toEqual([
+      expect.objectContaining({ binding: 'DB', database_name: 'sds-db-preview', database_id: '6d5b0fce-952f-4d94-8936-b51fc559496c' }),
+    ]);
     expect(preview.d1_databases[0].database_id).not.toBe(production.d1_databases[0].database_id);
     expect(production.durable_objects.bindings).toEqual([]);
     expect(preview.durable_objects.bindings).toEqual([]);

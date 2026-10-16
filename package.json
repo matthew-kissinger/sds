@@ -32,13 +32,13 @@
   "scripts": {
     "dev": "vite",
     "lab": "vite --config vite.lab.config.ts",
-    "build": "tsc -b && vite build && node scripts/write-release-manifest.mjs",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:lab": "tsc --noEmit -p tsconfig.lab.json",
-    "typecheck:worker": "npm run typecheck --prefix worker",
+    "typecheck:worker": "tsc --noEmit -p tsconfig.worker.json",
     "probe:release": "node tools/release-hardening-probe.mjs",
     "probe:playtest": "node tools/playtest-profile.mjs",
     "review:art": "node tools/art-review.mjs",
@@ -63,6 +63,8 @@
     "zustand": "5.0.15"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1.64.0",
+    "@cloudflare/workers-types": "5.20261016.1",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -75,7 +77,8 @@
     "playwright": "^1.64.1",
     "typescript": "~6.0.3",
     "vite": "^8.3.4",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "4.151.1"
   },
   "allowScripts": {
     "esbuild@0.25.12": true,

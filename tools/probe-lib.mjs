@@ -13,9 +13,10 @@
 
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -36,6 +37,13 @@ export const GPU_ARGS = [
 
 /** The debug-only DOM node the app publishes probe numbers on. No globals. */
 export const READOUT = '[data-testid="debug-readout"]';
+
+const MIME = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
+  '.mp3': 'audio/mpeg', '.flac': 'audio/flac', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2', '.bin': 'application/octet-stream', '.glb': 'model/gltf-binary',
+  '.webmanifest': 'application/manifest+json', '.txt': 'text/plain', '.xml': 'application/xml',
+};
 
 // --- the dev server ---------------------------------------------------------
 
@@ -73,37 +81,57 @@ export async function startServer(port) {
   throw new Error(`vite did not answer on port ${port} within 60 s`);
 }
 
-/** Start the built production preview on `port` and resolve once it answers. */
+/**
+ * Serve a built artifact statically on `port` and resolve once it answers.
+ *
+ * Probes measure the built `dist/` the way the hub does (tools/hub-presentation-
+ * probe.mjs): plain files with a single-page fallback to index.html, nothing
+ * else in the path. There is no Worker behind this origin, and none is wanted -
+ * the API and the analytics beacon are stubbed by tools/harness-stubs.mjs. The
+ * full stack, Worker included, is `vite preview` (docs/operations/deployment.md).
+ * Resolves to the http.Server; stopServer closes it.
+ */
 export async function startPreviewServer(port, buildDir = join(repo, 'dist')) {
-  const vite = join(repo, 'node_modules', 'vite', 'bin', 'vite.js');
-  const dist = join(buildDir, 'index.html');
-  if (!existsSync(vite)) throw new Error(`vite not found at ${vite}`);
-  if (!existsSync(dist)) throw new Error('dist missing; run npm run build first');
+  const root = resolve(buildDir);
+  if (!existsSync(join(root, 'index.html'))) throw new Error('dist missing; run npm run build first');
   if (await reachable(`http://localhost:${port}/`)) {
     throw new Error(`port ${port} is already in use. Stop it, or pass --url to use it on purpose.`);
   }
-  const child = spawn(process.execPath, [vite, 'preview', '--port', String(port), '--strictPort', '--outDir', buildDir], {
-    cwd: repo,
-    stdio: ['ignore', 'pipe', 'pipe'],
+  const server = createServer((req, res) => {
+    try {
+      const path = resolve(root, '.' + decodeURIComponent(new URL(req.url, 'http://localhost').pathname));
+      if (path !== root && !path.startsWith(root + sep)) {
+        res.writeHead(403).end();
+        return;
+      }
+      const exact = path !== root && existsSync(path) && statSync(path).isFile();
+      const file = exact ? path : join(root, 'index.html');
+      res.writeHead(200, { 'Content-Type': MIME[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-store' });
+      res.end(readFileSync(file));
+    } catch {
+      res.writeHead(404).end();
+    }
   });
-  child.stdout.on('data', () => {});
-  child.stderr.on('data', (chunk) => process.stderr.write(chunk));
-
-  const deadline = Date.now() + 60_000;
-  while (Date.now() < deadline) {
-    if (await reachable(`http://localhost:${port}/`)) return child;
-    if (child.exitCode !== null) throw new Error(`preview exited early (${child.exitCode})`);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  }
-  throw new Error(`preview did not answer on port ${port} within 60 s`);
+  await new Promise((resolveListen, reject) => {
+    server.once('error', reject);
+    server.listen(port, '127.0.0.1', resolveListen);
+  });
+  return server;
 }
 
-export function stopServer(child) {
-  if (!child || child.exitCode !== null) return;
+/** Stop a server from startServer (a child process) or startPreviewServer (an http.Server). */
+export function stopServer(server) {
+  if (!server) return;
+  if (typeof server.close === 'function') {
+    server.closeAllConnections?.();
+    server.close();
+    return;
+  }
+  if (server.exitCode !== null) return;
   if (process.platform === 'win32') {
-    spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    spawn('taskkill', ['/pid', String(server.pid), '/T', '/F'], { stdio: 'ignore' });
   } else {
-    child.kill('SIGTERM');
+    server.kill('SIGTERM');
   }
 }
 

@@ -64,7 +64,7 @@ async function measure(browser, spec) {
       });
     }
   });
-  // Standalone Vite preview has no Worker binding and the analytics beacon
+  // The static probe server has no Worker behind it and the analytics beacon
   // cannot report from loopback. Keep the boot receipt about the client path;
   // the release probe separately validates API wiring.
   await stubHarnessNetwork(context);

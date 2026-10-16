@@ -1,5 +1,8 @@
 // P2-MIGRATE-STATE: state-tracked D1 migration runner for the deploy pipeline.
 //
+// Runs from the repository root against the source wrangler.toml, named with
+// --config so a generated deploy config from a build is never picked up.
+//
 // Replaces the deploy.yml migrate job's `git diff --diff-filter=A` bash block.
 // Migration state lives in the sds_migration_state table (created/seeded by
 // worker/migrations/0010_migration_state.sql), which the deploy controls. The
@@ -35,8 +38,8 @@
 //   BEFORE / AFTER   commit range for diff bootstrap (deploy.yml passes
 //                    github.event.before / github.sha).
 //   D1_LOCAL=1       run against the local D1 (--local) instead of --remote.
-//                    For testing this script; skips remote-only id assertions
-//                    that depend on a provisioned preview database.
+//                    For testing this script; state goes to .wrangler/state,
+//                    where `vite dev` reads it.
 //
 // Exit codes: 0 = up to date or applied cleanly; 1 = failure (including a
 // detected 'failed' row, which is a refusal, not a skip).
@@ -47,14 +50,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const workerDir = join(repoRoot, 'worker');
-const migrationsDir = join(workerDir, 'migrations');
+const migrationsDir = join(repoRoot, 'worker', 'migrations');
 
 const STATE_TABLE = 'sds_migration_state';
 const PROD_DB_NAME = 'sds-db';
 const PROD_DB_ID = '513aa937-e60a-4fb6-b499-9f3814149e88';
 const PREVIEW_DB_NAME = 'sds-db-preview';
-const PREVIEW_PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000';
 
 const target = process.env.D1_TARGET || 'production';
 const bootstrapMode = process.env.BOOTSTRAP_MODE || (target === 'preview' ? 'full' : 'diff');
@@ -69,7 +70,7 @@ if (bootstrapMode !== 'diff' && bootstrapMode !== 'full') {
 }
 
 const dbName = target === 'preview' ? PREVIEW_DB_NAME : PROD_DB_NAME;
-const envArgs = target === 'preview' ? ' --env preview' : '';
+const envArgs = ` --config wrangler.toml${target === 'preview' ? ' --env preview' : ''}${isLocal ? ' --persist-to .wrangler/state' : ''}`;
 
 function fail(msg) {
   console.error(`d1-migrate-remote: ${msg}`);
@@ -81,7 +82,7 @@ function assertPreviewSafety() {
   if (dbName === PROD_DB_NAME) {
     fail('Preview target resolved to the production database name. Refusing.');
   }
-  const toml = readFileSync(join(workerDir, 'wrangler.toml'), 'utf8');
+  const toml = readFileSync(join(repoRoot, 'wrangler.toml'), 'utf8');
   const previewSection = toml.split(/\[env\.preview\]/)[1];
   if (!previewSection) {
     fail('wrangler.toml has no [env.preview] section. Refusing preview migration.');
@@ -94,17 +95,11 @@ function assertPreviewSafety() {
   if (previewId === PROD_DB_ID) {
     fail('The [env.preview] database_id equals the PRODUCTION database id. Refusing.');
   }
-  if (!isLocal && previewId === PREVIEW_PLACEHOLDER_ID) {
-    fail(
-      'The [env.preview] database_id is still the placeholder. The workflow must ' +
-      'substitute the real preview id (repo variable CF_PREVIEW_D1_ID) before this runs.'
-    );
-  }
 }
 
 function wrangler(args) {
   return execSync(`npx wrangler ${args}`, {
-    cwd: workerDir,
+    cwd: repoRoot,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit'],
   });
@@ -124,7 +119,7 @@ function sql(command) {
 
 function applyFile(file) {
   console.log(`>> Applying ${file} to ${isLocal ? 'LOCAL' : 'remote'} ${dbName}`);
-  wrangler(`d1 execute ${dbName}${envArgs} ${locationFlag} --file=migrations/${file} --yes`);
+  wrangler(`d1 execute ${dbName}${envArgs} ${locationFlag} --file=worker/migrations/${file} --yes`);
 }
 
 function assertSafeId(id) {

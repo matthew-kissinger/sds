@@ -1,4 +1,7 @@
 {
+  // The Worker's typecheck (`npm run typecheck:worker`). Separate from
+  // tsconfig.json because the Worker runs on the Workers runtime types, not the
+  // DOM ones the client uses, and the client never imports worker/ or shared/.
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
@@ -14,5 +17,5 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src/**/*", "../shared/**/*.js"]
+  "include": ["worker/src/**/*", "shared/**/*.js"]
 }

@@ -42,7 +42,7 @@ import {
 } from './eventProps';
 
 interface Env {
-  // The built client in ../dist. wrangler.toml runs this script first only for
+  // The built client in dist/. wrangler.toml runs this script first only for
   // /api/*, so every other path is answered by the asset layer before the
   // script is invoked; ASSETS is the fallback should the script ever see one.
   ASSETS: Fetcher;

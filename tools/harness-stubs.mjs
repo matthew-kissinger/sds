@@ -7,7 +7,8 @@
 // behind it. Two requests then fail for reasons that have nothing to do with
 // the game: the Cloudflare Web Analytics beacon in every HTML page cannot
 // report from that origin (cloudflareinsights.com refuses it), and `/api/*`
-// either 502s through the Vite preview proxy or 404s on a plain static server.
+// is a 404 or the single-page HTML from the static probe server
+// (startPreviewServer in tools/probe-lib.mjs), never the Worker's JSON.
 // Both used to land in receipts as failed requests and console errors, and
 // several probes still stubbed the version 2 `/api/lobbies` route that the
 // version 3 client never calls.
