@@ -14,10 +14,11 @@
 // and that the build selected the environment the deploy step expects.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { pathToFileURL } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
+import { BUILD_OUTPUT, BUILT_CLIENT, repo as root } from './build-output.mjs'
 
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+export { BUILD_OUTPUT, BUILT_CLIENT }
 
 const PRODUCTION = {
   name: 'sds-worker',
@@ -36,19 +37,6 @@ const MIGRATIONS = [
   { tag: 'v2', deleted_classes: ['RoomDO', 'LobbyDO'] },
 ]
 
-/**
- * Where the Cloudflare Vite plugin 2.0 writes the Build Output Specification
- * that `cf deploy --prebuilt` uploads (Release 2 Stage B). It sits under the
- * Vite root, app/, because the plugin anchors to that root; see
- * app/cloudflare.config.ts for why the project lives with it.
- */
-export const BUILD_OUTPUT = 'app/.cloudflare/output/v0'
-/**
- * The built game inside it: what the Worker serves as its assets, where
- * dist/ used to be. The plugin forces the client's build.outDir here
- * (`forceBuildOutputDirs`), so a Vite outDir cannot keep it at dist/.
- */
-export const BUILT_CLIENT = `${BUILD_OUTPUT}/workers/default/assets`
 
 function parseArgs(args) {
   const options = { preview: false, cf: false, config: '.wrangler/build/sds_worker/wrangler.json' }

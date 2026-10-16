@@ -5,6 +5,46 @@
 
 # Status log
 
+## Release 2 Stage B cutover - 2026-10-16, prepared on pull request 126, awaiting the owner's go
+
+The owner: "Do this task here: Release 2 Stage B cutover: production Deploy
+on cf". Same branch and pull request as the attempt below; nothing deployed,
+tagged or changed on the live Worker.
+
+- `deploy.yml` deploys the Build Output with `cf deploy --prebuilt
+  --no-provision --message <sha>` from `app/`, after the unchanged gates
+  (lint, typechecks, build, discovery, the suite, `--require-v3-static` on
+  the output's `release.json`, `verify-deploy-config --cf`, the 90-day
+  archive of `app/.cloudflare/output/v0`) and a `cf deploy --dry-run`. The
+  source-commit guard now requires `app/cloudflare.config.ts` instead of an
+  `[assets]` block in `wrangler.toml`. `--no-provision` because `cf deploy`
+  provisions by default and every binding here names an existing resource.
+- `scripts/build-output.mjs` is the one place that names the Build Output,
+  the Worker directory and the built game; the verifiers' defaults,
+  `write-release-manifest.mjs`, `vite.config.ts`, `tools/probe-lib.mjs`,
+  `art-review`, the release-hardening, context-loss, touch-interruption and
+  playtest-profile probes and the treeline test import it. The hub probe
+  stays standalone (it is copied to the hub) and takes `--dist=`, defaulting
+  to the hub-side name `dist`; `docs/art-review.md` and `AGENTS.md` say what
+  to copy. The two record tools were left alone: the ledgers digest them, so
+  a comment change there would have meant re-recording both ledgers.
+- `docs/operations/deployment.md` describes the `cf` path (Build Output
+  table, the plugin's two fixed paths, no Durable Object export,
+  `wrangler.toml`'s remaining role) and the rollback that still works:
+  `wrangler rollback <version> --name sds-worker` or `cf workers deployments
+  create` for any version from Release 1 on, `gh workflow run deploy.yml
+  --ref <tag>` for a commit built for an earlier deploy path (3.2.1 to 3.3.0
+  and 3.2.0), because a dispatch takes the workflow file from `main`.
+- Measured locally on the branch: `npm run build` writes the Build Output
+  with the same artifact digest as 3.3.0 (`2b64a94f...`, 36 files);
+  `verify-deploy-config --cf`, the manifest and discovery checks with their
+  new defaults pass; `cf deploy --dry-run --prebuilt --no-provision` from
+  `app/` reads 40 files and the two bindings for `sds-worker`; lint,
+  typecheck and the suite pass.
+- Not measured: whether `cf` uploads the bundle's source map as wrangler's
+  `upload_source_maps = true` did. The Build Output carries `index.js.map`;
+  the first production deploy is the place to read it off the dashboard.
+
 ## Release 2 Stage B - 2026-10-16, four checks passed on the preview Worker (pull request 126, draft)
 
 The owner's task: "Release 2 Stage B: cf CLI on the preview Worker, four

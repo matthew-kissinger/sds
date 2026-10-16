@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Isolated Linux hardware probe: copy this file, its two helper modules and dist
-// to a private directory. Uses an existing Playwright installation read-only.
+// Isolated Linux hardware probe: copy this file, its helper modules and the
+// built game (app/.cloudflare/output/v0/workers/default/assets, copied as
+// `dist`, or name it with --dist=) to a private directory. Uses an existing
+// Playwright installation read-only.
 import { createServer } from 'node:http';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
@@ -37,7 +39,7 @@ const bootOnly = process.argv.includes('--boot-only');
 const seconds = Number(arg('seconds', '60'));
 if (!dependency || !['webgpu', 'webgl2'].includes(backend) || seconds < 60 || seconds > 600) throw new Error('Supply --playwright, valid backend and 60–600 seconds');
 const { chromium } = await import(pathToFileURL(resolve(dependency)).href);
-const root = resolve('dist');
+const root = resolve(arg('dist', 'dist'));
 const out = resolve('receipts', `${backend}-${viewportName}-${Date.now()}`);
 mkdirSync(out, { recursive: true });
 const command = (file, args) => {

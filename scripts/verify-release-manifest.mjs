@@ -3,7 +3,7 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { BUILT_CLIENT } from './verify-deploy-config.mjs'
+import { BUILT_CLIENT } from './build-output.mjs'
 
 function parseArgs(args) {
   const options = { retries: 1 }

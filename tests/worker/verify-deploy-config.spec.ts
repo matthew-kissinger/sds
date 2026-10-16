@@ -113,7 +113,7 @@ describe('verify-deploy-config', () => {
     expect(failures).toMatch(/upload_source_maps:/);
   });
 
-  it('fails an assets directory that is not dist/', () => {
+  it('fails an assets directory other than the one it was given', () => {
     const config = production();
     config.assets.directory = '../../../elsewhere';
     expect(check(config).join('\n')).toMatch(/assets\.directory:/);

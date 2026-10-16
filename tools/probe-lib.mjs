@@ -18,6 +18,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { builtClientDir } from '../scripts/build-output.mjs';
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -84,8 +85,8 @@ export async function startServer(port) {
 /**
  * Serve a built artifact statically on `port` and resolve once it answers.
  *
- * Probes measure the built `dist/` the way the hub does (tools/hub-presentation-
- * probe.mjs): plain files, then `<path>.html` (so /about, /support and /privacy
+ * Probes measure the built game (scripts/build-output.mjs) the way the hub does
+ * (tools/hub-presentation-probe.mjs): plain files, then `<path>.html` (so /about, /support and /privacy
  * serve their own pages as production does), then a single-page fallback to
  * index.html. There are no range requests, no _headers and no _redirects, so
  * a probe that depends on those must not use this server. There is no Worker
@@ -94,9 +95,9 @@ export async function startServer(port) {
  * `vite preview` (docs/operations/deployment.md).
  * Resolves to the http.Server; stopServer closes it.
  */
-export async function startPreviewServer(port, buildDir = join(repo, 'dist')) {
+export async function startPreviewServer(port, buildDir = builtClientDir) {
   const root = resolve(buildDir);
-  if (!existsSync(join(root, 'index.html'))) throw new Error('dist missing; run npm run build first');
+  if (!existsSync(join(root, 'index.html'))) throw new Error(`${root} has no index.html; run npm run build first`);
   if (await reachable(`http://localhost:${port}/`)) {
     throw new Error(`port ${port} is already in use. Stop it, or pass --url to use it on purpose.`);
   }

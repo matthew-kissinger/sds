@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BUILT_CLIENT } from './verify-deploy-config.mjs';
+import { BUILT_CLIENT } from './build-output.mjs';
 
 const repo = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = process.argv.slice(2);
@@ -133,8 +133,8 @@ function verifyPages(files) {
 }
 
 function readLocal() {
-  // --dist names a built directory other than the one `npm run build` writes,
-  // the Build Output's assets (Release 2 Stage B; scripts/verify-deploy-config.mjs).
+  // --dist names a built directory other than the one `npm run build` writes
+  // (scripts/build-output.mjs).
   const dist = join(repo, sourceFiles ? 'app/public' : option('dist', BUILT_CLIENT));
   const paths = {
     '/': 'index.html',

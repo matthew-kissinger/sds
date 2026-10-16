@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { builtClientDir } from '../scripts/build-output.mjs';
 
 function filesUnder(root) {
   const files = [];
@@ -36,7 +37,7 @@ export function collectBuildReceipt(repo) {
       cwd: repo,
       encoding: 'utf8',
     }).trim(),
-    files: collectBuiltFiles(join(repo, 'dist')),
+    files: collectBuiltFiles(builtClientDir),
   };
 }
 

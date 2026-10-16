@@ -69,7 +69,7 @@ The hub is the timing lane and this PC is the functional lane; `AGENTS.md`
 states the rule and its preflight thresholds. What follows is how to drive the
 probe.
 
-`tools/hub-presentation-probe.mjs` can run against a copied production `dist/`
+`tools/hub-presentation-probe.mjs` can run against a copy of the built game (`app/.cloudflare/output/v0/workers/default/assets`, copied to the hub as `dist`)
 in a private Linux directory. Copy its four helpers alongside it:
 `art-render-counters.mjs`, `playtest-profile-receipt.mjs`,
 `screenshot-analysis.mjs` and `harness-stubs.mjs`. Pass `--playwright=` with

@@ -196,8 +196,10 @@ hub receipt passed (twelve runs, same shape), and the flip merged (pull
 request 125, `e3642877`). The whole homestead is Kiln and live as 3.3.0
 (`6a605e16`, tag `v3.3.0`). Open from the barn review: the slate course
 wander (owner's call, see the status log). Stage B was then attempted on the
-preview Worker and its four checks passed (pull request 126, draft, below).
-Next: the owner's decision on the production cutover to `cf`.
+preview Worker and its four checks passed, and the same pull request now
+carries the production cutover, ready for the owner's go (pull request 126,
+draft, below). Next: that go, then declarative hosting and the Pages
+retirement.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -249,10 +251,24 @@ costs the attempt measured, both in the status log: the plugin reads
 and `cf` runs from there; and the plugin forces the build to
 `app/.cloudflare/output/v0`, so `dist/` and the generated `wrangler.json` are
 no longer written, which means the branch cannot deploy production with
-wrangler. Merging it is therefore the cutover: `deploy.yml` moves to `cf
-deploy --prebuilt`, the tools and the deployment runbook read the Build
-Output, and `wrangler.toml` stays only as long as a rollback to Stage A needs
-it. Production stays on Stage A until the owner gives that go; a change in
+wrangler. Merging it is therefore the cutover, and the pull request is now
+that cutover, prepared the same evening: `deploy.yml` deploys the Build
+Output with `cf deploy --prebuilt --no-provision` from `app/` after the same
+gates as before plus a dry run, and refuses a commit without
+`app/cloudflare.config.ts`; every reader of `dist/` (the verifiers' defaults,
+the probes, `vite.config.ts`, the hub copy step) takes the path from
+`scripts/build-output.mjs`; `docs/operations/deployment.md` describes the
+`cf` path, and its Rolling back section says what still reaches an older
+release: `wrangler rollback <version> --name sds-worker` (or `cf workers
+deployments create`) for any version from Release 1 on, and `gh workflow run
+deploy.yml --ref <tag>` for a commit built for an earlier deploy path, since a
+dispatch takes the workflow file from `main`. `wrangler.toml` stays while a
+rollback to a wrangler-built release (3.2.1 to 3.3.0) is wanted, held equal
+to the cf declaration by `tests/worker/cloudflare-config.spec.ts`; it and
+that test go together when that is no longer true. The production dry run
+passes locally with the same artifact digest as 3.3.0. What merging does:
+the next tag deploys with `cf`; nothing changes on the live Worker until
+then. Production stays on Stage A until the owner gives the go; a change in
 either beta before then reopens the checks.
 
 From the renderer boot review

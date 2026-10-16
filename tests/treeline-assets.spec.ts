@@ -8,6 +8,8 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+// @ts-expect-error plain ES module without declarations
+import { builtClientDir } from '../scripts/build-output.mjs';
 import * as THREE from 'three/webgpu';
 import {
   makeCanopyMaterial,
@@ -388,7 +390,7 @@ describe('authored sculpted foliage chain', () => {
 
     // A built copy, if a build is present, is one of those files - at most one
     // of each, at its ledger's digest - and no other model.
-    const built = join(repo, 'app/.cloudflare/output/v0/workers/default/assets', 'assets');
+    const built = join(builtClientDir, 'assets');
     if (existsSync(built)) {
       const models = readdirSync(built).filter((name) => /\.(glb|gltf|obj|mtl)$/i.test(name));
       expect(models.length).toBeLessThanOrEqual(KILN_BUILDINGS.length);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-// Builds and writes dist/release.json. Imported by the releaseManifest plugin
+// Builds and writes the built game's release.json. Imported by the releaseManifest plugin
 // in vite.config.ts, which calls it at the end of the client build; it has no
 // command-line entry because nothing else writes the manifest.
 import { createHash } from 'node:crypto'
@@ -8,6 +8,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { builtClientDir } from './build-output.mjs'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 
@@ -45,7 +46,7 @@ function readCapabilities() {
 }
 
 export function createReleaseManifest({
-  distDir = resolve(root, 'dist'),
+  distDir = builtClientDir,
   packagePath = resolve(root, 'package.json'),
   commit = process.env.SDS_RELEASE_SHA || gitValue(['rev-parse', 'HEAD'], 'unknown'),
   sourceRef = process.env.SDS_RELEASE_REF || gitValue(['symbolic-ref', '--short', 'HEAD'], 'detached'),
@@ -89,7 +90,7 @@ export function createReleaseManifest({
 }
 
 export function writeReleaseManifest(options = {}) {
-  const distDir = options.distDir || resolve(root, 'dist')
+  const distDir = options.distDir || builtClientDir
   const manifest = createReleaseManifest({ ...options, distDir })
   const output = resolve(distDir, 'release.json')
   writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`)
