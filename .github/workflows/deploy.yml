@@ -123,7 +123,9 @@ jobs:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           workingDirectory: worker
-          command: deploy --message ${{ steps.source.outputs.sha }}
+          # --env="" names the top-level environment on purpose: the config also
+          # declares [env.preview], and wrangler warns when the target is implied.
+          command: deploy --env="" --message ${{ steps.source.outputs.sha }}
 
       - name: Verify live release identity
         run: node scripts/verify-release-manifest.mjs --url https://sheepdogsim.com/release.json --sha "${{ steps.source.outputs.sha }}" --retries 12

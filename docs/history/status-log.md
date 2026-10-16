@@ -31,9 +31,22 @@ Per `docs/operations/worker-cutover.md`, owner go for steps 1 and 2.
   (`b37a2a39`). The build now writes the manifest itself.
 - Dashboard, owner-approved: Web Analytics off on the Pages project; the
   `sheepdogsim.com` analytics site switched to snippet mode, token unchanged.
-- Preview D1: the two `Cutover Check` test players deleted. Production D1
-  still holds the `Cutover Check#0001` and one raw-API `Player` row created
-  for the identity checks; the owner decides whether they are removed.
+- Preview D1: the two `Cutover Check` test players deleted. Production D1:
+  the `Cutover Check#0001` and raw-API `Player` rows (no submissions) deleted
+  on the owner's decision.
+- Tag `v3.2.0` on `b2420f66` (CI green). The `Deploy` run deployed the exact
+  commit - the live manifest names `b2420f66` with source ref `v3.2.0`, and
+  every live check passes when run by hand - but the run itself failed: the
+  `CF_API_TOKEN` could publish the script and not the route (`No access to the
+  specified resource` on `/workers/scripts/sds-worker/routes`), so wrangler
+  stopped after the upload and the workflow's live checks never ran. The
+  route added by hand in step 2 is untouched. The token needs Workers Routes
+  edit on the `sheepdogsim.com` zone, as `docs/operations/deployment.md` says;
+  once it has it, the same commit is redeployed through `workflow_dispatch`
+  so the workflow path is proven green. wrangler also warned that the deploy
+  named no environment; the workflow now passes `--env=""`.
+- Analytics: the misnamed Pages site disappeared on its own when the Pages
+  toggle went off; nothing to delete.
 
 ## Release 1 hub gate - 2026-10-16, passed
 

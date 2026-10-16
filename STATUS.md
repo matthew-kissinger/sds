@@ -152,7 +152,23 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   as Worker custom domains, and the beacon injected once at build from one
   constant instead of spelled out in four pages.
 
+- Release 1 close-out, decided 2026-10-16: tag `v3.2.0` on `b2420f66` after
+  CI (done; the Deploy run deployed the commit but failed to publish the route
+  because the deploy token lacks Workers Routes edit on the zone - the token
+  permission and a dispatch re-run are the last open Release 1 items); the two production test players from the identity checks deleted (both
+  had no submissions); the misnamed Pages analytics site was removed by
+  Cloudflare itself when the Pages toggle went off; the deploy API token's
+  scopes stay as they are. No upstream issue is filed for the fiber 9.8
+  startup cost: the owner would rather have the renderer boot architecture
+  reviewed adversarially from first principles than spend time proving a
+  library bug, and that review's result is recorded in `docs/history/`.
+
 ### Release 2 - one project, new score service, multiplayer foundations
+
+Order, decided 2026-10-16: the `cf` CLI first, then declarative hosting and
+the Pages retirement, then the score service, the Kiln farmhouse, and the
+multiplayer foundations. Orchestrated in the same session as Release 1.
+
 
 - Adopt the `cf` CLI: `cloudflare.config.ts`, the Cloudflare Vite plugin, the
   Worker entrypoint imported into the one project, `worker/` as a separate
