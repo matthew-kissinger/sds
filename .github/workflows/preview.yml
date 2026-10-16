@@ -33,7 +33,7 @@ jobs:
       PREVIEW_ALIAS: pr-${{ github.event.pull_request.number }}
       PREVIEW_URL: https://pr-${{ github.event.pull_request.number }}-sds-worker-preview.matt-m-kissinger.workers.dev
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: 22
