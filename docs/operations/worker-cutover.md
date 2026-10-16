@@ -274,12 +274,10 @@ verified:
    (`b5895c76a5cb439ca880f29caf3e70bc`, site `sds-frontend.pages.dev +1`)
    then stops being injected anywhere; `sds-frontend.pages.dev` keeps serving
    3.1.0 without a beacon.
-2. Decide the `sheepdogsim.com` Web Analytics site's mode. It is on automatic
-   injection today. The planned end state is "Enable with JS Snippet
-   installation", which relies on the snippet in `app/index.html` alone. If
-   (e) showed the zone injecting a beacon into `/about`, `/support` or
-   `/privacy`, switching ends their page-view counts unless those pages get
-   the snippet too; that is the owner's call.
+2. Switch the `sheepdogsim.com` Web Analytics site to "Enable with JS Snippet
+   installation". (e) showed the zone injecting nothing on Worker-served
+   pages, so every HTML page now carries the snippet itself and automatic
+   injection has no work left.
 3. Rerun the discovery check:
    `node scripts/verify-public-discovery.mjs --url https://sheepdogsim.com --require-analytics`
    It must still report exactly one beacon with the source token.

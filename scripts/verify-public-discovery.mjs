@@ -110,15 +110,25 @@ function verifyPages(files) {
 
   if (requireAnalytics) {
     assert(sourceBeaconToken, 'app/index.html carries no Cloudflare Web Analytics beacon with a token.');
-    const tokens = beaconTokens(root);
-    assert(tokens.length > 0, 'Cloudflare Web Analytics beacon is missing from the page.');
-    // Two beacons count every view twice. A second one means something is
-    // injecting its own, such as Web Analytics re-enabled on a Pages project.
-    assert(tokens.length === 1, `The page carries ${tokens.length} analytics beacons; expected exactly one.`);
-    assert(tokens[0] === sourceBeaconToken, 'The page beacon is not the sheepdogsim.com token from app/index.html.');
+    // Every HTML page carries its own snippet. Nothing injects one for us: the
+    // zone's automatic injection does not run on responses a Worker serves,
+    // measured at the Release 1 cutover (docs/history/status-log.md).
+    for (const route of ['/', '/about', '/support', '/privacy']) {
+      const tokens = beaconTokens(files[route]);
+      assert(tokens.length > 0, `Cloudflare Web Analytics beacon is missing from ${route}.`);
+      // Two beacons count every view twice. A second one means something is
+      // injecting its own, such as Web Analytics re-enabled on a Pages project.
+      assert(tokens.length === 1, `${route} carries ${tokens.length} analytics beacons; expected exactly one.`);
+      assert(tokens[0] === sourceBeaconToken, `The beacon on ${route} is not the sheepdogsim.com token from app/index.html.`);
+    }
   }
 
-  return { routes: Object.keys(canonical).length, image, analytics: requireAnalytics ? 'one beacon, source token' : false };
+  return {
+    routes: Object.keys(canonical).length,
+    image,
+    analytics: requireAnalytics ? 'one beacon, source token, every page' : false,
+    www: files.www ?? 'not checked',
+  };
 }
 
 function readLocal() {
@@ -157,6 +167,18 @@ async function readRemote() {
     files[route] = route.endsWith('.png')
       ? Buffer.from(await response.arrayBuffer())
       : await response.text();
+  }
+  // The www host is a proxied DNS record and a Worker route that answers only
+  // with a redirect to the apex. Checked on the production host alone; the
+  // preview and workers.dev hosts have no www.
+  if (origin.hostname === 'sheepdogsim.com') {
+    const www = await fetch('https://www.sheepdogsim.com/about?x=1', {
+      headers: { 'user-agent': 'Mozilla/5.0 SheepdogSimReleaseVerifier/1.0' },
+      redirect: 'manual',
+    });
+    assert(www.status === 301, `www.sheepdogsim.com answered HTTP ${www.status}; expected a 301 to the apex.`);
+    assert(www.headers.get('location') === 'https://sheepdogsim.com/about?x=1', `www redirect points at ${www.headers.get('location')}.`);
+    files.www = 'redirects to the apex';
   }
   return files;
 }

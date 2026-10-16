@@ -54,7 +54,9 @@ database_id = "513aa937-e60a-4fb6-b499-9f3814149e88"
 # Domain. A route takes precedence over the sds-frontend Pages custom domain on
 # the same hostname, so it took over with no downtime and the Pages project sits
 # untouched underneath; deleting the route is the rollback. Only a Custom Domain
-# would force the hostname off Pages first. www.sheepdogsim.com has no DNS.
+# would force the hostname off Pages first. www.sheepdogsim.com is not a route:
+# a proxied DNS record and a Single Redirect rule send it to the apex at the
+# zone edge, before assets or this Worker (docs/operations/deployment.md).
 #
 # /r/* is deliberately left to a future, more specific route: route matching is
 # most-specific first, so a realtime Worker can claim sheepdogsim.com/r/*

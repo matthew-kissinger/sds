@@ -208,26 +208,53 @@ is no application-level cache. A returning player revalidates the HTML and
 picks up the new bundle hash on their next load. Only an already-open tab keeps
 running old code, which is one reason the `workers.dev` API stays up.
 
+## Zone configuration
+
+Settings that live on the `sheepdogsim.com` zone rather than in this
+repository. Each one is verified by `scripts/verify-public-discovery.mjs` on
+the production host, so a change in the dashboard that breaks one fails the
+next deploy. Dashboard changes are owner-approved, one at a time.
+
+- DNS: `sheepdogsim.com` is a proxied CNAME to `sds-frontend.pages.dev` from
+  the Pages era; the Worker route sits on top of it. `www.sheepdogsim.com` is a
+  proxied CNAME to `sheepdogsim.com`.
+- Redirect rule "www to apex": a Single Redirect for requests whose hostname is
+  `www.sheepdogsim.com`, dynamic target
+  `concat("https://sheepdogsim.com", http.request.uri.path)`, status 301,
+  query string preserved. It runs at the edge before static assets or the
+  Worker, which is the only layer that can canonicalise a hostname here: for
+  non-API paths the asset layer answers before any Worker code runs.
+- Web Analytics site `sheepdogsim.com`, mode "JS Snippet installation".
+
+End state, Release 2: once the Pages project is retired, both hostnames become
+Worker custom domains in `worker/wrangler.toml` and the DNS records are created
+by `wrangler deploy`, leaving the redirect rule and the analytics mode as the
+only zone settings. Until then the apex record must stay as it is, because a
+custom domain would force the hostname off Pages.
+
 ## Analytics
 
 Cloudflare Web Analytics loads from Cloudflare's own snippet in
-`app/index.html`, with the token of the Web Analytics site named
-`sheepdogsim.com` (site tag `7bf1aecd39d6485184c6a80f8f33639b`). That file is
-the only copy of the token. `npm run check:discovery` and the deploy require
-exactly one beacon on the page, carrying that token, so a second injector or
-the old token fails the check.
+`app/index.html` and in the three static pages under `app/public` (`about`,
+`support`, `privacy`), with the token of the Web Analytics site named
+`sheepdogsim.com` (site tag `7bf1aecd39d6485184c6a80f8f33639b`). Those four
+files are the only copies of the token. `npm run check:discovery` and the
+deploy require exactly one beacon on every HTML page, carrying that token, so a
+second injector or the old token fails the check.
 
 - The Pages project injected a different token,
   `b5895c76a5cb439ca880f29caf3e70bc`, which belongs to the site misnamed
   `sds-frontend.pages.dev +1` (tag `2a512ef5e27a4909a7915228adc31a63`). Never
   use it. That site goes quiet once Web Analytics is turned off on the Pages
   project.
-- The `sheepdogsim.com` site has zone-level automatic injection on. Cloudflare
-  skips injection on a page that already carries a beacon, so `index.html` is
-  counted once. The owner's planned end state is "Enable with JS Snippet
-  installation" for that site. Before switching, note that the `about`,
-  `support` and `privacy` pages carry no snippet of their own; whether the
-  zone injects on them today is checked in the cutover runbook.
+- The zone's automatic injection does not reach responses served by a Worker:
+  at the Release 1 cutover no page carried an injected beacon, which is why
+  every page carries the snippet itself. The `sheepdogsim.com` site therefore
+  runs in "JS Snippet installation" mode; automatic injection would do nothing.
+- The token is spelled out in four HTML files. The verifier makes drift fail a
+  deploy, but one source would be better: in Release 2 the three static pages
+  become Vite entries and a single `transformIndexHtml` hook injects the
+  snippet from one constant, alongside the cf CLI build change.
 - `sheepdogsim.com` is a proxied zone, so the zone's own analytics count
   requests at the edge with no beacon at all.
 

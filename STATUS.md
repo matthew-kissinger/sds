@@ -141,6 +141,14 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   two stale GitHub environments, and turn off Web Analytics on the Pages
   project after the cutover is verified. Dashboard actions are done in the
   browser with the owner's approval at each one.
+- Cutover findings, 2026-10-16: the zone's automatic analytics injection does
+  not run on Worker-served pages, so the snippet now sits in every HTML page
+  and the discovery check requires it there; `www.sheepdogsim.com` had never
+  had a DNS record, so it gets a proxied CNAME and a zone redirect rule to the
+  apex, both verified by the deploy. Zone configuration is listed in
+  `docs/operations/deployment.md`; the Release 2 end state is both hostnames
+  as Worker custom domains, and the beacon injected once at build from one
+  constant instead of spelled out in four pages.
 
 ### Release 2 - one project, new score service, multiplayer foundations
 
@@ -161,6 +169,12 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
 - Multiplayer foundations: the Durable Object placement decision recorded with
   its reasoning, room D1 migration 0001, and a CI-tested realtime skeleton on
   `/r/*`. Not deployed unless the owner says otherwise.
+- Hosting made fully declarative: with Pages retired, `sheepdogsim.com` and
+  `www.sheepdogsim.com` become Worker custom domains in the Worker config so
+  the deploy creates their DNS; the www redirect rule and the analytics mode
+  stay as the only zone settings. The three static pages become Vite entries
+  and one build hook injects the analytics snippet from one constant, so the
+  token is spelled once.
 
 ### Standing rule
 
