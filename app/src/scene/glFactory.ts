@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Memoized WebGPURenderer factory (spec/01). Memoization is mandatory:
-// R3F issue #3782 - a re-render can invoke the factory twice.
+// WebGPURenderer factory (spec/01). Not memoized: @react-three/fiber 9.8 calls
+// the `gl` factory once per root and owns the renderer it returns, so a memo
+// would hand a remounting root (the asset lab, hot reload) a renderer fiber
+// has already disposed, bound to the old canvas. The memo's reason, fiber
+// issue #3782, no longer applies.
 // The WebGL2 backend is forced via ?debug=webgl (one of the three sanctioned
 // URL params); WebGPURenderer otherwise falls back automatically.
 import * as THREE from 'three/webgpu';
@@ -13,7 +16,6 @@ import {
 
 export type GlProps = ConstructorParameters<typeof THREE.WebGPURenderer>[0];
 
-let renderer: THREE.WebGPURenderer | null = null;
 let rendererInit: Promise<THREE.WebGPURenderer> | null = null;
 let activeRenderer: THREE.WebGPURenderer | null = null;
 
@@ -164,33 +166,37 @@ export async function measureRendererFill(
 // until the scene is ready. Three throws on a render before init, so that
 // pause is load-bearing.
 export function glFactory(props: GlProps): THREE.WebGPURenderer {
-  if (!renderer) {
-    const forceWebGL = debugFlags().has('webgl');
-    const created = new THREE.WebGPURenderer({ ...props, forceWebGL, trackTimestamp: true });
-    const onDeviceLost = created.onDeviceLost.bind(created);
-    created.onDeviceLost = (info) => {
-      // Preserve Three's lost-device bookkeeping on both backends, then stop
-      // the game even if the renderer's diagnostic callback itself fails.
-      try { onDeviceLost(info); }
-      finally { useGameStore.getState().reportGraphicsLost(); }
-    };
-    // Authored toon ramps are already the lighting model. Neutral preserves
-    // their hue/value relationships on both backends, including the low tier
-    // where the optional post chain is intentionally absent.
-    created.toneMapping = THREE.NeutralToneMapping;
-    renderer = created;
-    rendererInit = created.init().then(() => {
-      activeRenderer = created;
-      // three tags its backends with a boolean brand; the published types
-      // describe only the abstract Backend, so this is the narrow read.
-      backendName = detectRendererBackend(created);
-      return created;
-    });
-    // The capability probe consumes a rejection. This keeps it from surfacing
-    // as an unhandled rejection should the probe never mount.
-    rendererInit.catch(() => undefined);
-  }
-  return renderer;
+  const forceWebGL = debugFlags().has('webgl');
+  const created = new THREE.WebGPURenderer({ ...props, forceWebGL, trackTimestamp: true });
+  const onDeviceLost = created.onDeviceLost.bind(created);
+  created.onDeviceLost = (info) => {
+    // Preserve Three's lost-device bookkeeping on both backends, then stop
+    // the game even if the renderer's diagnostic callback itself fails.
+    try { onDeviceLost(info); }
+    finally { useGameStore.getState().reportGraphicsLost(); }
+  };
+  // Authored toon ramps are already the lighting model. Neutral preserves
+  // their hue/value relationships on both backends, including the low tier
+  // where the optional post chain is intentionally absent.
+  //
+  // Known to be overridden today: fiber's first configure sets
+  // ACESFilmicToneMapping when `gl` is a factory (its `glProps` is undefined
+  // and `flat` is false), so the shipped look has been ACES since 3.1.0. The
+  // owner decides which look is wanted; see docs/history/renderer-boot-review-2026-10-16.md.
+  created.toneMapping = THREE.NeutralToneMapping;
+  backendName = 'pending';
+  activeRenderer = null;
+  rendererInit = created.init().then(() => {
+    activeRenderer = created;
+    // three tags its backends with a boolean brand; the published types
+    // describe only the abstract Backend, so this is the narrow read.
+    backendName = detectRendererBackend(created);
+    return created;
+  });
+  // The capability probe consumes a rejection. This keeps it from surfacing
+  // as an unhandled rejection should the probe never mount.
+  rendererInit.catch(() => undefined);
+  return created;
 }
 
 /**

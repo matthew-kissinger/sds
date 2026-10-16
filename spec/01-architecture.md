@@ -1,16 +1,16 @@
 # 01 - Architecture
 
-## Stack (verified against npm 2026-08-21)
+## Stack (verified against npm 2026-10-16)
 
 | Package | Version | Notes |
 |---|---|---|
-| react / react-dom | 19.2.x | Pin under 19.3: fiber's peer range is `>=19 <19.3`. Do not auto-bump. |
-| three | 0.185.x | WebGPURenderer is the three-recommended renderer since r182. |
-| @react-three/fiber | 9.7.x | v10 (WebGPU/TSL first-class hooks) is alpha; upgrade later, do not build on canary. |
+| react / react-dom | 19.3.x | fiber 9.8 accepts it. |
+| three | 0.186.x | WebGPURenderer is the three-recommended renderer since r182. |
+| @react-three/fiber | 9.8.x | v10 (WebGPU/TSL first-class hooks) is alpha; upgrade later, do not build on canary. 9.8 gates an async `gl` factory behind its own Suspense boundary; see the renderer section. |
 | @react-three/drei | 10.7.x | Audit every drei import under WebGPURenderer before adopting it; some components assume WebGLRenderer. |
 | zustand | 5.0.x | All game/UI/session state. Transient `subscribe` reads in useFrame; never setState per frame. |
 | typescript, vite, vitest | latest | |
-| @types/three | 0.185.x | dev |
+| @types/three | 0.186.x | dev |
 
 Explicitly omitted, with reasons (do not add without a recorded decision):
 
@@ -20,13 +20,29 @@ Explicitly omitted, with reasons (do not add without a recorded decision):
 
 ## Renderer: one path, two backends
 
-WebGPURenderer from `three/webgpu`, created through R3F's async gl factory:
+WebGPURenderer from `three/webgpu`, created through R3F's gl factory:
 
 ```tsx
-<Canvas gl={glFactory} frameloop="always" ...>
+<Canvas gl={glFactory} frameloop={sceneReady ? 'always' : 'never'} ...>
 ```
 
-where `glFactory` is a module-level memoized `async (props) => { const r = new THREE.WebGPURenderer(props); await r.init(); return r; }`. Memoization is mandatory: R3F issue #3782, a re-render can invoke the factory twice.
+where `glFactory` is synchronous: it constructs the renderer, starts `init()`,
+exposes that promise as `rendererReady()`, and returns the renderer before
+init resolves. It is not memoized; fiber 9.8 calls it once per root and owns
+the result. The frame loop stays paused until the scene is ready, and the
+capability probe awaits `rendererReady()` before it draws its one measuring
+frame; three throws on a render before init, so that pause is load-bearing.
+
+Why not fiber's intended async factory (a factory that awaits `init()`): fiber
+9.8 suspends the canvas on it behind fiber's own Suspense boundary, and
+react-dom's fallback throttle then holds the resolved commit for 300 ms. The
+hub measured it at +300 ms renderer-to-capability on WebGL2 and +150 ms on
+WebGPU. The adversarial review of this design and the on-contract alternative
+worth an A/B are in `docs/history/renderer-boot-review-2026-10-16.md`.
+
+Known gap: fiber's first configure sets `ACESFilmicToneMapping` when `gl` is a
+factory, overriding the `NeutralToneMapping` the factory sets, so the shipped
+look has been ACES since 3.1.0. Which look is wanted is an open owner decision.
 
 WebGPURenderer carries its own WebGL2 backend and falls back automatically. That is the entire fallback story. Rules that follow:
 

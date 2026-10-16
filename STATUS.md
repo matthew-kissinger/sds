@@ -187,12 +187,15 @@ review's reasons: `cf` is beta and only accepts the Vite plugin's v2 beta;
 its `exports` map replaces the migrations array and is documented as one-way
 once deployed; and `cf deploy` provisions missing resources by default.
 
-Also queued in Release 2 from the renderer boot review
-(`docs/history/renderer-boot-review-2026-10-16.md`): hold the asset lab's
-frame loop until the renderer has initialised, remove the factory memo,
-decide tone mapping on purpose after reading the runtime value (a look change,
-so through the visual review gate), and rewrite spec/01's renderer section to
-the shipped contract.
+From the renderer boot review
+(`docs/history/renderer-boot-review-2026-10-16.md`), done 2026-10-16: the
+asset lab stages its frame loop and scene mount on `rendererReady()`, the
+factory memo is gone, and spec/01's stack table and renderer section state the
+shipped contract. Open: tone mapping. Fiber's first configure has set
+`ACESFilmicToneMapping` over the factory's `NeutralToneMapping` since 3.1.0,
+so the approved look is ACES while the code says Neutral; the owner decides
+whether to keep ACES (and say so in code) or move to Neutral through the
+visual review gate.
 
 
 - Adopt the `cf` CLI: `cloudflare.config.ts`, the Cloudflare Vite plugin, the
