@@ -8,12 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- 3.2.1 (not yet tagged): one root package. The Worker is built and served by
+- 3.2.1 (not yet tagged) carries two kinds of change. The build restructure
+  below changes no served byte: built from the same sources, the old and the new
+  build produce the same artifact digest (`docs/history/status-log.md`). The
+  renderer fixes already on `main` are the only client change.
+- Build: one root package. The Worker is built and served by
   `@cloudflare/vite-plugin` from the root `wrangler.toml`; `worker/` keeps its
   source and migrations but loses its `package.json`, lockfile and
   `tsconfig.json`. `npm run dev` serves the game and the score API on one
-  origin with a local D1 and no proxy. There is no client change, and
-  `dist/release.json` reports the same artifact digest as 3.2.0.
+  origin with a local D1 and no proxy. Source maps for the Worker are uploaded
+  on purpose (`upload_source_maps = true`).
+- Renderer, from `main`: the asset lab's frame loop is staged on renderer
+  initialisation, the `WebGPURenderer` factory is no longer memoised, and the
+  shipped tone mapping (ACES, set by react-three-fiber's first configure) is
+  stated in code and in `spec/01-architecture.md`, with no visual change.
 - The release manifest is written by a Vite plugin at the end of the client
   build, after `app/public` is copied, instead of by a command after the build.
   It skips the plugin's `.assetsignore`, which is never uploaded or served.
@@ -22,7 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   build generated, after `scripts/verify-deploy-config.mjs` checks its name,
   route, D1 id, migrations and assets. The preview D1 id is committed in
   `wrangler.toml`; the `CF_PREVIEW_D1_ID` variable and its substitution step
-  are gone, and the preview D1 migrates before the build.
+  are gone.
 - Browser probes serve `dist/` with a small static server instead of
   `vite preview`.
 

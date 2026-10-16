@@ -84,7 +84,7 @@ environments through `@cloudflare/vite-plugin`:
 | client | `dist/` | the game, `app/public`, `release.json`, and `.assetsignore` |
 | `sds_worker` | `.wrangler/build/sds_worker/` | `index.js` and `wrangler.json`, the configuration generated from `wrangler.toml` |
 
-Three consequences:
+Four consequences:
 
 - **The deploy ships exactly the configuration the build produced.**
   `wrangler.toml` declares `main = "worker/src/index.ts"` and `[assets]`
@@ -102,6 +102,11 @@ Three consequences:
   refuses the mismatch. Measured with the plugin 1.64.0 and wrangler 4.151.1;
   nothing writes a redirect at the root, and a plain `wrangler deploy` at the
   root fails on the missing assets directory rather than shipping anything.
+- **One wrangler generates and deploys the configuration.** The root `wrangler`
+  pin equals the version the plugin pins for itself (4.151.0 with plugin
+  1.64.0), so `npm ls wrangler` shows one copy. A wrangler bump follows the
+  plugin's pin, in the same change as the plugin bump; bumping it alone would
+  install a second copy that deploys what the first generated.
 - **`dist/` is the served artifact and nothing else.** The Worker build is kept
   out of it (`build.outDir` is `.wrangler/build` in `vite.config.ts`), and the
   plugin's `.assetsignore` (emitted for wrangler's upload step, never uploaded
@@ -241,8 +246,11 @@ minutes. There is no separate command to write it.
 deploy and the live manifest after it. `scripts/verify-deploy-config.mjs`
 checks the generated `wrangler.json` (production, or `--preview` for a build
 made with `CLOUDFLARE_ENV=preview`): name, route list, `workers_dev`,
-`preview_urls`, the D1 id, the Durable Object migrations, the assets settings,
-and an assets directory that holds `release.json` and `index.html`. `npm run probe:release` runs the same
+`preview_urls`, compatibility date and flags, observability, source-map upload,
+the D1 id, the Durable Object migrations, the assets settings, and an assets
+directory that is this repository's `dist/` and holds `release.json` and
+`index.html`. `tests/worker/verify-deploy-config.spec.ts` breaks each fact and
+expects the check to fail naming it. `npm run probe:release` runs the same
 measurement locally, so the file count and byte count can be compared against
 the live site by hand.
 
@@ -344,11 +352,11 @@ a caching service worker or a Vite plugin that writes one.
 `Preview` (`.github/workflows/preview.yml`) runs for pull requests from this
 repository, skipping Dependabot, which receives no secrets. It builds `dist/`
 with no `VITE_SCORE_API_BASE`, so the preview calls its own origin. The order
-matters: it migrates the preview D1 only first (the script names
-`wrangler.toml` explicitly, and once a build exists wrangler follows the
-generated config and rejects `--env`), then builds with
-`CLOUDFLARE_ENV=preview`, verifies the generated config with
-`verify-deploy-config.mjs --preview`, and runs
+matters: it builds with `CLOUDFLARE_ENV=preview`, verifies the generated
+config with `verify-deploy-config.mjs --preview`, migrates the preview D1 only
+(the script names `wrangler.toml` and `--env preview` itself; the plugin's
+redirect file lands under `app/`, where wrangler never sees it, so a build on
+disk does not change which configuration it uses), and runs
 `wrangler versions upload --config .wrangler/build/sds_worker/wrangler.json
 --preview-alias pr-<n>`. The preview D1 id (`6d5b0fce-952f-4d94-8936-b51fc559496c`)
 is committed in `wrangler.toml`: a database id is an identifier, not a secret,

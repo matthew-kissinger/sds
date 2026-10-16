@@ -179,21 +179,16 @@ local D1 and no proxy, the workflows deploying with wrangler from the root.
 Stage A ships alone as 3.2.1 with no client change.
 
 **Stage A is in review** (pull request `release2/stage-a-vite-plugin`, not
-tagged). Measured with `@cloudflare/vite-plugin` 1.64.0 and wrangler 4.151.1:
-the plugin forces the client to `dist/client` unless
-`environments.client.build.outDir` is set, so the client stays at `dist/` and
-the Worker builds to `.wrangler/build/sds_worker`; it always emits
-`dist/.assetsignore`, which the release manifest leaves out of its digest, so
-the artifact digest is identical to 3.2.0's (32 files, 6,588,591 bytes); and
-its deploy redirect lands in `app/.wrangler/deploy/config.json` because the
-Vite root is `app/`, where wrangler will not follow it, so both workflows pass
-the generated `.wrangler/build/sds_worker/wrangler.json` with `--config` and
-`verify-deploy-config.mjs` checks that file before every deploy and preview.
-Browser probes serve `dist/` with a static server, not `vite preview`. Rolling
-back to the 3.2.0 commit dispatches `Deploy` at the `v3.2.0` ref. After the
-tag, the first production deploy is the check that wrangler publishes the same
-route, bindings and migrations from the generated file; the dry run and the
-config comparison showed no difference.
+tagged). The plugin forces the client to `dist/client`, always emits
+`dist/.assetsignore`, and writes its deploy redirect under the Vite root
+`app/`, where wrangler will not follow it; the measurements, the artifact
+digest comparison and the decisions that followed are in
+`docs/history/status-log.md` (Release 2 Stage A). 3.2.1 will carry the build
+restructure and the two renderer fixes already on `main`, so its artifact
+differs from 3.2.0's by those fixes alone. Rolling back to the 3.2.0 commit
+dispatches `Deploy` at the `v3.2.0` ref. After the tag, the first production
+deploy is the check that wrangler publishes the same route, bindings and
+migrations from the generated file.
 
 Stage B: `cf` and
 `cloudflare.config.ts`, attempted on the preview Worker only, and cut to
