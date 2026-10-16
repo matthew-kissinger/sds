@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Memoized async WebGPURenderer factory (spec/01). Memoization is mandatory:
+// Memoized WebGPURenderer factory (spec/01). Memoization is mandatory:
 // R3F issue #3782 - a re-render can invoke the factory twice.
 // The WebGL2 backend is forced via ?debug=webgl (one of the three sanctioned
 // URL params); WebGPURenderer otherwise falls back automatically.
@@ -13,7 +13,8 @@ import {
 
 export type GlProps = ConstructorParameters<typeof THREE.WebGPURenderer>[0];
 
-let rendererPromise: Promise<THREE.WebGPURenderer> | null = null;
+let renderer: THREE.WebGPURenderer | null = null;
+let rendererInit: Promise<THREE.WebGPURenderer> | null = null;
 let activeRenderer: THREE.WebGPURenderer | null = null;
 
 export type BackendName = 'pending' | 'webgpu' | 'webgl2';
@@ -151,29 +152,53 @@ export async function measureRendererFill(
   }
 }
 
-export function glFactory(props: GlProps): Promise<THREE.WebGPURenderer> {
-  if (!rendererPromise) {
+// Synchronous on purpose. @react-three/fiber 9.8 gates a Canvas whose `gl`
+// factory returns a promise behind a Suspense boundary until the promise
+// settles, and React's fallback throttle then holds the resolved commit back
+// until 300 ms have passed since the fallback was shown. Measured on the hub
+// against 3.1.0: +300 ms from renderer to capability on WebGL2, +150 ms on
+// WebGPU, where the backend's own init absorbed the rest. Returning the
+// renderer before `init()` resolves keeps the mount synchronous.
+// `rendererReady()` is the promise the capability probe awaits before anything
+// is drawn, and nothing renders before then because the frame loop is paused
+// until the scene is ready. Three throws on a render before init, so that
+// pause is load-bearing.
+export function glFactory(props: GlProps): THREE.WebGPURenderer {
+  if (!renderer) {
     const forceWebGL = debugFlags().has('webgl');
-    rendererPromise = (async () => {
-      const renderer = new THREE.WebGPURenderer({ ...props, forceWebGL, trackTimestamp: true });
-      const onDeviceLost = renderer.onDeviceLost.bind(renderer);
-      renderer.onDeviceLost = (info) => {
-        // Preserve Three's lost-device bookkeeping on both backends, then stop
-        // the game even if the renderer's diagnostic callback itself fails.
-        try { onDeviceLost(info); }
-        finally { useGameStore.getState().reportGraphicsLost(); }
-      };
-      await renderer.init();
-      // Authored toon ramps are already the lighting model. Neutral preserves
-      // their hue/value relationships on both backends, including the low tier
-      // where the optional post chain is intentionally absent.
-      renderer.toneMapping = THREE.NeutralToneMapping;
-      activeRenderer = renderer;
+    const created = new THREE.WebGPURenderer({ ...props, forceWebGL, trackTimestamp: true });
+    const onDeviceLost = created.onDeviceLost.bind(created);
+    created.onDeviceLost = (info) => {
+      // Preserve Three's lost-device bookkeeping on both backends, then stop
+      // the game even if the renderer's diagnostic callback itself fails.
+      try { onDeviceLost(info); }
+      finally { useGameStore.getState().reportGraphicsLost(); }
+    };
+    // Authored toon ramps are already the lighting model. Neutral preserves
+    // their hue/value relationships on both backends, including the low tier
+    // where the optional post chain is intentionally absent.
+    created.toneMapping = THREE.NeutralToneMapping;
+    renderer = created;
+    rendererInit = created.init().then(() => {
+      activeRenderer = created;
       // three tags its backends with a boolean brand; the published types
       // describe only the abstract Backend, so this is the narrow read.
-      backendName = detectRendererBackend(renderer);
-      return renderer;
-    })();
+      backendName = detectRendererBackend(created);
+      return created;
+    });
+    // The capability probe consumes a rejection. This keeps it from surfacing
+    // as an unhandled rejection should the probe never mount.
+    rendererInit.catch(() => undefined);
   }
-  return rendererPromise;
+  return renderer;
+}
+
+/**
+ * Settles once the backend is initialised and the backend name is published.
+ * Rejects when the renderer could not start, which the capability probe turns
+ * into the graphics-lost screen.
+ */
+export function rendererReady(): Promise<THREE.WebGPURenderer> {
+  if (rendererInit === null) throw new Error('glFactory has not created the renderer');
+  return rendererInit;
 }

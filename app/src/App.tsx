@@ -9,6 +9,7 @@ import {
   glFactory,
   measureRendererFill,
   rendererBackendName,
+  rendererReady,
 } from './scene/glFactory';
 import { FieldScene, preloadFieldSceneAssets } from './scene/FieldScene';
 import { CameraRig } from './camera/CameraRig';
@@ -38,10 +39,11 @@ import { RuntimeQualityGovernor } from './quality/RuntimeQualityGovernor';
 function trackedGlFactory(props: Parameters<typeof glFactory>[0]) {
   const report = useGameStore.getState().reportBootStep;
   report('renderer', 0.05);
-  return glFactory(props).then((renderer) => {
-    report('renderer', 1);
-    return renderer;
-  });
+  const renderer = glFactory(props);
+  // The mark still means "backend initialised", not "object constructed", so
+  // the boot timeline stays comparable with earlier receipts.
+  rendererReady().then(() => report('renderer', 1), () => undefined);
+  return renderer;
 }
 
 function CapabilityProbe() {
@@ -58,8 +60,17 @@ function CapabilityProbe() {
     frame = window.requestAnimationFrame(() => {
       void (async () => {
         const renderer = gl as unknown as THREE.WebGPURenderer;
+        // The factory hands over the renderer before init() resolves (see
+        // glFactory for the measured reason). Nothing may draw until it has.
+        try {
+          await rendererReady();
+        } catch (error: unknown) {
+          console.error('renderer_init_failed', error);
+          if (alive) useGameStore.getState().reportGraphicsLost();
+          return;
+        }
         // WebGL2 is the conservative fallback only if even backend inspection
-        // fails. glFactory normally publishes the exact backend before mount.
+        // fails. glFactory publishes the exact backend once init resolves.
         let backend: 'webgpu' | 'webgl2' = 'webgl2';
         try {
           const reportedBackend = rendererBackendName();
@@ -158,12 +169,12 @@ function HerdApp() {
         <Canvas
           gl={trackedGlFactory as never}
           dpr={dpr}
-          // The capability probe needs one live frame. Its receipt causes this
-          // React commit to mount the field, and that commit must stay paused:
-          // otherwise Canvas reapplies `always` while compileMountedScene has
-          // only begun its first async pipeline and the ordinary render loop
-          // synchronously steals the rest. SceneReadySignal owns the resume.
-          frameloop={capabilityReady && !sceneReady ? 'never' : 'always'}
+          // Paused until the scene is ready. The capability probe draws its one
+          // frame itself; the field mount must not be rendered while
+          // compileMountedScene has only begun its first async pipeline; and
+          // Three throws on a render before init(), which the synchronous
+          // factory leaves pending at mount. SceneReadySignal owns the resume.
+          frameloop={sceneReady ? 'always' : 'never'}
           camera={{ position: [-20, 52, -98], fov: 45, near: 0.5, far: 1200 }}
         >
           <IntentResolver />
