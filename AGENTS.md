@@ -29,8 +29,13 @@ rollback. Keep that service isolated from the client.
   the version 3.0 client.
 - Preserve the `field-v3` score partition and exact 25, 75 and 200 flock-size
   allow-list.
-- Do not change production infrastructure or deploy from a contribution.
-  Production workflows require an explicitly approved full commit SHA.
+- Do not change production infrastructure from a contribution.
+- A production deploy runs on the owner's explicit approval, naming the full
+  40-character commit SHA. Approval given in conversation is sufficient
+  authorization and needs no separate sign-off. The deploy workflows stay
+  `workflow_dispatch` taking that exact SHA, so what shipped is always a named
+  commit that can be named again to roll back - which is the whole reason
+  version 2 is still recoverable from its own immutable deployment.
 
 ## Architecture tripwires
 
