@@ -120,56 +120,18 @@ the record those files carry.
 
 - Whether to collapse the Pages project and the score Worker into one Worker
   serving static assets and `/api/*` on `sheepdogsim.com` alone. The present
-  split works, but the repository asserts invariants it does not own: the
+  split works, but the repository asserts invariants it does not own - the
   analytics beacon is injected by a Pages dashboard toggle and then required by
   `scripts/verify-public-discovery.mjs`, so flipping that toggle fails a deploy
-  for a reason no file in the repository records. One Worker would delete the
-  CORS allow-list rather than maintain it, retire the `sds-frontend.pages.dev`
-  hostname and the analytics site misnamed after it, and pin the game and its
-  API to one commit in one deploy. Against it: `sheepdogsim.com` can belong to
-  only one project at a time, so the cutover has a real window, and there are
-  live names and times to protect. Measured and reversible either way - a
-  player's name is a JWT in `localStorage` on the game's origin and their times
-  are in D1, so neither is touched by moving the API between hostnames. The
-  reasoning, the staging and the two traps found while measuring are in
+  for a reason no file records - and `deploy.yml` and `deploy-worker.yml` each
+  take their own SHA, so nothing makes the client and its API one release.
+  Measured during the 2026-10-16 alignment pass: the cutover needs no downtime,
+  because a Worker route takes precedence over a Pages custom domain and rolls
+  back by deleting the route; `_headers` and `_redirects` are supported
+  natively; a player's name is a JWT in `localStorage` on the game's origin and
+  their times are in D1, so neither moves. Not urgent, and nothing is broken.
+  The reasoning, the staging and the three traps found while measuring are in
   `docs/operations/deployment.md`.
-- None for the production cutover. Physical-device and final launch-media
-  receipts remain follow-up evidence.
-- Follow camera turning ships at Gentle by default. Off rotates 119 degrees over
-  a two-minute run against 5,204 on the rig it replaces and frames the dog
-  better; its only cost is that the player cannot see around a corner they are
-  turning toward. Gentle is a judgement, not a measurement, and is the owner's
-  call.
-- Is the 25 m/s sprint still wanted now the commanded speed has weight? Lowering
-  it, or scaling dog and sheep speeds together, moves the trace fixtures and
-  makes existing `field-v3` times incomparable, which is why nothing in the
-  camera work depends on it.
-- Should the player have any manual camera authority? At the Off end stop the
-  whole of it is the documented camera key twice, which re-arms the bearing. A
-  real nudge would need a control surface neither screen has to spare.
-- The bark ring is reported as very quick or invisible on a phone while it reads
-  correctly on desktop. Two suspects, both presentation: `reduceMotion` follows
-  the operating system unless the player overrides it, and under it
-  `barkRingFrame` pins the ring to the 10 m near radius at 0.096 opacity for
-  0.24 s instead of 40 m at 0.48 for 0.78 s; separately the ring is 1 m wide
-  expanding to 40 m in 0.64 s while `autoTier` caps phone device pixel ratio at
-  0.8 to 1.5, so it can render as a sub-pixel line. Checking the game's own
-  Reduce Motion toggle on the reporting phone distinguishes them. Not yet
-  measured on a device.
-- Whether the walk-in Kiln house becomes the real house. The prototype answers
-  the technical question - a GLB can be re-banded into this game's painting
-  with no new shader - and leaves the judgement open. Against it: the backdrop
-  cluster's look is a procedural surface keyed to `uv.x`/`uv.y`, and a baked
-  mesh can only have those channels reconstructed from world position, which
-  works for walls and roof slopes and degenerates wherever a surface is neither;
-  one building with an interior is 3,440 triangles against the whole present
-  homestead's 4,874; and `tests/treeline-assets.spec.ts:329` records this
-  project's standing choice not to load GLBs at runtime, which adopting this
-  would reverse. For it: an interior, a door and real reveals are not reachable
-  by growing `farmhouse/parts.ts`, and the render-and-revise loop caught a
-  twisted prism in the porch that no view of mine would have. The reversible
-  reading, and the one taken: keep the 90 m backdrop procedural, keep the
-  walk-in house in the lab, and decide when there is a scene to walk into.
 - Whether to build the grass on `threejs-field-grass`. The owner's condition is
   that it be at least as performant as what ships. It is not, yet, and the
   reason is narrow: only the interaction field differs, and it trades GPU work

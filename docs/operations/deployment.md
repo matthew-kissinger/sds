@@ -146,27 +146,53 @@ The present split - a Pages project for the game, a Worker on another hostname
 for the API, and an analytics beacon injected by a dashboard toggle that
 `scripts/verify-public-discovery.mjs` then asserts - has one structural problem:
 the repository asserts invariants it does not own. A dashboard change it cannot
-see can fail a deploy.
+see can fail a deploy. A second, quieter one: `deploy.yml` and
+`deploy-worker.yml` each take their own SHA, so nothing makes the client and the
+API it talks to come from the same commit.
 
-Cloudflare's current direction for exactly this shape is one Worker serving both
-the static assets and the API from one origin: an `assets` directory with
+Cloudflare's current direction for this shape is one Worker serving static
+assets and the API from one origin: an `assets` directory with
 `not_found_handling` set to `single-page-application`, and `run_worker_first`
-limited to `/api/*` and `/r/*`. That would put the game and its API on
-`sheepdogsim.com` alone, delete the CORS allow-list rather than maintain it,
-remove the `pages.dev` hostname and the misnamed analytics site with it, move
-the beacon into `app/index.html` where the repository can honestly assert it,
-and pin both halves of a release to one commit in one deploy.
+for the API prefix. Assets are served from the same edge CDN Pages uses and do
+not invoke the Worker script, so this is not a performance change - it is a
+packaging one. It would put the game and its API on `sheepdogsim.com` alone,
+delete the CORS allow-list rather than maintain it, retire the `pages.dev`
+hostname and the analytics site misnamed after it, move the beacon into
+`app/index.html` where the repository can honestly assert it, and pin both
+halves of a release to one commit in one deploy. `_headers` and `_redirects`
+are supported natively, so those files carry over unchanged.
 
-The one step that carries real risk is the custom domain: it can belong to only
-one project at a time, so `sheepdogsim.com` has to be removed from the Pages
-project before the Worker can take it. Build and verify the Worker on its own
-hostname first, then move the domain.
+**This needs no downtime.** A Worker *Route* takes precedence over a Pages
+Custom Domain on the same hostname, so a route on `sheepdogsim.com/*` takes over
+while the Pages project sits untouched underneath. Verify in production, and
+roll back by deleting the route. Only a Worker *Custom Domain* would force the
+domain off Pages first, because a custom domain belongs to one project at a
+time. Prefer the route for the cutover.
+
+Do not delete the Pages project afterwards. It still serves the immutable v2
+deployment named in `docs/operations/v2-rollback.md`. Left dormant with no
+custom domain it costs nothing, and the misnamed analytics site stops receiving
+traffic on its own once the Worker serves the domain.
+
+**Leave `/r/*` unclaimed.** `spec/03-multiplayer.md` reserves that prefix for
+multiplayer rooms, and whether the Durable Objects that back them share this
+Worker or get their own is an open decision recorded there. Routes match
+most-specific-first, so a realtime Worker can take `sheepdogsim.com/r/*` later
+without disturbing this one.
 
 Pages remains fully supported with no announced deadline, so this is a direction
-rather than a deadline. It also folds naturally into the `cf` CLI migration:
-`cf` moves configuration to `cloudflare.config.ts`, and that one file would
-describe the assets, the routes and the bindings together, so the two changes
-are cheaper done once than twice.
+and not a deadline. It also folds into the `cf` CLI migration: `cf` moves
+configuration to `cloudflare.config.ts`, and that one file would describe the
+assets, routes and bindings together, so the two are cheaper done once than
+twice. `cf` is in open beta with known gaps, so changing one variable at a time
+is the safer order.
+
+**The hazard that outranks all of the above.** Any Worker that verifies an
+identity JWT must carry the same `JWT_SECRET` as the one that minted it.
+`app/src/scores/controller.ts` treats a 401 as "re-register", so a secret
+mismatch does not error - it silently issues returning players new random names
+and orphans their recorded times under the old `persistent_id`. Copy the secret
+verbatim and verify an existing identity still resolves before sending traffic.
 
 ## Analytics
 

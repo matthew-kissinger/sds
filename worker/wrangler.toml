@@ -26,7 +26,20 @@ binding = "DB"
 database_name = "sds-db"
 database_id = "513aa937-e60a-4fb6-b499-9f3814149e88"
 
-# Route bindings for custom domain (added after DNS is configured)
+# Route bindings for the custom domain. DNS has been configured since the v3
+# cutover; these stay commented out deliberately, not pending.
+#
+# Enabling them REQUIRES adding `workers_dev = true` as a top-level key in the
+# same change. Cloudflare infers `workers_dev` as false once a config declares
+# routes, which would take sds-worker.matt-m-kissinger.workers.dev offline - the
+# origin every already-built client calls, because PROD_SCORE_API_BASE is baked
+# into the bundle.
+#
+# Note also that sheepdogsim.com/api/* already answers 200 today: that is the
+# Pages SPA fallback returning index.html, not this Worker. Verify a route took
+# effect by asserting Content-Type: application/json, never the status code.
+#
+# See docs/operations/deployment.md.
 # [[routes]]
 # pattern = "sheepdogsim.com/api/*"
 # zone_name = "sheepdogsim.com"

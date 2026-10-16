@@ -35,6 +35,58 @@ Durable Objects and a new D1 database with migrations starting at 0001. The
 retained production score Worker remains isolated. No score or room data
 migrates into the future service.
 
+### Where the Durable Objects live, and why it is a judgement
+
+Cloudflare documents that deploying a new version of a Worker restarts every
+Durable Object it hosts, closing every WebSocket attached to them. The
+Hibernation API does not change this; a deploy is a different event from an
+eviction, and this specification declines hibernation anyway.
+
+That is a real constraint, but it is weaker than it first sounds here, and the
+decision turns on one number: **how often the release unit ships.**
+
+- At a daily or weekly cadence, sharing one Worker is untenable: every colour
+  change drops every live match, and no small fix can ship while anyone plays.
+- At this project's actual cadence - a release every few weeks - a restart is a
+  hiccup the design above already absorbs. Room state hydrates and persists
+  through DO storage with backfill, in-game disconnects have a 15 s reconnect
+  grace, and clients must survive eviction regardless, because a Durable Object
+  can be evicted at any time without a deploy.
+
+So both shapes are defensible, and the trade is not "simple versus correct":
+
+- **One Worker** - assets, REST and the Durable Objects together. One
+  `JWT_SECRET`, one deploy, one config. A release interrupts live matches, and
+  the clients reconnect.
+- **Two Workers** - a release unit and a realtime unit, split by deploy cadence.
+  Buys the ability to hotfix the game without touching a match, and a smaller
+  blast radius per deploy. Costs a `JWT_SECRET` shared across two Workers.
+
+Weigh that second cost honestly. Splitting trades a **loud, self-healing**
+failure - a reconnect the design already handles - for a **silent, permanent**
+one: if the secret ever drifts between the two Workers, the client reads 401 as
+"re-register", so players are quietly issued new names and their recorded times
+are orphaned under the old `persistent_id`. Nothing alarms. At a low deploy
+cadence that is a bad trade, which argues for starting with one Worker.
+
+Whichever is chosen, the choice is reversible. A Durable Object class can be
+moved between Workers later, through `transferred_classes` in a legacy
+migration or the newer `exports` transfer, both of which are two-sided
+multi-deploy handoffs - fiddly and worth rehearsing, but supported. Do not treat
+this as a door that locks.
+
+**Routing, either way.** The units present one public origin. Worker routes
+match most-specific-first, so `sheepdogsim.com/r/*` can be taken by a realtime
+Worker while `sheepdogsim.com/*` serves the game, with no proxy hop and no CORS.
+**The `/r/*` prefix is reserved for rooms. Do not spend it on anything else.**
+
+One thing to settle before building rather than during: this document's "Worker
+router" section lists `POST /api/register`, `POST /api/score` and
+`GET /api/leaderboard` alongside the room surface. Today those belong to the
+release unit, against `sds-db`. Which unit owns identity in a multiplayer world
+is an open architecture question, and it is the question that decides whether a
+shared secret is needed at all.
+
 ## Architecture (lifted shape)
 
 - **Worker router** (`worker/src/index.ts`): REST handshake + WS ticket gate. The DO is reachable ONLY through the router, which derives identity from a verified JWT. This trust chain is an architectural invariant; state it in code comments. It breaks silently if DO routes are ever exposed directly.
