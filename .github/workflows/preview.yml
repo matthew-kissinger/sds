@@ -40,17 +40,6 @@ jobs:
           cache: npm
       - run: npm ci
 
-      # Before the build, and with --config wrangler.toml named by the script:
-      # once a build exists, wrangler follows a generated config and rejects
-      # --env. The preview database id is committed in wrangler.toml; the script
-      # refuses to run against the production id.
-      - name: Migrate preview D1 only
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          D1_TARGET: preview
-        run: node scripts/d1-migrate-remote.mjs
-
       - name: Acquire approved game audio
         run: |
           sudo apt-get update -qq
@@ -72,6 +61,18 @@ jobs:
         run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ github.event.pull_request.head.sha }}"
       - name: Verify the generated preview configuration
         run: node scripts/verify-deploy-config.mjs --preview
+
+      # The script names wrangler.toml and --env preview itself. The plugin's
+      # redirect file lands under app/, where wrangler never sees it, so a build
+      # on disk does not change which configuration this uses. The preview
+      # database id is committed in wrangler.toml; the script refuses to run
+      # against the production id.
+      - name: Migrate preview D1 only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          D1_TARGET: preview
+        run: node scripts/d1-migrate-remote.mjs
 
       # A version upload leaves the preview Worker's deployed version and every
       # other pull request's alias alone. It refuses a Durable Object lifecycle
