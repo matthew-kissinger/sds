@@ -13,7 +13,7 @@ import { useGameLoop } from '@app/game/useGameLoop';
 import { Atmosphere } from './Atmosphere';
 import { Dog } from './Dog';
 import { GateGuidance } from './GateGuidance';
-import { Farmhouse } from './Farmhouse';
+import { Farmhouse, preloadFarmhouse } from './Farmhouse';
 import { Farmer } from './Farmer';
 import { FenceLine } from './FenceLine';
 import { Flock } from './Flock';
@@ -42,6 +42,7 @@ export function preloadFieldSceneAssets(report?: BootReporter): void {
   void loadTufts((value) => report?.('grass', value));
   void loadTreelineManifest((value) => report?.('treeline', value));
   void loadScatterManifest((value) => report?.('scatter', value));
+  preloadFarmhouse();
 }
 
 /**

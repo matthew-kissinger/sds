@@ -34,7 +34,7 @@
     "z": 11.87
   },
   "runtime": {
-    "draws": 6,
+    "addedDraws": 0,
     "trianglesPerSurface": {
       "timber": 1964,
       "wall": 908,
@@ -43,7 +43,9 @@
       "lamp": 72,
       "roof": 48
     },
-    "note": "One draw per farmhouse band set. No texture is sampled; the ramp is computed."
+    "note": "Welded into the cluster wall, roof, timber, dress, opening and lamp buffers, so the cluster stays at ten draws. No texture is sampled; the ramp is computed.",
+    "loader": "app/src/scene/farmhouse/kilnHouse.ts",
+    "distPath": "assets/farmhouse-<hash>.glb"
   },
   "qa": {
     "profile": "asset.requirements.v1",
@@ -53,29 +55,26 @@
     "gltfWarnings": 0
   },
   "consumers": [
+    "app/src/scene/Farmhouse.tsx",
     "lab/src/subjects.ts"
   ],
-  "shipsInProductionBuild": false,
+  "shipsInProductionBuildWhen": "FARMHOUSE_SOURCE === 'kiln'",
   "sources": [
     {
       "path": "assets/house/farmhouse.kiln.js",
       "sha256": "b77ea645f1395e576b63dea99987ebf4f4e252610d5f64fd55f0355cf500c72d"
     },
     {
-      "path": "lab/src/kilnHouseAsset.ts",
-      "sha256": "6a570a49c3956c145d47c20a91f9c38b0c2fc220602493db066722a0600ccfa5"
+      "path": "app/src/scene/farmhouse/kilnHouse.ts",
+      "sha256": "bc49de4af0b4d6b0184d9ed01daf8ed82686b4625bd1a65b539d35a4fc4e550d"
     },
     {
       "path": "lab/src/KilnHouse.tsx",
-      "sha256": "3675ec720751f36481ab4cbc6049fbe0aba13d6e9e60c82d84fd7d816fce5c3e"
-    },
-    {
-      "path": "lab/src/glb-url.d.ts",
-      "sha256": "1607cb2fb629b16f453ec6fc3dcc42159d19e32668b2f06715d6e3eab8f701c0"
+      "sha256": "2c6063570703c5af6f7e3da650dc3ad0ca6d8d80bec357c1f4a75e6800a47e08"
     },
     {
       "path": "tools/record-house-asset.mjs",
-      "sha256": "3061d9b2469bc7503892192dcb9b8916904d0a972c49fe8c6b3e546ae54bfc92"
+      "sha256": "3d230cd65909274db96e8b0556bf1d09c0eca8eb778859a0e7915323a8d82192"
     }
   ]
 }

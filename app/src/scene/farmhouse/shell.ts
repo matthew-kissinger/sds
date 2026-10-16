@@ -242,6 +242,28 @@ export class Shell {
     }
   }
 
+  /**
+   * Weld a finished mesh authored in a building's own frame, with its normals and
+   * both uv channels already set. The Kiln farmhouse arrives this way
+   * (farmhouse/kilnHouse.ts): placement is the only thing done to it here.
+   */
+  append(
+    place: Stand,
+    positions: ArrayLike<number>,
+    normals: ArrayLike<number>,
+    uvs: ArrayLike<number>,
+  ): void {
+    const sin = Math.sin(place.yaw);
+    const cos = Math.cos(place.yaw);
+    for (let i = 0; i < positions.length; i += 3) {
+      const [x, y, z] = [positions[i]!, positions[i + 1]!, positions[i + 2]!];
+      this.positions.push(place.x + x * cos + z * sin, place.y + y, place.z - x * sin + z * cos);
+      const [nx, ny, nz] = [normals[i]!, normals[i + 1]!, normals[i + 2]!];
+      this.normals.push(nx * cos + nz * sin, ny, -nx * sin + nz * cos);
+    }
+    for (let i = 0; i < uvs.length; i++) this.uvs.push(uvs[i]!);
+  }
+
   private push(
     x: number,
     y: number,

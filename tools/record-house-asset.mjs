@@ -32,9 +32,8 @@ const recipe = 'assets/house/farmhouse.kiln.js';
 /** Hashed as text: line endings are not part of what these files mean. */
 const sources = [
   recipe,
-  'lab/src/kilnHouseAsset.ts',
+  'app/src/scene/farmhouse/kilnHouse.ts',
   'lab/src/KilnHouse.tsx',
-  'lab/src/glb-url.d.ts',
   'tools/record-house-asset.mjs',
 ];
 
@@ -59,7 +58,7 @@ const ledger = {
   },
   recipe,
   artifact: { path: artifact, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') },
-  // As exported. The lab welds these to one buffer per band set before drawing.
+  // As exported. The game welds these into the farmhouse cluster's buffers.
   triangles: 3440,
   exportedMeshNodes: 282,
   exportedGeometries: 173,
@@ -68,15 +67,21 @@ const ledger = {
   images: 0,
   gltfExtensions: ['KHR_materials_emissive_strength'],
   boundsMetres: { x: 20.05, y: 12.45, z: 11.87 },
-  // What the game actually issues, once lab/src/kilnHouseAsset.ts has welded it.
+  // What the game issues once farmhouse/kilnHouse.ts has parsed it and
+  // farmhouse/cluster.ts has welded it into the cluster's own buffers.
   runtime: {
-    draws: 6,
+    addedDraws: 0,
     trianglesPerSurface: { timber: 1964, wall: 908, dress: 288, opening: 160, lamp: 72, roof: 48 },
-    note: 'One draw per farmhouse band set. No texture is sampled; the ramp is computed.',
+    note: 'Welded into the cluster wall, roof, timber, dress, opening and lamp buffers, so the cluster stays at ten draws. No texture is sampled; the ramp is computed.',
+    loader: 'app/src/scene/farmhouse/kilnHouse.ts',
+    distPath: 'assets/farmhouse-<hash>.glb',
   },
   qa: { profile: 'asset.requirements.v1', acceptance: 'accepted', disposition: 'pass', gltfErrors: 0, gltfWarnings: 0 },
-  consumers: ['lab/src/subjects.ts'],
-  shipsInProductionBuild: false,
+  consumers: ['app/src/scene/Farmhouse.tsx', 'lab/src/subjects.ts'],
+  // A build constant, not a setting: see app/src/scene/farmhouse/source.ts. The
+  // GLB reaches dist/ only in a build where it is 'kiln', and the release probe
+  // checks that any model in dist/ is this file, byte for byte.
+  shipsInProductionBuildWhen: "FARMHOUSE_SOURCE === 'kiln'",
   sources: sources.map((path) => ({ path, sha256: textDigest(path) })),
 };
 
@@ -117,4 +122,4 @@ if (process.argv.includes('--check')) {
 } else writeFileSync(output, recorded);
 
 console.log(`Farmhouse source ledger verified: ${sources.length} files, ${ledger.triangles} triangles, `
-  + `${ledger.runtime.draws} draws (${fileURLToPath(output)})`);
+  + `${ledger.runtime.addedDraws} added draws (${fileURLToPath(output)})`);

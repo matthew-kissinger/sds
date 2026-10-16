@@ -172,3 +172,33 @@ export const LEANTO_HALF = 1.8;
 export const BARN_LEANTO_AT = -5.9;
 export const BARN_LEANTO_HALF = 2;
 export const BARN_CUPOLA_AT = -2.45;
+
+/**
+ * The walk-in house's stack and roof, in the house's own frame, from
+ * assets/house/farmhouse.kiln.js. That file is a Kiln program rather than a
+ * module, so these are repeated: they place the three things the baked mesh
+ * cannot say for itself, which are where the smoke leaves, where the stack
+ * throws its shadow and how big the outline's envelope is.
+ *
+ * The range is the same 18.6 by 8.6 box as HOUSE with a gable at both ends, and
+ * it carries no sag or settle, so the hull is HOUSE with the Kiln eaves.
+ */
+export const KILN_STACK = {
+  x: -8.1,
+  z: -1.35,
+  halfX: 1.4,
+  halfZ: 1.25,
+  /** The cap's top face. */
+  top: 11.35,
+  /** The pot's mouth, where the smoke starts, offset from the shaft's axis. */
+  mouth: { x: -7.84, y: 12.28, z: -1.45 },
+} as const;
+
+export const KILN_ROOF: RoofSpec = {
+  ...HOUSE,
+  eaveOverhang: 0.55,
+  endOverhang: 0.55,
+  ridgeFlat: 0,
+  settle: 0,
+  sag: 0,
+};

@@ -5,11 +5,16 @@ hinges, a porch over the step, reveals with real depth, and a hall, fireplace
 and stair behind the front wall. It exists so the question "can the farmer go
 inside" has an answer that is not "model it twice".
 
-It is **not in the game**. Nothing under `app/` imports it, the production build
-never sees it, and `vite.config.ts` keeps `app/` as its root. Its one consumer is
-the asset lab's `House (Kiln)` subject (`lab/src/subjects.ts`), where it stands on
-the same pad, at the same yaw, as the shipped procedural cluster, so the two can
-be judged by flipping between them with the camera held.
+**Whether it ships is one constant.** `FARMHOUSE_SOURCE` in
+`app/src/scene/farmhouse/source.ts` is `'procedural'` or `'kiln'`. `Farmhouse`
+reads it; with `'kiln'` the game loads this GLB (`farmhouse/kilnHouse.ts`, the only
+GLB the runtime loads) and welds it into the cluster in place of the procedural
+range, wing, porch and stack. It stands on the same pad at the same yaw either
+way. The value changes only after a hub timing receipt shows no load-time or
+frame-time regression: build once per value, probe both. In a `'procedural'`
+build no model reaches `dist/`. The asset lab's `House (Kiln)` subject mounts the
+Kiln source whatever the constant says, so the two can be flipped between with
+the camera held.
 
 ## What is authored, and what is baked
 
@@ -37,16 +42,17 @@ file has no way to carry: `uv.x` names *which* surface a triangle is, and `uv.y`
 carries a distance in metres - below a roof edge on a wall, up the slope on
 slate. A baked UV would be meaningless to it.
 
-So `lab/src/kilnHouseAsset.ts` does not import a look, it reconstructs one. Each
+So `app/src/scene/farmhouse/kilnHouse.ts` does not import a look, it reconstructs one. Each
 of the seven material names in the GLB is the name of a farmhouse band set, and
 that binding is the whole interface: `limewash` is `wall`, `slate` is `roof`,
 `stone` and `masonry` are the two `dress` channels, and so on. The loader bakes
 each node's world matrix, derives `uv.x` from the material it was authored
-against and `uv.y` from world position, and welds 264 mesh nodes into one buffer
-per band set. The shipped `makeFarmhouseSurfaceMaterial` then draws it. No new
+against and `uv.y` from world position, and sorts 282 mesh nodes into one list
+per band set, which `farmhouse/cluster.ts` welds into the cluster's own buffers. The shipped `makeFarmhouseSurfaceMaterial` then draws it. No new
 shader, no texture, nothing sampled.
 
-The cost of that: **3,440 triangles in 6 draws**, no textures. For comparison,
+The cost of that: **3,440 triangles and no added draws** (the six band sets weld
+into buffers the cluster already draws), no textures. For comparison,
 the entire shipped procedural cluster - house, cross wing, two lean-tos, porch,
 barn, cupola, outshot, cart-door hood, all 23 openings and the smoke plume -
 measures 4,874 triangles. One building with an interior and a storey inside it

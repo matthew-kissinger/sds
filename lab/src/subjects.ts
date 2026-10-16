@@ -44,9 +44,8 @@ export const LAB_PARTS: Record<LabPartId, ComponentType> = {
   fence: FenceLine,
   pen: Pen,
   farmhouse: Farmhouse,
-  // The Kiln-authored walk-in house, on the same pad as the procedural range.
-  // Lab-only, like the grass library beside it: the production build never
-  // references lab/, so no GLB reaches dist/.
+  // The Kiln-authored walk-in house on the procedural range's pad, whatever
+  // FARMHOUSE_SOURCE says, so the two can be flipped between at one camera.
   'kiln-house': KilnHouse,
   farmer: Farmer,
   treeline: Treeline,
@@ -153,7 +152,7 @@ export const LAB_SUBJECTS = [
     label: 'House (Kiln)',
     // The same pad, yaw and footprint as the subject above, so the panel holds
     // the camera across the flip and the comparison is the asset alone.
-    note: 'The walk-in house authored in Kiln and re-banded through the shipped toon ramp. Real reveals, joinery, a door on its hinges and a room behind it. Drop the distance to walk up to it.',
+    note: 'The walk-in house authored in Kiln, re-banded through the shipped toon ramp and welded into the farm cluster (barn, shadows, smoke unchanged). Real reveals, joinery, a door on its hinges and a room behind it. Drop the distance to walk up to it.',
     parts: ['terrain', 'grass', 'kiln-house', 'farmer'],
     target: { kind: 'fixed', x: HOUSE_AT.x, z: HOUSE_AT.z },
     distance: 26,
