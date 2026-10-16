@@ -4,6 +4,58 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.2.0] - 2026-10-16
+
+### Changed
+
+- The game and its score API are served by one Worker, `sds-worker`, on
+  `sheepdogsim.com`. The built client ships as the Worker's static assets with
+  single-page-application fallback, `/api/*` runs the Worker first, and the
+  client calls the API same-origin, so score submission no longer needs a CORS
+  preflight. Cutover is a Worker route in front of the dormant `sds-frontend`
+  Pages project, which stays as the immutable version 2 rollback. A player's
+  identity and times do not move: the identity is a JWT in `localStorage` on
+  the same origin, verified by the same `JWT_SECRET`, and the times are in the
+  same D1 database. `docs/operations/deployment.md` describes the one path and
+  `docs/operations/worker-cutover.md` records the one-time procedure.
+- One `Deploy` workflow, triggered by a `v*` tag, builds the client, writes and
+  verifies the release manifest, deploys the Worker with the assets, and then
+  asserts the live manifest, the JSON API on both hostnames and the analytics
+  beacon. `Deploy Worker` is gone; a client and its API can no longer ship from
+  different commits. Pull-request previews are version aliases on the preview
+  Worker with its own D1, never a version of production.
+- The Cloudflare Web Analytics beacon is in `app/index.html`, carrying the
+  token of the `sheepdogsim.com` analytics site, so the repository owns the
+  invariant its discovery check asserts instead of a dashboard toggle.
+- Dependencies to their latest stable releases: vitest 5.0.5, ESLint 10.13.0,
+  Vite 8.3.4, `@vitejs/plugin-react` 6.1.2, Three.js 0.186.1 with its types,
+  React 19.3.1, `@react-three/fiber` 9.8.2, `@types/node` 26, wrangler 4.151.1,
+  Playwright 1.64.1, TypeScript 6.0.3 at the root to match the worker.
+  TypeScript 7.0.2 was measured and not taken: it ships no compiler API yet and
+  typescript-eslint refuses it. Three.js 0.186 needed no code change; WebGPU
+  and forced-WebGL2 receipts match the previous build.
+- The Kiln farmhouse loader is in `app/src/scene/farmhouse/` behind the build
+  constant `FARMHOUSE_SOURCE`, shipped as `procedural`, so a corrected bake is
+  one constant flip gated on a hub receipt. The production build still draws
+  the code-built house: the current bake carries none of the surface channels
+  the backdrop shader needs, so roofs below the main eave collapsed to flat
+  slabs. The runtime may now load exactly one GLB, the farmhouse, digest-checked
+  against `assets/house/asset-manifest.json`; `tests/treeline-assets.spec.ts`
+  records that this reverses the earlier no-runtime-GLB decision deliberately.
+- Local development proxies `/api` from the Vite dev server to `wrangler dev`.
+
+### Removed
+
+- The version 2 multiplayer code from the production score Worker: `RoomDO`,
+  `LobbyDO`, the server game simulation, the WebSocket upgrade, the room and
+  lobby routes, and the 155 tests that covered them. A `deleted_classes`
+  migration retires the Durable Object classes. `spec/03-multiplayer.md`
+  builds rooms as a new Worker; the removed code stays in history as reference.
+- The CORS origin allow-list, including the dead `.sheepdogsim.pages.dev`
+  entry. A fixed permissive header remains only while already-built 3.1.0
+  clients still call the `workers.dev` hostname cross-origin.
+- `@msgpack/msgpack`, which only the removed room code used.
+
 ## [3.1.0] - 2026-10-16
 
 ### Added
