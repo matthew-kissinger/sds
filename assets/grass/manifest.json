@@ -6,6 +6,7 @@
   "stride": 12,
   "terrainSeed": 20260821,
   "farmhouseSource": "kiln",
+  "barnSource": "procedural",
   "encoding": {
     "xzRange": 200,
     "yRange": 8,
