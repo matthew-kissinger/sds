@@ -33,15 +33,30 @@ pushed, and keeps a `workflow_dispatch` escape hatch that takes a full
 Nothing else deploys production. `Client CI` verifies and never deploys.
 `Preview` uploads pull requests to the preview Worker, never to production.
 
-The `CF_API_TOKEN` repository secret must be able to edit Workers scripts on
-the account and Workers routes on the `sheepdogsim.com` zone: every deploy
-re-publishes the route from `wrangler.toml`.
+The `CF_API_TOKEN` repository secret is the Account API Token
+`sds-github-deploy` (created 2026-10-16, expires 2027-10-16), and its policy
+is exactly what the two workflows call, nothing more:
+
+| Scope | Permission | Why |
+| --- | --- | --- |
+| Account | Workers Scripts, Edit | upload the Worker and its assets, create preview versions |
+| Account | D1, Read | wrangler validates the `DB` binding at deploy |
+| Account | Account Settings, Read | wrangler's account resolution |
+| Zone `sheepdogsim.com` only | Workers Routes, Edit | every deploy re-publishes the route from `wrangler.toml`; deleting it is the rollback |
+
+Nothing for Pages: the dormant Pages project is never deployed to. The v3.2.0
+tag deploy is the record of why the zone permission matters: the previous
+token could upload the script and not the route, so wrangler stopped after
+the upload and the workflow's live checks never ran. When the token is
+rotated, the new one gets this table's policy and the old one is revoked the
+same day.
 
 ## What the hostnames and names mean
 
 | Name | What it is |
 | --- | --- |
-| `sheepdogsim.com` | The game. A proxied Cloudflare zone with a Worker **route** `sheepdogsim.com/*` to `sds-worker`. The only URL to publish. `www` has no DNS record. |
+| `sheepdogsim.com` | The game. A proxied Cloudflare zone with a Worker **route** `sheepdogsim.com/*` to `sds-worker`. The only URL to publish. |
+| `www.sheepdogsim.com` | A proxied DNS record and a zone redirect rule to the apex, 301 with path and query kept. Never served; see Zone configuration. |
 | `sds-worker` | The production Worker. Serves `dist/` as static assets and the identity and score API under `/api/*`. Holds `JWT_SECRET` and the `DB` binding to D1 `sds-db`. |
 | `sds-worker.matt-m-kissinger.workers.dev` | The same Worker on its own hostname. Kept on (`workers_dev = true`) because every client built before Release 1 calls the API here; it serves the game too, under its own origin and therefore its own `localStorage`. Not a URL to publish. |
 | `sds-worker-preview` | The preview Worker (`[env.preview]`), with its own D1 `sds-db-preview` and its own `JWT_SECRET`. Pull requests upload versions here. |

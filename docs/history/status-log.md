@@ -47,6 +47,18 @@ Per `docs/operations/worker-cutover.md`, owner go for steps 1 and 2.
   named no environment; the workflow now passes `--env=""`.
 - Analytics: the misnamed Pages site disappeared on its own when the Pages
   toggle went off; nothing to delete.
+- Token: the owner created the Account API Token `sds-github-deploy` with the
+  policy now tabled in `docs/operations/deployment.md` and set it as
+  `CF_API_TOKEN`. `Deploy` was dispatched for `b2420f66` from `main`
+  (`8533a571`, with `--env=""`): it published the route itself, passed every
+  live check, and the live manifest names `b2420f66`. **Release 1 is closed.**
+  The old `sds-token`, `sds-ci`, `sds-bot`, `sds` and `claude-agent-sds`
+  tokens are the owner's to revoke.
+- Renderer boot architecture: the adversarial review the owner asked for in
+  place of an upstream issue is in `docs/history/renderer-boot-review-2026-10-16.md`.
+  Verdict (b): sound, with four defects queued for Release 2 (the asset lab
+  renders before init, fiber overrides the tone mapping, the factory memo is
+  now a liability, spec/01 is stale).
 
 ## Release 1 hub gate - 2026-10-16, passed
 

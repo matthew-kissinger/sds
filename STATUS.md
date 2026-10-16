@@ -153,9 +153,10 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   constant instead of spelled out in four pages.
 
 - Release 1 close-out, decided 2026-10-16: tag `v3.2.0` on `b2420f66` after
-  CI (done; the Deploy run deployed the commit but failed to publish the route
-  because the deploy token lacks Workers Routes edit on the zone - the token
-  permission and a dispatch re-run are the last open Release 1 items); the two production test players from the identity checks deleted (both
+  CI (done; the tag run could not publish the route because the old token
+  lacked Workers Routes edit, so the owner created the scoped
+  `sds-github-deploy` token and a dispatch re-run of the same commit went
+  green end to end - Release 1 closed 2026-10-16); the two production test players from the identity checks deleted (both
   had no submissions); the misnamed Pages analytics site was removed by
   Cloudflare itself when the Pages toggle went off; the deploy API token's
   scopes stay as they are. No upstream issue is filed for the fiber 9.8
@@ -168,6 +169,30 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
 Order, decided 2026-10-16: the `cf` CLI first, then declarative hosting and
 the Pages retirement, then the score service, the Kiln farmhouse, and the
 multiplayer foundations. Orchestrated in the same session as Release 1.
+
+The `cf` step is two stages, decided 2026-10-16 on the planning review.
+Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
+plain directory, one `wrangler.toml` at the root with the preview D1 id
+committed, the release manifest written by a Vite plugin into the uploaded
+directory, the client kept at `dist/`, `vite dev` serving game and API with a
+local D1 and no proxy, the workflows deploying with wrangler from the root.
+Stage A ships alone as 3.2.1 with no client change. Stage B: `cf` and
+`cloudflare.config.ts`, attempted on the preview Worker only, and cut to
+production only if four checks pass (identical asset set and headers, identical
+bindings and route list, the Durable Object migration tag untouched by a
+wrangler deploy of an older commit and a rollback across the change, preview
+aliases still working); any failure, or a change in either beta between the
+preview and production steps, keeps production on Stage A. The planning
+review's reasons: `cf` is beta and only accepts the Vite plugin's v2 beta;
+its `exports` map replaces the migrations array and is documented as one-way
+once deployed; and `cf deploy` provisions missing resources by default.
+
+Also queued in Release 2 from the renderer boot review
+(`docs/history/renderer-boot-review-2026-10-16.md`): hold the asset lab's
+frame loop until the renderer has initialised, remove the factory memo,
+decide tone mapping on purpose after reading the runtime value (a look change,
+so through the visual review gate), and rewrite spec/01's renderer section to
+the shipped contract.
 
 
 - Adopt the `cf` CLI: `cloudflare.config.ts`, the Cloudflare Vite plugin, the
