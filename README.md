@@ -64,12 +64,21 @@ npm run dev
 
 Open the local URL printed by Vite.
 
-The client runs without a local score server. To run the full test suite,
-including the retained score-service tests, install its dependencies too:
+The client runs without a local score server; the online boards then report
+unavailable. It calls the score API at `/api` on its own origin, and the Vite
+server proxies `/api` to `wrangler dev` on port 8787. To run the API locally,
+and to run the full test suite including the score-service tests, install its
+dependencies too:
 
 ```bash
 npm ci --prefix worker
+cp worker/.dev.vars.example worker/.dev.vars
+node scripts/d1-local-setup.mjs        # once, for a fresh local database
+npm run dev --prefix worker            # wrangler dev on http://127.0.0.1:8787
 ```
+
+[docs/operations/deployment.md](docs/operations/deployment.md) has the local
+workflow in full.
 
 Useful commands:
 
@@ -99,7 +108,7 @@ sim/       deterministic fixed-step herding simulation
 app/       React Three Fiber, Three.js, input, audio and player interface
 assets/    runtime assets plus editable sources and bake manifests
 tools/     deterministic bakes, diagnostics and release verification
-worker/    retained identity and score service; separate from the v3 client
+worker/    identity and score API; also serves the built client as static assets
 ```
 
 The simulation imports no Three.js, React, DOM or network code. The renderer
@@ -125,11 +134,13 @@ including [trees](assets/treeline/README.md), [dog](assets/dog/README.md),
 
 ## Release discipline
 
-Production deploys use the manually dispatched
-[Pages workflow](.github/workflows/deploy.yml), pinned to a full commit SHA on
-`main`, and the procedure is
-[docs/operations/deployment.md](docs/operations/deployment.md). It installs dependencies, runs lint, typechecks, tests and the build,
-archives the artifact, then verifies the live release and discovery pages.
+Production deploys use the [Deploy workflow](.github/workflows/deploy.yml),
+triggered by a release tag on a commit already on `main`, and the procedure is
+[docs/operations/deployment.md](docs/operations/deployment.md). One Cloudflare
+Worker serves the game and its score API on `sheepdogsim.com`, so one deploy
+ships both from the same commit. The workflow installs dependencies, runs lint,
+typechecks, tests and the build, archives the artifact, deploys, then verifies
+the live release, the API and the discovery pages.
 
 Contributor checks additionally cover:
 

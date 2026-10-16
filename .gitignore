@@ -6,6 +6,8 @@ dist/
 .dev.vars
 worker/.dev.vars
 worker/.wrangler/
+# Temporary configs derived during operations (docs/operations/worker-cutover.md).
+worker/wrangler.*.toml
 *.local
 .DS_Store
 coverage/

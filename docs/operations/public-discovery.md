@@ -12,9 +12,10 @@ and aggregate site analytics. It does not authorize a production deployment.
 - Sitemap: `https://sheepdogsim.com/sitemap.xml`
 - Social image: `https://sheepdogsim.com/og/sheepdog-sim-v2.png`
 
-The secondary pages are flat HTML files so Cloudflare Pages keeps the same
-extensionless, no-trailing-slash URLs already used in production. Redirects,
-canonical elements, Open Graph URLs and sitemap entries must all agree.
+The secondary pages are flat HTML files so the Worker's static assets keep the
+same extensionless, no-trailing-slash URLs already used in production, as Pages
+did. Redirects, canonical elements, Open Graph URLs and sitemap entries must all
+agree.
 
 Run this after every production build:
 
@@ -22,20 +23,26 @@ Run this after every production build:
 npm run check:discovery
 ```
 
-The production workflow repeats the check against the live domain and also
-requires the Cloudflare Web Analytics beacon.
+It requires the analytics beacon in the built page. The production workflow
+repeats the check against the live domain.
 
 ## Analytics boundary
 
-Use the existing Cloudflare Pages automatic Web Analytics injection. Do not
-commit a beacon token and do not add a second manual beacon. The analytics
-surface measures aggregate page visits and load performance. It does not send
+The Cloudflare Web Analytics beacon is Cloudflare's snippet for the
+`sheepdogsim.com` site, committed once in `app/index.html`. Do not add a second
+beacon, and never use the token the retired Pages injection carried; the check
+requires exactly one beacon with the committed token. Which site and token is
+which is recorded in `docs/operations/deployment.md`. The analytics surface
+measures aggregate page visits and load performance. It does not send
 movement, controls, flock state, completion events or player names.
 
 After a production deployment, confirm:
 
-1. Each canonical HTML page contains one `beacon.min.js` script.
-2. Browser network tools show a successful request to `/cdn-cgi/rum`.
+1. The game page contains one `beacon.min.js` script, with the token from
+   `app/index.html`. The about, support and privacy pages carry no snippet of
+   their own; they are counted only if the zone's automatic injection adds one.
+2. Browser network tools show a successful request to a `cdn-cgi/rum`
+   endpoint.
 3. Cloudflare Web Analytics begins showing the new release after its normal
    ingestion delay.
 4. Gameplay remains complete if the beacon request is blocked.
@@ -92,7 +99,7 @@ deterministic
 single-player
 mobile-game
 gamepad
-cloudflare-pages
+cloudflare-workers
 open-source-game
 agpl
 ```
