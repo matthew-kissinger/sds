@@ -6,6 +6,7 @@
 // timing, errors and an active-play screenshot. Production preview is the
 // default; --url deliberately reuses an already-running server for iteration.
 
+import { stubHarnessNetwork } from './harness-stubs.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -388,11 +389,7 @@ async function runScenario(browser, name, spec) {
   page.on('response', (response) => {
     if (response.status() >= 400) remember(failedResponses, { status: response.status(), url: response.url() });
   });
-  await context.route('**/api/lobbies', (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: '{"lobbies":[]}',
-  }));
+  await stubHarnessNetwork(context);
   // Local art iteration must never create production identities or scores.
   if (name.startsWith('art-')) await context.route('**/api/**', (route) => route.fulfill({
     status: 200,

@@ -5,6 +5,7 @@
 // app and records the browser's sampled main-thread profile until Play becomes
 // enabled, so a slow fallback is attributed instead of guessed at.
 
+import { stubHarnessNetwork } from './harness-stubs.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -99,11 +100,7 @@ try {
       return result;
     };
   });
-  await context.route('**/api/lobbies', (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: '{"lobbies":[]}',
-  }));
+  await stubHarnessNetwork(context);
   const cdp = await context.newCDPSession(page);
   await cdp.send('Profiler.enable');
   await cdp.send('Profiler.setSamplingInterval', { interval: 500 });

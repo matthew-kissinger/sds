@@ -90,8 +90,10 @@ band; ready 2,645 ms WebGPU and 2,639 ms WebGL2 against 2,662 and 1,833 to
 `cloudflareinsights.com/cdn-cgi/rum`: the beacon now in `app/index.html`
 cannot report from the probe's loopback origin, and `probe:boot` on this PC
 also logs a 502 because the dev proxy for `/api` has no Worker behind it. Both
-are artifacts of the new architecture meeting a static harness, not defects;
-the probes should stub those two paths so they measure the game alone.
+are artifacts of the new architecture meeting a static harness, not defects.
+The probes now stub both paths through `tools/harness-stubs.mjs`, which also
+replaced the version 2 `/api/lobbies` stub six probes still carried, so a
+receipt's failed requests and console errors describe the game alone.
 
 ## Release 1, Phase 1 - 2026-10-16: dependencies and farmhouse wiring
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
+import { stubHarnessNetwork } from './harness-stubs.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { chromium } from 'playwright';
@@ -14,11 +15,7 @@ mkdirSync(dirname(screenshotPath), { recursive: true });
 
 const browser = await chromium.launch({ channel: 'chrome' });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-await context.route('**/api/lobbies', (route) => route.fulfill({
-  status: 200,
-  contentType: 'application/json',
-  body: '{"lobbies":[]}',
-}));
+await stubHarnessNetwork(context);
 const page = await context.newPage();
 const fatalEvents = [];
 const warnings = [];

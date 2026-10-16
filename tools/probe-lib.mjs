@@ -20,6 +20,9 @@ import { fileURLToPath } from 'node:url';
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+/** Analytics beacon and score API stubs; see tools/harness-stubs.mjs. */
+export { stubHarnessNetwork } from './harness-stubs.mjs';
+
 /** The pinned probe seed. Same seed, same field, always (spec/09). */
 export const SEED = 20260821;
 

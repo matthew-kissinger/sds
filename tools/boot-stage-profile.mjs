@@ -6,6 +6,7 @@
 // be separated: device creation, first configured canvas frame, timestamped
 // fill probe, tier commit, and the all-scene warm frame.
 
+import { stubHarnessNetwork } from './harness-stubs.mjs';
 import {
   READOUT,
   SEED,
@@ -279,11 +280,7 @@ async function measure(spec) {
         };
       }
     });
-    await context.route('**/api/lobbies', (route) => route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: '{"lobbies":[]}',
-    }));
+    await stubHarnessNetwork(context);
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(`pageerror:${error.message}`));

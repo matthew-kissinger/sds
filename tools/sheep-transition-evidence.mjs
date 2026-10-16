@@ -7,6 +7,7 @@
 // shipped code. Two frames before each click and the first 30 composited frames
 // after it become a fixed-crop contact sheet and a 6 fps review clip.
 
+import { stubHarnessNetwork } from './harness-stubs.mjs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -514,11 +515,7 @@ async function captureScenario(browser, baseUrl, backend, flockSize) {
     url: request.url(),
     error: request.failure()?.errorText ?? '',
   }));
-  await context.route('**/api/lobbies', (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: '{"lobbies":[]}',
-  }));
+  await stubHarnessNetwork(context);
 
   try {
     const debugParts = backend === 'webgl2' ? ['webgl', 'readout'] : ['readout'];

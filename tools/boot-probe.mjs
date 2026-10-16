@@ -13,6 +13,7 @@ import {
   scratchDir,
   startPreviewServer,
   stopServer,
+  stubHarnessNetwork,
 } from './probe-lib.mjs';
 import {
   MID_MOBILE_PROFILE,
@@ -63,13 +64,10 @@ async function measure(browser, spec) {
       });
     }
   });
-  // Standalone Vite preview has no Worker binding. Keep the boot receipt about
-  // the client path while the release probe separately validates API wiring.
-  await context.route('**/api/lobbies', (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: '{"lobbies":[]}',
-  }));
+  // Standalone Vite preview has no Worker binding and the analytics beacon
+  // cannot report from loopback. Keep the boot receipt about the client path;
+  // the release probe separately validates API wiring.
+  await stubHarnessNetwork(context);
   if (spec.mobile) {
     const cdp = await context.newCDPSession(page);
     await cdp.send('Network.enable');

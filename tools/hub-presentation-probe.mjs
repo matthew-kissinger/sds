@@ -10,6 +10,7 @@ import { hostname, loadavg } from 'node:os';
 import { collectBuiltFiles } from './playtest-profile-receipt.mjs';
 import { installArtRenderCounters } from './art-render-counters.mjs';
 import { analyzeScreenshot } from './screenshot-analysis.mjs';
+import { stubHarnessNetwork } from './harness-stubs.mjs';
 
 const arg = (name, fallback) => process.argv.find(x => x.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
 const dependency = arg('playwright', '');
@@ -78,8 +79,9 @@ try {
       : ['--ignore-gpu-blocklist', '--use-angle=gl'] });
   const context = await browser.newContext({ viewport,
     deviceScaleFactor: phone ? 3 : viewportName === 'hidpi' ? 1.5 : 1, isMobile: phone, hasTouch: phone, serviceWorkers: 'block' });
-  await context.route('**/api/**', route => route.fulfill({ status: 200, contentType: 'application/json',
-    body: JSON.stringify({ entries: [], token: 'local-review', authSecret: 'local-review', playerProfile: { persistentId: 'local-review', displayName: 'Review' } }) }));
+  // No Worker behind the static server and no analytics from loopback: both
+  // stubbed so requestsFailed and errors describe the game alone.
+  await stubHarnessNetwork(context, { displayName: 'Review', persistentId: 'local-review' });
   await context.addInitScript(installArtRenderCounters);
   await context.addInitScript(() => {
     const trace = { gaps: [], events: [], live: true };

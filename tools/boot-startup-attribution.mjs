@@ -5,6 +5,7 @@
 // It patches browser renderer entry points before navigation and correlates
 // pipeline work with rAF gaps without adding a debug path to the shipped app.
 
+import { stubHarnessNetwork } from './harness-stubs.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -236,11 +237,7 @@ async function runScenario(base, spec) {
         };
       }
     });
-    await context.route('**/api/lobbies', (route) => route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: '{"lobbies":[]}',
-    }));
+    await stubHarnessNetwork(context);
 
     const errors = [];
     page.on('crash', () => errors.push('page crashed'));
