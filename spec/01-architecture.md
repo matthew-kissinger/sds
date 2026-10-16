@@ -71,7 +71,7 @@ sds/
   tests/           vitest suites incl. sim trace fixtures
 ```
 
-`sim/` is the successor of sds `shared/` and carries the same fence, enforced by ESLint from day one: `no-restricted-imports` scoped to `sim/**` bans three (and sub-paths), react, `app/`, `worker/`; a DOM-free globals map makes browser API access an error. The Worker bundles `sim/` via wrangler/esbuild; the client bundles it via Vite; tests run it in Node. TypeScript is fine in all three toolchains (verify in phase 0).
+`sim/` is the successor of sds `shared/` and carries the same fence, enforced by ESLint from day one: `no-restricted-imports` scoped to `sim/**` bans three (and sub-paths), react, `app/`, `worker/`; a DOM-free globals map makes browser API access an error. The Worker bundles `sim/` through the Vite plugin's Worker build environment; the client bundles it via Vite; tests run it in Node. TypeScript is fine in all three toolchains (verify in phase 0).
 
 ## The sim is a pure function
 

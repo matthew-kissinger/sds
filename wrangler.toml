@@ -32,6 +32,11 @@ run_worker_first = ["/api/*"]
 [observability]
 enabled = true
 
+# Source-mapped stack traces in Workers observability; the maps are uploaded to
+# Cloudflare, not served. The Vite plugin defaults this on; stated here so the
+# deploy configuration is not at its mercy.
+upload_source_maps = true
+
 # Durable Object class history. The version 2 multiplayer classes were created
 # by v1 and retired by v2 in Release 1, which deletes the classes and their
 # stored room state. Both entries stay: migrations are an append-only history

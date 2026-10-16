@@ -34,6 +34,11 @@ describe('sds-worker hosting configuration', () => {
     expect(preview.routes).toEqual([]);
   });
 
+  it('uploads Worker source maps on purpose, not by the plugin default', () => {
+    expect(production.upload_source_maps).toBe(true);
+    expect(preview.upload_source_maps).toBe(true);
+  });
+
   it('gives version preview URLs to env.preview only', () => {
     expect(production.preview_urls).toBe(false);
     expect(preview.preview_urls).toBe(true);

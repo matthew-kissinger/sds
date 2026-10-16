@@ -85,10 +85,13 @@ export async function startServer(port) {
  * Serve a built artifact statically on `port` and resolve once it answers.
  *
  * Probes measure the built `dist/` the way the hub does (tools/hub-presentation-
- * probe.mjs): plain files with a single-page fallback to index.html, nothing
- * else in the path. There is no Worker behind this origin, and none is wanted -
- * the API and the analytics beacon are stubbed by tools/harness-stubs.mjs. The
- * full stack, Worker included, is `vite preview` (docs/operations/deployment.md).
+ * probe.mjs): plain files, then `<path>.html` (so /about, /support and /privacy
+ * serve their own pages as production does), then a single-page fallback to
+ * index.html. There are no range requests, no _headers and no _redirects, so
+ * a probe that depends on those must not use this server. There is no Worker
+ * behind this origin, and none is wanted - the API and the analytics beacon are
+ * stubbed by tools/harness-stubs.mjs. The full stack, Worker included, is
+ * `vite preview` (docs/operations/deployment.md).
  * Resolves to the http.Server; stopServer closes it.
  */
 export async function startPreviewServer(port, buildDir = join(repo, 'dist')) {
@@ -104,8 +107,8 @@ export async function startPreviewServer(port, buildDir = join(repo, 'dist')) {
         res.writeHead(403).end();
         return;
       }
-      const exact = path !== root && existsSync(path) && statSync(path).isFile();
-      const file = exact ? path : join(root, 'index.html');
+      const isFile = (candidate) => candidate !== root && existsSync(candidate) && statSync(candidate).isFile();
+      const file = [path, `${path}.html`].find(isFile) ?? join(root, 'index.html');
       res.writeHead(200, { 'Content-Type': MIME[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-store' });
       res.end(readFileSync(file));
     } catch {

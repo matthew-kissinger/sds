@@ -11,7 +11,7 @@
 // `/` with its health JSON, so `/` must now be HTML.
 //
 //   node scripts/verify-worker-origin.mjs --url https://sheepdogsim.com
-//   node scripts/verify-worker-origin.mjs --url http://127.0.0.1:8787 --sha <commit>
+//   node scripts/verify-worker-origin.mjs --url http://localhost:4173 --sha <commit>   # vite preview
 //
 // Options:
 //   --url <origin>   required; the origin to check.

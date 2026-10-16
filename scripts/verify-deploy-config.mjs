@@ -47,8 +47,12 @@ function parseArgs(args) {
   return options
 }
 
-/** Returns the list of failed assertions; empty means the config is right. */
-export function checkDeployConfig(config, configPath, { preview = false } = {}) {
+/**
+ * Returns the list of failed assertions; empty means the config is right. Each
+ * names the field it checked. `distDir` is where the assets must resolve to,
+ * the repository's dist/ unless a test supplies its own.
+ */
+export function checkDeployConfig(config, configPath, { preview = false, distDir = resolve(root, 'dist') } = {}) {
   const expected = preview ? PREVIEW : PRODUCTION
   const failures = []
   const expect = (label, actual, wanted) => {
@@ -58,6 +62,10 @@ export function checkDeployConfig(config, configPath, { preview = false } = {}) 
   }
 
   expect('name', config.name, expected.name)
+  expect('compatibility_date', config.compatibility_date, '2026-04-01')
+  expect('compatibility_flags', config.compatibility_flags, ['nodejs_compat'])
+  expect('observability.enabled', config.observability?.enabled, true)
+  expect('upload_source_maps', config.upload_source_maps, true)
   expect('workers_dev', config.workers_dev, true)
   expect('preview_urls', config.preview_urls, expected.previewUrls)
   expect('routes', config.routes ?? [], expected.routes)
@@ -80,6 +88,7 @@ export function checkDeployConfig(config, configPath, { preview = false } = {}) 
     failures.push('assets.directory is missing: wrangler would refuse to deploy')
   } else {
     const directory = resolve(configDir, assets.directory)
+    expect('assets.directory', directory, resolve(distDir))
     if (!existsSync(directory) || !statSync(directory).isDirectory()) {
       failures.push(`assets.directory ${directory} is not a directory`)
     } else {
