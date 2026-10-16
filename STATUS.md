@@ -84,9 +84,22 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
   release. The `cf` CLI's `cloudflare.config.ts` is Release 2 work: `cf` is a
   beta that rebuilds the project shape and does not run this repository's build
   script, and that must not land in the same change as a live hostname cutover.
+  Code merged 2026-10-16: assets block, route, `workers_dev = true`,
+  same-origin client, beacon in `app/index.html`, one `Deploy` workflow,
+  previews as version aliases on the preview Worker, and the runbook
+  `docs/operations/worker-cutover.md`. Verified on the preview Worker with its
+  own D1; production is untouched until the runbook runs. Two measured facts
+  that shaped it: `wrangler versions upload` refuses a pending Durable Object
+  migration, so step 1 is a `wrangler deploy`; and removing `[[routes]]` from
+  the config does not remove a live route, so rollback is deleting the route.
+  The CORS allow-list became a fixed `*` rather than nothing, because the
+  already-built 3.1.0 client calls `workers.dev` cross-origin until the route
+  lands and again on rollback; it goes in Release 2.
 - The v2 `RoomDO`, `LobbyDO`, `GameSim.js` and the `/r/:code/ws` upgrade leave
   `sds-worker` with a `deleted_classes` migration. `spec/03` builds rooms as a
   new Worker; the v2 code stays in history as reference for that rewrite.
+  Done 2026-10-16: 155 tests that covered the removed code went with it and 9
+  were added, so the suite is 801 tests in 101 files.
 - `PROD_SCORE_API_BASE` becomes same-origin and the CORS allow-list goes.
 - The Web Analytics beacon moves into `app/index.html` with the token of the
   existing `sheepdogsim.com` site. `scripts/verify-public-discovery.mjs:105`

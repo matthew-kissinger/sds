@@ -40,7 +40,7 @@ rollback. Keep that service isolated from the client.
   Deploying is pushing a `v*` tag: the tag names the commit, so what shipped is
   always a named commit that can be named again to roll back - which is the
   whole reason version 2 is still recoverable from its own immutable
-  deployment. `Deploy Pages` also keeps a `workflow_dispatch` path taking an
+  deployment. `Deploy` also keeps a `workflow_dispatch` path taking an
   exact 40-character SHA, which is how an older commit is redeployed. Both
   paths refuse a commit that is not already contained in `origin/main`.
 - `docs/operations/deployment.md` is the one description of how a change reaches
@@ -160,7 +160,7 @@ Full reasoning is in `spec/11-typography.md` and `spec/06-ux-ui-juice.md`.
 - Use conventional commit subjects.
 - Run the focused tests for what you changed. `Client CI` is the gate: it runs
   lint, typecheck, the worker typecheck, the build, discovery and the full suite
-  on every push and pull request, and `Deploy Pages` runs them again against the
+  on every push and pull request, and `Deploy` runs them again against the
   exact commit it ships. Running that same list by hand before a push is
   duplicated work, not diligence. Run it locally when you need the answer sooner
   than CI will give it, or when you are changing something CI cannot see.
