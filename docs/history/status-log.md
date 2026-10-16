@@ -5,6 +5,28 @@
 
 # Status log
 
+## Surface atlas spike - 2026-10-16, concluded: procedural stays
+
+The owner asked whether procedural textures and texture atlases would be
+smarter for the barn, the house, the fence, the gate and the trees, on an
+experimental branch. Done the same day as a measured spike with its win
+condition written before the build: one barn wall three ways in the asset
+lab, A the TSL surface per pixel, B the same surface (same arithmetic,
+bundled into the bake) in one cell of a 2048 KTX2 atlas sampled through a
+second UV set, B+ the atlas with painted knots and nail heads. Same picture at
+90 m and 20 m (mean difference under one luminance level); at 3 m and 1.5 m
+the atlas keeps a third and a sixth of the procedural panel's edge energy
+(256 texels a metre against the screen's 440 and 880); no seam or bleed; no
+draw call saved; one texture binding, 254 kB on the wire, 22 MB RGBA8 on the
+GPU (5.6 MB with a UASTC encoder the repo lacks) and a boot decode added; the
+painted detail invisible beyond 3 m; and the eave band, like every
+geometry-dependent term of the farmhouse surfaces, has to stay in the shader.
+Neither win condition met. Note, tools, captures and recommendation:
+`docs/history/spike-surface-atlas-2026-10-16.md`, branch
+`experiment/surface-atlas`, pull request 122 (draft, not for merge). The
+lab's loop gate also gained the renderer-stage condition on `main`
+(`3bce5760`): the game store outlives a hot reload of the lab tree.
+
 ## Lab WebGPU synchronisation error - 2026-10-16, fixed
 
 Once per lab boot under WebGPU: `[Texture "output"] usage includes writable

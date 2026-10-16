@@ -166,9 +166,27 @@ placement decision and a CI-tested skeleton on `/r/*`, with nothing live.
 
 ### Release 2 - one project, new score service, multiplayer foundations
 
-Order, decided 2026-10-16: the `cf` CLI first, then declarative hosting and
-the Pages retirement, then the score service, the Kiln farmhouse, and the
-multiplayer foundations. Orchestrated in the same session as Release 1.
+Order as decided 2026-10-16, then amended the same evening when the owner
+asked for the Kiln work to start in parallel with the `cf` step: Stage A of
+the `cf` step (done, 3.2.1), the Kiln farmhouse and barn (in flight, each
+its own pull request, each gated by the owner's look review and a hub
+receipt before its constant flips), a release carrying the homestead, then
+Stage B of `cf`, declarative hosting with the Pages retirement, the score
+service, and the multiplayer foundations. Orchestrated in the same session as
+Release 1.
+
+**Where it stands, 2026-10-16 evening.** Done: Release 1; Stage A live as
+3.2.1 with the live settings diffed; the lab's WebGPU boot error fixed at its
+cause (the lab now gates its loop on renderer stage and `sceneReady` as the
+game does; `docs/history/status-log.md`); the surface atlas spike concluded
+(below). In flight: pull request 121 (Kiln farmhouse channel contract, floor
+one step above the pad, grass hard-cut under the footprints that ship, CI
+green; one defect fix outstanding, the outline hull sized for the procedural
+roof, found by an adversarial review and handed back to the branch) and the
+Kiln barn (an agent authoring the recipe on its own branch against the
+channel convention of 121). Next in order: the owner's look review of both on
+the production build, hub receipts, the two constant flips each with its grass
+rebake, a release, then Stage B.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -206,8 +224,11 @@ once deployed; and `cf deploy` provisions missing resources by default.
 
 From the renderer boot review
 (`docs/history/renderer-boot-review-2026-10-16.md`), done 2026-10-16: the
-asset lab stages its frame loop and scene mount on `rendererReady()`, the
-factory memo is gone, and spec/01's stack table and renderer section state the
+asset lab mounts its scene on `rendererReady()` and holds its loop paused
+until the scene is ready, exactly as the game does (the bisect of the lab's
+WebGPU error, same day, found the imperative pause alone insufficient:
+fiber's `setFrameloop('never')` leaves queued frames to run), the factory
+memo is gone, and spec/01's stack table and renderer section state the
 shipped contract. Tone mapping: fiber's first configure has set
 `ACESFilmicToneMapping` over the factory's `NeutralToneMapping` since 3.1.0,
 so the approved look was always ACES; the owner kept it and the factory no
@@ -233,13 +254,40 @@ longer claims Neutral.
   owner's review of the correctly rendered house in-game against `spec/05`,
   never parity with the old house. Re-bake, flip `FARMHOUSE_SOURCE`, and gate
   on the hub. Kiln friction is logged as classified dogfood feedback.
+  **In review** (pull request 121, 2026-10-16): the recipe writes the two
+  channels into `TEXCOORD_0` and records it in the root node's extras, the
+  loader reads them and refuses a bake without them, the hall floor stands
+  0.15 m above the pad with step, thresholds and a new back-door sill moved
+  with it, and `tools/bake-grass.mjs` reads the plan and the source constant
+  to hard-cut the footprints of the buildings that ship (a flip now requires
+  a grass rebake, enforced by `tests/grass-bake.spec.ts`). Outstanding on the
+  branch: the outline hull, whose envelope was a hand copy of the procedural
+  roof and hangs 0.1 m outside and 0.2 m below the Kiln eave; the fix is an
+  eave depth on `RoofSpec` and the Kiln overhang, with the recipe writing
+  the eave corner into the GLB as the follow-up. The owner's look review and
+  the hub receipt remain.
 - Kiln barn, right after the farmhouse (added 2026-10-16; the status log had
   recorded "the barn has had no equivalent of the Kiln treatment" and the plan
   had left it out): a second recipe under `assets/barn/`, baked with the same
   per-vertex surface channels the farmhouse fix establishes, welded into the
   same board, roof and opening buffers so the draw count does not move, graded
-  in-game by the same standard, Kiln feedback logged the same way. Starts once
-  the farmhouse PR has proven the channel contract.
+  in-game by the same standard, Kiln feedback logged the same way. **In
+  progress** since 2026-10-16 on its own branch, adopting the channel
+  convention from pull request 121 and shipping behind a `BARN_SOURCE`
+  constant set to procedural; the grass bake will read that constant too once
+  121 has merged. Its floor takes the same step above the pad.
+- Surfaces stay procedural (decided 2026-10-16 on a measured spike,
+  `docs/history/spike-surface-atlas-2026-10-16.md`, branch
+  `experiment/surface-atlas`, pull request 122, not for merge). The owner
+  asked whether procedural textures and atlases would be smarter for the
+  barn, house, fence, gate and trees. One barn wall was built three ways in
+  the lab: TSL per pixel, the same surface from a KTX2 atlas, and the atlas
+  with painted extras. Same picture at 90 m and 20 m; a third to a sixth of
+  the edge energy at 3 m and 1.5 m; no draw call saved; one texture binding,
+  5.6 to 22 MB of GPU memory and a boot decode added; the painted detail
+  invisible beyond 3 m; and every geometry-dependent term (eave band, damp
+  course, slate courses) has to stay in the shader anyway. Richer surfaces
+  come from the TSL materials, which the barn work extends.
 - Multiplayer foundations: the Durable Object placement decision recorded with
   its reasoning, room D1 migration 0001, and a CI-tested realtime skeleton on
   `/r/*`. Not deployed unless the owner says otherwise.
