@@ -149,7 +149,9 @@ export function Hud() {
   const pennedCount = useGameStore((state) => state.pennedCount);
   const flockSize = useGameStore((state) => state.flockSize);
   const showTimer = useGameStore((state) => state.showTimer);
+  const timerKey = useGameStore((state) => state.inputBindings.timer);
   const pause = useGameStore((state) => state.pause);
+  const setShowTimer = useGameStore((state) => state.setShowTimer);
   const progress = `${(pennedCount / flockSize) * 360}deg`;
 
   return (
@@ -175,6 +177,31 @@ export function Hud() {
       </div>
       {showTimer && (gamePhase === 'playing' || gamePhase === 'paused') ? <RunTimer /> : null}
       {gamePhase === 'playing' || gamePhase === 'paused' ? <DogStamina /> : null}
+      {gamePhase === 'playing' ? (
+        <button
+          type="button"
+          className="herd-icon-button herd-timer-button"
+          aria-label="Run timer"
+          aria-pressed={showTimer}
+          data-testid="timer-toggle"
+          title={`Run timer (${timerKey.replace(/^Key/, '')})`}
+          onClick={() => setShowTimer(!showTimer)}
+        >
+          {/* A clock face at the pause button's weight. The same reasoning as
+              the pause glyph next to it: this interface is a light serif on
+              paper, so the face is a drawn outline with round caps rather than
+              a filled disc, and it carries the hands at the stroke width the
+              rest of the set uses. `aria-pressed` rather than two glyphs -
+              the state is "showing" or "not showing", which is what a toggle
+              button already says, and a crossed-out clock would be a second
+              drawing to keep in step with the first. */}
+          <svg viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+            <circle cx="7" cy="7" r="4.9" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M7 4.1V7.2l2.1 1.4" fill="none" stroke="currentColor"
+              strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      ) : null}
       {gamePhase === 'playing' ? (
         <button type="button" className="herd-icon-button herd-pause-button" aria-label="Pause" onClick={pause}>
           {/* Drawn rather than typed. "II" is two glyphs of the UI serif, so it

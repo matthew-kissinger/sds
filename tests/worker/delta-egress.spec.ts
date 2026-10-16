@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * P2-DELTA-IMPL: the egress measurement harness
- * (docs/hardening/delta-protocol-design.md sections 2 + 9).
+ * (v2 delta-protocol design, sections 2 and 9; not imported here, see the version 2 history).
  *
  * Drives a seeded 200-sheep / 4-player GameSimulation for 60 sim-seconds
  * (3,600 ticks at 60Hz) with scripted herding input (dogs sweeping behind

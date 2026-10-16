@@ -20,6 +20,7 @@ const AUDIO_LABELS: Readonly<Record<AudioBusPreference, string>> = {
 const BINDING_LABELS: Readonly<Record<InputAction, string>> = {
   forward: 'Move forward', backward: 'Move back', left: 'Move left',
   right: 'Move right', sprint: 'Sprint', walk: 'Hold to walk', bark: 'Bark', camera: 'Camera',
+  timer: 'Run timer',
 };
 
 const TURNING_LABELS: Readonly<Record<FollowTurning, string>> = {
@@ -63,7 +64,7 @@ const KEY_OPTIONS: readonly { readonly code: string; readonly label: string }[] 
   { code: 'KeyS', label: 'S' }, { code: 'KeyD', label: 'D' },
   { code: 'KeyQ', label: 'Q' }, { code: 'KeyE', label: 'E' },
   { code: 'KeyC', label: 'C' }, { code: 'KeyF', label: 'F' },
-  { code: 'KeyV', label: 'V' },
+  { code: 'KeyV', label: 'V' }, { code: 'KeyT', label: 'T' },
   { code: 'Space', label: 'Space' }, { code: 'ShiftLeft', label: 'Left Shift' },
 ];
 

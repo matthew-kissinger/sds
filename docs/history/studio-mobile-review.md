@@ -1,3 +1,8 @@
+> **Archived 2026-10-14.** Closed investigation, kept for its reasoning and
+> measurements only. The responsive Studio shipped; `tests/studio-layout.spec.ts` holds the layout rule.
+> Current release state is in `STATUS.md`, the chronology is in `CHANGELOG.md`,
+> and the rules that outlived this work are in `AGENTS.md` and `spec/`.
+
 # Responsive Studio review — 2026-09-05
 
 Owner report: Customize controls overflow phone screens and obscure the dog.

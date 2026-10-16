@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 /**
  * P2-DELTA-IMPL: RoomDO broadcast cohorts + keyframe paths
- * (docs/hardening/delta-protocol-design.md sections 4-6).
+ * (v2 delta-protocol design, sections 4-6; that document was not imported into this repository and lives in the version 2 history).
  *
  * Locks, with the socket-stub harness from room-do-messages.spec.ts:
  *   - a session that joined with protocolVersion >= 3 receives the keyframe

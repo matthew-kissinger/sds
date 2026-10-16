@@ -21,6 +21,15 @@ If a raw screenshot could pass for concept art of a cozy pastoral game, the bar 
 - **Palette**: one master palette module (`app/src/tsl/palette.ts`), every material samples from it. Sun-warmed greens and golds, cream wool, rust-red barn accents, dusty blue sky. Programmatic palette shifts stay possible because nothing hardcodes color outside the module.
 - **Post**: subtle vignette, gentle bloom on the sun and window glow, one film-grain-free color grade. Post is seasoning, not the dish.
 
+### Node-space discipline
+
+Per-instance shape and pigment variation reads `positionGeometry`, not
+`positionLocal`. Three's node path has already applied the instance transform to
+`positionLocal`, so normalized variation driven from it receives field-sized
+coordinates: the first treeline iteration displaced foliage off its own trunks
+that way. World coordinates remain correct for anything genuinely shared across
+instances, such as wind.
+
 ## The critic loop
 
 Every visual deliverable passes a harsh-critic gate before it counts as done (prompts in spec/prompts/). The loop:

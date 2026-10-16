@@ -38,7 +38,8 @@ export type InputAction =
   | 'sprint'
   | 'walk'
   | 'bark'
-  | 'camera';
+  | 'camera'
+  | 'timer';
 export type InputBindings = Readonly<Record<InputAction, string>>;
 export type AudioBusPreference = 'ambient' | 'flock' | 'dog' | 'world' | 'ui';
 export type AudioLevels = Readonly<Record<AudioBusPreference, number>>;
@@ -80,6 +81,10 @@ export const DEFAULT_INPUT_BINDINGS: InputBindings = {
   walk: 'KeyV',
   bark: 'Space',
   camera: 'KeyC',
+  // T for time. It is the only letter the word offers that no other action
+  // wants, and nothing has ever been assignable to it - `KEY_OPTIONS` in the
+  // settings panel has never listed it - so no saved layout can be holding it.
+  timer: 'KeyT',
 };
 
 /** Add walking without stealing a key from an older saved control layout. */

@@ -17,16 +17,19 @@
 import * as THREE from 'three/webgpu';
 import { Shell, offsetStand, stand, type Stand } from './shell';
 import type { GroundSample } from './shadows';
-import { gableWalls, leanTo, logStack, openingPanel } from './parts';
+import { cupola, gableWalls, hood, leanTo, logStack, openingPanel, porch } from './parts';
 import { BASE_X as CHIMNEY_HALF_X, BASE_Z as CHIMNEY_HALF_Z, chimney, potLocal } from './chimney';
 import { roofHull } from './hull';
-import { BARN_OPENINGS, HOUSE_OPENINGS, WING_OPENINGS } from './openings';
+import { BARN_OPENINGS, CART_DOOR, FRONT_DOOR, HOUSE_OPENINGS, WING_OPENINGS } from './openings';
 import { courseRoof, roofSurfaceLocal, type RoofSpec } from './roof';
 import { buildSmoke } from './smoke';
 import { LENGTH, boxCaster, buildShadows, type Caster } from './shadows';
 import {
   BARN,
   BARN_AT,
+  BARN_CUPOLA_AT,
+  BARN_LEANTO_AT,
+  BARN_LEANTO_HALF,
   BARN_YAW,
   CHIMNEY_AT,
   CHIMNEY_DOWN,
@@ -130,6 +133,7 @@ export function buildFarmhouse(sample: GroundSample): Farmstead {
   gableWalls(wall, house, HOUSE, { hipEnd: 1 });
   courseRoof(roof, house, HOUSE, { hipEnd: 1 });
   leanTo(roof, timber, house, HOUSE, LEANTO_AT, LEANTO_HALF);
+  porch(roof, timber, dress, house, HOUSE, FRONT_DOOR.across, FRONT_DOOR);
 
   // The wing's -x end is buried in the range: no gable, no verge, nothing to
   // surface through the main slope.
@@ -138,6 +142,9 @@ export function buildFarmhouse(sample: GroundSample): Farmstead {
 
   gableWalls(barnShell, barn, BARN);
   courseRoof(roof, barn, BARN, { tag: 1 });
+  leanTo(roof, timber, barn, BARN, BARN_LEANTO_AT, BARN_LEANTO_HALF);
+  hood(timber, barn, BARN, CART_DOOR.across, CART_DOOR.width / 2 + 0.55, CART_DOOR.height);
+  cupola(roof, timber, opening, barn, BARN, BARN_CUPOLA_AT);
 
   dress.mark(0, 0);
   plinth(dress, house, HOUSE);

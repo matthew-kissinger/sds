@@ -122,6 +122,31 @@ const MOTTLE_KEY_GAIN = 0.36;
 const MOTTLE_BIAS = 0.16;
 const MOTTLE_BROAD = 0.68;
 const MOTTLE_MID = 1.35;
+/**
+ * The stroke that breaks the band edge, and how far it moves it.
+ *
+ * A TERMINATOR THAT IS SMOOTH IS STILL A LINE. The two edges are already 0.07
+ * and 0.06 wide, wider than the 0.05 `spec/05` asks for, and the three tones
+ * are well separated - lit to mid is 18, 26 and 38 sRGB points with a gold
+ * shift. None of that stops the edge reading as a drawn line, because on a
+ * rounded fleece under a near-horizontal key the light varies almost purely
+ * with height, so a clean edge in light units lands as a clean horizontal one
+ * across the body. Every sheep got the same line at the same height, which is
+ * what made a flock look like it had been dipped.
+ *
+ * Softening it further only makes a blurrier line. What removes it is wobbling
+ * WHERE it falls, at the scale of the wool, so the edge wanders around a puff
+ * instead of cutting across it. 11 rad/m is 1.75 cycles a metre, which is the
+ * fleece lump's own broad octave: the band edge then breaks on the same
+ * features the silhouette does. The amplitude is 0.05 against terminators of
+ * 0.06 and 0.07, so the edge wanders by most of its own width - enough to read
+ * as torn, not so much that three bands stop being three bands.
+ *
+ * This is also why it is one sine and not two. It is a dither for an edge, not
+ * a texture, and the mottle above already supplies the texture.
+ */
+const TERMINATOR_BREAK_FREQ = 11;
+const TERMINATOR_BREAK = 0.05;
 /** How far the mottle also swings hue, toward warm where it brightens and cool
  *  where it darkens. Small, and it is the difference between a value texture and
  *  something that reads as laid-on paint. */
@@ -221,7 +246,23 @@ export function sheepBaseColor(
   const modeNode = varietyMode ?? float(0);
 
   const gain = fleeceGain(nodes);
-  const bands = woolBands(light, gain);
+
+  // Wobble the light the bands are cut from, at wool scale, so both edges tear
+  // along the fleece instead of ruling a line across it. Seeded per instance,
+  // so no two sheep in the flock tear in the same place; sampled from
+  // positionLocal, so the tear belongs to the body and sits still on it rather
+  // than swimming as the animal turns.
+  const edgeBreak = sin(
+    dot(
+      positionLocal,
+      vec3(
+        float(TERMINATOR_BREAK_FREQ),
+        float(TERMINATOR_BREAK_FREQ * 1.37),
+        float(-TERMINATOR_BREAK_FREQ * 0.81),
+      ),
+    ).add(seed.mul(float(5.17))),
+  );
+  const bands = woolBands(light.add(edgeBreak.mul(float(TERMINATOR_BREAK))), gain);
 
   // Compact deterministic brush fields. MaterialX gradient noise expands into
   // a large helper graph on both backends; these interfering strokes keep the

@@ -68,9 +68,11 @@ import {
   AGITATION_TAU,
   OUTLINE_FAR_METRES, OUTLINE_FAR_PIXELS, OUTLINE_MAX, OUTLINE_MIN, OUTLINE_NEAR_METRES,
   OUTLINE_NEAR_PIXELS, SHAPE_STRIDE, SHEEP_HEADING_STEP_LIMIT, SHEEP_HEADING_STEP_RATE,
-  SHEEP_HEADING_TAU,
+  sheepHeadingTauForAgitation,
   SHEEP_MAX_SPEED_MPS, TAU, sheepGaitRateForAgitation, sheepLegPose,
+  sheepStanceShareForAgitation,
   sheepStrideForAgitation,
+  sheepYawOffsetShareForAgitation,
 } from './flock/flockTuning';
 import { smoothHeadingInto } from './flock/headingSmoothing';
 import {
@@ -290,7 +292,7 @@ export function Flock() {
         Math.cos(headings[i]!),
         Math.sin(headings[i]!),
         delta,
-        SHEEP_HEADING_TAU,
+        sheepHeadingTauForAgitation(level),
         SHEEP_HEADING_STEP_LIMIT,
         SHEEP_HEADING_STEP_RATE,
       );
@@ -299,13 +301,16 @@ export function Flock() {
       }
       const yaw = Math.PI / 2
         - Math.atan2(presentationHeadings[headingAt + 1]!, presentationHeadings[headingAt]!)
-        + shape[at + 3]!;
+        + shape[at + 3]! * sheepYawOffsetShareForAgitation(level);
       const cosYaw = Math.cos(yaw);
       const sinYaw = Math.sin(yaw);
 
       const stride = sheepStrideForAgitation(level);
-      const positiveSwing = sheepLegPose(motionValues[motionAt]!, 1).travel * stride;
-      const negativeSwing = sheepLegPose(motionValues[motionAt]!, -1).travel * stride;
+      // Falls with speed, so the hoof this plants is the one the shader has on
+      // the ground (flockTuning.ts).
+      const stanceShare = sheepStanceShareForAgitation(level);
+      const positiveSwing = sheepLegPose(motionValues[motionAt]!, 1, stanceShare).travel * stride;
+      const negativeSwing = sheepLegPose(motionValues[motionAt]!, -1, stanceShare).travel * stride;
       const scaleX = shape[at]!;
       const scaleY = shape[at + 1]!;
       const scaleZ = shape[at + 2]!;
@@ -319,7 +324,7 @@ export function Flock() {
         const phase = motionValues[motionAt]!;
         measureSheepStanceContact(
           diagnostics.contact, field, terrainValues, terrainAt, groundY, x, z, cosYaw, sinYaw,
-          scaleX, scaleY, scaleZ, phase, stride,
+          scaleX, scaleY, scaleZ, phase, stride, stanceShare,
         );
         sheepFootErrorMax = Math.max(sheepFootErrorMax, diagnostics.contact.footErrorMax);
         if (diagnostics.contact.stanceContacts === 0) sheepAirborne += 1;

@@ -1,3 +1,8 @@
+> **Archived 2026-10-14.** Closed investigation, kept for its reasoning and
+> measurements only. Candidate handoff for a build that has since shipped.
+> Current release state is in `STATUS.md`, the chronology is in `CHANGELOG.md`,
+> and the rules that outlived this work are in `AGENTS.md` and `spec/`.
+
 # Combined presentation playtest — 2026-09-05
 
 Local production preview: http://127.0.0.1:5330/

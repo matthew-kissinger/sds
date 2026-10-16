@@ -1,0 +1,36 @@
+{
+  // The asset lab's typecheck (spec/13-asset-lab.md).
+  //
+  // Separate from the root project ON PURPOSE. `npm run build` is `tsc -b &&
+  // vite build`, so while `lab` sat in the root `include` a type error in a
+  // development tool could fail a production build - and the lab is allowed to
+  // reference things the game must never depend on, which is the case that
+  // forced the split: `threejs-field-grass` is a sibling checkout, not a
+  // dependency.
+  //
+  // This is NOT a release gate. It needs that sibling checkout to pass, so it
+  // is a lab-maintainer command (`npm run typecheck:lab`), and the gates named
+  // in AGENTS.md stay exactly as they were.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // `extends` replaces `paths` rather than merging it, so the game's two
+    // aliases are restated here alongside the lab's own.
+    //
+    // The grass library's own files sit outside this repository, so Node's
+    // upward node_modules walk from them never reaches ours and `three/webgpu`
+    // does not resolve. Mapping the two subpaths it imports to this
+    // repository's pinned typings is also what the bundler does at runtime:
+    // one Three instance, this project's version, for both implementations.
+    "paths": {
+      "@sim/*": ["./sim/*"],
+      "@app/*": ["./app/src/*"],
+      "@lab/*": ["./lab/src/*"],
+      "threejs-field-grass": ["../threejs-field-grass/src/index.ts"],
+      "three/webgpu": ["./node_modules/@types/three/build/three.webgpu.d.ts"],
+      "three/tsl": ["./node_modules/@types/three/build/three.tsl.d.ts"]
+    }
+  },
+  // The lab pulls the game in through its imports; `vite-env.d.ts` is the one
+  // file nothing imports, and `import.meta.env` needs it.
+  "include": ["lab", "app/src/vite-env.d.ts"]
+}

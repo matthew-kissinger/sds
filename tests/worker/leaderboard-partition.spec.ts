@@ -11,7 +11,7 @@
 // the new `solo`/(scene, count) read returns exactly what the old per-slug read
 // returned — same membership, order, scores, and formatting.
 //
-// Hard stop 1 (docs/cycle-58-plan.md): if any existing board changes membership
+// Hard stop 1 (v2 cycle-58 plan, not imported into this repository): if any existing board changes membership
 // or order here, the partition switch is wrong. This is that gate.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createTestD1, sqliteAvailable, type TestD1 } from './helpers/d1-sqlite';

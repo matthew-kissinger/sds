@@ -30,7 +30,18 @@
  * per-tuft tint are all compositions of PALETTE entries, exactly as Terrain.tsx
  * composes its relief tint out of the sky. The band ramp is the shared one
  * (tsl/toon.ts), so the meadow is lit by the same three-band light as the sheep
- * standing in it.
+ * standing in it. The painted breakup is the shared one (tsl/paintedField.ts),
+ * so a clump standing on a browner patch of ground is itself browner - which
+ * the two files used to assert in comments while quietly running two drifted
+ * copies of the formula.
+ *
+ * GRADING IS A STRUCT. The knobs a polish pass actually turns - how gold the
+ * tips go, how far a clump's hue may wander, how wide the per-tuft tint spreads
+ * and how hard the wind blows - are fields on `GrassMaterialStyle` rather than
+ * constants buried in the graph, and the five greens are `GrassPalette`. The
+ * shipped defaults below are the values this material has always had, so the
+ * struct changes nothing on its own; it is what lets the asset lab hold two
+ * gradings against each other at one camera (spec/13).
  */
 
 import * as THREE from 'three/webgpu';
@@ -73,6 +84,7 @@ import {
   SHEEP_FOOTPRINT,
   type InteractionField,
 } from './interactionField';
+import { paintedBlend } from '@app/tsl/paintedField';
 import { BARK_WAVE_WIDTH } from '../juice/barkPulse';
 
 const TAU = Math.PI * 2;
@@ -84,39 +96,29 @@ const TAU = Math.PI * 2;
  *  frame instead of receding up it. */
 const WIND_X = 0.76;
 const WIND_Z = 0.65;
-/** How fast the whole flow frame travels, m/s. A gust crosses the 200 m field
- *  in half a minute: weather, not a conveyor belt. */
-const WIND_SPEED = 6.5;
 
 /**
  * The three octaves: rotation of the sample plane in radians, spatial frequency
  * in cycles per metre, and how fast the octave churns inside the travelling
  * frame. The rotations are the load-bearing part - unrotated octaves stack
- * their features on the same axes and the sum is still one wavefront.
+ * their features on the same axes and the sum is still one wavefront. How much
+ * each one counts for is graded, so it lives on the style struct.
  */
 const OCTAVES = [
-  { angle: 0, frequency: 0.03, evolve: 0.35, weight: 0.55 },
-  { angle: 0.9, frequency: 0.092, evolve: 0.8, weight: 0.3 },
-  { angle: -1.7, frequency: 0.27, evolve: 1.6, weight: 0.15 },
+  { angle: 0, frequency: 0.03, evolve: 0.35 },
+  { angle: 0.9, frequency: 0.092, evolve: 0.8 },
+  { angle: -1.7, frequency: 0.27, evolve: 1.6 },
 ] as const;
 
 /** Carried from spec/06: the gust envelope never leaves this band. */
 const VARIATION_MIN = 0.35;
 const VARIATION_MAX = 0.65;
 
-/** Metres a tip travels at variation 1.0. The band above turns this into
- *  0.13 m to 0.25 m of sway on a 0.44 m blade: visible from the beauty camera,
- *  not a wheat field in a gale. */
-const WIND_REACH = 0.38;
 /** Sway grows as t^this up the blade. Roots are planted; tips are not. */
 const BEND_POWER = 1.6;
 /** How far the wind may swing off its base direction, per octave. */
 const SWIRL_MID = 0.42;
 const SWIRL_FINE = 0.3;
-/** Per-blade flutter: the small shiver that keeps a clump from moving as one
- *  rigid object. Tip only, hence the cube. */
-const FLUTTER_RATE = 5.2;
-const FLUTTER_AMP = 0.035;
 /** A bent blade is shorter. Keeps the arc roughly isometric under sway. */
 const BEND_DROP = 0.55;
 
@@ -145,17 +147,34 @@ const FLATTEN = 0.72;
 /**
  * The recovery spring, as a pure function of a ghost's age in seconds.
  *
- *   1.0 while the body is there, through zero at 0.54 s, down to about -0.11
- *   at 0.9 s, and exactly 0 at 1.55 s.
+ *   1.0 while the body is there, through zero at 0.83 s, down to about -0.08
+ *   at 1.10 s, and exactly 0 at 1.55 s.
  *
  * The negative lobe is the overshoot: the blades that were pushed away lean
  * back past upright before settling. The envelope reaches zero rather than
  * decaying asymptotically because the trail is finite - the oldest ghost has to
  * be able to leave without a step (see interactionField.ts).
+ *
+ * SLOWED FROM A RATE OF 2.9, which stood the grass up in 0.54 s and snapped
+ * back through a -0.12 overshoot at 0.80 s. Against a flock that changes
+ * direction as often as this one does, a field recovering that briskly reads as
+ * twitchy rather than alive - every jink got an immediate answer from several
+ * square metres of grass.
+ *
+ * The fix is to slow it WITHOUT flattening it, because the overshoot is the
+ * character and a spring that merely fades is a sponge. Dropping the rate alone
+ * does flatten it - the envelope has decayed too far by the time the cosine
+ * turns negative - so the shape comes down from 2.4 to 1.5 to hold amplitude
+ * out at the lobe. The result rises slower, settles later and overshoots by
+ * less but for longer: -0.078 at 1.10 s where it was -0.119 at 0.80 s.
+ *
+ * The envelope still reaches zero at exactly the same 1.55 s, so the trail
+ * lengths, the ghost ring sizes and the interactor budget are all untouched.
+ * This costs nothing; it is three constants.
  */
 const SPRING_DECAY = 1.55;
-const SPRING_SHAPE = 2.4;
-const SPRING_RATE = 2.9;
+const SPRING_SHAPE = 1.5;
+const SPRING_RATE = 1.9;
 
 /**
  * The same curve in plain numbers, so the trail lengths in interactionField.ts
@@ -173,49 +192,151 @@ export function springResponse(age: number): number {
 
 /** Linear multiplier turning the pasture green into the tone at a blade's
  *  root, where light does not reach. Cool, not black: shadows keep their hue. */
-const ROOT_SHADE = [0.72, 0.8, 0.9] as const;
-/** How much of the sun's own halo the tips take. Grass that catches the light
- *  goes gold before it goes white, and this is the whole difference between a
- *  green field and a golden-hour one. */
-const TIP_GOLD = 0.16;
-/** Shallow root occlusion grounds each clump. Root tint and toon shade already
- *  supply depth; avoid multiplying them into a dark outline around every clump
- *  beside the softer tree masses. */
-const ROOT_AO = 0.82;
+/** Metres over which root occlusion fades out. Shape, not grade. */
 const ROOT_AO_HEIGHT = 0.26;
-/** Per-tuft brightness spread. Enough to break the mass, not enough to read as
- *  patchwork. */
-const TINT_MIN = 0.95;
-const TINT_MAX = 1.05;
-/**
- * How far a clump's own colour may pull away from the pasture tone, toward the
- * duller surround green at one end and the light pasture green at the other.
- * Brightness variation alone reads as noise; hue variation reads as plants.
- */
-const CLUMP_HUE = 0.28;
 /** How trodden ground is coloured: the surround's duller green carried toward
  *  the pen floor's warm trodden earth. */
 const WORN_EARTH = 0.35;
-/** Painted breakup, at the SAME frequencies scene/Terrain.tsx uses for the
- *  ground, so a clump standing on a browner patch is itself browner. */
-const PATCH_SCALE = 0.07;
-const MOTTLE_SCALE = 0.26;
-const MOTTLE_WEIGHT = 0.45;
+
+// --- grading -----------------------------------------------------------------
+
+/**
+ * The five greens the meadow is made of, named for their role rather than for
+ * where they came from. The default maps the game's own palette; this is a
+ * lens onto tsl/palette.ts, never a second set of colours.
+ */
+export interface GrassPalette {
+  readonly dark: string;
+  readonly light: string;
+  readonly surround: string;
+  readonly wornEarth: string;
+  readonly sunGlow: string;
+}
+
+export const DEFAULT_GRASS_PALETTE: GrassPalette = {
+  dark: PALETTE.grassDark,
+  light: PALETTE.grassLight,
+  surround: PALETTE.surround,
+  wornEarth: PALETTE.penGround,
+  sunGlow: PALETTE.sunGlow,
+};
+
+/** What a grading pass is allowed to move without touching the graph. */
+export interface GrassMaterialStyle {
+  /** How fast the whole flow frame travels, m/s. A gust crosses the 200 m
+   *  field in half a minute: weather, not a conveyor belt. */
+  readonly windSpeed: number;
+  /** What each of the three octaves counts for in the summed flow. */
+  readonly octaveWeights: readonly [number, number, number];
+  /** Metres a tip travels at variation 1.0. The variation band turns this into
+   *  0.13 m to 0.25 m of sway on a 0.44 m blade: visible from the beauty
+   *  camera, not a wheat field in a gale. */
+  readonly windReach: number;
+  /** Per-blade flutter: the small shiver that keeps a clump from moving as one
+   *  rigid object. Tip only. */
+  readonly flutterRate: number;
+  readonly flutterAmplitude: number;
+  /**
+   * Linear multiplier turning the pasture green into the tone at a blade's
+   * root, where light does not reach. Cool, not black: spec/05 is explicit
+   * that shadows shift hue toward cool and never toward gray or mud, so the
+   * blue channel always comes down least.
+   */
+  readonly rootShade: readonly [number, number, number];
+  /**
+   * Root occlusion, grounding each clump. Shallow on purpose: root tint and
+   * toon shade already supply depth, and multiplying them into a hard dark
+   * ring around every clump reads as an outline beside the softer tree
+   * masses - which spec/05 forbids on grass specifically.
+   */
+  readonly rootAo: number;
+  /**
+   * Darkening at a blade's two long edges, so a flat strip of triangles reads
+   * as a strand with a spine. The brake on this one is the reference bar:
+   * grass is brushstroke masses, not photoreal blades, and edge contrast is
+   * what pulls a mass apart into countable blades.
+   */
+  readonly spineEdge: number;
+  /** How much of the sun's own halo the tips take. Grass that catches the
+   *  light goes gold before it goes white, and this is the whole difference
+   *  between a green field and a golden-hour one. */
+  readonly tipGold: number;
+  /** Per-tuft brightness spread. Enough to break the mass, not enough to read
+   *  as patchwork. */
+  readonly tintMin: number;
+  readonly tintMax: number;
+  /**
+   * How far a clump's own colour may pull away from the pasture tone, toward
+   * the duller surround green at one end and the light pasture green at the
+   * other. Brightness variation alone reads as noise; hue variation reads as
+   * plants.
+   */
+  readonly clumpHue: number;
+}
+
+/**
+ * The shipped grading.
+ *
+ * Wind is untouched from the original material. Colour was regraded against
+ * spec/05 in the asset lab, three gradings at one camera, and the numbers
+ * below are the ones that won:
+ *
+ *  - ROOT SHADE went deeper, from [0.72, 0.8, 0.9]. "Saturated shadows,
+ *    hue-shifted cool, never gray mud" is a hard rule, and the old root was
+ *    pale enough to read as washed out rather than as shadow. Blue still comes
+ *    down least, so the shadow stays cool.
+ *  - TIP GOLD and CLUMP HUE went up, from 0.16 and 0.28. "Sun-warmed greens
+ *    and golds", and hue variation between clumps is what reads as plants
+ *    where brightness variation alone reads as noise.
+ *  - TINT widened a little, from 0.95-1.05, to keep large flats off vector-flat
+ *    without crossing into speckle.
+ *  - ROOT AO came down only slightly, from 0.82. Deeper looked better in
+ *    isolation and worse in the field: it draws a dark ring at every clump
+ *    base, and spec/05 puts grass explicitly outside the outline pass.
+ *  - SPINE EDGE did not move. Edge contrast is what pulls a mass apart into
+ *    countable blades, and the reference bar is brushstroke masses.
+ *
+ * What this buys, at the Classic camera, is the hard rule in spec/05: the
+ * flock parts into individual sheep and the dog is findable in under a second,
+ * where against the old lighter field they were a pale cluster in pale green.
+ */
+export const DEFAULT_GRASS_STYLE: GrassMaterialStyle = {
+  windSpeed: 6.5,
+  octaveWeights: [0.55, 0.3, 0.15],
+  windReach: 0.38,
+  flutterRate: 5.2,
+  flutterAmplitude: 0.035,
+  rootShade: [0.62, 0.72, 0.86],
+  rootAo: 0.76,
+  spineEdge: 0.96,
+  tipGold: 0.24,
+  tintMin: 0.91,
+  tintMax: 1.11,
+  clumpHue: 0.38,
+};
 
 export interface GrassMaterialInputs {
   /** Per-tuft (worldX, worldZ, seed, vigour). See tuftData.ts. */
   readonly tufts: THREE.InstancedBufferAttribute;
   /** null on the surround tier: no body in this game can reach it. */
   readonly interaction: InteractionField | null;
+  /** Omitted everywhere the game mounts this. The lab grades with it. */
+  readonly palette?: GrassPalette;
+  readonly style?: GrassMaterialStyle;
 }
 
 /**
- * A compact deterministic field in roughly [-1, 1]. The inner stroke warps
- * the outer one, so neither wind nor colour resolves into straight sine bands.
- * Keeping this graph to two sine operations avoids MaterialX noise's large
- * generated helper library while retaining coherent authored-scale features.
+ * The wind's field: roughly [-1, 1], and the inner stroke warps the outer one
+ * so a gust does not resolve into straight sine bands. Two sine operations,
+ * which avoids MaterialX noise's large generated helper library while keeping
+ * coherent authored-scale features.
+ *
+ * The colour breakup does NOT come through here any more - it is the shared
+ * lattice value noise in tsl/paintedField.ts, so the grass and the ground read
+ * one field. Wind keeps a sine form because it has to EVOLVE: `phase` is a time
+ * node, and a lattice would have to be re-hashed per frame to move.
  */
-function sineHashField(
+function flowField(
   root: TSLNode,
   frequency: number,
   angle: number,
@@ -237,7 +358,7 @@ function sineHashField(
 function octave(root: TSLNode, travel: TSLNode, index: number): TSLNode {
   const { angle, frequency, evolve } = OCTAVES[index]!;
   const flow = root.sub(travel);
-  return sineHashField(flow, frequency, angle, time.mul(float(evolve)));
+  return flowField(flow, frequency, angle, time.mul(float(evolve)));
 }
 
 /**
@@ -308,6 +429,9 @@ function barkPush(root: TSLNode, pulse: THREE.DataTexture): TSLNode {
 }
 
 export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicNodeMaterial {
+  const palette = inputs.palette ?? DEFAULT_GRASS_PALETTE;
+  const style = inputs.style ?? DEFAULT_GRASS_STYLE;
+
   const tuft: TSLNode = instancedBufferAttribute(inputs.tufts, 'vec4');
   const root = tuft.xy;
   const seed = tuft.z;
@@ -320,15 +444,15 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
 
   // --- wind -----------------------------------------------------------------
 
-  const travel = vec2(float(WIND_X), float(WIND_Z)).mul(time.mul(float(WIND_SPEED)));
+  const travel = vec2(float(WIND_X), float(WIND_Z)).mul(time.mul(float(style.windSpeed)));
   const coarse = octave(root, travel, 0);
   const middle = octave(root, travel, 1);
   const fine = octave(root, travel, 2);
 
   const flow = coarse
-    .mul(float(OCTAVES[0].weight))
-    .add(middle.mul(float(OCTAVES[1].weight)))
-    .add(fine.mul(float(OCTAVES[2].weight)));
+    .mul(float(style.octaveWeights[0]))
+    .add(middle.mul(float(style.octaveWeights[1])))
+    .add(fine.mul(float(style.octaveWeights[2])));
   const gust = clamp(flow.mul(float(0.5)).add(float(0.5)), float(0), float(1));
   const variation = mix(float(VARIATION_MIN), float(VARIATION_MAX), gust);
   const coarseGust = clamp(coarse.mul(float(0.5)).add(float(0.5)), float(0), float(1));
@@ -344,17 +468,17 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
   const coarseDirection = normalize(vec2(float(WIND_X), float(WIND_Z)));
 
   const reach = pow(along, float(BEND_POWER));
-  const flutter = sin(time.mul(float(FLUTTER_RATE)).add(phase.mul(float(TAU))).add(seed.mul(float(41.7))));
+  const flutter = sin(time.mul(float(style.flutterRate)).add(phase.mul(float(TAU))).add(seed.mul(float(41.7))));
   const windSway = variation
-    .mul(float(WIND_REACH))
+    .mul(float(style.windReach))
     .mul(stature)
     .mul(reach);
   const coarseSway = coarseVariation
-    .mul(float(WIND_REACH))
+    .mul(float(style.windReach))
     .mul(stature)
     .mul(reach);
   const detailSway = windSway.sub(coarseSway);
-  const flutterSway = flutter.mul(float(FLUTTER_AMP)).mul(reach.mul(along));
+  const flutterSway = flutter.mul(float(style.flutterAmplitude)).mul(reach.mul(along));
 
   // --- bodies ---------------------------------------------------------------
 
@@ -389,10 +513,48 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
     const recordY: TSLNode = texture(interactors, vec2(slots.y, float(0.5)), 0);
     const recordZ: TSLNode = texture(interactors, vec2(slots.z, float(0.5)), 0);
     const recordW: TSLNode = texture(interactors, vec2(slots.w, float(0.5)), 0);
-    const push = evaluateBodyPush(root, slots.x, recordX)
-      .add(evaluateBodyPush(root, slots.y, recordY))
-      .add(evaluateBodyPush(root, slots.z, recordZ))
-      .add(evaluateBodyPush(root, slots.w, recordW));
+    const pushX = evaluateBodyPush(root, slots.x, recordX);
+    const pushY = evaluateBodyPush(root, slots.y, recordY);
+    const pushZ = evaluateBodyPush(root, slots.z, recordZ);
+    const pushW = evaluateBodyPush(root, slots.w, recordW);
+
+    // THE BODY STANDING ON A BLADE OWNS IT. The four slots used to be summed
+    // and the sum's magnitude clamped, which bounded how FAR a blade moved but
+    // said nothing about WHICH WAY. Direction was the plain vector sum, so a
+    // blade already pinned flat under one sheep still swung to follow every
+    // other sheep that came near, and with this flock changing direction as
+    // often as it does, several animals near one patch dragged it back and
+    // forth. Capping the size of a push that is pointing somewhere new every
+    // frame does not make it calm.
+    //
+    // So the slots now combine as a mean weighted by each body's own squared
+    // strength. Squared, so it is firmly a dominance and not a democracy, and
+    // squared also costs four dots where four lengths would cost four square
+    // roots on half a million blades.
+    //
+    // What that buys, case by case: one body alone comes through EXACTLY as
+    // before, because a weighted mean of one term is that term. Two bodies
+    // pressing the same way give one body's worth rather than two, which is
+    // the whole of "grass already down does not get pushed down again". Two
+    // pressing from opposite sides cancel horizontally and keep both their
+    // flatten, so the blade is pressed straight down between them, which is
+    // what actually happens. And a far body with a weak push can no longer
+    // turn a blade that a near one is standing on, because its weight is the
+    // square of a small number.
+    //
+    // A convex combination cannot exceed its largest term, so this bounds the
+    // result by one body's push by construction - the clamp below is now a
+    // guard rather than the mechanism, and it is kept because it costs two
+    // instructions and the explosive case it names is worth never revisiting.
+    const weightX = dot(pushX, pushX);
+    const weightY = dot(pushY, pushY);
+    const weightZ = dot(pushZ, pushZ);
+    const weightW = dot(pushW, pushW);
+    const push = pushX.mul(weightX)
+      .add(pushY.mul(weightY))
+      .add(pushZ.mul(weightZ))
+      .add(pushW.mul(weightW))
+      .div(tslMax(weightX.add(weightY).add(weightZ).add(weightW), float(1e-6)));
     const bark = barkPush(root, inputs.interaction.barkPulse);
 
     // Overlapping ghosts along a trail would otherwise stack into a shove no
@@ -451,43 +613,37 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
 
   // --- colour ---------------------------------------------------------------
 
-  const patches = sineHashField(root, PATCH_SCALE, 0.38, float(0.7));
-  const mottle = sineHashField(root, MOTTLE_SCALE, -1.13, float(2.4));
-  const blend = smoothstep(
-    float(-0.35),
-    float(0.35),
-    patches.add(mottle.mul(float(MOTTLE_WEIGHT))),
-  );
+  // The ground's own breakup, read at the tuft's root rather than per vertex,
+  // so a whole clump belongs to the patch it stands on (tsl/paintedField.ts).
+  const blend = paintedBlend(root);
 
   // Each clump draws its own tone off its baked seed, so neighbours differ in
   // hue and not only in brightness.
   const clumpTone = mix(
-    color(PALETTE.surround),
-    color(PALETTE.grassLight),
+    color(palette.surround),
+    color(palette.light),
     smoothstep(float(0.12), float(0.88), fract(seed.mul(float(19.73)))),
   );
-  const ground = mix(color(PALETTE.grassDark), color(PALETTE.grassLight), blend);
-  const pasture = mix(ground, clumpTone, float(CLUMP_HUE));
-  const rootTone = color(PALETTE.grassDark).mul(vec3(...ROOT_SHADE));
-  const tipTone = mix(color(PALETTE.grassLight), color(PALETTE.sunGlow), float(TIP_GOLD));
+  const ground = mix(color(palette.dark), color(palette.light), blend);
+  const pasture = mix(ground, clumpTone, float(style.clumpHue));
+  const rootTone = color(palette.dark).mul(vec3(...style.rootShade));
+  const tipTone = mix(color(palette.light), color(palette.sunGlow), float(style.tipGold));
 
   const stalk = mix(rootTone, pasture, smoothstep(float(0.02), float(0.46), along));
   const lit = mix(stalk, tipTone, smoothstep(float(0.48), float(1), along));
 
   // Trodden ground: the surround's duller green carried toward the pen floor's
   // warm earth, faded in by the baked vigour.
-  const worn = mix(color(PALETTE.surround), color(PALETTE.penGround), float(WORN_EARTH));
+  const worn = mix(color(palette.surround), color(palette.wornEarth), float(WORN_EARTH));
   const health = mix(worn, lit, smoothstep(float(0.32), float(0.94), vigour));
 
-  const tint = mix(float(TINT_MIN), float(TINT_MAX), fract(seed.mul(float(7.31))));
+  const tint = mix(float(style.tintMin), float(style.tintMax), fract(seed.mul(float(7.31))));
   const occlusion = mix(
-    float(ROOT_AO),
+    float(style.rootAo),
     float(1),
     smoothstep(float(0), float(ROOT_AO_HEIGHT), along),
   );
-  // A little darker at the two long edges, so a flat strip of triangles reads
-  // as a strand with a spine.
-  const spine = mix(float(0.96), float(1), sin(across.mul(float(Math.PI))));
+  const spine = mix(float(style.spineEdge), float(1), sin(across.mul(float(Math.PI))));
 
   const material = makeToonMaterial(health.mul(tint).mul(occlusion).mul(spine));
   material.positionNode = positionLocal.add(vec3(displaceX, displaceY, displaceZ));

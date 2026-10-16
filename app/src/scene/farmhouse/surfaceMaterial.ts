@@ -201,7 +201,14 @@ export function farmhouseSurfaceParameters(
       return surfaceParameters({
         primary: WALL,
         secondary: WALL_PATCH,
-        basePatch: field([0.62, 0.2, 0.62], 0.3, 0.012),
+        // 0.62 across and 0.07 up: a nine-to-one stretch, so a patch is a RUN of
+        // weather down a wall. It was three-to-one, which at the feature size
+        // the authored scales actually ask for (see STROKE) put a patch edge
+        // through the damp course every two metres and drew a row of arches
+        // along the foot of every wall - arcading, on a limewashed farmhouse.
+        // The board skins were already stretched 14:1 and 21:1; this is the one
+        // that was not.
+        basePatch: field([0.62, 0.07, 0.62], 0.3, 0.012),
         basePatchWeight: 1,
         eaveGain: 0.79,
         wallLevel,
@@ -268,6 +275,27 @@ function referencedBands(name: 'primary' | 'secondary'): TSLNode {
 }
 
 /**
+ * How many strokes fit in one unit of the authored scales below.
+ *
+ * IT IS NOT A TASTE CONSTANT, IT IS THE UNIT THOSE SCALES WERE WRITTEN IN. Every
+ * scale in this file was authored against MaterialX perlin, whose lattice is one
+ * unit across; the three sine strokes that replaced it turn over every 5.4 units,
+ * so without this factor each authored number asked for a feature 5.4 times
+ * wider than it was chosen to be. Measured across the barn's 16.5 m wall: the
+ * board field that materials.ts calls "vertical strips, at a period a pixel can
+ * hold" was 6.6 m across, the limewash's plaster patches 11 m, the bare board
+ * 6.6 m and the stone grain 16.5 m - one feature per wall, which is a gradient
+ * and not a material. At 5.4 they measure 1.38 m, 1.83 m, 1.14 m and 2.36 m,
+ * which is what the authored numbers were picked for and what the comments in
+ * this file and in materials.ts have always described.
+ *
+ * The thresholds' edges are scaled by the same factor where they are read, so
+ * every painted step keeps the WORLD width it has today. This changes how many
+ * features a wall carries, not how hard any one of them lands.
+ */
+const STROKE = 5.4;
+
+/**
  * Compact, non-axis-aligned painted breakup in roughly [-1, 1].
  *
  * MaterialX noise expanded this one shared surface graph to a 15 kB fragment
@@ -279,7 +307,8 @@ function referencedBands(name: 'primary' | 'secondary'): TSLNode {
  * and the third stroke pushed the farmhouse's first visible frame over the
  * 100 ms presentation-freeze ceiling without adding a readable value band.
  */
-function paintedField(point: TSLNode, phase: number): TSLNode {
+function paintedField(at: TSLNode, phase: number): TSLNode {
+  const point = at.mul(float(STROKE));
   const first = sin(
     point.x.mul(float(1.17))
       .add(point.y.mul(float(0.83)))
@@ -302,7 +331,8 @@ function referencedPatch(
 ): TSLNode {
   const field = paintedField(positionWorld.mul(ref(`${name}.scale`, 'vec3')), phase);
   const threshold = ref(`${name}.threshold`, 'float');
-  const edge = ref(`${name}.edge`, 'float');
+  // Scaled with the point, so the step keeps its world width (see STROKE).
+  const edge = ref(`${name}.edge`, 'float').mul(float(STROKE));
   return smoothstep(threshold.sub(edge), threshold.add(edge), field);
 }
 

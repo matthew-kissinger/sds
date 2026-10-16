@@ -1,11 +1,13 @@
-# Current local audio candidate
-
-Two approved Mixkit recordings now replace generated birds and panting; crowd and
-farmhouse chimes are removed. See [integration and license](../../docs/audio-approved-integration.md).
-The manifest is authoritative. The retained ElevenLabs provenance below applies
-only to the remaining short effects, not the Mixkit recordings.
-
 # Audio source ledger
+
+This is the ledger for the shipped audio set. `manifest.json` is authoritative.
+
+Two owner-approved Mixkit recordings provide birds and panting, replacing the
+earlier generated versions; crowd murmur and farmhouse chimes are removed. Their
+license terms and the acquisition recipe a fresh checkout must run are in
+[integration and license](../../docs/audio-approved-integration.md). The
+ElevenLabs provenance below applies only to the remaining short effects, not to
+the Mixkit recordings.
 
 The remaining 12 short effects were generated for Sheepdog Sim with the account
 owner's ElevenLabs subscription. The initial set was generated on 2026-08-22.

@@ -42,7 +42,20 @@ describe('sheep motion shader compile budget', () => {
     expect(motionSource).not.toContain('RUFF_NOD_SHARE');
     expect(motionSource).toContain('const fleeceLifeMask = masks.x.mul(');
     expect(motionSource).not.toContain('JIGGLE_REST');
-    expect(motionSource).toContain('.mul(agitation)\n    .mul(float(JIGGLE_RUN))');
+    // The invariant is that an idle sheep's fleece is PERFECTLY STILL, because
+    // the title scene stands one in front of the camera doing nothing. Both
+    // gains are gated - one on agitation, one on the response envelope - and
+    // there is no third, un-gated term. That is what JIGGLE_REST was, and why
+    // its absence is asserted just above. This line used to pin the literal
+    // formatting of the old vertical jiggle; it now pins the property that
+    // formatting was standing in for, so the fleece can be re-rigged without
+    // the test holding an opinion about layout.
+    expect(motionSource).toContain('agitation.mul(float(FLEECE_SWELL_RUN))');
+    expect(motionSource).toContain('response.mul(float(FLEECE_SWELL_RESPONSE))');
+    // And that the fleece travels along its own normal rather than the world
+    // axis: the swell scales the lump, and `rise` carries locomotion only.
+    expect(motionSource).toContain('lump.mul(masks.x).mul(float(1).add(fleeceSwell))');
+    expect(motionSource).toContain('const rise = hoof.add(bodyBob);');
     expect(motionSource).not.toContain('const headBone =');
     expect(motionSource).not.toContain('const articulatedHead = vec3(');
     expect(motionSource).not.toContain('const grazingRuff = vec3(');

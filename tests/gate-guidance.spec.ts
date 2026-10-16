@@ -57,9 +57,16 @@ function furniture(
 ): ReadonlyArray<readonly [string, number, number, number, number]> {
   const items: Array<readonly [string, number, number, number, number]> = [
     ['the sheep counter', 20, 20, 94, 94],
-    ['the clock', 20, 100, 102, 118],
     ['the stamina bar', width / 2 - 78, 20, width / 2 + 78, 46],
     ['Pause', width - 65, 20, width - 20, 65],
+    // The run-timer toggle, one target (45) and one gap (12) inboard of Pause,
+    // and the clock itself directly under the pair. Read off the live DOM at
+    // 1024x768 rather than added up from the stylesheet: the toggle and Pause
+    // land on these exactly, and the clock measures 902..1004 by 77..109, so
+    // the rectangle below is its own bounds with 2px of margin on the leading
+    // edges.
+    ['the timer toggle', width - 122, 20, width - 77, 65],
+    ['the clock', width - 124, 75, width - 20, 111],
   ];
   if (width < 600 || height < 500) {
     items.push(

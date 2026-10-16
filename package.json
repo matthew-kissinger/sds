@@ -31,11 +31,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lab": "vite --config vite.lab.config.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:lab": "tsc --noEmit -p tsconfig.lab.json",
     "typecheck:worker": "npm run typecheck --prefix worker",
     "probe:release": "node tools/release-hardening-probe.mjs",
     "probe:playtest": "node tools/playtest-profile.mjs",

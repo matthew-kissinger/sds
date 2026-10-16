@@ -22,6 +22,8 @@
       "@app/*": ["./app/src/*"]
     }
   },
+  // `lab` is deliberately absent: it has its own tsconfig.lab.json, so a type
+  // error in a development tool cannot fail `npm run build` (spec/13).
   "include": ["app/src", "sim", "tests", "tools"],
   "exclude": ["tests/worker"]
 }

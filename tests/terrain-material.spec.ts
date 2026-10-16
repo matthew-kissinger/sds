@@ -7,10 +7,15 @@ import { describe, expect, it } from 'vitest';
 const source = readFileSync(new URL('../app/src/scene/Terrain.tsx', import.meta.url), 'utf8');
 
 describe('terrain material compile budget', () => {
-  it('keeps both authored breakup scales without MaterialX noise', () => {
-    expect(source).toContain('paintedField(positionWorld.xz, PATCH_SCALE');
-    expect(source).toContain('paintedField(positionWorld.xz, MOTTLE_SCALE');
-    expect(source).toContain('MOTTLE_WEIGHT = 0.45');
+  it('takes its breakup from the shared painted field, not a copy', () => {
+    // The scales themselves are asserted where they now live, in
+    // tests/painted-field.spec.ts. What matters here is that the ground reads
+    // the same field as the grass standing on it instead of its own.
+    expect(source).toContain("import { paintedBlend } from '@app/tsl/paintedField'");
+    expect(source).toContain('paintedBlend(positionWorld.xz)');
+    expect(source).not.toContain('function paintedField');
+    expect(source).not.toContain('PATCH_SCALE');
+    expect(source).not.toContain('MOTTLE_SCALE');
     expect(source).not.toContain('mx_noise_float');
   });
 

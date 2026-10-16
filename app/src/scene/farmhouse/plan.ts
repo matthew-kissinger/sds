@@ -156,3 +156,19 @@ export const CHIMNEY_RISE = 1.6;
 /** Where the lean-to sits along the main range's sunlit wall, and how wide. */
 export const LEANTO_AT = 6.65;
 export const LEANTO_HALF = 1.8;
+
+/**
+ * The barn's outshot and its cupola, both in the barn's own frame.
+ *
+ * The outshot takes the left third of the door elevation, clear of the cart door
+ * at -2.1 and of the man door past it, so that wall reads as three things of
+ * three different heights instead of one board plane with a hole in it.
+ *
+ * The cupola is deliberately NOT on the barn's centre line. On centre it would
+ * stand directly over the cart door and read as part of it, and from the field
+ * it would line up with the house's stack behind; two and a half metres off
+ * breaks both alignments and still leaves it clear of the lean-to's ridge.
+ */
+export const BARN_LEANTO_AT = -5.9;
+export const BARN_LEANTO_HALF = 2;
+export const BARN_CUPOLA_AT = -2.45;

@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sheepdog-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "preview"
+      ],
+      "port": 4173
+    },
+    {
+      "name": "sheepdog-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 5199
+    },
+    {
+      "name": "sheepdog-lab",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "lab"
+      ],
+      "port": 5200
+    }
+  ]
+}

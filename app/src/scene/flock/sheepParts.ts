@@ -24,6 +24,7 @@
  */
 
 import * as THREE from 'three/webgpu';
+import { sheepKneeBend } from './flockTuning';
 import { HEAD_FACE_SCALE, HEAD_FORWARD, HEAD_LIFT } from './sheepFormTuning';
 
 // --- head -------------------------------------------------------------------
@@ -63,6 +64,24 @@ export const HEAD_GRAZE_END = 0.66;
 
 /** Nose tip, for anything that needs to know how long the animal is. */
 export const HEAD_NOSE_Z = 0.755 + HEAD_FORWARD;
+
+/**
+ * Where an authored head z ends up once the loft is stretched by HEAD_FORWARD.
+ *
+ * Exported because the burial volume in sheepGeometry has to travel with the
+ * rings it buries. It did not, and that is a drift worth naming: the volume
+ * ended at a hardcoded 0.56, the second ring sat at 0.555 just inside it, and
+ * reaching the head out slid that ring to 0.620 - past the end of its own
+ * burial - so a narrow neck ring surfaced through the fleece. The asset test
+ * for exactly that caught it. Two numbers describing one lengthening, in two
+ * files, with only a comment holding them together.
+ */
+export function headStretchedZ(z: number): number {
+  const first = HEAD_RINGS[0]!.z;
+  const last = HEAD_RINGS[HEAD_RINGS.length - 1]!.z;
+  const alongHead = Math.max(0, Math.min((z - first) / (last - first), 1));
+  return z + alongHead * HEAD_FORWARD;
+}
 
 /**
  * A point on a unit section: a circle and a square blended by `square`. The
@@ -202,11 +221,24 @@ interface Ring {
   readonly t: number;
 }
 
+// THE CARPUS STANDS OFF THE CHORD, and it has to: a two-bone chain authored at
+// full extension is a chain sitting on its own singularity, where the bend the
+// solve returns goes as the SQUARE ROOT of how far the limb has shortened. At
+// the old 0.005 m of stand-off, the first frame of a hoof leaving the ground
+// shortened the chain by 5 mm and snapped the knee 76 mm sideways - a pop, not
+// a fold. Carrying 0.05 m of carpus instead puts the chain 2.1% off extension,
+// the same slack the hind leg has always had, and the same frame moves the knee
+// 45 mm, in line with the hock beside it. The ring below follows onto the new
+// knee-to-sole line so the cannon stays a straight bone.
+//
+// It is also just what a foreleg looks like. The carpus of a standing sheep is
+// a little forward of the line from shoulder to hoof, and the joint flexes
+// FORWARD, carrying the hoof up and back underneath it.
 const FRONT_RINGS: readonly Ring[] = [
   { y: 0.56, hw: 0.058, hd: 0.065, dz: 0, dx: 0, t: 0 },
-  { y: 0.34, hw: 0.054, hd: 0.061, dz: 0.008, dx: -0.003, t: 0.2 },
-  { y: 0.14, hw: 0.049, hd: 0.056, dz: 0.02, dx: -0.006, t: 0.56 },
-  { y: 0.05, hw: 0.045, hd: 0.052, dz: 0.01, dx: -0.01, t: 0.86 },
+  { y: 0.34, hw: 0.054, hd: 0.061, dz: 0.035, dx: -0.003, t: 0.2 },
+  { y: 0.14, hw: 0.049, hd: 0.056, dz: 0.065, dx: -0.006, t: 0.56 },
+  { y: 0.05, hw: 0.045, hd: 0.052, dz: 0.036, dx: -0.01, t: 0.86 },
   { y: 0, hw: 0.068, hd: 0.08, dz: 0.02, dx: -0.01, t: 1 },
 ];
 
@@ -268,6 +300,76 @@ export function legShape(
   geometry.computeVertexNormals();
   return { geometry, weights: Float32Array.from(weights) };
 }
+
+/** The two-bone chain a leg actually is, MEASURED FROM ITS RINGS rather than
+ *  authored beside them, so the solver in the shader and the mesh it poses
+ *  cannot drift apart. Every length is metres. */
+export interface SheepLegBones {
+  /** Shoulder to knee. */
+  readonly upper: number;
+  /** Knee to sole. */
+  readonly lower: number;
+  /** Rest height of the shoulder above the sole. */
+  readonly restRise: number;
+  /** Rest fore-aft offset of the sole from the shoulder, signed. */
+  readonly restReach: number;
+  /** Straight shoulder-to-sole distance at rest. */
+  readonly span: number;
+  /** The bend the AUTHORED pose already carries, so the shader can displace by
+   *  the difference and leave a standing sheep exactly as modelled. */
+  readonly restBend: number;
+  /** Which way the joint folds, +1 fore and -1 aft, taken from the side of the
+   *  chord the modelled joint is already on. The front pair flexes forward like
+   *  a carpus and the hind pair back like a hock, and taking the sign from the
+   *  mesh is what stops the shader folding a leg through its own rest pose. */
+  readonly foldDirection: number;
+  /** Leg weight at the bend ring: where the fold's tent profile peaks. */
+  readonly kneeT: number;
+}
+
+/**
+ * Read a leg's chain off its rings. The bend is ring index 2, which is where
+ * both legs carry their largest fore-aft offset - the carpus in front, the hock
+ * behind - and is the only ring either leg displaces far enough off the
+ * shoulder-to-sole chord to be a joint rather than a taper.
+ *
+ * The measurement is worth stating because it agrees with the solve to the
+ * millimetre, which is the check that this reads the rig correctly: the front
+ * chain comes out 0.425 + 0.147 over a 0.560 span, and `sheepKneeBend` puts its
+ * knee 0.050 m off the chord against the 0.050 authored; the back is 0.449 +
+ * 0.154 over 0.590, solved 0.053 against 0.053 authored. Both pairs therefore
+ * stand a little off full extension, which is the only place the solve is well
+ * behaved, and each one's fold direction is read back out of the same numbers.
+ */
+function legBones(rings: readonly Ring[]): SheepLegBones {
+  const shoulder = rings[0]!;
+  const knee = rings[2]!;
+  const sole = rings[rings.length - 1]!;
+  const restRise = shoulder.y - sole.y;
+  const restReach = sole.dz - shoulder.dz;
+  const reach = (a: Ring, b: Ring): number => Math.hypot(b.y - a.y, b.dz - a.dz);
+  const upper = reach(shoulder, knee);
+  const lower = reach(knee, sole);
+  const span = Math.hypot(restRise, restReach);
+  // Where the modelled joint sits relative to the shoulder-to-sole chord: drop
+  // the knee onto the chord and keep the fore-aft part of what is left over.
+  const along = ((knee.y - shoulder.y) * -restRise + (knee.dz - shoulder.dz) * restReach)
+    / (span * span);
+  const offChord = knee.dz - shoulder.dz - along * restReach;
+  return {
+    upper,
+    lower,
+    restRise,
+    restReach,
+    span,
+    restBend: sheepKneeBend(span, upper, lower),
+    foldDirection: Math.sign(offChord) || 1,
+    kneeT: knee.t,
+  };
+}
+
+export const SHEEP_FRONT_BONES: SheepLegBones = legBones(FRONT_RINGS);
+export const SHEEP_BACK_BONES: SheepLegBones = legBones(BACK_RINGS);
 
 /** Hip placements. The back pair sits narrower and further out fore-aft than the
  *  front, which is what a sheep does and what keeps the four hooves from

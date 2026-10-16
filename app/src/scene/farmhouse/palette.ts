@@ -113,9 +113,17 @@ export const TIMBER: BandSet = { shade: '#6d5745', body: '#8f7154', key: '#ab8b6
 
 /**
  * Dressings: the plinth course under each building. Warm stone, deliberately
- * between the roof and the wall in value. palette candidate: promote in cohesion pass
+ * between the roof and the wall in value.
+ *
+ * A THIRD OF THE CHROMA CAME OUT THIS PASS. The ladder was right and the hue was
+ * not: at 41 per cent saturation against a limewash at 21, the course under every
+ * wall read as a pink skirting painted onto the building rather than as the stone
+ * it is standing on - the one band in the cluster more saturated than the barn.
+ * The values are unchanged, so the plinth still sits between the slate and the
+ * render where it belongs; it is simply stone-coloured now.
+ * palette candidate: promote in cohesion pass
  */
-export const DRESS: BandSet = { shade: '#8f6d5c', body: '#b8916a', key: '#cda578' };
+export const DRESS: BandSet = { shade: '#857064', body: '#ab917a', key: '#c0a98d' };
 /**
  * The chimney. A warm grey-brown stone, close enough to the lit slate to read as
  * the same family of material and far enough off the timber not to read as trim.

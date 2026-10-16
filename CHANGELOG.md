@@ -20,8 +20,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   terrain, grass, atmosphere and original synthesized audio.
 - Public architecture, contribution, security, asset-license and launch
   documentation under AGPL-3.0-or-later.
+- A walk-in farmhouse, in the asset lab only: an editable Kiln geometry program
+  under `assets/house/`, the GLB it bakes to, and a loader that welds that GLB
+  into one buffer per farmhouse band set so the shipped toon material draws it
+  unchanged. It has a door on its hinges, a porch, reveals with real depth and a
+  hall, fireplace and stair behind the front wall, a first floor of three
+  bedrooms off a railed landing and a loft above it, at 3,440 triangles in 6
+  draws
+  with no texture. Nothing in `app/` imports it and no GLB reaches `dist/`; its
+  one consumer is the lab's `House (Kiln)` subject, which stands it on the same
+  pad and yaw as the shipped cluster so the two can be compared by flipping
+  between them. The bake is deterministic and `tools/record-house-asset.mjs`
+  checks that claim by re-rendering from a directory with no build cache.
 
 ### Changed
+
+- The homestead has a surface again. The painted breakup on every farmhouse and
+  barn skin was running at 5.4 times its authored feature size - measured over a
+  16.5 m run, boards came out 6.6 m, wall patches 11 m and stone grain 16.5 m -
+  so five different materials rendered as flat fills and the buildings read as
+  untextured blocks. The correction scales the sample point and the threshold
+  edge together, so each step keeps the world width it was authored at. The wall
+  patch, stretched only 3:1 against the boards' 14:1, had been drawing an arcade
+  of arches along the foot of every wall; it is 9:1 now. Openings went from nine
+  to twenty-three so that no elevation is blank, for 44 triangles and no extra
+  draw call, and the plinth lost a third of its chroma, which is what made it
+  read as pink skirting rather than as the stone the building stands on. The
+  chimney smoke is a nine-slot vertex-stage plume on a 7.2 s cycle with wind
+  shear and sway, in place of a cone that never moved.
+
+- Dog gait geometry belongs to a contact rather than to a frame. A foot's share
+  of the cycle is fixed when it touches down, its stride is frozen while it
+  carries weight and re-aimed only in the air, and its place in the gait order
+  is re-timed only while it is off the ground. Measured over six speed profiles,
+  this takes the limb from 2106 foot-frames within 1% of straight to 52, retires
+  the 0.35 s foot settle decay, and leaves steady-state reach and stance slip
+  unchanged.
 
 - The version 3 score client is isolated to the `field-v3` partition and exact
   flock sizes 25, 75 and 200. It does not import the version 2 network client.

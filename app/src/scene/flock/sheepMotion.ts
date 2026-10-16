@@ -9,7 +9,10 @@
  *
  *   fleece   a seeded lump field, per instance, so no two sheep in the flock
  *            carry the same crease in the same place
- *   flex     the airborne middle leg folds rearward while both endpoints hold
+ *   knee     a closed-form two-bone solve: each joint folds the way it is
+ *            modelled, by exactly what the distance from shoulder to hoof asks
+ *            for, so a hill and the stride bend the limb instead of stretching
+ *            it
  *   jiggle   the fleece lags the body by about a third of a cycle, which is the
  *            only cue in the asset that says the wool has mass
  *   stride   diagonal leg pairs, amplitude from agitation
@@ -44,23 +47,39 @@
 
 import {
   clamp,
+  cos,
   float,
   fract,
+  length,
+  max,
+  min,
   mix,
   normalLocal,
   positionLocal,
   sin,
   smoothstep,
+  sqrt,
   step,
+  vec2,
   vec3,
   type TSLNode,
 } from '@app/tsl/nodes';
 import {
+  BODY_BOB_RUN,
+  BODY_BREATH,
   HOOF_LIFT,
-  SHEEP_STANCE_SHARE,
+  KNEE_COMPLIANCE,
+  SHEEP_STANCE_BOUND,
+  SHEEP_STANCE_WALK,
+  STRIDE_OPEN_KNEE,
   STRIDE_RUN,
   STRIDE_WALK,
 } from './flockTuning';
+import {
+  SHEEP_BACK_BONES,
+  SHEEP_FRONT_BONES,
+  type SheepLegBones,
+} from './sheepParts';
 import { SHEEP_TERRAIN_OFFSET_LIMIT } from './terrainPlanting';
 
 /** The per-instance wool lump: two octaves in cycles per metre, and how far
@@ -101,20 +120,22 @@ function paintedFleeceField(point: TSLNode): TSLNode {
   return primary.mul(float(0.52)).add(cross.mul(float(0.31))).add(weave.mul(float(0.17)));
 }
 
-/** Agitation at which the walk cycle is fully open. Low, so a sheep drifting at
- *  half a metre per second still visibly steps. */
-const WALK_KNEE = 4;
-
-/** Rearward fold of the middle leg during airborne recovery, as a fraction of
- * stride. The shoulder and hoof stay on the authored path while the joint tucks
- * behind them, avoiding the forward-bending silhouette that reads as a reversed
- * walk cycle. */
-const LEG_RECOVERY_FOLD = 0.5;
+/** Leg weight at the bend ring, which is where the knee fold's tent profile
+ *  peaks. Both pairs author it at the same ring, and a guard test holds them
+ *  equal so this can be read from one of them. */
+const KNEE_T = SHEEP_FRONT_BONES.kneeT;
 
 /** How far moving fleece lags the body, radians, and how far it travels. Idle
  * sheep keep the collar and body vertically still on the live title scene. */
 const JIGGLE_LAG = 1.9;
-const JIGGLE_RUN = 0.05;
+/** How far the fleece swells, AS A FRACTION OF THE LUMP it is swelling - not a
+ *  distance. The wool moves along its own normals now, so the amount it can
+ *  move is the amount of wool there is at that vertex, and a thin patch over
+ *  the ribs necessarily moves less than a full puff over the haunch. That is
+ *  the behaviour; a metre value would flatten it back out. At a run this is
+ *  0.024 m of surface travel on a mean lump, against 0.032 m when the whole
+ *  fleece translated vertically together. */
+const FLEECE_SWELL_RUN = 0.55;
 
 /** Fore-aft hoof travel, m, split between the walk knee and raw speed. A
  *  standing sheep gets zero of both, so its legs are still. */
@@ -124,7 +145,7 @@ const JIGGLE_RUN = 0.05;
 const EAR_FLICK = 0.026;
 const EAR_STARTLE = 0.055;
 const TAIL_WIGGLE = 0.035;
-const RESPONSE_JIGGLE = 0.036;
+const FLEECE_SWELL_RESPONSE = 0.35;
 
 export interface SheepMotion {
   /** Apply the whole animation to a local-space position node. Takes the
@@ -156,7 +177,7 @@ export function createSheepMotion(
   clock: TSLNode,
   terrainOffsets: TSLNode,
 ): SheepMotion {
-  const walk = clamp(agitation.mul(float(WALK_KNEE)), float(0), float(1));
+  const open = clamp(agitation.mul(float(STRIDE_OPEN_KNEE)), float(0), float(1));
 
   // The instance's own wool. Sampled from positionLocal rather than from the
   // incoming base, so the outline hull is displaced by exactly the field the
@@ -166,35 +187,66 @@ export function createSheepMotion(
     seed.mul(float(11.7)),
     seed.mul(float(31.3)).add(float(9.6)),
   );
-  const lump = paintedFleeceField(
+  // THE LUMP ONLY ADDS WOOL. Both octaves are rectified to 0..1 before they are
+  // scaled, so the field bulges outward and never carves inward.
+  //
+  // Signed, it did both, and that is what put legs outside the fleece. The
+  // narrowest wool is the -x haunch at 0.33 against a 0.279 leg: a 0.051
+  // margin, which a lump reaching -0.086 eats straight through, leaving the
+  // limb standing proud of the body it hangs from. It was per-instance seeded,
+  // so it happened to some sheep and not others, which is exactly how it was
+  // described - "sometimes".
+  //
+  // Rectifying also WIDENS the fleece, by the half-amplitude it used to spend
+  // digging: about 0.043 m of mean outward bulge. A sheep in full fleece is a
+  // wide thing on narrow legs, so the margin and the silhouette improve
+  // together rather than trading against each other.
+  const broadLump = paintedFleeceField(
     positionLocal.mul(float(FLEECE_BROAD * TAU)).add(woolOffset),
-  )
+  ).mul(float(0.5)).add(float(0.5));
+  const fineLump = paintedFleeceField(
+    positionLocal
+      .mul(float(FLEECE_FINE * TAU))
+      .add(woolOffset)
+      .add(vec3(17.9, 3.1, 24.4)),
+  ).mul(float(0.5)).add(float(0.5));
+  const lump = broadLump
     .mul(float(FLEECE_BROAD_AMP))
-    .add(
-      paintedFleeceField(
-        positionLocal
-          .mul(float(FLEECE_FINE * TAU))
-          .add(woolOffset)
-          .add(vec3(17.9, 3.1, 24.4)),
-      ).mul(float(FLEECE_FINE_AMP)),
-    );
-  const fleeceLump = normalLocal.mul(lump.mul(masks.x));
+    .add(fineLump.mul(float(FLEECE_FINE_AMP)));
 
-  // Twice-gait phase remains useful for small fleece follow-through. Leg flex
-  // itself is derived from the airborne recovery below so it bends in a clear
-  // anatomical direction instead of merely squashing the limb vertically.
+  // Twice-gait phase is the body bob's own rate, and the bob is what the wool
+  // hangs off, so it is the rate the wool answers at. Leg flex is derived from
+  // the airborne recovery below instead, so it bends anatomically rather than
+  // merely squashing the limb vertically.
   const bobArg = gait.mul(float(2));
+
   // Wool carrying a graze mask is the collar around the buried skull root.
   // Keep that join planted while the rest of the fleece retains its secondary
   // motion; lifting only the collar made the neck appear to telescope.
   const fleeceLifeMask = masks.x.mul(
     float(1).sub(smoothstep(float(0.1), float(0.14), masks.y)),
   );
-  const jiggle = sin(bobArg.sub(float(JIGGLE_LAG)))
+
+  // THE FLEECE MOVES ALONG ITS OWN NORMALS, NOT UP THE WORLD AXIS. This was the
+  // jitter. Every fleece vertex used to receive one scalar on +Y, so the whole
+  // coat rose and fell as a rigid slab - and a rigid slab ticking up and down
+  // is read as a vibration, however slow it is made, because nothing about it
+  // is shaped like wool. Swelling the lump instead moves each vertex along the
+  // surface it belongs to: the haunch swings out while the flank swings down,
+  // the thin patch over the ribs barely moves, and the coat breathes rather
+  // than pulses. It also means the fleece WIDENS as it moves, which a vertical
+  // translation could never do.
+  const fleeceSwell = sin(bobArg.sub(float(JIGGLE_LAG)))
     .mul(fleeceLifeMask)
-    .mul(agitation)
-    .mul(float(JIGGLE_RUN))
+    .mul(
+      agitation.mul(float(FLEECE_SWELL_RUN))
+        .add(response.mul(float(FLEECE_SWELL_RESPONSE))),
+    )
     .mul(motionScale);
+  const fleeceLump = normalLocal.mul(
+    lump.mul(masks.x).mul(float(1).add(fleeceSwell)),
+  );
+
 
   // The ears carry a constant graze mask of 0.85; the head is a gradient and
   // the poll is 0.5, so a narrow band selects both ear blades without another
@@ -216,60 +268,150 @@ export function createSheepMotion(
     .mul(float(0.012).add(agitation.mul(float(TAIL_WIGGLE))).add(response.mul(float(0.025))))
     .mul(motionScale);
 
-  const responseJiggle = sin(gait.mul(float(3)).add(seed))
-    .mul(response)
-    .mul(fleeceLifeMask)
-    .mul(float(RESPONSE_JIGGLE))
-    .mul(motionScale);
-  const stride = walk.mul(float(STRIDE_WALK)).add(agitation.mul(float(STRIDE_RUN)));
+  // Twin of sheepStrideForAgitation: opens over a twentieth of the range, then
+  // grows with speed. A sheep that is moving at all takes a real step; only a
+  // standing one takes none.
+  const stride = open.mul(
+    float(STRIDE_WALK).add(agitation.mul(float(STRIDE_RUN - STRIDE_WALK))),
+  );
   // A short planted interval moves backward under the body; the longer recovery
   // moves forward while visibly airborne. The former symmetric sine made the
   // world-space foot travel forward with the sheep and read as reverse walking.
   const positivePair = step(float(0), legs.x);
   const pairOffset = float(1).sub(positivePair).mul(float(0.5));
   const legTurn = fract(gait.mul(float(1 / (Math.PI * 2))).add(pairOffset));
-  const recovery = step(float(SHEEP_STANCE_SHARE), legTurn);
-  const stanceT = clamp(
-    legTurn.mul(float(1 / SHEEP_STANCE_SHARE)),
-    float(0),
-    float(1),
+  // The share of the cycle a hoof holds the ground, falling with speed so a
+  // bolt bounds rather than flickers. `sheepStanceShareForAgitation` mixes the
+  // same two constants on the CPU, for terrain contact and the guard suite.
+  const stanceShare = mix(
+    float(SHEEP_STANCE_WALK),
+    float(SHEEP_STANCE_BOUND),
+    clamp(agitation, float(0), float(1)),
   );
+  const recovery = step(stanceShare, legTurn);
+  const stanceT = clamp(legTurn.div(stanceShare), float(0), float(1));
   const recoveryT = clamp(
-    legTurn.sub(float(SHEEP_STANCE_SHARE)).mul(float(1 / (1 - SHEEP_STANCE_SHARE))),
+    legTurn.sub(stanceShare).div(float(1).sub(stanceShare)),
     float(0),
     float(1),
   );
-  const stanceTravel = float(1).sub(stanceT.mul(float(2)));
-  const recoveryTravel = smoothstep(float(0), float(1), recoveryT)
-    .mul(float(2))
-    .sub(float(1));
-  const swing = mix(stanceTravel, recoveryTravel, recovery)
-    .mul(legs.y)
-    .mul(stride);
-  const recoveryArc = sin(recoveryT.mul(float(Math.PI)))
-    .mul(recovery)
-    .mul(stride);
-  const hoof = recoveryArc.mul(legs.y).mul(float(HOOF_LIFT));
-  const legFold = recoveryArc
-    .mul(sin(legs.y.mul(float(Math.PI))))
-    .mul(float(-LEG_RECOVERY_FOLD));
-
-  // Wool follow-through and mid-leg flex never translate either endpoint of a
-  // leg. There is therefore no body-to-hoof span inflation hidden in the pose.
-  const rise = jiggle.add(responseJiggle).add(hoof);
 
   // Four CPU samples, selected by authored leg quadrant. Applied only down the
   // leg and after the body pitch, so every stance sole lands on the visible
   // heightfield while a lifted hoof keeps its intentional gait clearance.
+  // `front` also chooses which bone pair the knee solve uses, which is why the
+  // quadrant is picked here rather than beside the displacement at the end.
   const positiveSide = step(float(0), positionLocal.x);
   const front = step(float(0), positionLocal.z);
   const frontOffset = mix(terrainOffsets.y, terrainOffsets.x, positiveSide);
   const backOffset = mix(terrainOffsets.w, terrainOffsets.z, positiveSide);
-  const terrainLift = clamp(
+  const groundOffset = clamp(
     mix(backOffset, frontOffset, front),
     float(-SHEEP_TERRAIN_OFFSET_LIMIT),
     float(SHEEP_TERRAIN_OFFSET_LIMIT),
-  ).mul(legs.y);
+  );
+
+  /** The authored chain for whichever pair this vertex belongs to. Front and
+   *  back are measured separately in sheepParts because they differ: 0.425 and
+   *  0.147 over a 0.560 m span in front, 0.449 and 0.154 over 0.590 behind, and
+   *  they fold opposite ways. */
+  const byPair = (pick: (bones: SheepLegBones) => number): TSLNode =>
+    mix(float(pick(SHEEP_BACK_BONES)), float(pick(SHEEP_FRONT_BONES)), front);
+
+  // EVERY TERM THAT MOVES THE HOOF IS AN AMPLITUDE FIRST and a displacement
+  // second. The knee solve below needs the distance between the two endpoints,
+  // and by the time a term has been faded along the limb by `legWeight` that
+  // distance is no longer recoverable from it.
+  //
+  // The body bob, twinned in flockTuning's sheepBodyBob. Scaled by
+  // (1 - legWeight), which is what that attribute was authored for: full on the
+  // torso, zero at the sole, so a planted hoof stays planted and the limb takes
+  // up the difference as compliance. The hoof-contact receipt therefore needs
+  // no term for this, and neither does terrain planting.
+  //
+  // Not scaled by motionScale. This is locomotion, like `swing` and `hoof`
+  // beside it, not secondary life: damping it would hand the reduced-motion
+  // setting back the tapping that the setting has no opinion about.
+  const bobAmplitude = cos(bobArg.sub(stanceShare.mul(float(TAU))))
+    .negate()
+    .mul(float(BODY_BREATH).add(agitation.mul(float(BODY_BOB_RUN))));
+  const bodyBob = bobAmplitude.mul(float(1).sub(legs.y));
+
+  const stanceTravel = float(1).sub(stanceT.mul(float(2)));
+  const recoveryTravel = smoothstep(float(0), float(1), recoveryT)
+    .mul(float(2))
+    .sub(float(1));
+  const swingAmplitude = mix(stanceTravel, recoveryTravel, recovery).mul(stride);
+  const swing = swingAmplitude.mul(legs.y);
+  const liftAmplitude = sin(recoveryT.mul(float(Math.PI)))
+    .mul(recovery)
+    .mul(stride)
+    .mul(float(HOOF_LIFT));
+  const hoof = liftAmplitude.mul(legs.y);
+  const terrainLift = groundOffset.mul(legs.y);
+
+  // THE KNEE IS SOLVED FROM WHERE THE HOOF IS, NOT PUT ON A TIMETABLE. The fold
+  // used to be the swing arc times a hand-tuned half of stride, so the joint
+  // bent when the clock said to and not because anything had moved. Which meant
+  // the three terms that DO move an endpoint - terrain planting at +/-0.08 m,
+  // the bob at +/-0.016, the fore-aft swing at +/-stride - changed the
+  // shoulder-to-sole distance with no knee response whatever, and the limb
+  // telescoped instead of folding: a sheep standing across a hummock stretched
+  // one leg by a seventh of its length and nothing in the pose bent. That is the
+  // rubber leg, and this is what replaces it.
+  //
+  // The old constant was not the wrong size, only blind. At full run the solve
+  // returns 0.140 m of bend on the front chain and 0.154 on the back against the
+  // authored 0.5 * 0.3 = 0.150, so the magnitude of the swing fold is kept, by
+  // derivation rather than by coincidence. What the constant could not do was
+  // answer a hill, or bend at all during stance, where it was gated off.
+  //
+  // The bob is deliberately NOT in the span. It is the thorax riding over the
+  // scapula, not the shoulder joint translating, so it should not ask the knee
+  // for anything - and a chain this close to straight would answer far too
+  // loudly if it did: the 4 mm breath of an idle sheep would come back as 9 mm
+  // of knee, which is a new idle motion on the title screen for no gain. What
+  // it leaves behind is the 16 mm the shoulder ring rises at a dead run while
+  // the sole holds, already carried and already named as compliance above.
+  const spanRise = byPair((bones) => bones.restRise)
+    .sub(liftAmplitude)
+    .sub(groundOffset);
+  const spanReach = byPair((bones) => bones.restReach).add(swingAmplitude);
+  const span = max(length(vec2(spanRise, spanReach)), float(1e-4));
+  const alongUpper = byPair((bones) => bones.upper ** 2 - bones.lower ** 2)
+    .add(span.mul(span))
+    .div(span.mul(float(2)));
+  const bend = sqrt(
+    max(
+      byPair((bones) => bones.upper ** 2).sub(alongUpper.mul(alongUpper)),
+      float(0),
+    ).add(float(KNEE_COMPLIANCE * KNEE_COMPLIANCE)),
+  );
+
+  // Bones are rigid, so the rings between the joints ride straight lines: a
+  // linear tent peaking at the bend ring, where the old fold used a sine. The
+  // sine bowed both bones outward - 0.59 of full bend at the t=0.2 ring, where a
+  // real chain gives 0.36 - which is its own share of why a folding leg read as
+  // rubber. The tent is also cheaper than the sine it replaces.
+  const alongLeg = min(
+    legs.y.mul(float(1 / KNEE_T)),
+    float(1).sub(legs.y).mul(float(1 / (1 - KNEE_T))),
+  );
+  // Each pair folds the way its own joint is modelled - the front carpus
+  // forward, the hind hock back - and by the DIFFERENCE from the authored bend,
+  // so a standing sheep on flat ground is exactly the sheep that was modelled.
+  // The hind leg is already drawn with 0.053 m of hock and the front with 0.050
+  // of carpus; subtracting those is what keeps the solve from folding them in a
+  // second time, and taking the direction from the same rings is what keeps a
+  // leg from folding through its own rest pose.
+  const legFold = bend
+    .sub(byPair((bones) => bones.restBend))
+    .mul(alongLeg)
+    .mul(byPair((bones) => bones.foldDirection));
+
+  // Wool follow-through and mid-leg flex never translate either endpoint of a
+  // leg. There is therefore no body-to-hoof span inflation hidden in the pose.
+  const rise = hoof.add(bodyBob);
 
   return {
     displace(base: TSLNode): TSLNode {
