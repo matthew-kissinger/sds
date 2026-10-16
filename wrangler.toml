@@ -16,6 +16,11 @@ workers_dev = true
 # from a throwaway hostname. Pull-request previews use env.preview instead.
 preview_urls = false
 
+# Source-mapped stack traces in Workers observability; the maps are uploaded to
+# Cloudflare, not served. The Vite plugin defaults this on; stated here so the
+# deploy configuration is not at its mercy.
+upload_source_maps = true
+
 # The game. There is no `directory` here on purpose: the Vite plugin supplies
 # the client build output (dist/, with dist/release.json written into it by the
 # releaseManifest plugin in vite.config.ts) when it generates the deploy
@@ -31,11 +36,6 @@ run_worker_first = ["/api/*"]
 # Observability
 [observability]
 enabled = true
-
-# Source-mapped stack traces in Workers observability; the maps are uploaded to
-# Cloudflare, not served. The Vite plugin defaults this on; stated here so the
-# deploy configuration is not at its mercy.
-upload_source_maps = true
 
 # Durable Object class history. The version 2 multiplayer classes were created
 # by v1 and retired by v2 in Release 1, which deletes the classes and their
