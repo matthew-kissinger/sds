@@ -70,12 +70,12 @@
     "@types/three": "^0.185.4",
     "@typescript-eslint/eslint-plugin": "^8.71.2",
     "@typescript-eslint/parser": "^8.46.4",
-    "@vitejs/plugin-react": "^5.1.4",
+    "@vitejs/plugin-react": "^6.1.2",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "playwright": "^1.64.0",
     "typescript": "~5.9.3",
-    "vite": "^7.3.4",
+    "vite": "^8.3.4",
     "vitest": "^5.0.5"
   },
   "allowScripts": {
