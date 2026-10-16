@@ -779,6 +779,10 @@ reports are inside another worktree under `.claude/worktrees/`), `npm test`
 940 passed in 113 files, `npm run build` exit 0 at 2,286.69 kB raw and
 637.46 kB gzip against 2,277.14 and 634.68 before: 9.55 kB raw and 2.78 kB
 gzipped, all of it the procedural pass, none of it the prototype.
+`npm run probe:release` exit 0: initial JS 637,877 gzip against a 1,572,864
+budget, first load 6,166,485 estimated transfer against 8,388,608, secret scan
+clean, and - the line that matters for the prototype - `builtExternalModels: 0`,
+which is the build's own evidence that no GLB reaches `dist/`.
 `node tools/record-house-asset.mjs --check` re-bakes from a scratch directory
 with no `.kiln/` cache and reproduces the recorded GLB byte for byte.
 
