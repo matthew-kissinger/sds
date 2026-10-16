@@ -30,12 +30,14 @@ rollback. Keep that service isolated from the client.
 - Preserve the `field-v3` score partition and exact 25, 75 and 200 flock-size
   allow-list.
 - Do not change production infrastructure from a contribution.
-- A production deploy runs on the owner's explicit approval, naming the full
-  40-character commit SHA. Approval given in conversation is sufficient
-  authorization and needs no separate sign-off. The deploy workflows stay
-  `workflow_dispatch` taking that exact SHA, so what shipped is always a named
-  commit that can be named again to roll back - which is the whole reason
-  version 2 is still recoverable from its own immutable deployment.
+- A production deploy runs on the owner's explicit approval. Approval given in
+  conversation is sufficient authorization and needs no separate sign-off.
+  Deploying is pushing a `v*` tag: the tag names the commit, so what shipped is
+  always a named commit that can be named again to roll back - which is the
+  whole reason version 2 is still recoverable from its own immutable
+  deployment. `Deploy Pages` also keeps a `workflow_dispatch` path taking an
+  exact 40-character SHA, which is how an older commit is redeployed. Both
+  paths refuse a commit that is not already contained in `origin/main`.
 - `docs/operations/deployment.md` is the one description of how a change reaches
   production: the single workflow, what each Cloudflare and GitHub name means,
   which deployment targets are stale, and the seven steps from merge to tag.
