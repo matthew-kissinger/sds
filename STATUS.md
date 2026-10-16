@@ -211,6 +211,13 @@ longer claims Neutral.
   Regrade the farmhouse surface material where it reads sloppy. Re-bake, flip
   `FARMHOUSE_SOURCE`, and gate on the hub. The agent does this with Kiln
   available on the owner's PC.
+- Kiln barn, right after the farmhouse (added 2026-10-16; the status log had
+  recorded "the barn has had no equivalent of the Kiln treatment" and the plan
+  had left it out): a second recipe under `assets/barn/`, baked with the same
+  per-vertex surface channels the farmhouse fix establishes, welded into the
+  same board, roof and opening buffers so the draw count does not move, graded
+  in-game by the same standard, Kiln feedback logged the same way. Starts once
+  the farmhouse PR has proven the channel contract.
 - Multiplayer foundations: the Durable Object placement decision recorded with
   its reasoning, room D1 migration 0001, and a CI-tested realtime skeleton on
   `/r/*`. Not deployed unless the owner says otherwise.
