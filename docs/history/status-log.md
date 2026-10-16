@@ -5,7 +5,7 @@
 
 # Status log
 
-## Release 2 Stage A - 2026-10-16, in review (pull request `release2/stage-a-vite-plugin`)
+## Release 2 Stage A - 2026-10-16, live as 3.2.1 (pull request 117, tag `v3.2.1`)
 
 One root package on `@cloudflare/vite-plugin` 1.64.0 with wrangler 4.151.0 (the
 version the plugin pins).
@@ -42,6 +42,21 @@ version the plugin pins).
 - Dev loop: `vite dev` with the local D1 answered `/api/healthz`, a register
   and a leaderboard read through the Worker with no proxy; `vite preview`
   passes `verify-worker-origin.mjs`.
+- Release: merged as `58f2be74`, released as 3.2.1 on `c5964ff2`, tag `v3.2.1`
+  pushed after Client CI, Deploy run 38957976689 green end to end (verifier,
+  deploy from the generated config, live manifest, origin on the apex and on
+  `workers.dev`, discovery and analytics). Live `release.json`: 3.2.1,
+  `c5964ff2`, 34 files, 8,501,460 bytes, sha256 `83db6d44...`, the digest the
+  new build gave before the tag. The four live verifiers re-run from the
+  workstation pass, `www` redirects to the apex.
+- Live Worker settings read through the dashboard API before (19:27Z) and
+  after (19:57Z) the deploy, 27 fields: migration tag `v2`, bindings `ASSETS`,
+  `DB` (same D1 id), `JWT_SECRET`, route `sheepdogsim.com/*`, `workers.dev`
+  on with previews off, compatibility date and flag, observability, placement,
+  tail consumers all identical; only `modified_on` moved. The generated config
+  publishes the same Worker the old `worker/wrangler.toml` did. Stage B (the
+  `cf` CLI and `cloudflare.config.ts`) is next, on preview only, behind its
+  four checks.
 
 ## Release 1 production cutover - 2026-10-16, complete
 

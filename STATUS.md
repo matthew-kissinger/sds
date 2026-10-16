@@ -17,9 +17,9 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.2.0 is live at `https://sheepdogsim.com`, served by the
-  `sds-worker` Worker through the `sheepdogsim.com/*` route since the
-  2026-10-16 cutover (`docs/history/status-log.md`). `release.json` is the
+- Version 3.2.1 (`c5964ff2`, tag `v3.2.1`) is live at `https://sheepdogsim.com`,
+  served by the `sds-worker` Worker through the `sheepdogsim.com/*` route since
+  the 2026-10-16 cutover (`docs/history/status-log.md`). `release.json` is the
   authority for the exact deployed source commit and artifact digest.
   `www.sheepdogsim.com` redirects to the apex at the zone edge.
 - The `sds-frontend` Pages project is dormant underneath the route: it serves
@@ -179,17 +179,19 @@ local D1 and no proxy, the workflows deploying with wrangler from the root.
 Stage A ships alone as 3.2.1, whose only client change is the two renderer
 fixes.
 
-**Stage A is merged** (pull request 117, merge `58f2be74`, 2026-10-16) and
-3.2.1 is prepared for the tag. The plugin forces the client to `dist/client`, always emits
+**Stage A is merged and live** (pull request 117, merge `58f2be74`; tag
+`v3.2.1` on `c5964ff2`, Deploy run 38957976689 green, 2026-10-16). The plugin forces the client to `dist/client`, always emits
 `dist/.assetsignore`, and writes its deploy redirect under the Vite root
 `app/`, where wrangler will not follow it; the measurements, the artifact
 digest comparison and the decisions that followed are in
-`docs/history/status-log.md` (Release 2 Stage A). 3.2.1 will carry the build
-restructure and the two renderer fixes already on `main`, so its artifact
-differs from 3.2.0's by those fixes alone. Rolling back to the 3.2.0 commit
-dispatches `Deploy` at the `v3.2.0` ref. After the tag, the first production
-deploy is the check that wrangler publishes the same route, bindings and
-migrations from the generated file.
+`docs/history/status-log.md` (Release 2 Stage A). 3.2.1 carries the build
+restructure and the two renderer fixes, so its artifact differs from 3.2.0's
+by those fixes alone (34 files, 8,501,460 bytes, sha256 `83db6d44...`, the
+digest measured before the tag). The first production deploy from the
+generated file was the check that wrangler publishes the same route, bindings
+and migrations: the live Worker settings read before and after differ only in
+`modified_on`. Rolling back to the 3.2.0 commit dispatches `Deploy` at the
+`v3.2.0` ref.
 
 Stage B: `cf` and
 `cloudflare.config.ts`, attempted on the preview Worker only, and cut to
