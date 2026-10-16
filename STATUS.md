@@ -200,7 +200,10 @@ preview Worker and its four checks passed, and the same pull request carried
 the production cutover, which the owner approved and which is merged (pull
 request 126, merge `37154931`, Client CI green on it; below). The next `v*`
 tag deploys with `cf`; the live Worker still runs the wrangler-deployed
-3.3.0. Next: declarative hosting and the Pages retirement.
+3.3.0. Declarative hosting is planned, not started:
+`docs/operations/declarative-hosting.md` (draft pull request), with three
+decisions for the owner listed below. Next: those decisions, then the
+rehearsal on `stage.sheepdogsim.com`.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -354,12 +357,29 @@ longer claims Neutral.
 - Multiplayer foundations: the Durable Object placement decision recorded with
   its reasoning, room D1 migration 0001, and a CI-tested realtime skeleton on
   `/r/*`. Not deployed unless the owner says otherwise.
-- Hosting made fully declarative: with Pages retired, `sheepdogsim.com` and
-  `www.sheepdogsim.com` become Worker custom domains in the Worker config so
-  the deploy creates their DNS; the www redirect rule and the analytics mode
-  stay as the only zone settings. The three static pages become Vite entries
-  and one build hook injects the analytics snippet from one constant, so the
-  token is spelled once.
+- Hosting made fully declarative: with Pages retired, `sheepdogsim.com`
+  becomes a Worker Custom Domain declared in `app/cloudflare.config.ts`, so
+  the deploy creates its DNS record and certificate; the route goes in the
+  release after. **Amended 2026-10-16 in the plan
+  (`docs/operations/declarative-hosting.md`): `www.sheepdogsim.com` stays a
+  proxied placeholder record with the zone redirect rule, which is
+  Cloudflare's own recommendation for a redirected hostname, rather than a
+  second Custom Domain.** The plan's sources: a Custom Domain is refused on
+  a hostname with a CNAME by default, but wrangler's and `cf`'s deploy code
+  set the override flags themselves when there is no TTY, so the first tag
+  after `domains` reaches `main` replaces the apex CNAME without asking; the
+  route keeps precedence until it is deleted, so the sequence is gapless;
+  deploys do not delete undeclared routes; a Custom Domain's certificate is
+  not deleted with it; and the v2 rollback changes shape (the Pages custom
+  domain goes; v2 stays at `7cea2cd2.sds-frontend.pages.dev`). The owner's
+  three decisions: (1) accept the amended end state for `www`; (2) the
+  rehearsal, a Custom Domain `stage.sheepdogsim.com` on the preview Worker
+  over a deliberately conflicting CNAME, which measures the CI override, the
+  certificate authority against the zone's CAA records, and what removal
+  leaves behind, before the apex is touched; (3) when the cutover tag is,
+  since merging `domains` arms it and the next tag fires it. The three
+  static pages becoming Vite entries with the analytics snippet injected
+  from one constant stays a separate item.
 
 ### Standing rule
 

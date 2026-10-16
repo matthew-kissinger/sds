@@ -5,6 +5,51 @@
 
 # Status log
 
+## Release 2 declarative hosting - 2026-10-16, planned (draft pull request), nothing changed
+
+The owner: "Do this task here: Release 2: declarative hosting and the Pages
+retirement". The plan is `docs/operations/declarative-hosting.md`; this entry
+records what was read and measured to write it. No DNS record, route, custom
+domain, Pages setting or production setting was touched.
+
+- Read from the dashboard API (Sonnet agent in Chrome, GETs): the zone's ten
+  DNS records (apex CNAME to `sds-frontend.pages.dev` proxied, `www` CNAME to
+  the apex proxied, four CAA records allowing `pki.goog` and
+  `letsencrypt.org` only, null MX and SPF, DMARC reject, a site-verification
+  TXT), the one route, no sds Custom Domain on the account, the Pages
+  project's active `sheepdogsim.com` custom domain (certificate authority
+  `google`, HTTP validation), and the `www to apex` redirect rule.
+- Read in the docs (web-fetch agents, URLs in the runbook): a Custom Domain is
+  refused on a hostname with an existing CNAME and the documented migration
+  deletes the CNAME first; routes take precedence over Custom Domains on the
+  same hostname; a Custom Domain creates the DNS record and an Advanced
+  Certificate and leaves the certificate behind on removal; for a www
+  redirect Cloudflare recommends a placeholder record and a rule, not a
+  Custom Domain; the `cf` reference types `domains` as `string[]`, documents
+  `cf workers triggers deploy` for the hosting half alone, and says nothing
+  about conflicts, overrides or removal. The public API docs for the domains
+  endpoint list no override flags.
+- Read in the bundles of wrangler 4.151.0 and `cf` 1.0.0-beta.18, which
+  share `publishCustomDomains`: the deploy asks for a changeset
+  (`replace_state=true`), prompts in a TTY on conflicting DNS records or
+  domains held by another Worker, and without a TTY sets
+  `override_existing_dns_record` and `override_existing_origin` to true and
+  PUTs the records. CI has no TTY. Both also warn that previously deployed
+  routes are not deleted.
+- Measured here, no credentials: `cf deploy --dry-run --prebuilt
+  --no-provision` and `cf workers triggers deploy --dry-run --prebuilt`
+  against a scratch copy of the Build Output with `domains:
+  ["sheepdogsim.com"]` both pass and print nothing about domains or routes;
+  the copy was restored and the gate re-verified.
+- Decided in the plan, for the owner to confirm: the apex alone becomes a
+  Custom Domain and `www` keeps its placeholder record and rule (amends the
+  STATUS end state); a rehearsal on `stage.sheepdogsim.com` with the preview
+  Worker over a deliberately conflicting CNAME comes first; the production
+  sequence keeps the route through the DNS change (deploy with `domains` and
+  `triggers` together, then delete the route, then remove the Pages custom
+  domain, then drop `triggers` in a follow-up release), and the patch is
+  written in the runbook, not applied, because merging it arms the next tag.
+
 ## Release 2 Stage B cutover - 2026-10-16, merged (pull request 126, `37154931`)
 
 The owner: "Do this task here: Release 2 Stage B cutover: production Deploy
