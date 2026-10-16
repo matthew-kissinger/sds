@@ -15,7 +15,7 @@
 // byte-compares against the committed files, so a recipe edit that was not
 // meant to move a blade fails there.
 //
-// THIS BAKE HAS TWO INPUTS AND OWNS NEITHER OF THEM.
+// THIS BAKE HAS THREE INPUTS AND OWNS NONE OF THEM.
 //
 //  - sim/field.ts HOME_FIELD is the authority for the bounds, the gate and the
 //    pen (spec/04: bake scripts read the layout, never carry their own copy).
@@ -25,6 +25,17 @@
 //    pads in that manifest are read as the scatter keep-out rects they are
 //    declared to be. So a terrain rebake changes these bytes, the grass
 //    byte-compare goes red, and the two assets cannot silently part ways.
+//  - app/src/scene/farmhouse/plan.ts and source.ts are the authority for the
+//    buildings (spec/04: "structures get ... declared scatter keep-out rects").
+//    The footprints that SHIP are hard-cut, as oriented rectangles in each
+//    building's own frame, so no tuft grows up through a floor or a wall. What
+//    ships depends on FARMHOUSE_SOURCE - the code-built range, wing, porch and
+//    lean-to, or the Kiln house and its porch - and that coupling is
+//    deliberate: flipping the constant changes which ground is under a
+//    building, so the flip REQUIRES A GRASS REBAKE, committed with it. The
+//    manifest records the source it was baked for and tests/grass-bake.spec.ts
+//    fails, naming the rebake, when the two disagree - the same discipline this
+//    bake already applies to the terrain.
 //
 // TUFTS, NOT BLADES. A record here is a clump; the blades inside it are the
 // tuft mesh (app/src/scene/grass/tuftGeometry.ts), which is one small
@@ -147,6 +158,13 @@ writeFileSync(
     "export { HOME_FIELD } from '@sim/field';",
     "export { mulberry32 } from '@sim/rng';",
     "export { Heightfield } from '@app/world/heightfieldSampler';",
+    'export {',
+    '  BARN, BARN_AT, BARN_LEANTO_AT, BARN_LEANTO_HALF, BARN_YAW, HOUSE, HOUSE_AT,',
+    '  KILN_PORCH, KILN_ROOF, LEANTO_AT, LEANTO_DEPTH, LEANTO_HALF, PLINTH_OUT, PORCH,',
+    '  WING, WING_ALONG, WING_OUT, WING_SKEW, YAW,',
+    "} from '@app/scene/farmhouse/plan';",
+    "export { FARMHOUSE_SOURCE } from '@app/scene/farmhouse/source';",
+    "export { FRONT_DOOR } from '@app/scene/farmhouse/openings';",
     '',
   ].join('\n'),
 );
@@ -159,7 +177,8 @@ await build({
   outfile: bundle,
   alias: { '@sim': join(repo, 'sim'), '@app': join(repo, 'app', 'src') },
 });
-const { HOME_FIELD, mulberry32, Heightfield } = await import(pathToFileURL(bundle).href);
+const inputs = await import(pathToFileURL(bundle).href);
+const { HOME_FIELD, mulberry32, Heightfield } = inputs;
 
 const terrainDir = join(repo, 'assets', 'terrain');
 const terrainManifest = JSON.parse(readFileSync(join(terrainDir, 'manifest.json'), 'utf8'));
@@ -276,6 +295,79 @@ if (FARMYARD_RECTS.length !== 2) {
   throw new Error('assets/terrain/manifest.json must have farmhouse and barn pads');
 }
 
+/**
+ * The buildings that ship, as rectangles in each one's own frame: a stand is a
+ * footprint centre and a yaw, and a local point (lx, lz) is at world
+ *   x = sx + lx cos(yaw) + lz sin(yaw),  z = sz - lx sin(yaw) + lz cos(yaw)
+ * (farmhouse/shell.ts `offsetStand`). Each rect is the ground the building
+ * covers at its foot: walls plus plinth, and the covered ground under a porch.
+ */
+function structureFootprints() {
+  const {
+    BARN, BARN_AT, BARN_LEANTO_AT, BARN_LEANTO_HALF, BARN_YAW, HOUSE, HOUSE_AT, KILN_PORCH,
+    KILN_ROOF, LEANTO_AT, LEANTO_DEPTH, LEANTO_HALF, PLINTH_OUT, PORCH, WING, WING_ALONG,
+    WING_OUT, WING_SKEW, YAW, FARMHOUSE_SOURCE, FRONT_DOOR,
+  } = inputs;
+  const at = (x, z, yaw) => ({ x, z, yaw });
+  const offset = (base, dx, dz, dyaw) => {
+    const sin = Math.sin(base.yaw);
+    const cos = Math.cos(base.yaw);
+    return at(base.x + dx * cos + dz * sin, base.z - dx * sin + dz * cos, base.yaw + dyaw);
+  };
+  const centred = (id, place, halfX, halfZ) => ({ id, place, minX: -halfX, maxX: halfX, minZ: -halfZ, maxZ: halfZ });
+  /** Something built against a long wall at z = -width/2, standing `depth` out. */
+  const against = (id, place, width, along, half, depth) => ({
+    id, place, minX: along - half, maxX: along + half, minZ: -width / 2 - depth, maxZ: -width / 2,
+  });
+
+  const house = at(HOUSE_AT.x, HOUSE_AT.z, YAW);
+  const barn = at(BARN_AT.x, BARN_AT.z, BARN_YAW);
+  const footprints = [];
+  if (FARMHOUSE_SOURCE === 'procedural') {
+    footprints.push(
+      centred('house', house, HOUSE.length / 2 + PLINTH_OUT, HOUSE.width / 2 + PLINTH_OUT),
+      centred('wing', offset(house, WING_ALONG, WING_OUT, WING_SKEW), WING.length / 2 + PLINTH_OUT, WING.width / 2 + PLINTH_OUT),
+      against('porch', house, HOUSE.width, FRONT_DOOR.across, PORCH.half, PORCH.depth),
+      against('lean-to', house, HOUSE.width, LEANTO_AT, LEANTO_HALF, LEANTO_DEPTH),
+    );
+  } else if (FARMHOUSE_SOURCE === 'kiln') {
+    // The Kiln house's outer walls; its threshold stones lie inside them.
+    footprints.push(
+      centred('house', house, KILN_ROOF.length / 2, KILN_ROOF.width / 2),
+      against('porch', house, KILN_ROOF.width, KILN_PORCH.across, KILN_PORCH.half, KILN_PORCH.depth),
+    );
+  } else {
+    throw new Error(`bake-grass does not know FARMHOUSE_SOURCE ${JSON.stringify(FARMHOUSE_SOURCE)}`);
+  }
+  footprints.push(
+    centred('barn', barn, BARN.length / 2 + PLINTH_OUT, BARN.width / 2 + PLINTH_OUT),
+    against('barn lean-to', barn, BARN.width, BARN_LEANTO_AT, BARN_LEANTO_HALF, LEANTO_DEPTH),
+  );
+  return { source: FARMHOUSE_SOURCE, footprints };
+}
+const STRUCTURES = structureFootprints();
+
+/**
+ * The strongest building cut at (x, z): 1 on a footprint, easing to 0 over
+ * `cutRim` outside it, and which footprint it is.
+ */
+function structureCut(x, z) {
+  let weight = 0;
+  let id = null;
+  for (const rect of STRUCTURES.footprints) {
+    const sin = Math.sin(rect.place.yaw);
+    const cos = Math.cos(rect.place.yaw);
+    const dx = x - rect.place.x;
+    const dz = z - rect.place.z;
+    const w = rectWeight(rect, dx * cos - dz * sin, dx * sin + dz * cos, RECIPE.cutRim);
+    if (w > weight) {
+      weight = w;
+      id = rect.id;
+    }
+  }
+  return { weight, id };
+}
+
 function farmyardWeight(x, z) {
   let weight = 0;
   for (const rect of FARMYARD_RECTS) {
@@ -286,9 +378,10 @@ function farmyardWeight(x, z) {
 
 /**
  * Tufts per candidate cell, in [0, 1]: the probability that a jittered-grid
- * candidate at (x, z) becomes a tuft.
+ * candidate at (x, z) becomes a tuft. `buildings` false leaves the building
+ * cut out, which is only for counting what that cut removed.
  */
-function density(x, z) {
+function density(x, z, buildings = true) {
   const radius = Math.max(Math.abs(x), Math.abs(z));
 
   // Open field, then the surround floor, then nothing at all.
@@ -309,6 +402,9 @@ function density(x, z) {
     rectWeight(CORRIDOR_RECT, x, z, RECIPE.cutRim),
   );
   d *= 1 - penned;
+  // Hard cut under the buildings. Outside every rim the weight is 0 and this is
+  // a multiply by exactly 1, so it moves no tuft that a building does not touch.
+  if (buildings) d *= 1 - structureCut(x, z).weight;
   d *= 1 - (1 - RECIPE.farmyardDensity) * farmyardWeight(x, z);
   d *= 1 - (1 - RECIPE.gateLaneDensity) * rectWeight(GATE_LANE_RECT, x, z, RECIPE.gateLaneRim);
 
@@ -363,7 +459,13 @@ function scatter(rng, { spacing, minRadius, maxRadius }) {
 
       const radius = Math.max(Math.abs(x), Math.abs(z));
       if (radius < minRadius || radius >= maxRadius) continue;
-      if (keep >= density(x, z)) continue;
+      if (keep >= density(x, z)) {
+        if (keep < density(x, z, false)) {
+          const { id } = structureCut(x, z);
+          cutTally.set(id, (cutTally.get(id) ?? 0) + 1);
+        }
+        continue;
+      }
 
       records.push({
         x,
@@ -380,6 +482,9 @@ function scatter(rng, { spacing, minRadius, maxRadius }) {
   }
   return records;
 }
+
+/** Tufts each building's cut removed, by footprint id, for the report. */
+const cutTally = new Map(STRUCTURES.footprints.map((rect) => [rect.id, 0]));
 
 /** Fisher-Yates from the same stream. See the header: prefixes are the tiers. */
 function shuffle(records, rng) {
@@ -475,6 +580,9 @@ const manifest = {
   stride: STRIDE,
   /** The terrain bake these heights were sampled from. A mismatch is a rebake. */
   terrainSeed: terrainManifest.seed,
+  /** The farmhouse whose footprint was cut. A mismatch with
+   *  farmhouse/source.ts is a rebake. */
+  farmhouseSource: STRUCTURES.source,
   encoding: {
     xzRange: RECIPE.xzRange,
     yRange: RECIPE.yRange,
@@ -495,8 +603,10 @@ writeFileSync(join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2
 const report = manifestGroups
   .map((group) => `  ${group.id}: ${group.count} tufts at offset ${group.offset}`)
   .join('\n');
+const cuts = [...cutTally].map(([id, count]) => `${id} ${count}`).join(', ');
 console.log(
   `baked ${total} tufts (${bytes.length} bytes, ${STRIDE} B each)\n` +
     `${report}\n` +
-    `  footprint ${RECIPE.fieldHalf} m field, ${RECIPE.surroundOuter} m surround`,
+    `  footprint ${RECIPE.fieldHalf} m field, ${RECIPE.surroundOuter} m surround\n` +
+    `  buildings cut (${STRUCTURES.source} farmhouse): ${cuts} tufts`,
 );

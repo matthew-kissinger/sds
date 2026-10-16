@@ -156,6 +156,17 @@ export const CHIMNEY_RISE = 1.6;
 /** Where the lean-to sits along the main range's sunlit wall, and how wide. */
 export const LEANTO_AT = 6.65;
 export const LEANTO_HALF = 1.8;
+/** How far a lean-to stands out from the wall it is built against. */
+export const LEANTO_DEPTH = 2.8;
+
+/** How far the plinth course stands out past a building's walls at its foot. */
+export const PLINTH_OUT = 0.22;
+
+/**
+ * The procedural porch over FRONT_DOOR: half its width across the door, and how
+ * far it stands out from the front wall; the posts stand just inside that line.
+ */
+export const PORCH = { half: 1.32, depth: 1.95 } as const;
 
 /**
  * The barn's outshot and its cupola, both in the barn's own frame.
@@ -209,6 +220,15 @@ export const KILN_STACK = {
  * of the authored house. Ending the envelope at the gable face costs the
  * outline only the 0.45 m end of the verge.
  */
+/**
+ * The Kiln house's porch, in the house's frame, from the recipe: centred on the
+ * front door at x 3.5, 1.38 m each side (the posts' outer faces at 1.33), and
+ * 2.05 m out from the front wall's outer face at z -4.575. The step stands
+ * under it. Repeated for the same reason as KILN_STACK: the grass bake cuts
+ * the house's footprint, and the GLB is not something a bake script reads.
+ */
+export const KILN_PORCH = { across: 3.5, half: 1.38, depth: 2.05 } as const;
+
 export const KILN_ROOF: RoofSpec = {
   length: 19.15,
   width: 9.15,
