@@ -43,7 +43,7 @@ jobs:
         run: node scripts/verify-release-manifest.mjs --path dist/release.json --sha "${{ github.sha }}"
       - name: Verify the generated deploy configuration
         run: node scripts/verify-deploy-config.mjs
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: pages-candidate-${{ github.sha }}
           path: dist/

@@ -113,7 +113,7 @@ jobs:
         run: node scripts/verify-deploy-config.mjs
 
       - name: Archive exact release artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ steps.source.outputs.sha }}
           path: dist/
