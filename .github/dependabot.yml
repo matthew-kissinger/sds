@@ -1,0 +1,48 @@
+# Without this file Dependabot runs on defaults: one pull request per advisory,
+# every one rebased on every push to main. That produced eleven open pull
+# requests and eight simultaneous CI runs on 2026-10-16.
+#
+# Grouping batches a week of minor and patch updates into one pull request per
+# ecosystem. Majors stay ungrouped on purpose - vitest 3 to 5 is a decision,
+# not a bump. Security advisories are still raised outside this schedule.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      client-development:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+      client-production:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /worker
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      worker:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - '*'

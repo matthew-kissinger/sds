@@ -151,8 +151,12 @@ Full reasoning is in `spec/11-typography.md` and `spec/06-ux-ui-juice.md`.
 
 - Keep one coherent system change in flight per commit.
 - Use conventional commit subjects.
-- Run the focused tests while iterating, then lint, typecheck, full tests,
-  production build and release probe before handoff.
+- Run the focused tests for what you changed. `Client CI` is the gate: it runs
+  lint, typecheck, the worker typecheck, the build, discovery and the full suite
+  on every push and pull request, and `Deploy Pages` runs them again against the
+  exact commit it ships. Running that same list by hand before a push is
+  duplicated work, not diligence. Run it locally when you need the answer sooner
+  than CI will give it, or when you are changing something CI cannot see.
 - Record test counts, bundle size, renderer receipts, performance percentiles
   and screenshots in `STATUS.md` when closing a release gate.
 - Keep browser probes clean: close pages, contexts, listeners and local servers.
