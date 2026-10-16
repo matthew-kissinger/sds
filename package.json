@@ -44,7 +44,7 @@
     "review:art": "node tools/art-review.mjs",
     "probe:boot": "node tools/boot-probe.mjs",
     "capture:launch": "node tools/launch-media-capture.mjs",
-    "check:discovery": "node scripts/verify-public-discovery.mjs",
+    "check:discovery": "node scripts/verify-public-discovery.mjs --require-analytics",
     "lint": "eslint .",
     "bake:terrain": "node tools/bake-terrain.mjs",
     "bake:grass": "node tools/bake-grass.mjs",

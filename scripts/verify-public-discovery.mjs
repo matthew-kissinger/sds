@@ -18,6 +18,13 @@ const sourceFiles = args.includes('--source');
 assert(!(baseUrl && sourceFiles), '--source and --url cannot be combined.');
 const retries = Number(option('retries', '1'));
 const requireAnalytics = args.includes('--require-analytics');
+// The Web Analytics beacon is part of app/index.html, so the token the page must
+// carry is read from the source rather than restated here.
+const beaconPattern = /<script\b[^>]*src=['"]https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js['"][^>]*>/g;
+function beaconTokens(html) {
+  return [...html.matchAll(beaconPattern)].map((tag) => tag[0].match(/"token":\s*"([0-9a-f]{32})"/)?.[1] ?? null);
+}
+const [sourceBeaconToken] = beaconTokens(readFileSync(join(repo, 'app/index.html'), 'utf8'));
 const socialImageUrl = 'https://raw.githubusercontent.com/matthew-kissinger/sds/main/app/public/og/sheepdog-sim-v2.png';
 
 function assert(condition, message) {
@@ -102,10 +109,16 @@ function verifyPages(files) {
   assert(image.bitDepth === 8 && image.colorType === 2, 'Social image must be an 8-bit truecolor RGB PNG.');
 
   if (requireAnalytics) {
-    assert(root.includes('static.cloudflareinsights.com/beacon.min.js'), 'Cloudflare Web Analytics is not enabled on the deployed page.');
+    assert(sourceBeaconToken, 'app/index.html carries no Cloudflare Web Analytics beacon with a token.');
+    const tokens = beaconTokens(root);
+    assert(tokens.length > 0, 'Cloudflare Web Analytics beacon is missing from the page.');
+    // Two beacons count every view twice. A second one means something is
+    // injecting its own, such as Web Analytics re-enabled on a Pages project.
+    assert(tokens.length === 1, `The page carries ${tokens.length} analytics beacons; expected exactly one.`);
+    assert(tokens[0] === sourceBeaconToken, 'The page beacon is not the sheepdogsim.com token from app/index.html.');
   }
 
-  return { routes: Object.keys(canonical).length, image, analytics: requireAnalytics };
+  return { routes: Object.keys(canonical).length, image, analytics: requireAnalytics ? 'one beacon, source token' : false };
 }
 
 function readLocal() {
