@@ -181,12 +181,15 @@ cause (the lab now gates its loop on renderer stage and `sceneReady` as the
 game does; `docs/history/status-log.md`); the surface atlas spike concluded
 (below). Merged: pull request 121 (Kiln farmhouse channel contract, floor one step
 above the pad, grass hard-cut under the footprints that ship, the outline
-hull fitted to the Kiln eave; merge `00fdc295`, 2026-10-16), with
-`FARMHOUSE_SOURCE` still procedural. In flight: the Kiln barn (an agent
-authoring the recipe on its own branch against the merged channel
-convention). Next in order: the owner's look review of both on
-the production build, hub receipts, the two constant flips each with its grass
-rebake, a release, then Stage B.
+hull fitted to the Kiln eave; merge `00fdc295`, 2026-10-16). The Kiln house
+then passed the owner's look review on the production build and the hub
+receipt (twelve 60 s runs, both backends, both cameras, the homestead in and
+out of frame: identical percentiles, zero frames over 100 ms, no added draws;
+`docs/history/status-log.md`), and `FARMHOUSE_SOURCE` is flipped to `kiln`
+with its grass rebake. In flight: the Kiln barn (an agent authoring the recipe
+on its own branch against the merged channel convention). Next in order: the
+barn's look review on the production build, its hub receipt, its flip with a
+grass rebake, a release, then Stage B.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -254,7 +257,9 @@ longer claims Neutral.
   owner's review of the correctly rendered house in-game against `spec/05`,
   never parity with the old house. Re-bake, flip `FARMHOUSE_SOURCE`, and gate
   on the hub. Kiln friction is logged as classified dogfood feedback.
-  **In review** (pull request 121, 2026-10-16): the recipe writes the two
+  **Shipped** (pull request 121 merged 2026-10-16, look review passed, hub
+  receipt passed, constant flipped to `kiln` with the grass rebake the same
+  day): the recipe writes the two
   channels into `TEXCOORD_0` and records it in the root node's extras, the
   loader reads them and refuses a bake without them, the hall floor stands
   0.15 m above the pad with step, thresholds and a new back-door sill moved
@@ -266,8 +271,9 @@ longer claims Neutral.
   slab's lower outer corner, so no ledge hangs under the eaves; a test holds
   the envelope inside the baked slab. Follow-up: the recipe writes the slab's
   eave and verge corners into the GLB extras beside `surfaceChannels` and the
-  envelope is derived from them rather than copied. The owner's look review
-  and the hub receipt remain.
+  envelope is derived from them rather than copied. The hub probe gained
+  `--drive=homestead` for this receipt, because the default input never has
+  the buildings in frame; `docs/art-review.md` says when to use it.
 - Kiln barn, right after the farmhouse (added 2026-10-16; the status log had
   recorded "the barn has had no equivalent of the Kiln treatment" and the plan
   had left it out): a second recipe under `assets/barn/`, baked with the same

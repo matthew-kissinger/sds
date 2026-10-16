@@ -70,8 +70,9 @@ states the rule and its preflight thresholds. What follows is how to drive the
 probe.
 
 `tools/hub-presentation-probe.mjs` can run against a copied production `dist/`
-in a private Linux directory. Copy its `art-render-counters.mjs` and
-`playtest-profile-receipt.mjs` helpers alongside it. Pass `--playwright=` with
+in a private Linux directory. Copy its four helpers alongside it:
+`art-render-counters.mjs`, `playtest-profile-receipt.mjs`,
+`screenshot-analysis.mjs` and `harness-stubs.mjs`. Pass `--playwright=` with
 an existing installation's absolute `index.mjs` path; the tool neither installs
 dependencies nor modifies that installation. Pass `--chrome=` if the system
 Chrome path differs. Use the active desktop session's display credentials for
@@ -82,6 +83,14 @@ for a 390x844 DPR3 low-tier emulation; this still uses the laptop GPU and must
 never be reported as physical-phone performance. The default run is 60 seconds
 with 200 sheep and normal keyboard input. The server binds to loopback on an
 ephemeral port, score endpoints are mocked, and browser/server close on exit.
+
+The default input wanders the dog around its spawn, which keeps the homestead
+170 m away and out of Classic's frame, so a receipt for a building change
+measures almost none of the building. Add `--drive=homestead` to walk the dog
+to the north fence between house and barn and hold it there, with both in
+frame for the whole minute; run it with `--camera=classic` and again with
+`--camera=follow`, which looks at the pair from ground level. Keep the default
+run as well: it is the like-for-like against every earlier receipt.
 
 Each receipt includes all served-file hashes, actual renderer/driver identity,
 frame samples, readiness, and before/during/after CPU/GPU activity. Inspect the

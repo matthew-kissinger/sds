@@ -5,6 +5,77 @@
 
 # Status log
 
+## Kiln house hub receipt - 2026-10-16, passed; `FARMHOUSE_SOURCE` flipped
+
+The owner passed the Kiln house on look review of the production build
+(`vite preview` of a `dist/` built from `e07303af` with the constant on
+`kiln`) and asked for the hub receipt and then the flip with its grass rebake.
+
+Taken on `mk-os` over the `hub` alias, native viewport 1440x900, Classic rig
+unless stated, Chrome stable at `/opt/google/chrome/chrome`, Playwright 1.61.1
+read-only, 200 sheep, `high` tier by measurement on every run. Preflight idle
+samples under 2.5% CPU and 0% GPU; the probe's own quiet gate passed on every
+run. "Before" is the exact live 3.2.1 artifact (`c5964ff2`, 34 files,
+downloaded from the deploy run's archive). "After" is `e07303af` built with
+`FARMHOUSE_SOURCE = 'kiln'` and `assets/grass/` rebaked for it (35 files; the
+one runtime GLB is the Kiln house, 193,888 bytes). Receipts under
+`captures/stability/hub-receipts/kiln-house/`, gitignored as every receipt in
+this lane is, so the numbers here are the record.
+
+**Like-for-like with every earlier receipt: 60 s, default input.** The dog
+wanders around its spawn, 170 m from the homestead.
+
+| | frames | p50 | p95 | p99 | max | over 100 ms | ready | draws | triangles |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| WebGPU before | 7,186 | 8.3 | 8.4 | 8.4 | 33.4 | 0 | 2,724 ms | 40 | 3,959,384 |
+| WebGPU after | 7,191 | 8.3 | 8.4 | 8.4 | 25.0 | 0 | 2,634 ms | 40 | 3,958,224 |
+| WebGL2 before | 7,183 | 8.3 | 8.4 | 8.4 | 75.0 | 0 | 1,880 ms | 33 | 3,916,714 |
+| WebGL2 after | 7,197 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 2,682 ms | 40 | 3,958,224 |
+
+**The homestead in frame, 60 s.** The owner pointed out mid-run that the
+default input never shows the buildings, so a receipt for a building change
+measured almost none of the building. `tools/hub-presentation-probe.mjs` gained
+`--drive=homestead`: the dog walks to world x 30 and up to the north fence,
+between the house and the barn, and holds there facing them, so both fill the
+frame for the whole minute. Classic frames the pair from above with the flock
+gathered below the fence; Follow looks at them from ground level. Framing was
+checked on this PC first, from screenshots, before the hub ran it, and the
+hub's own `active-play.png` on every run shows the same frame.
+
+| | frames | p50 | p95 | p99 | max | over 100 ms | ready | draws | triangles |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Classic WebGPU before | 7,188 | 8.3 | 8.4 | 8.4 | 41.6 | 0 | 2,592 ms | 53 | 3,964,064 |
+| Classic WebGPU after | 7,192 | 8.3 | 8.4 | 8.4 | 24.9 | 0 | 2,566 ms | 53 | 3,965,250 |
+| Classic WebGL2 before | 7,193 | 8.3 | 8.4 | 8.4 | 16.8 | 0 | 1,841 ms | 53 | 3,964,064 |
+| Classic WebGL2 after | 7,195 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 1,837 ms | 53 | 3,965,250 |
+| Follow WebGPU before | 7,183 | 8.3 | 8.4 | 8.4 | 33.3 | 0 | 2,609 ms | 47 | 3,923,712 |
+| Follow WebGPU after | 7,185 | 8.3 | 8.4 | 8.4 | 25.0 | 0 | 2,625 ms | 47 | 3,924,898 |
+| Follow WebGL2 before | 7,195 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 1,795 ms | 47 | 3,923,712 |
+| Follow WebGL2 after | 7,194 | 8.3 | 8.4 | 8.4 | 16.8 | 0 | 1,924 ms | 47 | 3,924,898 |
+
+**Boot-only, three repetitions per arm and backend, medians of `readyMs`.**
+WebGPU 2,668 before, 2,700 after; WebGL2 1,918 before, 1,821 after. Every
+`herd:boot:*` mark moves within the spread of the repetitions.
+
+No frame-time regression: every percentile is identical on both backends, in
+both cameras, with the homestead filling the frame and with it out of frame;
+zero frames over 100 ms in twelve 60 s runs; the same draw count per view (the
+weld adds no draws, as the loader's design said); the triangle readout moves
+by about a thousand against 3.96 million either way, which is the Kiln house
+against the procedural one at the 250 ms peak sample. The probe's own 2 s
+startup budget (`startupPass`) is missed on WebGPU by both arms alike, at 2.6
+to 2.7 s, exactly as the live 3.2.1 artifact and the Release 1 receipt
+already showed; that is a known property of the WebGPU boot path, not this
+change. The WebGL2 before run's 75 ms maximum is a single frame in the live
+arm, not the candidate. The one limit from earlier receipts applies: a
+vsync-locked distribution near 120 Hz shows the budget is met with headroom,
+not how much.
+
+Flipped on the strength of this: `FARMHOUSE_SOURCE = 'kiln'`, with the grass
+rebake the bake test requires (house 30 tufts cut, porch 3, barn 7, barn
+lean-to 2; field 81,736 and surround 16,555 tufts). The probe's new drive and
+its documentation in `docs/art-review.md` ship in the same change.
+
 ## Surface atlas spike - 2026-10-16, concluded: procedural stays
 
 The owner asked whether procedural textures and texture atlases would be

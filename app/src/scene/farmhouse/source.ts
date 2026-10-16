@@ -22,4 +22,4 @@
  */
 export type FarmhouseSource = 'procedural' | 'kiln';
 
-export const FARMHOUSE_SOURCE: FarmhouseSource = 'procedural';
+export const FARMHOUSE_SOURCE: FarmhouseSource = 'kiln';
