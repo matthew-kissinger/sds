@@ -4,6 +4,18 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.4.1] - 2026-10-17
+
+### Changed
+
+- The Kiln oak leaves out the faces no camera can see: 364 bark triangles a
+  tree hidden inside the crown, kept out of the bake on a bound that covers
+  the game's sway and swell (a test holds the materials inside it). 9,885
+  triangles a tree, from 10,249; the GLB is 363,500 bytes, from 371,876. The
+  crown is bit-identical and the picture unchanged; still three treeline
+  draws. The hub receipt (status log, "Kiln oak cost trim - 2026-10-17")
+  shows frame percentiles, draws and boots unchanged.
+
 ## [3.4.0] - 2026-10-17
 
 ### Changed
