@@ -31,7 +31,7 @@ import { chromium } from 'playwright';
 import { buildSync } from 'esbuild';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { repo, startPreviewServer, stopServer } from './probe-lib.mjs';
+import { GPU_ARGS, repo, startPreviewServer, stopServer } from './probe-lib.mjs';
 import { STICK_RADIUS, createStick, stickEffort } from './touch-stick.mjs';
 import { collectBuildReceipt, sameBuildReceipt } from './playtest-profile-receipt.mjs';
 const flock = Number(process.argv.find(x => x.startsWith('--flock='))?.slice(8) ?? 25);
@@ -47,6 +47,8 @@ const out = join(repo, 'captures/stability', label);
 mkdirSync(out, { recursive: true });
 const driver = buildSync({ entryPoints: [join(repo, 'tests/helpers/herding-driver.ts')], bundle: true, write: false, format: 'iife', globalName: 'herdingDriver' }).outputFiles[0].text;
 const cap = Number(process.argv.find(x => x.startsWith('--seconds='))?.slice(10) ?? 600);
+const port = Number(process.argv.find(x => x.startsWith('--port='))?.slice(7) ?? 5364);
+if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid port');
 if (!Number.isFinite(cap) || cap <= 0) throw new Error('Invalid duration');
 const deflection = Number(process.argv.find(x => x.startsWith('--deflection='))?.slice(13) ?? 1);
 if (!Number.isFinite(deflection) || deflection <= 0 || deflection > 1) throw new Error('Invalid deflection');
@@ -55,8 +57,8 @@ const effort = stickEffort(deflection);
 let server; let browser; let failure; let cdp;
 const report = { before: collectBuildReceipt(repo), flock, scoreUnavailable, submissionUnavailable, apiRequests: [], samples: [], errors: [], completed: false, limitation: 'Production functional herding, read-only sim observation, automated touch movement plus keyboard sprint. The scripted driver switches the stick on and off rather than holding a deflection, so nothing here measures how the controls feel. Not a physical-mobile or performance receipt.' };
 try {
-  server = await startPreviewServer(5364);
-  browser = await chromium.launch({ channel: 'chrome', headless: false });
+  server = await startPreviewServer(port);
+  browser = await chromium.launch({ channel: 'chromium', headless: true, args: GPU_ARGS });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1,
     ...(recordVideo ? { recordVideo: { dir: out, size: { width: 390, height: 844 } } } : {}) });
   page.on('pageerror', e => report.errors.push(String(e)));
@@ -89,7 +91,7 @@ try {
       throw new Error('Live sim not found in committed React hooks');
     };
   });
-  await page.goto('http://localhost:5364/?seed=20260821&debug=webgl');
+  await page.goto(`http://localhost:${port}/?seed=20260821&debug=webgl`);
   await page.locator('.herd-app[data-ready="true"]').waitFor({ timeout: 60000 });
   await page.locator('.herd-size').filter({ hasText: String(flock) }).click();
   await page.getByRole('button', { name: 'Play', exact: true }).click();
@@ -165,6 +167,7 @@ try {
   report.stick = stickReport();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await page.keyboard.up('ShiftLeft');
+  if (report.completed) await page.waitForTimeout(2500);
   await page.screenshot({ path: join(out, report.completed ? 'completed.png' : 'unfinished.png') });
   if (report.completed) {
     if (scoreUnavailable || submissionUnavailable) await page.getByText('Your local time is safe. The online board is unavailable.').waitFor({ timeout: 15000 });

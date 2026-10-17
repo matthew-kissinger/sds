@@ -5,6 +5,66 @@
 
 # Status log
 
+## Release 3.5.0 preflight - 2026-10-17, owner-approved fence and homestead
+
+The owner approved the new Kiln fence and farmhouse/barn corrections and
+explicitly requested the live release. Pull request 140; candidate 2f6cc243.
+The screenshot request was cancelled; no community image was published or sent.
+
+- The whole perimeter and pen use the Kiln mortised-oak kit. 189 post instances,
+  605 rail/gate instances and pooled shadows submit 81,416 triangles including
+  hulls, in three fence draws. GLB: 21,932 bytes; editable recipe and digest ledger.
+- Farmhouse facade parallel to its pen fence; barn at x 0, z 143 and zero yaw,
+  centred on the gate, matching roof ends, compact wall hoist and both small
+  hayloft leaves closed with separate pivots. Ground pad and dependent bakes
+  follow the placement. Deterministic tree keep-outs leave 137 stands.
+- Focused validation: 93 tests in nine suites; build, lab typecheck, focused lint
+  and release-boundary probe pass. Client CI 39063764977 on 2f6cc243 passed
+  883 tests in 106 files, lint, both typechecks, discovery, identity and deploy
+  configuration checks. No sim/input/fixture/score/hosting change.
+- Vite main JS: 2,438.25 kB raw, 676.06 kB gzip. Release-boundary estimate:
+  6,924,101 bytes first-load transfer, under the 8 MiB limit.
+- Production-build desktop/portrait Classic/Follow captures on genuine WebGPU
+  and forced WebGL2: captures/fence-kit/barn-aligned-1/ and runtime-gate-1/.
+  Source/build stable; no captured page, console or request failures; each of
+  three fence batch signatures submitted once. Phone viewport is composition,
+  not physical-phone performance. Independent placement review found no
+  correction indicated. Strict material review remains ITERATE for restrained
+  grain/value variation; the owner approved preserving this look and shipping.
+- Real 25-sheep completion on the production build: 240.65 s; replay reset to
+  0/25, personal best persisted after reload, no page errors, build unchanged.
+  captures/stability/fence-3-5-0-completion/ includes its recording. This is a
+  functional scripted-input check, not feel, performance or a live score test.
+  A separate near-completion fixture in fence-3-5-0-gate-motion-headless/ allowed
+  the final crossing and 2.5 s of settling to be recorded. It is labelled as
+  synthetic elapsed time with mocked API traffic, not a second full run.
+
+**Quiet-hub comparison.** Isolated /home/matthewk/perf/sds-fence-20261017/,
+using the exact 3.4.1 deployment artifact (832b915d) as before and the copied
+3.5.0 production build as after. GTX 1660 Ti Max-Q, headed hardware Chrome,
+native 1440x900, high tier, 200 sheep, Follow homestead approach. Four 60 s runs,
+one per arm/backend, alternating arm order. Every run admitted after two samples
+at 0% GPU and below 1% aggregate CPU; each probe repeats that gate. All builds
+stable, all page/request failure collections empty, physical window fit verified.
+
+| Backend | Before p95 / p99 | After p95 / p99 | Frames over 100 ms | Draws before / after |
+| --- | --- | --- | --- | --- |
+| WebGPU | 8.4 / 8.4 ms | 8.4 / 8.4 ms | 0 / 0 | 47 / 47 |
+| WebGL2 | 8.4 / 8.4 ms | 8.4 / 8.4 ms | 0 / 0 | 47 / 47 |
+
+Sampled triangles were 5,172,098 before and 5,181,655 after. The first WebGPU
+boot was 2,744 / 2,742 ms; first WebGL2 was 2,082 / 2,696 ms. All four missed
+the 2,000 ms startup target, so their original exit-1 receipts and xrandr
+Xwayland warnings are retained. The outer script continued explicitly for
+comparison; it did not turn those misses into passes. Three alternating fresh
+WebGL2 boot pairs after that, with the driver's shader cache warm, had medians
+1,944 ms before and 1,909 ms after. This small sample found no persistent warm
+startup regression; it does not establish a cold-start distribution. Hub scripts,
+logs and receipts: captures/stability/hub-receipts/fence-3-5-0/. All probe browsers
+and servers closed. Remaining: physical-device qualification, cold-start target,
+and independent artistic judgement of the recorded completion motion. Owner
+approval to ship the reviewed appearance is explicit; those limits stay recorded.
+
 ## Release 3.4.1 - 2026-10-17, the Kiln oak's cost trim live
 
 Pull request 136 (the trim, "Kiln oak cost trim - 2026-10-17" below) merged
