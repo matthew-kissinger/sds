@@ -5,6 +5,46 @@
 
 # Status log
 
+## Release 2 declarative hosting rehearsal - 2026-10-17, done on `stage.sheepdogsim.com`, nothing left behind
+
+The owner: "Yes: add the proxied CNAME stage.sheepdogsim.com -> sheepdogsim.com,
+open the rehearsal pull request, read the results, then remove the record,
+the Custom Domain and the certificate", and then "You do that for me through
+the dashboard in Claude and Chrome." Pull request 128 (branch
+`release2/stage-domain-rehearsal`, closed unmerged, branch deleted) declared
+`domains: ['stage.sheepdogsim.com']` in the preview mode with the verifier
+and both specs pinning it; the dashboard steps were clicks in the owner's
+Chrome session, each approved; a subagent's attempt to create the record
+through the dashboard API was refused by the session's own permission layer,
+which blocks DNS, domain and certificate writes from an agent. Times UTC,
+2026-10-17; the full readings are in `docs/operations/declarative-hosting.md`,
+"Rehearsal results".
+
+- With the proxied CNAME in place, the Preview run (38985501548) deployed
+  the version and failed at the domain step: "Hostname 'stage.sheepdogsim.com'
+  already has externally managed DNS records", "only partially updated",
+  "Successful trigger changes were not rolled back", exit 1. The CI override
+  the deploy tools set without a TTY does not cover a record we created.
+- Record deleted 00:18:29; failed job re-run 00:18:36 to 00:19:42; `cf`
+  printed the custom domain under the deployed triggers; record created
+  00:19:35 (`AAAA 100::`, proxied, read-only, owned by the domain); first
+  200 at 00:20:01; the origin and discovery verifiers passed on the
+  hostname; apex and `www` unchanged. The zone SOA's default TTL is 1800 s.
+- Certificate pack `887fe855...`: advanced, `google`, TXT validation, hosts
+  `sheepdogsim.com`, `stage.sheepdogsim.com`, `*.stage.sheepdogsim.com`;
+  pending at 00:21, active by 00:26; TLS served by the Universal wildcard
+  throughout; not listed on the Edge Certificates page.
+- Removal deploy (version `d5028f5e...`, config without `domains`): the
+  domain, record and pack all stayed; `cf` said nothing.
+- Dashboard removal of the Custom Domain: record gone at once, hostname no
+  longer resolving, pack and both certificates `status: deleted`. Zone back
+  to ten records; no sds Custom Domain on the account.
+- Consequence for the plan: the apex CNAME must be deleted before the domain
+  is published (a gap, seconds to 66 s, with a 30-minute negative-cache
+  tail), or Pages is retired without a Custom Domain by editing the apex
+  record in place to the same `AAAA 100::` placeholder and keeping the
+  route, with no gap. The owner's call; STATUS names it.
+
 ## Release 2 declarative hosting - 2026-10-16, planned (draft pull request), nothing changed
 
 The owner: "Do this task here: Release 2: declarative hosting and the Pages

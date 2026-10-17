@@ -1,7 +1,7 @@
 # Declarative hosting: `sheepdogsim.com` as a Worker Custom Domain, the Pages project retired
 
-**Draft plan, nothing executed.** This is the Release 2 step after the `cf`
-cutover (`docs/operations/deployment.md`): the apex stops being a proxied
+**Plan with its rehearsal done; the production steps are not executed.**
+This is the Release 2 step after the `cf` cutover (`docs/operations/deployment.md`): the apex stops being a proxied
 CNAME to the dormant `sds-frontend` Pages project with a Worker route on top,
 and becomes a Custom Domain of `sds-worker` declared in
 `app/cloudflare.config.ts`, so the deploy owns the DNS record and the
@@ -164,15 +164,87 @@ reversible, nothing on it is public.
 5. Close the pull request unmerged; the rehearsal leaves nothing in `main`.
 
 The rehearsal answers facts 2, 3, 8 and 9 for this account before the apex is
-touched. If the override does not replace the CNAME in CI, the production
-sequence gains a step: the owner deletes the apex CNAME in the dashboard
-immediately before the tag, inside the window the route keeps serving (fact 4
-makes the route independent of the record's target, but not of the record
-existing; a hostname with no proxied record does not reach the edge, so that
-window is a DNS outage of the record's TTL, "auto", and the sequence must then
-be measured on `stage` first).
+touched.
 
-## The production sequence
+## Rehearsal results, 2026-10-17 (pull request 128, closed unmerged)
+
+Run as written above, with the owner's go; the dashboard steps were done
+through Claude in Chrome on the owner's session, each one approved. Times UTC.
+
+1. **The CI override does not replace a record we made.** With the proxied
+   CNAME `stage -> sheepdogsim.com` in place, the Preview run deployed the
+   version and then failed at the domain step: `Trigger configuration for
+   "sds-worker-preview" was only partially updated: Custom domains: ...
+   Hostname 'stage.sheepdogsim.com' already has externally managed DNS
+   records. Successful trigger changes were not rolled back.` Exit 1, the
+   new version live on `workers.dev`, nothing else changed. So fact 2's
+   override covers records Cloudflare itself manages, not ours, and the
+   docs' rule (fact 1) holds for the apex CNAME: **it has to be deleted
+   before the deploy.** A production `Deploy` would end red the same way
+   with the release already live behind the route.
+2. **The clean path, and the gap.** Record deleted 00:18:29; the failed job
+   re-run 00:18:36 to 00:19:42; `cf` printed `stage.sheepdogsim.com (custom
+   domain)` under `Deployed sds-worker-preview triggers`; the record it
+   created is dated 00:19:35, so the hostname had no record for 66 s, the
+   time the pipeline took to reach the trigger step. The record is a proxied
+   `AAAA 100::`, `read_only: true`, with `meta.origin_worker_id` naming the
+   Custom Domain: a placeholder exactly like the one Cloudflare recommends
+   for a redirected hostname (fact 6), owned by the domain. Its public
+   answer (`104.21.11.5`, `172.67.131.198`) is the same pair the CNAME had
+   resolved to, so a resolver holding the old answer kept working through
+   the gap; one that asked during it got an empty answer with the zone's
+   negative TTL, `default TTL = 1800` in the SOA, 30 minutes. The first
+   probe after the run, at 00:20:01, answered 200;
+   `verify-worker-origin --url https://stage.sheepdogsim.com` and
+   `verify-public-discovery --require-analytics` passed on it; the apex and
+   `www` were unchanged throughout.
+3. **The certificate.** The deploy requested an advanced certificate pack
+   (`887fe855...`) from `google`, allowed by the CAA records, by TXT
+   validation, `pending_validation` at 00:21 and `active` by 00:26. Its
+   hosts were `sheepdogsim.com`, `stage.sheepdogsim.com` and
+   `*.stage.sheepdogsim.com`: **a Custom Domain on a subdomain requests a
+   pack that includes the zone apex.** TLS on `stage` was served by the
+   Universal wildcard (`*.sheepdogsim.com`, Google WE1) the whole time, so
+   issuance is not on the path to serving. The dashboard's Edge
+   Certificates page never listed the advanced pack (ACM is not active on
+   the zone); it is visible through the API only.
+4. **An undeclared domain stays.** The config without `domains` deployed
+   (version `d5028f5e...`) and `cf` printed nothing about the domain; the
+   domain entry, the `AAAA` record and the certificate pack were all still
+   there afterwards and `stage` still served the game. Fact 5 holds for
+   Custom Domains as for routes.
+5. **Removing the domain removes its record and its certificate.** Workers
+   & Pages > `sds-worker-preview` > Domains > Remove (the dialog warns the
+   DNS change "may take up to 24 hours"): the `AAAA` record was gone at
+   once, the hostname stopped resolving within seconds, and the advanced
+   pack and both of its certificates read `status: deleted`. The docs' "the
+   certificate is not automatically deleted" (fact 3) did not hold here;
+   nothing was left to clean up by hand. The zone is back to its ten
+   records and the account to no sds Custom Domain.
+
+**What this changes in the plan.** The sequence below is written for the
+measured behaviour: the apex CNAME must go before the deploy that declares
+the domain, so there is a gap, seconds long if the domain is published from
+this PC with `cf workers triggers deploy --prebuilt` right after the
+deletion, 66 s if a tag does it, with a 30-minute negative-cache tail for
+any resolver that asks inside it. The route serves throughout for everyone
+whose resolver already holds the answer. The rollback at every step is
+simpler than planned, because removing the domain removes its record and
+certificate.
+
+**The alternative the results make available: retire Pages without a Custom
+Domain.** The Custom Domain's own record is a proxied `100::` placeholder;
+the game is served at the edge by the route either way. Editing the apex
+CNAME in place to that same placeholder (`AAAA 100::`, proxied), keeping
+the route, and then removing the Pages custom domain retires Pages with no
+gap at all, because an edit of a proxied record changes nothing a client
+sees. What it gives up is the deploy owning the apex record: the record
+becomes one more zone setting the verifiers check and the repository does
+not create, exactly as `www` already is. Which to take is the owner's call;
+the sequence below is the Custom Domain path, and the placeholder path is
+the three dashboard steps just named plus the Pages removal in step 4.
+
+## The production sequence (Custom Domain path)
 
 Preconditions: the rehearsal is recorded; `main` is green; the owner has read
 this file and the amended end state in `STATUS.md`. Each numbered step is one
@@ -185,20 +257,30 @@ owner's go.
    changed (wrangler's `custom_domain` route form is a different thing and
    wrangler no longer deploys production). Merge only when the next tag is
    the one meant to do this: the merge arms it, the tag fires it (fact 2).
-2. **The tag.** `Deploy` runs as for any release. After the upload, `cf`
-   publishes the Custom Domain: the apex record `46ad7bd1...` is replaced by
-   the Worker's own record (override in CI), the Advanced Certificate is
-   requested, the route is re-published. Traffic does not move: the route
-   still wins (fact 4). The live checks pass as before.
-   Read afterwards: the DNS record for the apex (type and target), the
-   account's Workers Custom Domains (`sheepdogsim.com` to `sds-worker`,
-   `enabled`, `cert_id`), the certificate's authority, and the Pages custom
-   domain's status (expected to leave `active`, per the Pages page "Change
-   DNS entry away from Pages": the custom domain "will become inactive").
-   Rollback here: the route is still serving, so nothing visible changed; to
-   undo, remove the Custom Domain in the dashboard and recreate the apex
-   CNAME to `sds-frontend.pages.dev` proxied (the Pages custom domain then
-   re-validates), then revert the config commit before the next tag.
+2. **The record and the domain, back to back.** Measured: the deploy
+   refuses a hostname with our own record, so the apex CNAME
+   `46ad7bd1...` is deleted first and the domain published right after.
+   Smallest gap: at a quiet hour, with the merged config built locally
+   (`npm run build`, `verify-deploy-config --cf`), the owner deletes the
+   record in the dashboard and in the same minute runs, from `app/` with
+   their own `cf` login, `cf workers triggers deploy --prebuilt`, the
+   hosting half alone (fact 7). The alternative is to let the tag do both
+   halves, which measured 66 s from the start of the run to the record.
+   Either way `cf` creates the proxied `AAAA 100::` record owned by the
+   domain, requests the advanced certificate (Google, TXT validation, a
+   few minutes; the Universal certificate serves meanwhile) and re-publishes
+   the route. Traffic does not move: the route still wins (fact 4), and
+   resolvers holding the old answer never notice. A resolver that asks
+   inside the gap caches an empty answer for up to 30 minutes.
+   Read afterwards: the apex record (`AAAA 100::`, read-only, owned by the
+   domain), the account's Workers Custom Domains (`sheepdogsim.com` to
+   `sds-worker`, `enabled`, `cert_id`), the pack's authority and status, the
+   live checks, and the Pages custom domain's status (expected to leave
+   `active`, per the Pages page "Change DNS entry away from Pages").
+   Rollback here: remove the Custom Domain in the dashboard, which takes
+   its record and certificate with it (measured), recreate the apex CNAME
+   to `sds-frontend.pages.dev` proxied, and revert the config commit before
+   the next tag.
 3. **Delete the route.** Dashboard: Workers & Pages > `sds-worker` > Settings >
    Domains & Routes > `sheepdogsim.com/*` > Remove, or the API as in
    `worker-cutover.md` (f). The Custom Domain now serves. Verify:
@@ -236,7 +318,7 @@ mail-hardening and CAA records from before.
 | After step | To undo |
 | --- | --- |
 | 1 | revert the commit; nothing deployed |
-| 2 | remove the Custom Domain, recreate the apex CNAME to Pages (proxied), revert the config; the route served throughout |
+| 2 | remove the Custom Domain (its record and certificate go with it), recreate the apex CNAME to Pages (proxied), revert the config; the route served throughout |
 | 3 | re-add the route (dashboard, or a deploy with `triggers` declared) |
 | 4 | re-add the Pages custom domain, which needs the Worker Custom Domain removed first and re-validates; v2 stays at its pages.dev URL regardless |
 | 5 | a Worker version rollback is the only hosting rollback left, and it is the same as before: `wrangler rollback <version> --name sds-worker` |
@@ -267,8 +349,9 @@ domains: ['sheepdogsim.com'],
 ['sheepdogsim.com']`, `PREVIEW` gains `domains: []`, and the Build Output check
 replaces `expect('domains', worker.domains, undefined)` with
 `expect('domains', worker.domains ?? [], expected.domains)`; a preview build
-that declares a domain fails, as a preview route does. The rehearsal uses the
-same lines with `PREVIEW.domains = ['stage.sheepdogsim.com']` on its branch.
+that declares a domain fails, as a preview route does. The rehearsal used the
+same lines with `PREVIEW.domains = ['stage.sheepdogsim.com']` on its branch
+(pull request 128, closed unmerged), and they passed the gate and both specs.
 
 `tests/worker/cloudflare-config.spec.ts`, in "routes sheepdogsim.com to
 production only": `expect(cf('production').domains).toEqual(['sheepdogsim.com'])`

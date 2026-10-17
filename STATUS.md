@@ -371,15 +371,24 @@ longer claims Neutral.
   route keeps precedence until it is deleted, so the sequence is gapless;
   deploys do not delete undeclared routes; a Custom Domain's certificate is
   not deleted with it; and the v2 rollback changes shape (the Pages custom
-  domain goes; v2 stays at `7cea2cd2.sds-frontend.pages.dev`). The owner's
-  three decisions: (1) accept the amended end state for `www`; (2) the
-  rehearsal, a Custom Domain `stage.sheepdogsim.com` on the preview Worker
-  over a deliberately conflicting CNAME, which measures the CI override, the
-  certificate authority against the zone's CAA records, and what removal
-  leaves behind, before the apex is touched; (3) when the cutover tag is,
-  since merging `domains` arms it and the next tag fires it. The three
-  static pages becoming Vite entries with the analytics snippet injected
-  from one constant stays a separate item.
+  domain goes; v2 stays at `7cea2cd2.sds-frontend.pages.dev`). The owner
+  accepted the amended end state for `www` and approved the rehearsal, run
+  2026-10-17 on `stage.sheepdogsim.com` with the preview Worker (results in
+  the runbook): the deploy **refuses** a hostname with a record of ours, so
+  the apex CNAME must be deleted before the domain is published and there
+  is a gap, seconds if the domain is published from this PC right after the
+  deletion, 66 s if the tag does it, with a 30-minute negative-cache tail;
+  the record `cf` creates is a proxied `AAAA 100::` placeholder owned by
+  the domain; the certificate is Google's, allowed by CAA, and its pack
+  includes the apex; an undeclared domain stays; removing the domain removes
+  its record and certificate. **The owner's remaining decision:** the
+  Custom Domain path as planned (the deploy owns the apex record, a gap of
+  seconds), or the placeholder path the results opened (edit the apex CNAME
+  in place to `AAAA 100::` proxied, keep the route, remove the Pages custom
+  domain: no gap, the record stays a zone setting like `www`'s). Then the
+  cutover tag, since merging `domains` arms it and the next tag fires it.
+  The three static pages becoming Vite entries with the analytics snippet
+  injected from one constant stays a separate item.
 
 ### Standing rule
 
