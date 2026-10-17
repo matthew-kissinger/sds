@@ -22,9 +22,9 @@ investigations are in `docs/history/`.
   (`Deploy` run 38988161939, the first production deploy through `cf`;
   `docs/history/status-log.md`), served by the `sds-worker` Worker.
   `sheepdogsim.com` is that Worker's Custom Domain since 00:49 UTC the same
-  day, declared in `app/cloudflare.config.ts`; the `sheepdogsim.com/*` route
-  from the 2026-10-16 cutover still sits beside it for one release as the
-  rollback and goes in the next. `release.json` is the authority for the
+  day, declared in `app/cloudflare.config.ts`, and since 3.3.2 the only
+  thing that serves the hostname: the `sheepdogsim.com/*` route from the
+  2026-10-16 cutover is deleted. `release.json` is the authority for the
   exact deployed source commit and artifact digest. `www.sheepdogsim.com`
   redirects to the apex at the zone edge.
 - The `sds-frontend` Pages project is dormant and off the zone: its
@@ -206,11 +206,11 @@ request 126, merge `37154931`, Client CI green on it; below). Declarative
 hosting was then planned, rehearsed on `stage.sheepdogsim.com` and, on the
 owner's choice of the Custom Domain path, shipped as 3.3.1 on 2026-10-17:
 the apex is a Custom Domain of `sds-worker`, the tag was the first `cf`
-production deploy, the Pages custom domain is gone, and the route stays one
-release as the rollback (`docs/operations/declarative-hosting.md`,
-"Production results"; `docs/history/status-log.md`). Next: the release
-after, which deletes the route and drops `triggers` from the config; then
-the score service.
+production deploy, the Pages custom domain is gone. 3.3.2, the same night,
+deleted the Release 1 route and dropped `triggers` from the config, so the
+repository now declares every hosting fact it owns
+(`docs/operations/declarative-hosting.md`, "Production results";
+`docs/history/status-log.md`). Next: the score service.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -401,7 +401,7 @@ longer claims Neutral.
   removed after it (`docs/history/status-log.md`). One finding against the
   plan: for about two minutes the apex answered from Pages, not the Worker,
   while the Pages custom domain was still attached; a hostname should leave
-  Pages first. The route goes in the release after.
+  Pages first. 3.3.2 deleted the route the same night.
   The three static pages becoming Vite entries with the analytics snippet
   injected from one constant stays a separate item.
 

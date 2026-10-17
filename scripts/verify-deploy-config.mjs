@@ -22,10 +22,11 @@ export { BUILD_OUTPUT, BUILT_CLIENT }
 
 const PRODUCTION = {
   name: 'sds-worker',
-  routes: [{ pattern: 'sheepdogsim.com/*', zone_name: 'sheepdogsim.com' }],
-  // Custom Domains the Build Output declares (cf only). The apex is one from
-  // 3.3.1 (docs/operations/declarative-hosting.md); the preview Worker has
-  // none: a preview must never claim a production hostname.
+  // No route on either Worker since 3.3.2: sheepdogsim.com is production's
+  // Custom Domain (cf only, docs/operations/declarative-hosting.md), and a
+  // route declared again would be re-published by every deploy. The preview
+  // Worker has neither: a preview must never claim a production hostname.
+  routes: [],
   domains: ['sheepdogsim.com'],
   previewUrls: false,
   database: { name: 'sds-db', id: '513aa937-e60a-4fb6-b499-9f3814149e88' },

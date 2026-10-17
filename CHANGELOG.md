@@ -4,6 +4,18 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.3.2] - 2026-10-17
+
+### Changed
+
+- The `sheepdogsim.com/*` Worker route is gone. `sheepdogsim.com` is served
+  by the `sds-worker` Custom Domain alone, declared in
+  `app/cloudflare.config.ts`; neither that file nor `wrangler.toml` declares
+  a route any more, and `scripts/verify-deploy-config.mjs` fails a build that
+  brings one back. The route was deleted in the dashboard before this
+  release's tag, as the last step of `docs/operations/declarative-hosting.md`.
+  No change to the game.
+
 ## [3.3.1] - 2026-10-17
 
 ### Changed

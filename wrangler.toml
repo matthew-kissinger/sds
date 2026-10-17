@@ -1,6 +1,9 @@
-# The one Wrangler configuration, at the repository root. The Cloudflare Vite
-# plugin (vite.config.ts) reads it to build the Worker beside the client and to
-# serve both in `vite dev`; wrangler deploys what the build generates from it.
+# The one Wrangler configuration, at the repository root. Since the `cf` move
+# (Release 2 Stage B) the deploying declaration is app/cloudflare.config.ts,
+# read by `cf` and the Cloudflare Vite plugin; this file is read by wrangler
+# for the D1 scripts (scripts/d1-local-setup.mjs, scripts/d1-migrate-remote.mjs)
+# and by the tags built before the move (3.2.1 to 3.3.0).
+# tests/worker/cloudflare-config.spec.ts keeps the two in step;
 # docs/operations/deployment.md explains the handoff.
 name = "sds-worker"
 main = "worker/src/index.ts"
@@ -59,24 +62,14 @@ binding = "DB"
 database_name = "sds-db"
 database_id = "513aa937-e60a-4fb6-b499-9f3814149e88"
 
-# sheepdogsim.com is served by this Worker through a route, not a Custom
-# Domain. A route takes precedence over the sds-frontend Pages custom domain on
-# the same hostname, so it took over with no downtime and the Pages project sits
-# untouched underneath; deleting the route is the rollback. Only a Custom Domain
-# would force the hostname off Pages first. www.sheepdogsim.com is not a route:
-# a proxied DNS record and a Single Redirect rule send it to the apex at the
-# zone edge, before assets or this Worker (docs/operations/deployment.md).
-#
-# /r/* is deliberately left to a future, more specific route: route matching is
-# most-specific first, so a realtime Worker can claim sheepdogsim.com/r/*
-# without touching this one (spec/03-multiplayer.md).
-#
-# A deploy PUTs exactly this list, replacing any other route on this script.
-# A config with no routes leaves existing routes alone, so removing this block
-# does not remove the route; see docs/operations/deployment.md for rollback.
-[[routes]]
-pattern = "sheepdogsim.com/*"
-zone_name = "sheepdogsim.com"
+# No routes. sheepdogsim.com is this Worker's Custom Domain, declared in
+# app/cloudflare.config.ts and published by `cf deploy`; wrangler has no part
+# in it. The sheepdogsim.com/* route that carried Release 1's cutover was
+# deleted by hand in 3.3.2 (docs/operations/declarative-hosting.md). A route
+# declared here would be PUT by any `wrangler deploy` of this file, so none is.
+# www.sheepdogsim.com is a proxied DNS record and a Single Redirect rule to the
+# apex at the zone edge (docs/operations/deployment.md). /r/* stays free for a
+# realtime Worker (spec/03-multiplayer.md).
 
 # ---------------------------------------------------------------------------
 # Per-pull-request preview environment. Built with CLOUDFLARE_ENV=preview and
@@ -96,8 +89,8 @@ name = "sds-worker-preview"
 # against this environment's own D1 and JWT_SECRET. Assets are inherited.
 workers_dev = true
 preview_urls = true
-# routes is inheritable in Wrangler 4: without this line a preview deploy would
-# try to claim sheepdogsim.com/* for sds-worker-preview.
+# routes is inheritable in Wrangler 4; there is none to inherit, and the
+# tests pin that neither environment declares one.
 routes = []
 
 [[env.preview.d1_databases]]

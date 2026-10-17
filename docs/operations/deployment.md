@@ -32,8 +32,8 @@ pushed, and keeps a `workflow_dispatch` escape hatch that takes a full
 5. runs `cf deploy --dry-run --prebuilt --no-provision` and then
    `cf deploy --prebuilt --no-provision` from `app/`, which uploads the game as
    the Worker's static assets and the API code as one version, makes it the
-   active deployment and publishes the route - one commit, one deploy, both
-   halves;
+   active deployment and publishes the Custom Domain - one commit, one
+   deploy, both halves;
 6. verifies the live `https://sheepdogsim.com/release.json` reports that SHA;
    that `sheepdogsim.com` serves `index.html` at `/` and JSON at
    `/api/healthz` (`scripts/verify-worker-origin.mjs`); that the `workers.dev`
@@ -52,7 +52,7 @@ is exactly what the two workflows call, nothing more:
 | Account | Workers Scripts, Edit | upload the Worker and its assets, create preview versions |
 | Account | D1, Read | the `DB` binding is validated at deploy |
 | Account | Account Settings, Read | account resolution |
-| Zone `sheepdogsim.com` only | Workers Routes, Edit | every deploy re-publishes the route from `app/cloudflare.config.ts`; deleting it is the rollback |
+| Zone `sheepdogsim.com` only | Workers Routes, Edit | published the route from `app/cloudflare.config.ts` until 3.3.2. Kept until a deploy that declares no route has shown whether the Custom Domain publish needs it; if that deploy passes, this row goes at the next token rotation |
 
 `cf` keeps its own credentials and does not read wrangler's login; it takes the
 same token from `CLOUDFLARE_API_TOKEN`, and the workflows pass the same two
@@ -71,7 +71,7 @@ same day.
 
 | Name | What it is |
 | --- | --- |
-| `sheepdogsim.com` | The game. A proxied Cloudflare zone with a Worker **route** `sheepdogsim.com/*` to `sds-worker`. The only URL to publish. |
+| `sheepdogsim.com` | The game. A proxied Cloudflare zone whose apex is the **Custom Domain** of `sds-worker`, declared in `app/cloudflare.config.ts`; the deploy owns its DNS record and certificate. The only URL to publish. |
 | `www.sheepdogsim.com` | A proxied DNS record and a zone redirect rule to the apex, 301 with path and query kept. Never served; see Zone configuration. |
 | `sds-worker` | The production Worker. Serves the built game as static assets and the identity and score API under `/api/*`. Holds `JWT_SECRET` and the `DB` binding to D1 `sds-db`. |
 | `sds-worker.matt-m-kissinger.workers.dev` | The same Worker on its own hostname. Kept on (`workers_dev = true`) because every client built before Release 1 calls the API here; it serves the game too, under its own origin and therefore its own `localStorage`. Not a URL to publish. |
@@ -160,46 +160,49 @@ passes with the API down. Likewise a missing `release.json` is served as
 
 ## Routes and hostnames
 
-From 3.3.1 the apex is a Custom Domain of `sds-worker`, declared as
+Since 3.3.1 the apex is a Custom Domain of `sds-worker`, declared as
 `domains: ['sheepdogsim.com']` in `app/cloudflare.config.ts`: the deploy owns
 its DNS record (a proxied `AAAA 100::` placeholder, read-only in the zone) and
-its certificate, and removing the domain removes both. The route stays one
-release beside it as the rollback and goes in the release after
-(`docs/operations/declarative-hosting.md` has the sequence, the rehearsal and
-the rollback at each step). Four measured facts govern the rest of the
-hosting declaration (`workersDev`, `triggers` and `previewUrls` in
-`app/cloudflare.config.ts`; `workers_dev`, `routes` and `preview_urls` in
-`wrangler.toml`):
+its certificate, and removing the domain removes both. Since 3.3.2 there is
+no route: the `sheepdogsim.com/*` route that carried Release 1's cutover was
+deleted by hand once the Custom Domain was seen serving, and neither
+`app/cloudflare.config.ts` nor `wrangler.toml` declares one
+(`docs/operations/declarative-hosting.md` has the sequence, the rehearsal,
+the production results and the rollback at each step). The measured facts
+that govern the hosting declaration (`workersDev`, `domains` and
+`previewUrls` in `app/cloudflare.config.ts`; `workers_dev`, `routes` and
+`preview_urls` in `wrangler.toml`):
 
 - **`workers_dev` is set explicitly.** Cloudflare infers it as false as soon
   as a config declares routes, which would take the `workers.dev` host off
-  the air and break every pre-Release-1 client.
+  the air and break every pre-Release-1 client. No route is declared now;
+  the setting stays explicit so that a future route cannot flip it.
 - **Release 1 cut over by route, not Custom Domain.** A Worker route takes
   precedence over the Pages custom domain on the same hostname, so the
   takeover needed no downtime, and deleting the route then handed
-  `sheepdogsim.com` back to Pages. Since 3.3.1 the Custom Domain owns the
-  hostname and the Pages custom domain is gone, so the route is redundant:
-  deleting it changes nothing a player sees, because the Custom Domain
-  answers with the same Worker. Measured on the way there: while the Pages
+  `sheepdogsim.com` back to Pages. 3.3.1 gave the hostname to the Custom
+  Domain and removed the Pages custom domain, which made the route
+  redundant; 3.3.2 deleted it. Measured on the way there: while the Pages
   custom domain was still attached, the hostname answered from Pages for
   about two minutes after its record became the Worker's
   (`docs/operations/declarative-hosting.md`, "Production results").
 - **A deploy replaces the route set; a config without routes leaves it
-  alone.** `wrangler deploy` and `wrangler triggers deploy` PUT exactly the
-  configured routes when there are any, and do nothing to routes when there
-  are none (Wrangler 4.151.1 source). So removing the `[[routes]]` block does
-  not remove the route, and while the block is on `main` every deploy puts it
-  back.
-- **`routes` is inheritable in wrangler.** Without `routes = []` under
-  `[env.preview]`, a preview deploy would try to claim `sheepdogsim.com/*` for
-  the preview Worker. The cf modes inherit nothing, and the preview mode
-  declares no trigger. `tests/worker/wrangler-config.spec.ts` and
+  alone.** `wrangler deploy`, `wrangler triggers deploy` and `cf deploy` PUT
+  exactly the configured routes when there are any, and do nothing to routes
+  when there are none (Wrangler 4.151.1 source; measured on `cf`, which left
+  an undeclared domain in place too). That is why the route was deleted in
+  the dashboard and not by a deploy, and why a route declared again in
+  either file would come back with the next deploy of that file.
+- **`routes` is inheritable in wrangler.** `[env.preview]` keeps
+  `routes = []` so that no future top-level route could be inherited by the
+  preview Worker. The cf modes inherit nothing, and the preview mode declares
+  no trigger and no domain. `tests/worker/wrangler-config.spec.ts` and
   `tests/worker/cloudflare-config.spec.ts` pin this and the rest.
 
-`/r/*` is left unclaimed on purpose. Routes match most-specific first, so a
-realtime Worker can take `sheepdogsim.com/r/*` later
-(`spec/03-multiplayer.md`) without touching this one. Until then `/r/*` is
-just the single-page fallback.
+`/r/*` is left unclaimed on purpose. A route takes precedence over a Custom
+Domain on the same hostname, so a realtime Worker can take
+`sheepdogsim.com/r/*` later (`spec/03-multiplayer.md`) without touching this
+Worker's declaration. Until then `/r/*` is just the single-page fallback.
 
 ## Durable Objects
 
@@ -264,15 +267,14 @@ a version: a wrangler deploy over a `cf` deployment and a rollback across it
 were measured on the preview Worker to leave the bindings and the migration
 tag as they were.
 
-**The hosting itself.** Since 3.3.1 there is no hosting rollback separate
-from the Worker's version rollback: the Custom Domain and the route both
-point at `sds-worker`, and deleting the route (dashboard: Workers & Pages >
-`sds-worker` > Domains; or the API, as in `docs/operations/worker-cutover.md`)
-leaves the Custom Domain serving the same version. Before 3.3.1, deleting the
-route handed the hostname to the Pages custom domain and its 3.1.0, which
-called the API on the `workers.dev` host cross-origin; the Worker still sends
-a `*` CORS header for the clients built then. Giving the hostname back to
-Pages now is the v2 procedure in `docs/operations/v2-rollback.md`.
+**The hosting itself.** Since 3.3.2 there is no hosting rollback separate
+from the Worker's version rollback: the Custom Domain is the only thing that
+serves `sheepdogsim.com`, it points at `sds-worker`, and a version rollback
+changes what that Worker runs. Before 3.3.1, deleting the Release 1 route
+handed the hostname to the Pages custom domain and its 3.1.0, which called
+the API on the `workers.dev` host cross-origin; the Worker still sends a `*`
+CORS header for the clients built then. Giving the hostname back to Pages
+now is the v2 procedure in `docs/operations/v2-rollback.md`.
 
 Version 2 is recoverable separately through its immutable deployment, without
 its multiplayer, which went with the Durable Objects.
@@ -362,13 +364,13 @@ next deploy. Dashboard changes are owner-approved, one at a time.
   non-API paths the asset layer answers before any Worker code runs.
 - Web Analytics site `sheepdogsim.com`, mode "JS Snippet installation".
 
-End state, Release 2, reached for the apex in 3.3.1: `sheepdogsim.com` is a
-Worker Custom Domain in `app/cloudflare.config.ts` and its record and
-certificate are the deploy's. `www` stays a placeholder record under the
-redirect rule by design (`docs/operations/declarative-hosting.md`, fact 6).
-Once the route goes in the release after, the zone holds exactly: the apex
-record and certificate the deploy created, the `www` record, the redirect
-rule, the Web Analytics mode, and the CAA and mail-hardening records.
+End state, Release 2, reached in 3.3.1 and 3.3.2: `sheepdogsim.com` is a
+Worker Custom Domain in `app/cloudflare.config.ts`, its record and
+certificate are the deploy's, and no route exists. `www` stays a placeholder
+record under the redirect rule by design (`docs/operations/declarative-hosting.md`,
+fact 6). The zone holds exactly: the apex record and certificate the deploy
+created, the `www` record, the redirect rule, the Web Analytics mode, and
+the CAA and mail-hardening records.
 
 ## Analytics
 

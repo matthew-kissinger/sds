@@ -75,9 +75,10 @@ migration or the newer `exports` transfer, both of which are two-sided
 multi-deploy handoffs - fiddly and worth rehearsing, but supported. Do not treat
 this as a door that locks.
 
-**Routing, either way.** The units present one public origin. Worker routes
-match most-specific-first, so `sheepdogsim.com/r/*` can be taken by a realtime
-Worker while `sheepdogsim.com/*` serves the game, with no proxy hop and no CORS.
+**Routing, either way.** The units present one public origin. A Worker route
+takes precedence over a Custom Domain on the same hostname, so
+`sheepdogsim.com/r/*` can be taken by a realtime Worker's route while the
+apex Custom Domain serves the game, with no proxy hop and no CORS.
 **The `/r/*` prefix is reserved for rooms. Do not spend it on anything else.**
 
 One thing to settle before building rather than during: this document's "Worker
