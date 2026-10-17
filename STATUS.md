@@ -17,10 +17,12 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.4.0 (`f2b1c41c`, tag `v3.4.0`; the Kiln homestead and, new, the
-  Kiln oak as the treeline) is live at `https://sheepdogsim.com` since
-  2026-10-17 14:38 UTC (`Deploy` run 39041378840;
-  `docs/history/status-log.md`), served by the `sds-worker` Worker.
+- Version 3.4.1 (`832b915d`, tag `v3.4.1`; the Kiln homestead and the Kiln
+  oak as the treeline, 3.4.0's, with the oak's cost trim) is live at
+  `https://sheepdogsim.com` since 2026-10-17 18:00 UTC (`Deploy` run
+  39055958574; `docs/history/status-log.md`), served by the `sds-worker`
+  Worker. Every finished change is merged and deployed for the owner to test
+  in production (owner's rule, 2026-10-17).
   `sheepdogsim.com` is that Worker's Custom Domain since 00:49 UTC the same
   day, declared in `app/cloudflare.config.ts`, and since 3.3.2 the only
   thing that serves the hostname: the `sheepdogsim.com/*` route from the
@@ -526,7 +528,7 @@ the record those files carry.
   hardware. The first reference image is the owner's, attached in the
   session that commissioned the oak. Art: owner approved. Physical phones:
   the owner tests in production. The cost trim (pull request 136, merged
-  untagged, rides the next release) took the oak to 9,885 triangles a tree
+  untagged, released as 3.4.1) took the oak to 9,885 triangles a tree
   with no visible change. The owner kept the full crown (2026-10-17) and held
   the coarser bake as a phone low-tier option only: `DETAIL.frequency`
   starting at 2 and a 0.6 m edge give 5,730 triangles a tree, whose outline
