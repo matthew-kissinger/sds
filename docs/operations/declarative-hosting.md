@@ -356,6 +356,19 @@ empty, Production), then the tag. Times UTC.
    `pages.dev` hostnames still answer.
 6. **Not measured:** whether `cf` uploads source maps (the log does not say).
 
+Release 3.3.2, the same night (steps 3 and 5; `docs/history/status-log.md`):
+
+7. **Deleting the route moved nothing.** Route removed in the dashboard
+   01:11:04 with 3.3.1 deployed; the live verifiers passed on the apex and
+   on `workers.dev` straight after, six of six requests the Worker's own
+   `release.json`. With the Pages custom domain already gone, the Custom
+   Domain and the route had pointed at the same Worker.
+8. **A deploy without `triggers` leaves no route and re-publishes the
+   domain.** `v3.3.2` (`14bdc70a`): `cf deploy` listed `workers.dev` and
+   `sheepdogsim.com (custom domain)` and nothing else; the zone's route
+   list stayed empty; version `55b517c1` live 01:14:44; the verifiers
+   passed. The token's Workers Routes permission was not needed for it.
+
 ## Rollback summary
 
 | After step | To undo |
@@ -364,7 +377,7 @@ empty, Production), then the tag. Times UTC.
 | 2 | remove the Custom Domain (its record and certificate go with it), recreate the apex CNAME to Pages (proxied), revert the config; the route served throughout |
 | 3 | re-add the route (dashboard, or a deploy with `triggers` declared) |
 | 4 | re-add the Pages custom domain, which needs the Worker Custom Domain removed first and re-validates; v2 stays at its pages.dev URL regardless |
-| 5 | a Worker version rollback is the only hosting rollback left, and it is the same as before: `wrangler rollback <version> --name sds-worker` |
+| 5 | a Worker version rollback is the only hosting rollback left, and it is the same as before: `wrangler rollback <version> --name sds-worker` (reached 2026-10-17, release 3.3.2) |
 
 ## The owner's steps
 

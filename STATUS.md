@@ -17,10 +17,11 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.3.1 (`de5fc53f`, tag `v3.3.1`; the game is 3.3.0's, the Kiln
-  homestead) is live at `https://sheepdogsim.com` since 2026-10-17 00:52 UTC
-  (`Deploy` run 38988161939, the first production deploy through `cf`;
-  `docs/history/status-log.md`), served by the `sds-worker` Worker.
+- Version 3.3.2 (`14bdc70a`, tag `v3.3.2`; the game is 3.3.0's, the Kiln
+  homestead) is live at `https://sheepdogsim.com` since 2026-10-17 01:14 UTC
+  (`Deploy` run 38989814766; 3.3.1 before it was the first production
+  deploy through `cf`; `docs/history/status-log.md`), served by the
+  `sds-worker` Worker.
   `sheepdogsim.com` is that Worker's Custom Domain since 00:49 UTC the same
   day, declared in `app/cloudflare.config.ts`, and since 3.3.2 the only
   thing that serves the hostname: the `sheepdogsim.com/*` route from the
