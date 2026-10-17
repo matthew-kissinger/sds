@@ -77,7 +77,7 @@ same day.
 | `sds-worker.matt-m-kissinger.workers.dev` | The same Worker on its own hostname. Kept on (`workers_dev = true`) because every client built before Release 1 calls the API here; it serves the game too, under its own origin and therefore its own `localStorage`. Not a URL to publish. |
 | `sds-worker-preview` | The preview Worker (the `preview` mode of `app/cloudflare.config.ts`; `[env.preview]` in `wrangler.toml`), with its own D1 `sds-db-preview` and its own `JWT_SECRET`. Pull requests upload versions here and deploy to it. |
 | `pr-<n>-sds-worker-preview.matt-m-kissinger.workers.dev` | Pull request `<n>`'s preview: a version alias of `sds-worker-preview`, game and API on one origin. |
-| `sds-frontend` | The Cloudflare Pages project that served the game until Release 1. **Dormant**: nothing deploys to it, and it is not deleted, because it holds the immutable v2 deployment and is what answers `sheepdogsim.com` if the route is removed. |
+| `sds-frontend` | The Cloudflare Pages project that served the game until Release 1. **Dormant**: nothing deploys to it, and it is not deleted, because it holds the immutable v2 deployment. Since 3.3.1 it has no custom domain; `sheepdogsim.com` is the Worker's, and a v2 rollback gives the hostname back to Pages first (`docs/operations/v2-rollback.md`). |
 | `sds-frontend.pages.dev` | The Pages project's own hostname. It cannot be disabled and keeps serving the last Pages deployment (3.1.0), which carries `<link rel="canonical">` to `sheepdogsim.com`. |
 | `7cea2cd2.sds-frontend.pages.dev` | The immutable v2 deployment kept for rollback. See `docs/operations/v2-rollback.md`. |
 
@@ -174,10 +174,16 @@ hosting declaration (`workersDev`, `triggers` and `previewUrls` in
 - **`workers_dev` is set explicitly.** Cloudflare infers it as false as soon
   as a config declares routes, which would take the `workers.dev` host off
   the air and break every pre-Release-1 client.
-- **A route, not a Custom Domain.** A Worker route takes precedence over the
-  Pages custom domain on the same hostname, so the takeover needed no
-  downtime, and deleting the route hands `sheepdogsim.com` back to Pages. A
-  Custom Domain would have forced the hostname off Pages first.
+- **Release 1 cut over by route, not Custom Domain.** A Worker route takes
+  precedence over the Pages custom domain on the same hostname, so the
+  takeover needed no downtime, and deleting the route then handed
+  `sheepdogsim.com` back to Pages. Since 3.3.1 the Custom Domain owns the
+  hostname and the Pages custom domain is gone, so the route is redundant:
+  deleting it changes nothing a player sees, because the Custom Domain
+  answers with the same Worker. Measured on the way there: while the Pages
+  custom domain was still attached, the hostname answered from Pages for
+  about two minutes after its record became the Worker's
+  (`docs/operations/declarative-hosting.md`, "Production results").
 - **A deploy replaces the route set; a config without routes leaves it
   alone.** `wrangler deploy` and `wrangler triggers deploy` PUT exactly the
   configured routes when there are any, and do nothing to routes when there
@@ -258,13 +264,15 @@ a version: a wrangler deploy over a `cf` deployment and a rollback across it
 were measured on the preview Worker to leave the bindings and the migration
 tag as they were.
 
-**The hosting itself.** Delete the `sheepdogsim.com/*` route (dashboard:
-Workers & Pages > `sds-worker` > Settings > Domains & Routes; or the API, as in
-`docs/operations/worker-cutover.md`). The Pages custom domain answers again
-within moments with its last deployment, 3.1.0, which calls the API on the
-`workers.dev` host cross-origin; the Worker still sends a `*` CORS header for
-exactly that reason. Then revert the routes commit on `main` before the next
-tag, or the next deploy will publish the route again.
+**The hosting itself.** Since 3.3.1 there is no hosting rollback separate
+from the Worker's version rollback: the Custom Domain and the route both
+point at `sds-worker`, and deleting the route (dashboard: Workers & Pages >
+`sds-worker` > Domains; or the API, as in `docs/operations/worker-cutover.md`)
+leaves the Custom Domain serving the same version. Before 3.3.1, deleting the
+route handed the hostname to the Pages custom domain and its 3.1.0, which
+called the API on the `workers.dev` host cross-origin; the Worker still sends
+a `*` CORS header for the clients built then. Giving the hostname back to
+Pages now is the v2 procedure in `docs/operations/v2-rollback.md`.
 
 Version 2 is recoverable separately through its immutable deployment, without
 its multiplayer, which went with the Durable Objects.
@@ -354,11 +362,13 @@ next deploy. Dashboard changes are owner-approved, one at a time.
   non-API paths the asset layer answers before any Worker code runs.
 - Web Analytics site `sheepdogsim.com`, mode "JS Snippet installation".
 
-End state, Release 2: once the Pages project is retired, both hostnames become
-Worker custom domains in `app/cloudflare.config.ts` and the DNS records are
-created by the deploy, leaving the redirect rule and the analytics mode as the
-only zone settings. Until then the apex record must stay as it is, because a
-custom domain would force the hostname off Pages.
+End state, Release 2, reached for the apex in 3.3.1: `sheepdogsim.com` is a
+Worker Custom Domain in `app/cloudflare.config.ts` and its record and
+certificate are the deploy's. `www` stays a placeholder record under the
+redirect rule by design (`docs/operations/declarative-hosting.md`, fact 6).
+Once the route goes in the release after, the zone holds exactly: the apex
+record and certificate the deploy created, the `www` record, the redirect
+rule, the Web Analytics mode, and the CAA and mail-hardening records.
 
 ## Analytics
 

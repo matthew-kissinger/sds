@@ -17,16 +17,20 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.3.0 (`6a605e16`, tag `v3.3.0`, the Kiln homestead) is live at
-  `https://sheepdogsim.com` since 2026-10-16 22:31 UTC (`Deploy` run
-  38976103808; `docs/history/status-log.md`), served by the `sds-worker`
-  Worker through the `sheepdogsim.com/*` route since
-  the 2026-10-16 cutover (`docs/history/status-log.md`). `release.json` is the
-  authority for the exact deployed source commit and artifact digest.
-  `www.sheepdogsim.com` redirects to the apex at the zone edge.
-- The `sds-frontend` Pages project is dormant underneath the route: it serves
-  3.1.0 on `sds-frontend.pages.dev`, receives no `sheepdogsim.com` traffic,
-  and is the Release 1 rollback (delete the route). It is retired in Release 2.
+- Version 3.3.1 (`de5fc53f`, tag `v3.3.1`; the game is 3.3.0's, the Kiln
+  homestead) is live at `https://sheepdogsim.com` since 2026-10-17 00:52 UTC
+  (`Deploy` run 38988161939, the first production deploy through `cf`;
+  `docs/history/status-log.md`), served by the `sds-worker` Worker.
+  `sheepdogsim.com` is that Worker's Custom Domain since 00:49 UTC the same
+  day, declared in `app/cloudflare.config.ts`; the `sheepdogsim.com/*` route
+  from the 2026-10-16 cutover still sits beside it for one release as the
+  rollback and goes in the next. `release.json` is the authority for the
+  exact deployed source commit and artifact digest. `www.sheepdogsim.com`
+  redirects to the apex at the zone edge.
+- The `sds-frontend` Pages project is dormant and off the zone: its
+  `sheepdogsim.com` custom domain was removed 2026-10-17, it serves 3.1.0 on
+  `sds-frontend.pages.dev` only, and it is kept for the immutable v2
+  deployment (`docs/operations/v2-rollback.md`).
 - The Web Analytics site `sheepdogsim.com` is in snippet mode and is fed by the
   beacon every HTML page carries; Web Analytics on the Pages project is off.
 - Player-facing branding is `Sheepdog Sim`. The `3.1.0` number is retained only
@@ -198,12 +202,15 @@ request 125, `e3642877`). The whole homestead is Kiln and live as 3.3.0
 wander (owner's call, see the status log). Stage B was then attempted on the
 preview Worker and its four checks passed, and the same pull request carried
 the production cutover, which the owner approved and which is merged (pull
-request 126, merge `37154931`, Client CI green on it; below). The next `v*`
-tag deploys with `cf`; the live Worker still runs the wrangler-deployed
-3.3.0. Declarative hosting is planned, not started:
-`docs/operations/declarative-hosting.md` (draft pull request), with three
-decisions for the owner listed below. Next: those decisions, then the
-rehearsal on `stage.sheepdogsim.com`.
+request 126, merge `37154931`, Client CI green on it; below). Declarative
+hosting was then planned, rehearsed on `stage.sheepdogsim.com` and, on the
+owner's choice of the Custom Domain path, shipped as 3.3.1 on 2026-10-17:
+the apex is a Custom Domain of `sds-worker`, the tag was the first `cf`
+production deploy, the Pages custom domain is gone, and the route stays one
+release as the rollback (`docs/operations/declarative-hosting.md`,
+"Production results"; `docs/history/status-log.md`). Next: the release
+after, which deletes the route and drops `triggers` from the config; then
+the score service.
 
 The `cf` step is two stages, decided 2026-10-16 on the planning review.
 Stage A: one root package on the stable Cloudflare Vite plugin, `worker/` a
@@ -388,10 +395,13 @@ longer claims Neutral.
   domain: no gap, the record stays a zone setting like `www`'s). The owner
   chose the Custom Domain, 2026-10-17: it was the plan's end state, the
   route was Release 1's cutover device, and a placeholder would be a stopgap
-  replaced later at the same cost. Release 3.3.1 declares the apex domain
-  and keeps the route; its tag is the first `cf` production deploy and the
-  moment the apex CNAME is deleted by hand; the route goes in the release
-  after.
+  replaced later at the same cost. Release 3.3.1 shipped it 2026-10-17: the
+  apex CNAME deleted by hand, the Custom Domain added in the dashboard 80 s
+  later, the tag the first `cf` production deploy, the Pages custom domain
+  removed after it (`docs/history/status-log.md`). One finding against the
+  plan: for about two minutes the apex answered from Pages, not the Worker,
+  while the Pages custom domain was still attached; a hostname should leave
+  Pages first. The route goes in the release after.
   The three static pages becoming Vite entries with the analytics snippet
   injected from one constant stays a separate item.
 

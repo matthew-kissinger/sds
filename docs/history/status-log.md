@@ -5,6 +5,56 @@
 
 # Status log
 
+## Release 3.3.1 - 2026-10-17, the apex is a Worker Custom Domain, the first `cf` production deploy, the Pages custom domain retired
+
+The owner: "Yes: merge pull request 127, finish the 3.3.1 release branch,
+open its pull request and merge on green, then tag v3.3.1 and delete the
+apex CNAME at the deploy step as planned", then, when the session's own
+permission layer refused the deletion click, "Can you do that for me?". Pull
+request 127 (the plan) merged `4c7d7e6b`; pull request 129 (`release: 3.3.1`,
+branch `release2/apex-custom-domain`) merged `de5fc53f` with Client CI and
+Preview green; Client CI green on `main`. The dashboard steps were clicks in
+the owner's Chrome session. Times UTC, 2026-10-17; the readings are in
+`docs/operations/declarative-hosting.md`, "Production results".
+
+- Order chosen to keep the gap off CI's clock: apex CNAME `46ad7bd1...`
+  deleted about 00:48:15; `sheepdogsim.com` added as a Custom Domain of
+  `sds-worker` (production) in the Worker's Domains tab; record `AAAA 100::`
+  (proxied, read-only, owned by the domain) and its advanced certificate pack
+  both created 00:49:34. About 80 s with no apex record, all of it the
+  dashboard navigation. Resolvers that asked in that window hold an empty
+  answer for up to 30 minutes (SOA default TTL).
+- Tag `v3.3.1` on `de5fc53f` pushed 00:49:53; `Deploy` run 38988161939
+  green at 00:52:52, every step. `cf deploy --prebuilt --no-provision`
+  uploaded one changed asset (`release.json`), printed the route and
+  `sheepdogsim.com (custom domain)` under the deployed triggers, and made
+  version `588a8202` (`source: cf_cli`) the live deployment at 00:52:45. The
+  four live verifiers passed; `release.json` reads 3.3.1, `de5fc53f`,
+  `sourceRef v3.3.1`.
+- Not as planned: for about two minutes after the domain was added the apex
+  answered from the Pages project (3.1.0, ETag `06234d66...`, no
+  `CF-Cache-Status`), not from the Worker, although the route was in place
+  throughout. By 00:51:13 eight consecutive requests were the Worker's 3.3.0
+  and the Pages custom domain read `deactivated`. The fact the plan relied on
+  (routes win over a Pages custom domain on the same hostname) held while
+  the apex was a CNAME to Pages and did not hold in the window when the
+  Pages custom domain was still attached to a hostname whose record had just
+  become the Worker's. A hostname should leave Pages before it is given to a
+  Worker Custom Domain; recorded in the plan.
+- Certificate pack: advanced, `google`, TXT validation, hosts
+  `sheepdogsim.com` and `*.sheepdogsim.com`, `pending_validation` at 00:51,
+  `active` by 00:53 with two Google Trust Services certificates valid to
+  2027-01-15; the Universal certificate served meanwhile.
+- The Pages custom domain `sheepdogsim.com` was removed from `sds-frontend`
+  (dashboard, "Remove domain") after the deploy; the apex `AAAA` record was
+  untouched by it; the project keeps `sds-frontend.pages.dev` (3.1.0) and
+  `7cea2cd2.sds-frontend.pages.dev` (v2). `docs/operations/v2-rollback.md`
+  rewritten for the new order of operations.
+- Not measured: whether `cf` uploads source maps (the deploy log does not
+  say). Left for the release after: delete the route (step 3) and drop
+  `triggers` from the config (step 5), with `wrangler.toml`, the tests and
+  `deployment.md` following.
+
 ## Release 2 declarative hosting rehearsal - 2026-10-17, done on `stage.sheepdogsim.com`, nothing left behind
 
 The owner: "Yes: add the proxied CNAME stage.sheepdogsim.com -> sheepdogsim.com,
