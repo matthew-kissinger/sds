@@ -4,7 +4,7 @@
 // away from the sim's gate fails here instead of in a playtest.
 import { describe, it, expect } from 'vitest';
 import { HOME_FIELD } from '@sim/field';
-import { RETIREMENT_PASTURE_FENCE } from '@app/scene/FenceLine';
+import { RETIREMENT_PASTURE_FENCE } from '@app/scene/fence/fieldSections';
 import { rectFenceLayout } from '@app/scene/fenceGeometry';
 
 const { bounds, gate, pen } = HOME_FIELD;

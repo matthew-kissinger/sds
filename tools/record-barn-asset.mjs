@@ -73,7 +73,7 @@ const ledger = {
   artifactDigestEncoding: 'raw bytes',
   toolchain: {
     name: '@instruktlabs/kiln',
-    version: '1.2.3',
+    version: '1.3.0',
     license: 'MIT',
     command: 'kiln render assets/barn/barn.kiln.js --out assets/barn/barn.glb',
     note: 'The tool is not a dependency of this repository. It bakes the artifact; nothing imports it.',

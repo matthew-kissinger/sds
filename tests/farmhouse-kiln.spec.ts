@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { buildFarmhouse } from '@app/scene/farmhouse/cluster';
 import { parseKilnHouse, type KilnHouse } from '@app/scene/farmhouse/kilnHouse';
 import { roofHull } from '@app/scene/farmhouse/hull';
-import { HOUSE_AT, KILN_PORCH, KILN_ROOF, KILN_STACK } from '@app/scene/farmhouse/plan';
+import { HOUSE_AT, KILN_PORCH, KILN_ROOF, KILN_STACK, YAW } from '@app/scene/farmhouse/plan';
 import { Shell, stand } from '@app/scene/farmhouse/shell';
 import { FARMHOUSE_SOURCE } from '@app/scene/farmhouse/source';
 
@@ -333,8 +333,8 @@ describe('Kiln farmhouse in the cluster', () => {
     const baked = smoke(kiln);
     const authored = smoke(null);
     expect(baked).not.toEqual(authored);
-    const sin = Math.sin(1.1);
-    const cos = Math.cos(1.1);
+    const sin = Math.sin(YAW);
+    const cos = Math.cos(YAW);
     const { x, y, z } = KILN_STACK.mouth;
     expect(baked[0]).toBeCloseTo(HOUSE_AT.x + x * cos + z * sin, 4);
     expect(baked[1]).toBeCloseTo(LEVEL + y, 4);

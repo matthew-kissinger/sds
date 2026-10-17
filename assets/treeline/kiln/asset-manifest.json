@@ -54,12 +54,12 @@
   "runtime": {
     "draws": 3,
     "addedDraws": 0,
-    "stands": 139,
+    "stands": 137,
     "trianglesPerRole": {
       "crown": 8947,
       "wood": 938
     },
-    "submittedTrianglesBeforeShadows": 1374015,
+    "submittedTrianglesBeforeShadows": 1354245,
     "note": "One instanced draw for every crown and one for all the wood, the procedural treeline's own two, beside its pooled shadows: three draws either way. No texture is sampled, nothing is transparent and no pass is added; the light is computed (treeline/kilnTreeMaterials.ts).",
     "loader": "app/src/scene/treeline/kilnTree.ts",
     "distPath": "assets/oak-<hash>.glb"

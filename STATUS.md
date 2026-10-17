@@ -509,6 +509,13 @@ the record those files carry.
 
 ## Open questions
 
+- Kiln fence/homestead release 3.5.0: owner approved shipping on 2026-10-17.
+  Pull request 140. Production captures confirm three fence draws; real herding
+  completion/replay passes; quiet-hub frame percentiles match 3.4.1 on both
+  backends. Owner-approved material look retained; physical-device, cold-start
+  and recorded-motion art limits remain open. Full preflight evidence:
+  `docs/history/status-log.md`, "Release 3.5.0 preflight".
+
 - The Kiln oak's remaining notes (2026-10-17; the owner approved the look and
   shipped it as 3.4.0, so these are refinements, not gates). A separate critic scored the production captures
   ITERATE and, past the fifth iteration, escalated: the crown was a pile of

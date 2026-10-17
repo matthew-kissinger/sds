@@ -111,6 +111,15 @@ export const PALETTE = {
   /** Gate posts, marked out so the opening reads from across the field. */
   gatePost: '#b8834b',
   gatePaint: '#567c82',
+  // The Kiln fence's on-screen timber bands, shared by game and asset lab.
+  fenceOak: {
+    line: { shade: '#514d58', body: '#70583f', key: '#9f8256' },
+    leaf: { shade: '#59515b', body: '#886242', key: '#b39360' },
+    gate: { shade: '#59515b', body: '#80603f', key: '#ad8d5a' },
+    cap: { shade: '#59515b', body: '#927349', key: '#b99b65' },
+    iron: { shade: '#45434b', body: '#554f51', key: '#75685b' },
+  },
+  fenceOakOutline: '#655447',
   farmerShirt: '#ddcba7',
   farmerOveralls: '#637c88',
   farmerSkin: '#c48f6a',

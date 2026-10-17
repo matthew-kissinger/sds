@@ -9,7 +9,7 @@
   "spacing": 2.5,
   "amplitude": 2.4,
   "relief": 4.67,
-  "maxGradient": 0.1362,
+  "maxGradient": 0.1363,
   "noise": {
     "octaves": 4,
     "baseWavelength": 260,
@@ -28,7 +28,7 @@
       "minZ": 90,
       "maxZ": 135,
       "rim": 16,
-      "level": -0.616
+      "level": -0.615
     },
     {
       "id": "farmhouse",
@@ -37,16 +37,16 @@
       "minZ": 102.5,
       "maxZ": 140,
       "rim": 16,
-      "level": -0.616
+      "level": -0.615
     },
     {
       "id": "barn",
-      "minX": -2.5,
-      "maxX": 27.5,
+      "minX": -15,
+      "maxX": 15,
       "minZ": 135,
       "maxZ": 155,
       "rim": 14,
-      "level": -0.616
+      "level": -0.615
     }
   ]
 }

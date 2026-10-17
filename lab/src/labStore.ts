@@ -38,6 +38,8 @@ export const EMPTY_COUNTERS: LabCounters = {
 };
 
 export interface LabStore {
+  readonly fenceClosed: boolean;
+  setFenceClosed(closed: boolean): void;
   readonly subject: LabSubjectId;
   readonly view: LabViewMode;
   readonly quality: Exclude<QualityPreference, 'auto'>;
@@ -94,6 +96,8 @@ const OPENING: LabSubjectId = 'sheep';
 const OPENING_VIEW = labSubject(OPENING);
 
 export const useLabStore = create<LabStore>((set) => ({
+  fenceClosed: false,
+  setFenceClosed: (fenceClosed) => set({ fenceClosed }),
   subject: OPENING,
   view: 'lit',
   quality: 'high',

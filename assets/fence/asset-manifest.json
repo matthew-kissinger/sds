@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "id": "sheepdog-hewn-fence-kit",
+  "status": "runtime; owner-approved design; deployment tracked in STATUS.md",
+  "author": "Matthew Kissinger",
+  "license": "AGPL-3.0-or-later",
+  "licenseFile": "LICENSE",
+  "provenance": "Original procedural geometry authored with Kiln. No external meshes, images or textures.",
+  "toolchain": {
+    "name": "@instruktlabs/kiln",
+    "version": "1.3.0",
+    "license": "MIT"
+  },
+  "recipe": {
+    "path": "assets/fence/fence-kit.kiln.js",
+    "encoding": "UTF-8 with LF",
+    "sha256": "969267fecfff35524a49f224ca9445cb48e984148b5a4eefd9a945409dba78d2"
+  },
+  "artifact": {
+    "path": "assets/fence/fence-kit.glb",
+    "bytes": 21932,
+    "encoding": "raw bytes",
+    "sha256": "525b0b988512db534a156447c9246710c3fe6c061e5459f64c77f92d12162d44"
+  },
+  "exported": {
+    "triangles": 1960,
+    "exportedMeshNodes": 42,
+    "exportedGeometries": 4,
+    "materials": 3,
+    "textures": 0,
+    "images": 0,
+    "gltfExtensions": [],
+    "boundsMetres": {
+      "x": 42.76,
+      "y": 2.59,
+      "z": 5.55
+    },
+    "trianglesPerSurface": {
+      "preview": 1960
+    }
+  },
+  "modules": [
+    "straight",
+    "corner",
+    "gate"
+  ],
+  "runtime": {
+    "consumer": "app/src/scene/fence/fenceField.ts",
+    "drawBudget": 3,
+    "surfaces": "Shared procedural timber TSL, oak palette, no texture images",
+    "note": "GLB nodes are authoring assemblies. The client fits the complete field and pen into two instance batches and a merged shadow; exported mesh count is not runtime draw count."
+  },
+  "sources": [
+    {
+      "path": "app/src/scene/fence/fenceKit.ts",
+      "sha256": "713e8f2ab628a41e63b0b2750ce37528b0101f4b1ad763f1c3ec01ccfd9dacf8"
+    },
+    {
+      "path": "app/src/scene/fence/fenceField.ts",
+      "sha256": "4cbfe53031e878004b5e12fae4b4ac3370d6dab22f0ba088b5103abc7791dd9f"
+    },
+    {
+      "path": "app/src/scene/fence/fenceShadowMotion.ts",
+      "sha256": "0dc8b860ee568b865b43e636d404d290954ba3374a954b52da8aa2180fc470af"
+    },
+    {
+      "path": "app/src/scene/FenceLine.tsx",
+      "sha256": "b69823199f524f166c536b486a7d945eda83301184bd0b898aa4aab83c0b9cf5"
+    },
+    {
+      "path": "app/src/scene/fence/fieldSections.ts",
+      "sha256": "89461008752653d835d25d1d4e47ba524885519dafb74706a24d8d54efa6bf46"
+    },
+    {
+      "path": "app/src/tsl/palette.ts",
+      "sha256": "29a817ba79c2d8b5588b183d849a66134c30833565d58d4cc00a2a603b6ace7f"
+    },
+    {
+      "path": "app/src/scene/fence/buildMeshes.ts",
+      "sha256": "8c25f8052b5e405518eed945bfc6ea47cce31363bb034388bbd9bb1b26ed4065"
+    },
+    {
+      "path": "app/src/scene/fence/timberMaterial.ts",
+      "sha256": "16d209c75530b58995d645a7891ccbeba1eac0193f1738e086cab8445a060200"
+    },
+    {
+      "path": "app/src/scene/fence/timberStyle.ts",
+      "sha256": "eb9fa8fcdba664b9282d5e4d70d127938f2286f60d5890f85973d1c49928256c"
+    }
+  ]
+}

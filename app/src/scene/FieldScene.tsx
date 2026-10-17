@@ -15,7 +15,7 @@ import { Dog } from './Dog';
 import { GateGuidance } from './GateGuidance';
 import { Farmhouse, preloadFarmhouse } from './Farmhouse';
 import { Farmer } from './Farmer';
-import { FenceLine } from './FenceLine';
+import { FenceLine, preloadFence } from './FenceLine';
 import { Flock } from './Flock';
 import { GrassField } from './GrassField';
 import { Pen } from './Pen';
@@ -44,6 +44,7 @@ export function preloadFieldSceneAssets(report?: BootReporter): void {
   void loadScatterManifest((value) => report?.('scatter', value));
   preloadFarmhouse();
   preloadTreeline();
+  preloadFence();
 }
 
 /**

@@ -47,6 +47,7 @@ import {
   type TSLNode,
 } from '@app/tsl/nodes';
 import { bandedTimber, screenTone, sideness, timberLevel } from './timberBands';
+import { DEFAULT_TIMBER_STYLE, type TimberStyle } from './timberStyle';
 import {
   AERIAL,
   AERIAL_FAR,
@@ -55,14 +56,12 @@ import {
   AERIAL_NEAR,
   ARRIS,
   ARRIS_LIFT,
-  BANDS,
   BLEACH_SPREAD,
   COLLAR,
   COLLAR_LIFT,
   GRAIN,
   HEAD,
   HEAD_LIFT,
-  OUTLINE,
   RAIL_SECTION,
   SOIL,
   SOIL_HEIGHT,
@@ -112,14 +111,14 @@ function grain(kind: TimberKind, timber: TSLNode, up01: TSLNode): TSLNode {
   const point =
     kind === 'post'
       ? vec3(
-          positionLocal.x.mul(timber.w).mul(float(across)),
+          positionGeometry.x.mul(timber.w).mul(float(across)),
           up01.mul(timber.z).mul(float(GRAIN.along)),
-          positionLocal.z.mul(timber.w).mul(float(across)),
+          positionGeometry.z.mul(timber.w).mul(float(across)),
         )
       : vec3(
-          positionLocal.x.mul(timber.z).mul(float(GRAIN.along)),
-          positionLocal.y.mul(float(RAIL_SECTION * across)),
-          positionLocal.z.mul(float(RAIL_SECTION * across)),
+          positionGeometry.x.mul(timber.z).mul(float(GRAIN.along)),
+          positionGeometry.y.mul(float(RAIL_SECTION * across)),
+          positionGeometry.z.mul(float(RAIL_SECTION * across)),
         );
   // Offset per instance, or every stick in the run shows the same board.
   const seed = timber.x;
@@ -143,13 +142,17 @@ export function makeTimberMaterial(
   data: THREE.InstancedBufferAttribute,
   inverse: THREE.InstancedBufferAttribute,
   kind: TimberKind,
+  style: TimberStyle = DEFAULT_TIMBER_STYLE,
 ): THREE.MeshBasicNodeMaterial {
   const material = new THREE.MeshBasicNodeMaterial();
   const timber: TSLNode = instancedBufferAttribute(data, 'vec4');
   const inverseScale: TSLNode = instancedBufferAttribute(inverse, 'vec3');
   const outlineMask = step(float(0.5), uv().x);
   const seed = timber.x;
-  const up01 = positionLocal.y.add(float(0.5));
+  // The authored unit stock, before instancing (spec/05). positionLocal has
+  // already received the instance matrix: using it here turned head highlights
+  // and foot stains into field-height bands and moved grain between placements.
+  const up01 = positionGeometry.y.add(float(0.5));
 
   // A post is line stock, pier shaft or pier head; a rail is line, leaf, iron or
   // pier head. One index, four boxes, no second material.
@@ -166,13 +169,13 @@ export function makeTimberMaterial(
   const side = sideness();
   const arris =
     kind === 'rail'
-      ? smoothstep(float(ARRIS[0]), float(ARRIS[1]), positionLocal.y).mul(side)
-      : smoothstep(float(HEAD[0]), float(HEAD[1]), positionLocal.y);
+      ? smoothstep(float(ARRIS[0]), float(ARRIS[1]), positionGeometry.y).mul(side)
+      : smoothstep(float(HEAD[0]), float(HEAD[1]), positionGeometry.y);
   const lift = kind === 'rail' ? arris.mul(float(ARRIS_LIFT)) : arris.mul(float(HEAD_LIFT));
   const collar = kind === 'post'
     ? smoothstep(float(COLLAR[0]), float(COLLAR[1]), up01).mul(isGate).mul(float(COLLAR_LIFT))
     : float(0);
-  const drop = smoothstep(float(UNDER[0]), float(UNDER[1]), positionLocal.y.negate())
+  const drop = smoothstep(float(UNDER[0]), float(UNDER[1]), positionGeometry.y.negate())
     .mul(side)
     .mul(float(UNDER_DROP));
 
@@ -182,15 +185,15 @@ export function makeTimberMaterial(
   // four materials: the gate costs instances, never a draw call.
   const banded =
     kind === 'post'
-      ? bandedTimber(BANDS.line!, level)
+      ? bandedTimber(style.bands.line, level)
           .mul(isLine)
-          .add(bandedTimber(BANDS.gate!, level).mul(isGate))
-          .add(bandedTimber(BANDS.cap!, level).mul(isCap))
-      : bandedTimber(BANDS.line!, level)
+          .add(bandedTimber(style.bands.gate, level).mul(isGate))
+          .add(bandedTimber(style.bands.cap, level).mul(isCap))
+      : bandedTimber(style.bands.line, level)
           .mul(isLine)
-          .add(bandedTimber(BANDS.leaf!, level).mul(isLeaf))
-          .add(bandedTimber(BANDS.iron!, level).mul(isIron))
-          .add(bandedTimber(BANDS.cap!, level).mul(isCap));
+          .add(bandedTimber(style.bands.leaf, level).mul(isLeaf))
+          .add(bandedTimber(style.bands.iron, level).mul(isIron))
+          .add(bandedTimber(style.bands.cap, level).mul(isCap));
 
   // Only line stock has been left out to silver, and only a little: this is one
   // board weathering faster than its neighbour, not a second material.
@@ -235,15 +238,15 @@ export function makeTimberMaterial(
   const collarHeight = positionGeometry.y.add(float(0.5));
   const painted = isGate.mul(smoothstep(float(0.42), float(0.45), collarHeight))
     .mul(float(1).sub(smoothstep(float(0.84), float(0.87), collarHeight)));
-  const markedWood = mix(wood, color(PALETTE.gatePaint).mul(level.mul(float(0.35)).add(float(0.8))), painted.mul(float(0.9)));
+  const markedWood = mix(wood, color(PALETTE.gatePaint).mul(level.mul(float(0.35)).add(float(0.8))), painted.mul(float(style.gatePaintStrength)));
   const surfaceColor = mix(markedWood, color(screenTone(AERIAL)), aerial.mul(damp));
   const outlineColor = mix(
-    color(screenTone(OUTLINE)),
+    color(screenTone(style.outlineColor)),
     color(screenTone(AERIAL)),
     aerial,
   );
   material.positionNode = positionLocal.add(
-    normalLocal.mul(inverseScale).mul(float(OUTLINE_WIDTH)).mul(outlineMask),
+    normalLocal.mul(inverseScale).mul(float(style.outlineWidth)).mul(outlineMask),
   );
   material.colorNode = mix(surfaceColor, outlineColor, outlineMask);
   return material;
@@ -254,14 +257,3 @@ function aerialAmount(): TSLNode {
   const viewDistance = length(positionWorld.sub(cameraPosition));
   return smoothstep(float(AERIAL_NEAR), float(AERIAL_FAR), viewDistance).mul(float(AERIAL_MAX));
 }
-
-/**
- * How far the outline hull stands off the timber, metres, at every point on it.
- *
- * Down by a third. The line has to survive the Follow camera without eating the
- * asset at the near one: at 12 m a centimetre and a half of shell is drawn on
- * BOTH edges of a 9 cm rail, which is a third of the board spent on its own
- * outline, and it is why the run measured as alternating light and near-black
- * stripes rather than as timber.
- */
-export const OUTLINE_WIDTH = 0.009;

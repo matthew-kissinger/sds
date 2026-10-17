@@ -4,6 +4,27 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.5.0] - 2026-10-17
+
+### Changed
+
+- The full field perimeter and pen use the Kiln-authored mortised oak fence
+  kit: pointed posts, broad rails, braced corners and matched swept-top gate
+  leaves. Procedural timber surfaces and outlines remain shared across both
+  renderer backends. Posts, rails with moving leaves, and pooled shadows use
+  three fence draws. The editable recipe, GLB and provenance ledger are included.
+
+### Fixed
+
+- The farmhouse faces parallel to the pen's side fence. The barn is centred
+  behind the pen and gate, with its front parallel to the back fence.
+- Both barn roof ends match; the hayloft leaves are closed symmetrically and
+  retain separate pivots. A compact wall hoist replaces the projecting hood.
+- Fence grain and wear use geometry coordinates before instancing. Gate shadows
+  follow the moving leaves within the existing pooled draw.
+- Terrain pads, grass footprints and world placements follow the aligned
+  homestead; the deterministic treeline now contains 137 stands.
+
 ## [3.4.1] - 2026-10-17
 
 ### Changed
