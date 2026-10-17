@@ -65,20 +65,19 @@ describe('cloudflare.config.ts says what wrangler.toml says', () => {
     expect(cf('preview').previewUrls).toBe(true);
   });
 
-  it('serves sheepdogsim.com from production only: the apex Custom Domain and, for now, the route', () => {
-    // 3.3.1 (docs/operations/declarative-hosting.md): the apex is a Custom
-    // Domain owned by the deploy; the route stays one release as the
-    // rollback and goes next. wrangler.toml knows routes only; it is read by
-    // the D1 scripts and by the wrangler-built tags, never by this deploy.
+  it('serves sheepdogsim.com from production only, by its Custom Domain, and declares no route anywhere', () => {
+    // 3.3.1 made the apex a Custom Domain owned by the deploy; 3.3.2 deleted
+    // the Release 1 route (docs/operations/declarative-hosting.md). A route
+    // declared in either file would be published again by a deploy of it,
+    // so neither declares one. wrangler.toml is read by the D1 scripts and
+    // by the wrangler-built tags, never by this deploy.
     expect(cf('production').domains).toEqual(['sheepdogsim.com']);
-    expect(cf('production').triggers).toEqual([
-      { type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' },
-    ]);
-    expect(wrangler().routes).toEqual([{ pattern: 'sheepdogsim.com/*', zone_name: 'sheepdogsim.com' }]);
+    expect(cf('production').triggers).toBeUndefined();
+    expect(wrangler().routes ?? []).toEqual([]);
     // A preview must never claim a production hostname, by route or domain.
     expect(cf('preview').domains).toBeUndefined();
     expect(cf('preview').triggers).toBeUndefined();
-    expect(wrangler('preview').routes).toEqual([]);
+    expect(wrangler('preview').routes ?? []).toEqual([]);
   });
 
   it('binds each Worker to its own D1, the assets and the JWT secret, and to nothing else', () => {

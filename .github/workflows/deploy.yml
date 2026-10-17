@@ -116,8 +116,9 @@ jobs:
         run: node scripts/verify-release-manifest.mjs --path "$BUILD_OUTPUT/workers/default/assets/release.json" --sha "${{ steps.source.outputs.sha }}" --require-v3-static
 
       # The deploy ships exactly this Build Output, so prove it carries the
-      # production name, route, D1 id, no Durable Object export and an assets
-      # directory that holds release.json, before anything is uploaded.
+      # production name, the apex Custom Domain and no route, the D1 id, no
+      # Durable Object export and an assets directory that holds release.json,
+      # before anything is uploaded.
       - name: Verify the Build Output
         run: node scripts/verify-deploy-config.mjs --cf
 
@@ -139,10 +140,10 @@ jobs:
         working-directory: app
         run: npx cf deploy --dry-run --prebuilt --no-provision
 
-      # `cf deploy`, never `versions create`: only a deploy publishes the route
-      # and becomes the Worker's active deployment. It uploads the game as the
-      # Worker's assets and the API code as one version, so it must run after
-      # the build and the checks above.
+      # `cf deploy`, never `versions create`: only a deploy publishes the
+      # Custom Domain and becomes the Worker's active deployment. It uploads
+      # the game as the Worker's assets and the API code as one version, so it
+      # must run after the build and the checks above.
       - name: Deploy sds-worker with the game's assets
         working-directory: app
         env:
@@ -153,8 +154,8 @@ jobs:
       - name: Verify live release identity
         run: node scripts/verify-release-manifest.mjs --url https://sheepdogsim.com/release.json --sha "${{ steps.source.outputs.sha }}" --retries 12
 
-      # Content types, not status codes: an unrouted sheepdogsim.com/api/*
-      # answers 200 text/html from the Pages fallback.
+      # Content types, not status codes: a sheepdogsim.com/api/* that reached
+      # the asset layer instead of the Worker would answer 200 text/html.
       - name: Verify the game and API share sheepdogsim.com
         run: node scripts/verify-worker-origin.mjs --url https://sheepdogsim.com --sha "${{ steps.source.outputs.sha }}" --retries 12
 

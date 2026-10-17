@@ -22,7 +22,7 @@ const production = () => ({
   compatibility_flags: ['nodejs_compat'],
   workers_dev: true,
   preview_urls: false,
-  routes: [{ pattern: 'sheepdogsim.com/*', zone_name: 'sheepdogsim.com' }],
+  routes: [],
   observability: { enabled: true },
   upload_source_maps: true,
   durable_objects: { bindings: [] },
@@ -80,9 +80,9 @@ describe('verify-deploy-config', () => {
     expect(check(config).join('\n')).toMatch(/d1_databases:/);
   });
 
-  it('fails a dropped route', () => {
+  it('fails a route, which nothing declares since 3.3.2', () => {
     const config = production();
-    config.routes = [];
+    config.routes = [{ pattern: 'sheepdogsim.com/*', zone_name: 'sheepdogsim.com' }];
     expect(check(config).join('\n')).toMatch(/routes:/);
   });
 
@@ -95,8 +95,8 @@ describe('verify-deploy-config', () => {
   it('fails the preview configuration in production mode, and the reverse', () => {
     const failures = check(preview()).join('\n');
     expect(failures).toMatch(/name:/);
-    expect(failures).toMatch(/routes:/);
     expect(failures).toMatch(/preview_urls:/);
+    expect(failures).toMatch(/d1_databases:/);
     expect(check(production(), { preview: true }).join('\n')).toMatch(/name:/);
   });
 
@@ -151,7 +151,7 @@ const cfWorker = (preview = false) => ({
   observability: { enabled: true },
   workersDev: true,
   previewUrls: preview,
-  ...(preview ? {} : { domains: ['sheepdogsim.com'], triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] }),
+  ...(preview ? {} : { domains: ['sheepdogsim.com'] }),
   env: {
     ASSETS: { type: 'assets' },
     DB: { type: 'd1', name: preview ? 'sds-db-preview' : 'sds-db', id: preview ? PREVIEW_D1 : PRODUCTION_D1 },
@@ -192,12 +192,14 @@ describe('verify-deploy-config --cf', () => {
     expect(check(cfWorker(), 'production', { preview: true }).join('\n')).toMatch(/buildContext\.mode:/);
   });
 
-  it('fails a wrong D1, a dropped route, a preview route and a Durable Object export', () => {
+  it('fails a wrong D1, a route on either Worker and a Durable Object export', () => {
     const wrongDb = cfWorker();
     wrongDb.env.DB.id = PREVIEW_D1;
     expect(check(wrongDb, 'production').join('\n')).toMatch(/^env:/m);
-    const noRoute = { ...cfWorker(), triggers: [] };
-    expect(check(noRoute, 'production').join('\n')).toMatch(/^triggers:/m);
+    // Since 3.3.2 no route is declared: one that comes back would be
+    // re-published by every deploy (docs/operations/declarative-hosting.md).
+    const productionRoute = { ...cfWorker(), triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] };
+    expect(check(productionRoute, 'production').join('\n')).toMatch(/^triggers:/m);
     const previewRoute = { ...cfWorker(true), triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] };
     expect(check(previewRoute, 'preview', { preview: true }).join('\n')).toMatch(/^triggers:/m);
     const withExports = { ...cfWorker(), exports: { RoomDO: { type: 'durable-object', storage: 'sqlite' } } };

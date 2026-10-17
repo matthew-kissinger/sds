@@ -1,7 +1,8 @@
 # Declarative hosting: `sheepdogsim.com` as a Worker Custom Domain, the Pages project retired
 
-**Steps 1, 2 and 4 ran as release 3.3.1 on 2026-10-17 ("Production results"
-below; `docs/history/status-log.md`); steps 3 and 5 are the release after.**
+**Steps 1, 2 and 4 ran as release 3.3.1 and steps 3 and 5 as release 3.3.2,
+both on 2026-10-17 ("Production results" below; `docs/history/status-log.md`).
+The sequence is complete.**
 This is the Release 2 step after the `cf` cutover (`docs/operations/deployment.md`): the apex stops being a proxied
 CNAME to the dormant `sds-frontend` Pages project with a Worker route on top,
 and becomes a Custom Domain of `sds-worker` declared in

@@ -24,14 +24,15 @@ describe('sds-worker hosting configuration', () => {
     expect(preview.workers_dev).toBe(true);
   });
 
-  it('serves sheepdogsim.com by route, never by custom domain, and leaves /r/* free', () => {
-    expect(production.routes).toEqual([{ pattern: 'sheepdogsim.com/*', zone_name: 'sheepdogsim.com' }]);
-    expect(production.routes.some((route: any) => route.custom_domain)).toBe(false);
+  it('declares no route and no custom domain: sheepdogsim.com is declared in app/cloudflare.config.ts', () => {
+    // Since 3.3.2. A route here would be PUT by any wrangler deploy of this
+    // file, and the Custom Domain is cf's to publish; /r/* stays free.
+    expect(production.routes ?? []).toEqual([]);
   });
 
-  it('never lets the preview environment inherit the production route', () => {
+  it('gives the preview environment its own name and no route either', () => {
     expect(preview.name).toBe('sds-worker-preview');
-    expect(preview.routes).toEqual([]);
+    expect(preview.routes ?? []).toEqual([]);
   });
 
   it('uploads Worker source maps on purpose, not by the plugin default', () => {
