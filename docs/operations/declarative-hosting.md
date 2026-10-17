@@ -1,9 +1,8 @@
 # Declarative hosting: `sheepdogsim.com` as a Worker Custom Domain, the Pages project retired
 
-**Plan with its rehearsal done; the production steps run as release 3.3.1
-(step 1 and 2) and the release after (step 5), each recorded in
-`docs/history/status-log.md`.** This is the Release 2 step after the `cf`
-cutover (`docs/operations/deployment.md`): the apex stops being a proxied
+**Steps 1, 2 and 4 ran as release 3.3.1 on 2026-10-17 ("Production results"
+below; `docs/history/status-log.md`); steps 3 and 5 are the release after.**
+This is the Release 2 step after the `cf` cutover (`docs/operations/deployment.md`): the apex stops being a proxied
 CNAME to the dormant `sds-frontend` Pages project with a Worker route on top,
 and becomes a Custom Domain of `sds-worker` declared in
 `app/cloudflare.config.ts`, so the deploy owns the DNS record and the
@@ -294,8 +293,9 @@ owner's go.
 4. **Retire the Pages custom domain.** Dashboard: Workers & Pages >
    `sds-frontend` > Custom domains > `sheepdogsim.com` > Remove domain. Its
    CNAME is already gone (step 2). The project stays, with `sds-frontend.pages.dev`
-   and `7cea2cd2.sds-frontend.pages.dev`. Update `docs/operations/v2-rollback.md`
-   (fact 10) in the same change as step 5.
+   and `7cea2cd2.sds-frontend.pages.dev`. `docs/operations/v2-rollback.md`
+   (fact 10) is updated with it. Done 2026-10-17, right after step 2's
+   deploy; in hindsight it belongs before step 2 ("Production results", 3).
 5. **Follow-up release: drop the route from the config.** Remove `triggers`
    from the production mode; the verifier requires `triggers` empty and
    `domains` `['sheepdogsim.com']`; the config test and the wrangler test
@@ -314,6 +314,46 @@ After step 5 the repository declares every hosting fact it owns, and the zone
 holds exactly: the apex record and certificate the deploy created, the `www`
 placeholder record, the redirect rule, the Web Analytics mode, and the
 mail-hardening and CAA records from before.
+
+## Production results, 2026-10-17 (release 3.3.1)
+
+Order taken, to keep the gap off CI's clock: the owner's go, the apex CNAME
+deleted in the dashboard, the Custom Domain added in the dashboard (Workers &
+Pages > `sds-worker` > Domains > Add Domain > `sheepdogsim.com`, subdomain
+empty, Production), then the tag. Times UTC.
+
+1. **The gap was the dashboard navigation.** CNAME `46ad7bd1...` deleted
+   about 00:48:15; record `AAAA 100::` (proxied, read-only, owned by the
+   domain) and the advanced certificate pack created 00:49:34: about 80 s.
+   Deleting and adding from two prepared tabs would make it seconds.
+2. **The tag's deploy found the domain and said so.** `v3.3.1` pushed
+   00:49:53; `Deploy` 38988161939 green 00:52:52. `cf deploy` printed the
+   route and `sheepdogsim.com (custom domain)` under "Deployed sds-worker
+   triggers"; the dashboard-created domain and the declared one are the same
+   object, nothing duplicated. Version `588a8202`, `source: cf_cli`, live
+   00:52:45; the live verifiers passed.
+3. **Pages answered the apex for about two minutes, against fact 4.** From
+   the domain's creation until some time before 00:51:13, requests to the
+   apex returned the Pages project's 3.1.0 (ETag `06234d66...`, no
+   `CF-Cache-Status`), not the Worker, with the route in place throughout.
+   Then the Worker's 3.3.0, eight of eight requests, and the Pages custom
+   domain read `status: deactivated` (`verification_data.status:
+   deactivated`) without anyone touching it. Fact 4 held while the apex was
+   a CNAME to Pages; it did not hold in the window when the Pages custom
+   domain was still attached to a hostname whose record had just become
+   the Worker's. The step order for any future hostname: remove it from
+   Pages first (step 4 before step 2).
+4. **The certificate.** Pack `google`, advanced, TXT validation, hosts
+   `sheepdogsim.com` and `*.sheepdogsim.com`; `pending_validation` at 00:51,
+   `active` by 00:53 with two Google Trust Services certificates valid to
+   2027-01-15; the Universal certificate served meanwhile. The domain's
+   `cert_id` field is still empty (the dashboard lists the pack by hosts).
+5. **Retiring the Pages custom domain left the apex record alone.** "Remove
+   domain" on `sds-frontend` warned it would remove "the CNAME record
+   pointing to your project"; there was none, and the Worker's `AAAA` record
+   was unchanged afterwards. The project lists no custom domain; both
+   `pages.dev` hostnames still answer.
+6. **Not measured:** whether `cf` uploads source maps (the log does not say).
 
 ## Rollback summary
 
