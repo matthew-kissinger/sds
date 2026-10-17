@@ -5,6 +5,175 @@
 
 # Status log
 
+## Kiln oak - 2026-10-17, in review on its pull request, nothing flipped
+
+The owner asked, through the coordinating session, for a performant, painterly
+oak for the treeline, authored in Kiln: "just one tree type and variant for
+now", brought to a pull request ready for the look review and the hub receipt,
+with nothing flipped live. For the leaves the owner approved the plan as a
+whole: "Whatever the plan is, please enact on it." Branch
+`release2/oak-kiln`; `TREE_SOURCE` stays `'procedural'`.
+
+- **The asset.** `assets/treeline/kiln/oak.kiln.js` bakes (Kiln 1.2.3) to
+  `oak.glb`: one spreading oak, a buttressed bole that splits at 2.7 m into
+  five limbs and six branches under nine lobes of 56 geodesic leaf clusters,
+  each cut to one edge length (0.42 m: 180 to 720 faces a cluster). 371,876
+  bytes; 10,249 triangles (crown 8,947, wood 1,302) against a declared budget
+  of 11,000; QA accepted, no glTF errors or warnings. The cold bake reproduces
+  it byte for byte (`KILN_CLI=.../kiln-oss/dist/cli.mjs node
+  tools/record-tree-asset.mjs --check`). The recipe refuses a limb or branch
+  that ends outside a cluster or leaves the crown between two (`requireBuried`,
+  `requireCovered`) and drops faces buried inside another cluster.
+- **The channels.** `extras.treeChannels` version 1 on the root node: the
+  cluster's seed in `TEXCOORD_0.x`, the lobe's normal in `TANGENT`, Kiln's
+  `_CAVITY`; one `treeVariant` node, `spreading`.
+- **The runtime.** `treeline/kilnTree.ts` loads it: one buffer per role in the
+  tree's frame, fitted to the unit stand from the bake's bounds, the crown's
+  envelope derived, and a bake missing any record, attribute, variant or
+  material binding refused. `treeline/kilnTreeMaterials.ts` paints it (one
+  opaque material per role). `treeline/kilnOak.ts` hands both to the treeline
+  as one builder (`treeline/oakRoles.ts`), and `Treeline.tsx` splits into
+  `Treeline`, `KilnTreeline` and `TreelineMeshes`, so either oak takes the
+  same stands, matrices and pooled shadows and a `'procedural'` build carries
+  none of the Kiln oak: no loader, no materials, no GLB, no shader strings in
+  the bundle (checked by name).
+- **The lab and the ledger.** `Tree (Kiln)` and `Tree (procedural)` at one
+  frame, `tools/treeline-lab-capture.mjs` for the eight standard views;
+  `assets/treeline/kiln/asset-manifest.json` written by
+  `tools/record-tree-asset.mjs`.
+
+| | Procedural oak (ships) | Kiln oak |
+| --- | --- | --- |
+| Triangles a tree | 924 | 10,249 |
+| Across 139 stands | 128,436 | 1,424,611 |
+| Treeline draws | 3 | 3 |
+| Whole frame, Follow, high tier | 54 draws, 3,968,047 triangles | 54 draws, 5,264,222 triangles |
+| Whole frame, Classic, phone, low tier | 29 draws, 2,154,954 triangles | 29 draws, 3,451,129 triangles |
+| Crown fragment shader | about 70 operations, 2 sines | about 200, 3 sines |
+| Game JavaScript, gzip | 664,631 bytes (`main` 664,385) | 667,570 bytes |
+| Download | none | 371,876 bytes |
+
+Whole-frame counts are from the production art review (`oak-kiln-final`
+against `oak-procedural-baseline`, both under `captures/profiling/`,
+gitignored); every scenario keeps its draw count. Nothing culls the treeline,
+so the oak's 1.30 million triangles are a third more for the whole frame at
+the high tier and three fifths more at the low tier. Locally: typecheck (app,
+lab, worker), lint (no errors; three warnings in the generated
+`app/.cloudflare/types`), 872 tests in 105 files, the build,
+`verify-deploy-config.mjs --cf` and the release probe (`oakModels` 0, and 1 in
+a `'kiln'` build).
+
+How it got here. Iterations 1 to 3 in the lab: the first bakes, the wood's
+tubes rewound (they were inside out), and the leaf plan - lobe normals,
+subdivision, banded warm and cool light, dabs, swell and sway, backlight,
+banded bark. The review of iteration 3, through the coordinating session,
+kept the silhouettes, the warm-lit and cool-shade split, the solid bole foot
+and the calm Follow treeline, and asked for six things, which iterations 4 to
+7 answered:
+
+- Bubbles: the lighting normal is nine tenths the lobe's, then a quarter the
+  whole crown's (an ellipsoid the loader fits inside the crown's bounds), each
+  band edge a wide soft ramp, and the cavity squared so only deep folds
+  darken. Iteration 4 drew the backlight round every lobe and was itself
+  bubbly; the glow moved to the crown's envelope.
+- Dabs: crisp-edged, near the camera, on the terminator; full to 40 m, gone by
+  105 m. Iteration 6 speckled where a dab's threshold reached the ends of the
+  ramp; the thresholds now span its middle seven tenths.
+- Facets: clusters cut to one edge length, 3 to 6 subdivisions by size.
+- Shade: a greyer blue-green; the lit band held close to the body.
+- Wood: 18, 12 and 8 sides; a warm grey-brown with close bands and the field's
+  warm bounce on its shade side. The branch tip above the crown in view 04 is
+  buried: a new guard in the recipe, `requireCovered`, refuses a limb or
+  branch that comes back out of the crown between two clusters; it refused
+  branch 0's old route, and branch 0 now leaves the central leader.
+- Into the sun: the crown's edge takes a yellow-green glow (faint, by the
+  critic's reading below).
+
+The final pass split the builder out so the procedural build carries nothing;
+no change to the picture. Stills: `captures/treeline/final/` (both backends,
+both subjects) and the production review above.
+
+Decisions:
+
+- **Widened deliberately.** `tests/treeline-assets.spec.ts` allowed the runtime
+  two GLBs, the farmhouse and the barn, each pinned by its ledger. It now
+  allows the oak as a third, from one table of loader, model, ledger and built
+  name; the test's comment says so with the date. The release probe counts
+  each Kiln model in `dist/` and fails one that enters more than once.
+- **The reference images are not committed.** The owner supplied two; the
+  first's provenance is unknown and the second is a Studio Ghibli film frame
+  (the repository is public). `assets/treeline/kiln/README.md` describes both
+  with size and SHA-256. Open with the owner: where the first came from.
+- **The lobe normal rides in `TANGENT`.** Kiln's GLB bridge writes no other
+  vertex attribute; `treeChannels` records the substitution.
+- **The crown's envelope comes from the loader**, from the bake's bounds,
+  rather than from a record in the bake or per stand.
+- **Fixed in passing.** `tools/art-review.mjs` has used `repo` without
+  importing it since `e964cd21` and failed "repo is not defined"; the import
+  is back.
+
+Kiln, as used here (bug, missing capability, docs gap, fine):
+
+| What | Class | Worked around |
+| --- | --- | --- |
+| No tree, branch, canopy or cluster helpers | missing capability | The recipe builds its own geodesic clusters, tubes and Catmull-Rom limbs |
+| The cavity bake is a hemisphere about the surface normal; foliage wants sky visibility | missing capability | Used for deep folds only, squared |
+| The GLB bridge drops any vertex attribute beyond POSITION, NORMAL, TEXCOORD_0, TANGENT and `_EDGE`/`_CAVITY` | missing capability | The lobe normal in TANGENT, recorded |
+| An error thrown in a recipe surfaces as "Generated asset execution was rejected", with no message or line, and there is no `validate` command | bug | A local dry run of the recipe outside Kiln |
+| `gameMaterial` defaults to flat shading | fine | `flatShading: false` |
+| Byte-identical cold bake; `programRef` is the recipe's SHA-256 prefix | fine | |
+| QA cannot certify part volumes for open shells ("Not manifold") | fine | The crown is open by design |
+
+Self-review, by a separate critic on `spec/prompts/harsh-critic.md`, from the
+production captures (the lab stills only to name causes): silhouette 6, ramp
+discipline 6, palette cohesion 7, painterly conviction 5, readability 7, life
+6 (provisional; stills cannot judge motion), screenshot test 4. **ITERATE**,
+and past the fifth iteration the template makes that **ESCALATE**, with this
+diagnosis: the crown is a pile of spheres, each lobe lit as its own sphere,
+where the reference paints a few big masses lit as one shape and breaks them
+into leaf-shaped strokes only where the light turns; until the light comes
+from the crown's overall shape, changes to colour, dabs or contrast will keep
+reading as bubbles. Like for like at Follow the critic would still take the
+Kiln oak over the shipped one, a full, soft countryside tree against a flat
+slab on a long maroon trunk, by a modest margin: a nicer generic tree, not yet
+the Ghibli oak. At Classic the ring is out of frame in both builds. Its notes,
+by impact:
+
+1. Light the crown as one shape: about three quarters of the light from the
+   crown's envelope, the lobe's normal kept for the dabs and the rim (the leaf
+   material). One constant: a trial with `CROWN_WEIGHT` at 0.75 is in
+   `captures/treeline/option-crown75/` (views 01, 02, 03, 05), where the
+   body of the crown reads as one shaded mass under lit tops. Not adopted:
+   the loop is past five iterations, so it is the owner's call.
+2. A sap-green middle stop at the turn, a deeper blue-green for the crown's
+   interior from an occlusion value the recipe would bake, the lit stop a
+   tenth darker and still warm, and the bark's shade toward violet-brown
+   (palette and materials).
+3. Three lobe sizes, sunk into one another, instead of equal scallops (the
+   recipe). It keeps the outline but changes its rhythm.
+4. Dabs as crisp cellular clusters around the turn, gone by 60 to 70 m (the
+   leaf material).
+5. A stronger glow into the sun, and a Follow capture that faces it.
+6. Seen from directly below (lab view 04), where a limb enters a cluster's
+   underside it reads as a blunt end. The critic took these for limb ends;
+   they are entries, since the recipe's guards bury every tip, but the read
+   is the same. Not visible on the ring.
+
+Outside the notes, because it changes a kept silhouette: the crown is about
+1.45:1 wide to tall against the reference's 1.9:1, with its limbs hidden, and
+that is most of why it reads as a round tree rather than a spreading oak at
+Follow. Art is UNREVIEWED by the owner; physical phones are NOT_TESTED.
+
+Not verified: performance. This PC's timings are not evidence, and the art
+review's boot and frame checks fail here for the procedural baseline exactly
+as for the Kiln build. Motion is judged from three frames a scenario only;
+physical phones are untested. Next, in order: the owner's look review on the
+production build (the lab's `Tree (Kiln)` subject and a `TREE_SOURCE = 'kiln'`
+build); a hub receipt over `ssh hub` with `tools/hub-presentation-probe.mjs`
+on both builds, both backends, Classic and Follow, desktop and the phone
+viewport (which runs the low tier); then the flip in its own commit, with the
+CHANGELOG entry in the release that ships it.
+
 ## Release 3.3.2 - 2026-10-17, the route deleted, the Custom Domain alone serves `sheepdogsim.com`
 
 The owner: "Do this task here: Release after 3.3.1: delete the route, drop

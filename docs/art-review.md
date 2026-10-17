@@ -54,6 +54,9 @@ Change the owner, not the symptom:
 
 - `tools/bake-sculpted-trees.mjs` owns crown proportions and connected wood.
   Run it to rebuild the committed geometry; `--check` verifies the output.
+- `assets/treeline/kiln/oak.kiln.js` owns the Kiln oak's crown and wood, which
+  ship only when `TREE_SOURCE` is `kiln`; `treeline/kilnTreeMaterials.ts` owns
+  its light. Re-bake with Kiln and re-record with `tools/record-tree-asset.mjs`.
 - `tsl/palette.ts` owns tree, bark, cloud and sky colors.
 - `tsl/sky.ts` owns the cloud masses and the sun disc.
 - `Atmosphere.tsx` and `PostProcessing.tsx` own haze and high-tier bloom.
