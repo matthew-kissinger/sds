@@ -33,9 +33,10 @@ function parsed(): Promise<KilnBarn> {
 }
 
 interface GltfJson {
-  nodes: { name?: string; extras?: Record<string, unknown> }[];
+  nodes: { name?: string; extras?: Record<string, unknown>; mesh?: number; translation?: number[]; rotation?: number[]; children?: number[] }[];
   meshes: { primitives: { attributes: Record<string, number> }[] }[];
   materials: { name?: string }[];
+  accessors: { min?: number[]; max?: number[] }[];
 }
 
 /** The GLB's JSON chunk, as written. */
@@ -122,14 +123,45 @@ const TO_KNEE = 5.693;
 const TO_RIDGE = 8.821;
 
 describe('Kiln barn import', () => {
+  it('keeps matching closed hayloft leaves on separate named hinges', () => {
+    const json = gltfJson();
+    const leaf = (side: 'South' | 'North') => {
+      const name = `HayDoor${side}`;
+      const hinge = json.nodes.find((node) => node.name === `Joint_${name}`)!;
+      expect(hinge).toBeDefined();
+      expect(hinge.rotation ?? [0, 0, 0, 1]).toEqual([0, 0, 0, 1]);
+      const children = hinge.children!.map((index) => json.nodes[index]!);
+      expect(children.map((node) => node.name).sort()).toEqual([`Mesh_${name}_Boards`, `Mesh_${name}_Ledges`]);
+      const bounds = Object.fromEntries(children.map((node) => {
+        const position = json.meshes[node.mesh!]!.primitives[0]!.attributes.POSITION!;
+        return [node.name!.split('_').at(-1)!, json.accessors[position]!];
+      }));
+      return { hinge, bounds };
+    };
+    const south = leaf('South');
+    const north = leaf('North');
+    expect(south.hinge.translation).toEqual([-8.3, 0, -0.8]);
+    expect(north.hinge.translation).toEqual([-8.3, 0, 0.8]);
+    for (const part of ['Boards', 'Ledges']) {
+      const a = south.bounds[part]!;
+      const b = north.bounds[part]!;
+      for (const axis of [0, 1]) {
+        expect(a.min![axis]).toBeCloseTo(b.min![axis]!, 5);
+        expect(a.max![axis]).toBeCloseTo(b.max![axis]!, 5);
+      }
+      expect(a.min![2]).toBeCloseTo(-b.max![2]!, 5);
+      expect(a.max![2]).toBeCloseTo(-b.min![2]!, 5);
+    }
+  });
+
   it('names a source the game can draw', () => {
     expect(['procedural', 'kiln']).toContain(BARN_SOURCE);
   });
 
-  it('welds the 42 baked meshes into one triangle list per band set', async () => {
+  it('welds the 41 baked meshes into one triangle list per band set', async () => {
     const kiln = await parsed();
-    expect(kiln.sourceNodes).toBe(42);
-    expect(kiln.triangles).toBe(2350);
+    expect(kiln.sourceNodes).toBe(41);
+    expect(kiln.triangles).toBe(2024);
     expect(Object.keys(kiln.parts).sort()).toEqual(['barn', 'dress', 'lamp', 'opening', 'roof', 'timber']);
     let triangles = 0;
     for (const part of Object.values(kiln.parts)) {
@@ -414,6 +446,34 @@ describe('Kiln barn on its pad', () => {
 });
 
 describe('Kiln barn outline envelope', () => {
+  it('finishes both gambrel ends at matching verges, with a symmetric ridge roll', async () => {
+    const { parts } = await parsed();
+    const slate = [...corners(parts.roof!)];
+    expect(Math.min(...slate.map((c) => c.x))).toBeCloseTo(-XV - 0.04, 4);
+    expect(Math.max(...slate.map((c) => c.x))).toBeCloseTo(XV + 0.04, 4);
+    // Compare end-face area, including the upper verge formerly omitted under
+    // the pointed hay hood. Surface-channel splits may triangulate differently
+    // on opposite windings; the covered area must match at each roof pitch.
+    const timber = [...corners(parts.timber!)];
+    const verge = (side: number): number[] => {
+      const areas = [0, 0, 0];
+      for (let i = 0; i < timber.length; i += 3) {
+        const [a, b, c] = timber.slice(i, i + 3) as [Corner, Corner, Corner];
+        if (![a, b, c].every((p) => Math.abs(p.x - side * XV) < 1e-3 && p.nx * side > 0.99)) continue;
+        const area = Math.abs((b.y - a.y) * (c.z - a.z) - (b.z - a.z) * (c.y - a.y)) / 2;
+        const height = (a.y + b.y + c.y) / 3;
+        areas[height < 5 ? 0 : height < 9.3 ? 1 : 2]! += area;
+      }
+      return areas;
+    };
+    const east = verge(1);
+    const west = verge(-1);
+    for (let i = 0; i < east.length; i++) {
+      expect(east[i]).toBeGreaterThan(0);
+      expect(west[i]).toBeCloseTo(east[i]!, 4);
+    }
+  });
+
   // The farmhouse's envelope is a hand copy of its roof (KILN_ROOF), and the copy
   // drifted until the outline drew a ledge under both eaves. The barn's is the
   // bake's own record; these hold the record to the baked geometry, and the hull

@@ -9,7 +9,7 @@ import { HOME_FIELD } from '@sim/field';
 import {
   FIELD_FENCE_SECTIONS,
   RETIREMENT_PASTURE_FENCE,
-} from '@app/scene/FenceLine';
+} from '@app/scene/fence/fieldSections';
 import { buildPosts, buildRails } from '@app/scene/fence/buildMeshes';
 import type { GateLeafAssembly } from '@app/scene/fence/gateKit';
 import {
@@ -23,7 +23,7 @@ import type { PostPlacement, RailPlacement } from '@app/scene/fence/placement';
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
 describe('field fence GPU batching', () => {
-  it('submits the perimeter and pen through one RectFence component', () => {
+  it('shares the perimeter and pen outline with the procedural fallback', () => {
     expect(FIELD_FENCE_SECTIONS).toHaveLength(2);
     expect(FIELD_FENCE_SECTIONS[0]).toMatchObject({
       rect: HOME_FIELD.bounds,
@@ -41,7 +41,7 @@ describe('field fence GPU batching', () => {
     expect(pen).not.toContain('<RectFence');
   });
 
-  it('builds one post, rail, and shadow batch for every section', () => {
+  it('keeps the procedural fallback at one post, rail and shadow batch', () => {
     const component = source('app/src/scene/RectFence.tsx');
     expect(component.match(/\.\.\.buildPosts\(/g)).toHaveLength(1);
     expect(component.match(/buildRails\(/g)).toHaveLength(1);

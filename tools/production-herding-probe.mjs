@@ -38,6 +38,7 @@ const flock = Number(process.argv.find(x => x.startsWith('--flock='))?.slice(8) 
 const scoreUnavailable = process.argv.includes('--score-unavailable');
 const submissionUnavailable = process.argv.includes('--submission-unavailable');
 const nearComplete = process.argv.includes('--near-complete');
+const recordVideo = process.argv.includes('--record-video');
 if (scoreUnavailable && submissionUnavailable) throw new Error('Select one outage scenario');
 if (![25, 75, 200].includes(flock)) throw new Error('Invalid flock');
 const label = process.argv.find(x => x.startsWith('--label='))?.slice(8) ?? `production-herding${flock === 25 ? '' : `-${flock}`}`;
@@ -56,7 +57,8 @@ const report = { before: collectBuildReceipt(repo), flock, scoreUnavailable, sub
 try {
   server = await startPreviewServer(5364);
   browser = await chromium.launch({ channel: 'chrome', headless: false });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1,
+    ...(recordVideo ? { recordVideo: { dir: out, size: { width: 390, height: 844 } } } : {}) });
   page.on('pageerror', e => report.errors.push(String(e)));
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;

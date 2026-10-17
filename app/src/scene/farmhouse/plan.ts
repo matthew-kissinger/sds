@@ -16,8 +16,9 @@
  * TWO MASSES WITH PASTURE BETWEEN THEM. The house remains the east-side approach
  * landmark while the barn anchors the north rail. From down-field they occupy
  * separate thirds of the frame rather than collapsing into one roof cluster.
- * Their small yaw difference keeps the eaves from becoming parallel rulers, and
- * the open field between them preserves the gate approach as the dominant route.
+ * The house faces the pen squarely, with its front wall parallel to the pen's
+ * east rail. The open field between them preserves the gate approach as the
+ * dominant route.
  *
  * THE RANGE IS HIPPED AT ONE END AND GABLED AT THE OTHER, which is what breaks
  * the triangle-on-box read and, more importantly, is the only way to get a
@@ -29,28 +30,22 @@
  */
 
 import type { RoofSpec } from './roof';
+import { HOME_FIELD } from '@sim/field';
 
 /**
- * The bearing that splits sun from shadow across the approach, and the one number
- * here that was derived rather than composed. At 1.10 rad the range puts:
- *
- *   long wall (-z)   -> nDotL 0.74   key band, and 45 per cent facing the camera
- *   end wall (+x)    -> nDotL 0.02   deep shadow, and 89 per cent facing it
- *   near slope       -> nDotL 0.63   key band
- *   hip plane (+x)   -> nDotL 0.23   shadow band, and 74 per cent facing it
- *   lean-to slope    -> nDotL 0.61   key band, on its own shallow pitch
- *   wing near slope  -> nDotL 0.20   shadow band
- *   wing gable (SW)  -> nDotL 0.48   body band
- *
- * which is a three-value facade under one sun rather than one flat sheet of cream
- * with a roofline drawn on it.
+ * Owner-directed alignment (2026-10-17): the house stands east of the pen, whose
+ * east fence runs north-south. Its front is local -Z and its ridge is local X,
+ * so a quarter turn faces the front west into the pen and aligns the facade with
+ * that fence. The previous 1.10 rad bearing favoured light bands but left the
+ * house visibly skewed by about 27 degrees. Geometry, outline, shadows, smoke
+ * and the grass footprint all read this placement; rebake grass when it moves.
  */
-export const YAW = 1.1;
+export const YAW = Math.PI / 2;
 
 /**
  * The main range, hipped at its +x end. Long and narrow, and both are load
- * bearing: at this yaw the long wall is the lit plane and the end is the shadowed
- * one, so every metre traded from width into length is slate traded for cream.
+ * bearing: they keep the range readable above the pasture from the gameplay
+ * cameras, with a broad roof and a narrower end elevation.
  */
 export const HOUSE: RoofSpec = {
   length: 18.6,
@@ -116,14 +111,13 @@ export const BARN: RoofSpec = {
 export const HOUSE_AT = { x: 45.6, z: 113 } as const;
 
 /**
- * The barn beyond the pasture. Its nearest footprint corner stays more than six
- * metres north of the pasture's back rail at z = 130, while the twelve-metre
- * east offset keeps the gate axis open and gives the south cart door a clean read
- * between sheep and roof. A small yaw prevents the long eave from becoming a
- * ruler-straight tangent to the pasture rail without turning the facade away.
+ * Owner-directed alignment (2026-10-17): centre the barn behind the pen and
+ * gate, with its south facade parallel to the pen's back rail. This replaces
+ * the previous 12 m offset and 0.14 rad yaw. Keep the same northward setback;
+ * terrain pad, grass footprints and the ambient farmer route follow the move.
  */
-export const BARN_AT = { x: 12, z: 143 } as const;
-export const BARN_YAW = 0.14;
+export const BARN_AT = { x: HOME_FIELD.gate.position.x, z: 143 } as const;
+export const BARN_YAW = 0;
 
 /** How far along the range the wing is attached, and how far it stands out. */
 export const WING_ALONG = -3.35;
@@ -145,7 +139,8 @@ export const WING_SKEW = Math.PI / 2 - 0.26;
  * in the open it has earth behind it and sky over it and reads as what it is.
  */
 export const LOGS_AT = { x: 55.5, z: 106.5 } as const;
-export const LOGS_YAW = YAW - 0.35;
+/** Independent yard dressing: keep its bearing when the house is realigned. */
+export const LOGS_YAW = 0.75;
 
 /** Where along the ridge the chimney stands, how far down the near pitch it is
  *  seated, and how far its head rises above the ridge. */

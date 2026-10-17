@@ -129,7 +129,8 @@ if (
   || foliageManifest.field?.externalModels !== 0
   || foliageManifest.field?.sourceModels !== 0
   || foliageManifest.field?.textures !== 0
-  || foliageManifest.field?.treeInstances !== 139
+  // Centring the barn moved its keep-out pad; the deterministic ring now has 137 stands.
+  || foliageManifest.field?.treeInstances !== 137
   || foliageManifest.field?.shrubInstances !== 0
   || foliageManifest.field?.draws !== 3
   || !(foliageManifest.field?.submittedTrianglesBeforeShadows < 400_000)
@@ -172,7 +173,7 @@ for (const source of foliageManifest.sources) {
     || geometry.provenance?.license !== source.license
     || geometry.geometry?.foliage?.triangles !== foliageManifest.geometry?.crownTriangles
     || geometry.geometry?.wood?.triangles !== foliageManifest.geometry?.trunkTriangles
-    || (geometry.geometry.foliage.triangles + geometry.geometry.wood.triangles) * 139
+    || (geometry.geometry.foliage.triangles + geometry.geometry.wood.triangles) * 137
       !== foliageManifest.field.submittedTrianglesBeforeShadows
   ) fail('baked foliage geometry does not match its authoring ledger');
 }
@@ -189,13 +190,15 @@ for (const path of [
 // The models the runtime may load are the Kiln models: the farmhouse
 // (app/src/scene/farmhouse/kilnHouse.ts) when FARMHOUSE_SOURCE is 'kiln', the
 // barn (kilnBarn.ts) when BARN_SOURCE is 'kiln', and the treeline's oak
-// (app/src/scene/treeline/kilnTree.ts) when TREE_SOURCE is 'kiln'. Each must be
+// (app/src/scene/treeline/kilnTree.ts) when TREE_SOURCE is 'kiln', and the
+// owner-approved fence kit (app/src/scene/fence/fenceKit.ts). Each must be
 // its recorded bake, byte for byte, and in dist at most once. Anything else is
 // a model the licence ledger does not cover.
 const kilnModels = [
   { name: 'farmhouse', ledger: 'assets/house/asset-manifest.json' },
   { name: 'barn', ledger: 'assets/barn/asset-manifest.json' },
   { name: 'oak', ledger: 'assets/treeline/kiln/asset-manifest.json' },
+  { name: 'fence-kit', ledger: 'assets/fence/asset-manifest.json' },
 ].map(({ name, ledger }) => ({
   name,
   pattern: new RegExp(`(^|[\\\\/])${name}-[\\w-]+\\.glb$`),
@@ -217,6 +220,8 @@ const modelCount = (name) => builtModels.filter((model) => model === name).lengt
 const farmhouseModels = modelCount('farmhouse');
 const barnModels = modelCount('barn');
 const oakModels = modelCount('oak');
+const fenceModels = modelCount('fence-kit');
+if (fenceModels !== 1) fail(`expected exactly one recorded Kiln fence kit, found ${fenceModels}`);
 if (farmhouseModels > 1 || barnModels > 1 || oakModels > 1) {
   fail(`a Kiln model entered dist more than once: ${farmhouseModels} farmhouse, ${barnModels} barn, ${oakModels} oak`);
 }

@@ -25,6 +25,7 @@ import type { PostPlacement, RailPlacement } from './placement';
 import type { GateLeafAssembly } from './gateKit';
 import { postTimberGeometry, railTimberGeometry } from './postGeometry';
 import { makeTimberMaterial } from './timberMaterial';
+import { DEFAULT_TIMBER_STYLE, type TimberStyle } from './timberStyle';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const ALONG = new THREE.Vector3(1, 0, 0);
@@ -44,7 +45,10 @@ function instanced(
 }
 
 /** One surface-plus-outline instance batch for every post, line and pier alike. */
-export function buildPosts(posts: readonly PostPlacement[]): THREE.InstancedMesh[] {
+export function buildPosts(
+  posts: readonly PostPlacement[],
+  style: TimberStyle = DEFAULT_TIMBER_STYLE,
+): THREE.InstancedMesh[] {
   const count = posts.length;
   const data = new Float32Array(count * 4);
   const inverse = new Float32Array(count * 3);
@@ -82,6 +86,7 @@ export function buildPosts(posts: readonly PostPlacement[]): THREE.InstancedMesh
     new THREE.InstancedBufferAttribute(data, 4),
     new THREE.InstancedBufferAttribute(inverse, 3),
     'post',
+    style,
   );
   return [
     instanced(postTimberGeometry(), material, matrices, count),
@@ -103,6 +108,7 @@ export interface FenceRailBatch {
 export function buildRails(
   rails: readonly RailPlacement[],
   leaves: readonly GateLeafAssembly[] = [],
+  style: TimberStyle = DEFAULT_TIMBER_STYLE,
 ): FenceRailBatch {
   let gateCount = 0;
   for (const leaf of leaves) gateCount += leaf.parts.length;
@@ -164,6 +170,7 @@ export function buildRails(
     new THREE.InstancedBufferAttribute(data, 4),
     new THREE.InstancedBufferAttribute(inverse, 3),
     'rail',
+    style,
   );
   const solid = instanced(railTimberGeometry(), material, matrices, count);
   const matrixAttributes = [solid.instanceMatrix] as const;

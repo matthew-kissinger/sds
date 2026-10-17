@@ -84,8 +84,8 @@ const PAD_RECIPE = {
   penRim: 16,
   /** The farmhouse site, east of the pen. Offsets from the pen rect. */
   farmhouse: { eastOffset: 10, width: 36, northOffset: 2, depth: 36, rim: 16 },
-  /** The barn site, beyond the retirement pasture. Offsets from its north-west. */
-  barn: { westInset: 28, width: 28, northGap: 5, depth: 18, rim: 14 },
+  /** The barn site, centred on the gate behind the retirement pasture. */
+  barn: { width: 28, northGap: 5, depth: 18, rim: 14 },
 };
 
 // ---------------------------------------------------------------------------
@@ -233,8 +233,8 @@ const PAD_RECTS = [
     // pad begins north of its back rail, and shares the farmyard terrace so the
     // narrow grass interval between rail and building cannot form a step.
     id: 'barn',
-    minX: pen.minX + barn.westInset,
-    maxX: pen.minX + barn.westInset + barn.width,
+    minX: HOME_FIELD.gate.position.x - barn.width / 2,
+    maxX: HOME_FIELD.gate.position.x + barn.width / 2,
     minZ: pen.maxZ + barn.northGap,
     maxZ: pen.maxZ + barn.northGap + barn.depth,
     rim: barn.rim,

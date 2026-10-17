@@ -143,6 +143,12 @@ function Controls() {
       </div>
       <p style={{ margin: '0 0 14px', fontSize: '11px', opacity: 0.7 }}>{subject.note}</p>
 
+      {lab.subject.startsWith('kiln-fence') && <div style={row}>
+        <Button on={lab.fenceClosed} onClick={() => lab.setFenceClosed(!lab.fenceClosed)}>
+          {lab.fenceClosed ? 'Gate closed' : 'Gate open'}
+        </Button>
+      </div>}
+
       <span style={label}>View</span>
       <div style={row}>
         {VIEWS.map((entry) => (
@@ -194,8 +200,8 @@ function Controls() {
         </Button>
       </div>
       <Slider name="Bearing" value={lab.orbit} min={-Math.PI} max={Math.PI} step={0.01} suffix=" rad" onChange={lab.setOrbit} />
-      <Slider name="Distance" value={lab.distance} min={2} max={200} step={1} suffix=" m" onChange={lab.setDistance} />
-      <Slider name="Height" value={lab.height} min={0.3} max={60} step={0.1} suffix=" m" onChange={lab.setHeight} />
+      <Slider name="Distance" value={lab.distance} min={2} max={400} step={1} suffix=" m" onChange={lab.setDistance} />
+      <Slider name="Height" value={lab.height} min={0.3} max={600} step={0.1} suffix=" m" onChange={lab.setHeight} />
 
       <span style={label}>Treadmill</span>
       <div style={row}>

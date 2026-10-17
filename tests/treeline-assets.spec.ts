@@ -345,6 +345,14 @@ describe('authored sculpted foliage chain', () => {
   // only under TREE_SOURCE (app/src/scene/treeline/source.ts), and the
   // procedural build still carries no model of it.
   const KILN_MODELS = [
+    // Owner approved the full Kiln fence replacement on 2026-10-17. Like the
+    // oak, its authored nodes become instance batches with procedural surfaces.
+    {
+      loader: 'app/src/scene/fence/fenceKit.ts',
+      model: 'assets/fence/fence-kit.glb',
+      ledger: 'assets/fence/asset-manifest.json',
+      built: /^fence-kit-[\w-]+\.glb$/,
+    },
     {
       loader: 'app/src/scene/farmhouse/kilnHouse.ts',
       model: 'assets/house/farmhouse.glb',
@@ -365,7 +373,7 @@ describe('authored sculpted foliage chain', () => {
     },
   ] as const;
 
-  it('lets the runtime load the Kiln farmhouse, barn and oak GLBs, and only those', () => {
+  it('lets the runtime load only the recorded Kiln fence, farmhouse, barn and oak GLBs', () => {
     const loaders = KILN_MODELS.map(({ loader }) => join(...loader.split('/')));
     const code = (path: string): string => readFileSync(join(repo, path), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -420,6 +428,7 @@ describe('authored sculpted foliage chain', () => {
     ['farmhouse', 'tools/record-house-asset.mjs'],
     ['barn', 'tools/record-barn-asset.mjs'],
     ['oak', 'tools/record-tree-asset.mjs'],
+    ['fence', 'tools/record-fence-kit.mjs'],
   ])('keeps the %s ledger in step with its recipe and loader', (_building, tool) => {
     const result = spawnSync(process.execPath, [tool, '--check'], {
       cwd: repo, encoding: 'utf8', windowsHide: true, timeout: 60_000,

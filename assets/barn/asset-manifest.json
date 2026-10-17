@@ -8,7 +8,7 @@
   "artifactDigestEncoding": "raw bytes",
   "toolchain": {
     "name": "@instruktlabs/kiln",
-    "version": "1.2.3",
+    "version": "1.3.0",
     "license": "MIT",
     "command": "kiln render assets/barn/barn.kiln.js --out assets/barn/barn.glb",
     "note": "The tool is not a dependency of this repository. It bakes the artifact; nothing imports it."
@@ -16,13 +16,13 @@
   "recipe": "assets/barn/barn.kiln.js",
   "artifact": {
     "path": "assets/barn/barn.glb",
-    "bytes": 162772,
-    "sha256": "eaada895d44c01b1092ed415881ff389b40c63fb98e7fc55514e47afcf0f00f5"
+    "bytes": 151756,
+    "sha256": "56cc801498181b2b55c6affcd13b201277a3125e818426fe48c5bea89995f386"
   },
-  "triangles": 2350,
+  "triangles": 2024,
   "triangleBudget": 2800,
-  "exportedMeshNodes": 42,
-  "exportedGeometries": 42,
+  "exportedMeshNodes": 41,
+  "exportedGeometries": 41,
   "materials": 6,
   "textures": 0,
   "images": 0,
@@ -30,7 +30,7 @@
     "KHR_materials_emissive_strength"
   ],
   "boundsMetres": {
-    "x": 18.78,
+    "x": 17.48,
     "y": 13.45,
     "z": 13.5
   },
@@ -50,11 +50,11 @@
   "runtime": {
     "addedDraws": 0,
     "trianglesPerSurface": {
-      "timber": 1301,
-      "barn": 658,
-      "opening": 301,
+      "timber": 1177,
+      "barn": 464,
+      "opening": 299,
       "dress": 48,
-      "roof": 32,
+      "roof": 26,
       "lamp": 10
     },
     "note": "Welded into the cluster barn, roof, timber, dress, opening and lamp buffers, so the cluster stays at ten draws. No texture is sampled; the ramp is computed.",
@@ -76,7 +76,7 @@
   "sources": [
     {
       "path": "assets/barn/barn.kiln.js",
-      "sha256": "f27b35919703862628783da71d89e71cd127547c3825554c49c77355535ceb27"
+      "sha256": "7ffb6ccdc0561b7f7835acf2fab834d18866c0d27f93bfbad5cf0e178439914b"
     },
     {
       "path": "app/src/scene/farmhouse/kilnBarn.ts",
@@ -88,7 +88,7 @@
     },
     {
       "path": "tools/record-barn-asset.mjs",
-      "sha256": "6d62028df5ee94f53f3b84cb990b3e72c4a052ed831438f3b39ec30548411656"
+      "sha256": "870cb899720b6fec0412a85050f188ab9b374e9dc23a28ab8aa2e5ab6ef061cb"
     },
     {
       "path": "tools/glb-ledger.mjs",

@@ -6,7 +6,7 @@
 //
 // A THREE-BAY THRESHING BARN UNDER A GAMBREL. Timber-framed and boarded, on a
 // stone sill wall, with its cart doors in the middle bay of the long south wall,
-// a mow bay either side, a hay door under a hood in the west gable and a
+// a mow bay either side, a hay door with a compact hoist in the west gable and a
 // ventilating cupola over the east mow. The doors stand open on their hinges and
 // there is a barn behind them: a raised threshing floor, two framed bents, lofts
 // over the side bays with hay in them, and a lantern hung inside the door.
@@ -117,11 +117,8 @@ const OPEN_WEST = 118;
 const OPEN_EAST = 124;
 /** The stable door in the east bay: the lower leaf shut, the upper hooked back. */
 const STABLE = { x0: 4.75, x1: 5.85, head: 2.25, split: 1.25 };
-/** The hay door, high in the west gable under its hood. */
+/** The hay door, high in the west gable below a wall-mounted hoist. */
 const HAY = { z0: -0.8, z1: 0.8, y0: 6.7, y1: 8.7 };
-/** The hay hood: half its width where it leaves the verge, and its tip. */
-const HOOD_HALF = 1.6;
-const HOOD_TIP = HX + 1.75;
 /** The cupola, over the east mow rather than the door: see the notes in plan.ts. */
 const CUPOLA_X = 4.8;
 /**
@@ -522,15 +519,16 @@ function build() {
 
   // --------------------------------------------------------------- the roof
   // Three planes a side, run out over both verges, with a fascia board on the
-  // eave, a barge board on each verge and a ridge roll. The upper plane is cut
-  // at the hood's width so the hood's triangles share its corners.
+  // eave, matching barge boards on both verges and a centred ridge roll.
+  // Owner-directed 2026-10-17: both gambrel ends finish at the ordinary verge;
+  // the former pointed hay hood made one ridge end protrude by 1.30 m.
   {
     const top = new Sheet();
     const soffit = new Sheet();
     const ceiling = new Sheet();
     const boardsEdge = new Sheet();
-    const stations = [...PROFILE.slice(0, 3), [HOOD_HALF, heightAt(PROFILE, HOOD_HALF)], PROFILE[3]];
-    const under = [...UNDER.slice(0, 3), [HOOD_HALF, heightAt(UNDER, HOOD_HALF)], UNDER[3]];
+    const stations = PROFILE;
+    const under = UNDER;
     for (const sz of [-1, 1]) {
       for (let i = 0; i + 1 < stations.length; i += 1) {
         const [za, ya] = stations[i];
@@ -563,8 +561,6 @@ function build() {
       boardsEdge.face([[-XV, UNDER[0][1], sz * ze], [XV, UNDER[0][1], sz * ze], [XV, ye, sz * ze], [-XV, ye, sz * ze]], [0, 0, sz]);
       for (const sx of [-1, 1]) {
         for (let i = 0; i + 1 < stations.length; i += 1) {
-          // The west verge under the hood is inside the hood's own slab.
-          if (sx < 0 && stations[i][0] <= HOOD_HALF + 1e-6) continue;
           const a = stations[i];
           const b = stations[i + 1];
           const c = under[i + 1];
@@ -573,43 +569,25 @@ function build() {
         }
       }
     }
-    // The ridge roll, out along the hood to its tip.
-    box(top, [-(HOOD_TIP + 0.04), XV + 0.04], [RIDGE_H - 0.12, RIDGE_H + 0.1], [-0.17, 0.17], '-y');
+    // The ridge roll projects the same four centimetres past both verges.
+    box(top, [-(XV + 0.04), XV + 0.04], [RIDGE_H - 0.12, RIDGE_H + 0.1], [-0.17, 0.17], '-y');
     part('Roof', slate, top);
     undersides.push(part('Soffit', timber, soffit), part('Ceiling', opening, ceiling));
     part('Barge', timber, boardsEdge);
   }
 
-  // ---------------------------------------------------------- the hay hood
-  // The upper pitch carried on past the west verge to a point: two triangles in
-  // the roof's own planes, so the hood is the roof and not a lid on it, with the
-  // hay track running out under it to a pulley.
+  // --------------------------------------------------------- the hay hoist
+  // The hay door remains a working opening. Its compact wall-mounted hoist sits
+  // above the lintel, wholly under the ordinary 0.45 m verge, so the hardware
+  // reads at the door without extending or changing the roof silhouette.
   {
-    const top = new Sheet();
-    const under = new Sheet();
-    const edge = new Sheet();
-    const yHalf = heightAt(PROFILE, HOOD_HALF);
-    const drop = RIDGE_H - UNDER[UNDER.length - 1][1];
-    for (const sz of [-1, 1]) {
-      const a = [-XV, RIDGE_H, 0];
-      const b = [-XV, yHalf, sz * HOOD_HALF];
-      const c = [-HOOD_TIP, RIDGE_H, 0];
-      const out = unit([0, PROFILE[2][0], sz * (RIDGE_H - PROFILE[2][1])]);
-      top.face([a, b, c], out, [slopeLength(0), slopeLength(HOOD_HALF), slopeLength(0)]);
-      const lower = (p) => [p[0], p[1] - drop, p[2]];
-      under.face([a, b, c].map(lower), mul(out, -1));
-      edge.face([b, c, lower(c), lower(b)], [0, 0, sz]);
-    }
-    part('Hood', slate, top);
-    undersides.push(part('HoodSoffit', timber, under));
-    // The hay track: a beam clear of the hood's soffit, which falls away from
-    // the ridge line at the cap's pitch, and the pulley block at its end.
-    const track = new Sheet();
-    const ceiling = UNDER[UNDER.length - 1][1];
-    box(edge, [-(HOOD_TIP - 0.1), -HX], [ceiling - 0.24, ceiling - 0.07], [-0.07, 0.07], '+x +y');
-    box(track, [-(HOOD_TIP - 0.33), -(HOOD_TIP - 0.17)], [ceiling - 0.6, ceiling - 0.24], [-0.05, 0.05], '+y');
-    part('HoodTimber', timber, edge);
-    part('HayPulley', opening, track);
+    const mount = new Sheet();
+    const pulley = new Sheet();
+    box(mount, [-HX - 0.14, -HX + 0.02], [HAY.y1 + 0.15, HAY.y1 + 0.65], [-0.12, 0.12]);
+    box(mount, [-HX - 0.37, -HX - 0.05], [HAY.y1 + 0.49, HAY.y1 + 0.62], [-0.06, 0.06]);
+    box(pulley, [-HX - 0.34, -HX - 0.18], [HAY.y1 + 0.23, HAY.y1 + 0.47], [-0.05, 0.05]);
+    part('HayHoist', timber, mount);
+    part('HayPulley', opening, pulley);
   }
 
   // ------------------------------------------------------------ the cupola
@@ -739,25 +717,29 @@ function build() {
     part('StableDoorUpper_Boards', boards, upper, hinge);
   }
 
-  // The hay door: the north leaf shut, the south one swung out, a sill and a
-  // head board on the gable.
+  // The hay door: matching shut leaves, with a sill and head board on the
+  // gable. Each leaf owns its hinge so a future functional door can open them
+  // independently; the static game welds their closed geometry as usual.
   {
     const s = new Sheet();
     wallBox(s, 'west', [HAY.z0 - 0.1, HAY.z1 + 0.1], [HAY.y0 - 0.08, HAY.y0], [-0.08, 0]);
     wallBox(s, 'west', [HAY.z0 - 0.12, HAY.z1 + 0.12], [HAY.y1, HAY.y1 + 0.1], [-0.05, 0]);
     part('HayDoorFrame', timber, s);
-    const shut = new Sheet();
     const mid = (HAY.z0 + HAY.z1) / 2;
-    box(shut, [-HX + 0.02, -HX + 0.08], [HAY.y0 + 0.02, HAY.y1 - 0.02], [mid, HAY.z1 - 0.02], '+z -y +y');
-    part('HayDoorShut', boards, shut);
-    const hinge = createPivot('HayDoorOpen', [-(HX + 0.05), 0, HAY.z0], root);
-    hinge.rotation.y = (-100 * Math.PI) / 180;
-    const leafSheet = new Sheet();
-    const ledge = new Sheet();
-    box(leafSheet, [-0.03, 0.03], [HAY.y0 + 0.02, HAY.y1 - 0.02], [0.02, mid - HAY.z0 - 0.02]);
-    box(ledge, [0.03, 0.06], [7.15, 7.33], [0.08, mid - HAY.z0 - 0.08], '-x');
-    part('HayDoorOpen_Boards', boards, leafSheet, hinge);
-    part('HayDoorOpen_Ledge', timber, ledge, hinge);
+    const half = (HAY.z1 - HAY.z0) / 2;
+    const hayLeaf = (name, hingeZ, sign) => {
+      const hinge = createPivot(name, [-(HX + 0.05), 0, hingeZ], root);
+      const leafSheet = new Sheet();
+      const ledges = new Sheet();
+      box(leafSheet, [-0.03, 0.03], [HAY.y0 + 0.02, HAY.y1 - 0.02], [sign * 0.02, sign * (half - 0.02)]);
+      for (const y of [HAY.y0 + 0.35, HAY.y1 - 0.35]) {
+        box(ledges, [0.03, 0.06], [y - 0.09, y + 0.09], [sign * 0.08, sign * (half - 0.08)], '-x');
+      }
+      part(`${name}_Boards`, boards, leafSheet, hinge);
+      part(`${name}_Ledges`, timber, ledges, hinge);
+    };
+    hayLeaf('HayDoorSouth', mid - half, 1);
+    hayLeaf('HayDoorNorth', mid + half, -1);
   }
 
   // The winnowing doors on the north side, shut: laid on the boards as relief.
@@ -859,8 +841,7 @@ function build() {
  *    boarded body, from inside the slate to its cap.
  *  - `caps`: the cupola's slate cap, a square pyramid: its eave square and apex.
  *
- * The hay hood and the vane are left out: a hood is a triangle of the roof's
- * own plane and the verge's outline already runs through its root.
+ * The small hay-hoist hardware and the vane are left out of this coarse envelope.
  */
 function outlineEnvelope() {
   const full = (half) => [...half.map(([z, y]) => [-z, y]), ...half.slice(0, -1).reverse()];
@@ -915,20 +896,20 @@ const FOOTPRINT = [
  *    here carries 0: boards, timber, stone (DRESS, no course joints), the dark.
  *  - `uv.y` is metres. On boards and timber it is how far the face sits below
  *    the underside of the roof directly over it, so the first 0.46 m draws the
- *    shadow band under an eave, a verge, the hood or the cupola cap; negative
+ *    shadow band under an eave, a verge or the cupola cap; negative
  *    where a face runs up inside a slab, which is hidden; 9 where no roof is over
  *    it or the face is inside the shell. On slate it is metres along the roof
  *    from its eave edge - across the knee, not restarting there, because the cap
  *    of a gambrel is the same roof getting more sky, not a second eave - and -1
- *    on every slate face that is not that surface (roll, hood edges, cupola cap).
+ *    on every slate face that is not that surface (roll, cupola cap).
  *    9 on stone; 0 on openings and lamps.
  *
  * The distance below a roof is a vertical ray from the vertex, a fifth of a
  * millimetre off its face (see `below`), to the first downward-facing roof
- * underside over it (the soffits, the ceiling, the hood's and the cupola cap's),
- * so it follows the eave on the long walls, the rake on the gables and the hood
- * over the open hay door with no second copy of the roof's arithmetic. Faces are first split where the
- * underside over them bends (the ridge, the knee and flare mitres, the hood) and
+ * underside over it (the soffits, the ceiling and the cupola cap's),
+ * so it follows the eave on the long walls and the rake on the gables
+ * with no second copy of the roof's arithmetic. Faces are first split where the
+ * underside over them bends (the ridge and the knee and flare mitres) and
  * where the roof ends (the eave edge, the verges), so the distance is exactly
  * linear across every triangle.
  */
@@ -953,11 +934,11 @@ function writeSurfaceChannels(root, spec) {
   const raycaster = new THREE.Raycaster();
   const up = new THREE.Vector3(0, 1, 0);
   const normal = new THREE.Matrix3();
-  // Where an underside bends (the ridge, the knee and flare mitres, the hood's
-  // shoulders) or ends (the eave edge, the verges). Faces are cut along these
+  // Where an underside bends (the ridge and the knee and flare mitres)
+  // or ends (the eave edge, the verges). Faces are cut along these
   // first, so every triangle is wholly under one underside or clear of all.
   const splits = [
-    ['z', 0], ['z', HOOD_HALF], ['z', -HOOD_HALF],
+    ['z', 0],
     ...UNDER.slice(1, -1).flatMap(([z]) => [['z', z], ['z', -z]]),
     ['z', PROFILE[0][0]], ['z', -PROFILE[0][0]], ['x', XV], ['x', -XV],
   ];

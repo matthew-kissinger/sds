@@ -509,6 +509,19 @@ the record those files carry.
 
 ## Open questions
 
+- Kiln fence/homestead adoption (owner-directed 2026-10-17, local, undeployed):
+  owner approved the new look and requested replacement. The runtime now uses
+  the full Kiln perimeter and pen with shared procedural surfaces and exactly
+  three fence draws on both backends in desktop/portrait production captures.
+  Farmhouse is parallel to the pen fence; barn is centred behind the gate and
+  parallel to the back fence, with ground/grass placements rebaked (137 trees).
+  Barn roof ends match and both hayloft
+  leaves are closed with distinct pivots. Separate critic found no integration
+  defect; strict art verdict remains ITERATE for restrained surface variation.
+  Completed-run gate motion, hub timing and physical-device qualification remain
+  open. The earlier lab hot-tier pipeline issue is retained in its failed receipt.
+  Scope, costs and receipts: `assets/fence/README.md`, `assets/barn/README.md`.
+
 - The Kiln oak's remaining notes (2026-10-17; the owner approved the look and
   shipped it as 3.4.0, so these are refinements, not gates). A separate critic scored the production captures
   ITERATE and, past the fifth iteration, escalated: the crown was a pile of

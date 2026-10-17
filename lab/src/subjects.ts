@@ -11,11 +11,13 @@
  * values. They are the frame I would open each review at; the panel moves them.
  */
 
-import type { ComponentType } from 'react';
+import { createElement, type ComponentType } from 'react';
 import { Dog } from '@app/scene/Dog';
 import { Farmer } from '@app/scene/Farmer';
 import { Farmhouse } from '@app/scene/Farmhouse';
 import { FenceLine } from '@app/scene/FenceLine';
+import { RectFence } from '@app/scene/RectFence';
+import { FIELD_FENCE_SECTIONS } from '@app/scene/fence/fieldSections';
 import { Flock } from '@app/scene/Flock';
 import { Pen } from '@app/scene/Pen';
 import { Scatter } from '@app/scene/Scatter';
@@ -25,13 +27,14 @@ import { HOME_FIELD } from '@sim/field';
 import { BARN_AT, HOUSE_AT } from '@app/scene/farmhouse/plan';
 import { GradedGrass } from './GradedGrass';
 import { KilnBarn } from './KilnBarn';
+import { KilnFence } from './KilnFence';
 import { KilnHouse } from './KilnHouse';
 import { KilnTreeline } from './KilnTreeline';
 import { LibraryGrass } from './LibraryGrass';
 
 export type LabPartId =
-  | 'terrain' | 'grass' | 'grass-lib' | 'fence' | 'pen' | 'farmhouse' | 'kiln-house'
-  | 'kiln-barn' | 'farmer' | 'treeline' | 'kiln-treeline' | 'scatter' | 'flock' | 'dog';
+  | 'terrain' | 'grass' | 'grass-lib' | 'fence' | 'fence-previous' | 'pen' | 'farmhouse' | 'kiln-house'
+  | 'kiln-barn' | 'kiln-fence' | 'farmer' | 'treeline' | 'kiln-treeline' | 'scatter' | 'flock' | 'dog';
 
 /** Draw order matters, so this record is ordered as `FieldScene` orders it. */
 export const LAB_PARTS: Record<LabPartId, ComponentType> = {
@@ -44,6 +47,8 @@ export const LAB_PARTS: Record<LabPartId, ComponentType> = {
   // here that is not a game component: it is the other side of an A/B.
   'grass-lib': LibraryGrass,
   fence: FenceLine,
+  'fence-previous': () => createElement(RectFence, { sections: FIELD_FENCE_SECTIONS }),
+  'kiln-fence': KilnFence,
   pen: Pen,
   farmhouse: Farmhouse,
   // The Kiln-authored walk-in house on the procedural range's pad, whatever
@@ -105,6 +110,48 @@ const FARM_MID_Z = (HOUSE_AT.z + BARN_AT.z) / 2;
 const TREE_AT = { x: -45.4, z: 146.6 } as const;
 
 export const LAB_SUBJECTS = [
+  {
+    id: 'kiln-fence-outline', label: 'Fence perimeter (Kiln)',
+    note: 'The complete perimeter and attached three-sided pen on the exact game outline. New mortised oak kit, three asset draws, buildings in their actual placements.',
+    parts: ['terrain', 'grass', 'kiln-fence', 'pen', 'farmhouse', 'treeline', 'flock', 'dog'],
+    target: { kind: 'fixed', x: 0, z: 15 }, distance: 200, height: 300,
+  },
+  {
+    id: 'fence-reference', label: 'Fence previous',
+    note: 'Previous procedural fence in the same homestead frame for the redesign comparison.',
+    parts: ['terrain', 'grass', 'fence-previous', 'pen', 'farmhouse', 'treeline'],
+    target: { kind: 'fixed', x: 18, z: 112 }, distance: 74, height: 24,
+  },
+  {
+    id: 'kiln-fence-straight', label: 'Fence straight (Kiln)',
+    note: 'Broad hewn rails enter pointed posts as mortised joints. Full perimeter remains mounted.',
+    parts: ['terrain', 'grass', 'kiln-fence', 'pen', 'farmhouse', 'treeline'],
+    target: { kind: 'fixed', x: 40, z: 100 }, distance: 16, height: 4,
+  },
+  {
+    id: 'kiln-fence-corner', label: 'Fence corner (Kiln)',
+    note: 'The pen corner shares one heavier pointed post, with knee braces joining the top rails.',
+    parts: ['terrain', 'grass', 'kiln-fence', 'pen', 'farmhouse', 'treeline'],
+    target: { kind: 'fixed', x: HOME_FIELD.pen.maxX, z: HOME_FIELD.pen.maxZ }, distance: 18, height: 6,
+  },
+  {
+    id: 'kiln-fence-gate', label: 'Fence gate (Kiln)',
+    note: 'Eight-metre mouth, single pointed strainers and swept-top leaves. No blue bands. Use Gate open / Gate closed to review the swing.',
+    parts: ['terrain', 'grass', 'kiln-fence', 'pen', 'farmhouse', 'treeline'],
+    target: { kind: 'fixed', x: HOME_FIELD.gate.position.x, z: HOME_FIELD.gate.position.z }, distance: 25, height: 6,
+  },
+  {
+    id: 'kiln-fence', label: 'Fence kit (Kiln)',
+    note: 'The redesigned mortised oak kit around the complete perimeter and pen. Procedural surfaces, three fence draws. Farmhouse facade parallel with the pen fence. The game uses this same kit.',
+    parts: ['terrain', 'grass', 'kiln-fence', 'pen', 'farmhouse', 'treeline'],
+    target: { kind: 'fixed', x: 18, z: 112 }, distance: 74, height: 24,
+  },
+  {
+    id: 'kiln-fence-alone', label: 'Fence kit alone (Kiln)',
+    note: 'The complete fence without buildings or trees. Hide terrain and grass to isolate the three-draw kit. Use Gate closed to review the swing.',
+    parts: ['terrain', 'grass', 'kiln-fence'],
+    target: { kind: 'fixed', x: 0, z: 15 }, distance: 200, height: 300,
+  },
   {
     id: 'sheep',
     label: 'Sheep',

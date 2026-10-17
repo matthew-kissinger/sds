@@ -70,11 +70,11 @@
   "familyDeformation": "Deterministic broad, upright, balanced and windswept instance morphology over seven authored opaque crown lobes and one tapered branching trunk",
   "motion": "Herd TSL base-pinned travelling gust with restrained whole-crown follow-through",
   "field": {
-    "treeInstances": 139,
+    "treeInstances": 137,
     "shrubInstances": 0,
-    "woodInstances": 139,
+    "woodInstances": 137,
     "draws": 3,
-    "submittedTrianglesBeforeShadows": 128436,
+    "submittedTrianglesBeforeShadows": 126588,
     "textures": 0,
     "externalModels": 0,
     "sourceModels": 0
