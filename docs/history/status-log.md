@@ -5,6 +5,28 @@
 
 # Status log
 
+## Release 3.5.0 - 2026-10-17, Kiln fence and homestead fixes live
+
+- Owner-approved pull request 140 merged at
+  6e8b4ff5dfcd41a3f535a964324271a38749a240. Client CI 39064491088 passed on
+  that merge commit. Tag v3.5.0 names it; Deploy 39064760796 succeeded,
+  including its repeated 883 tests, live identity, origin and discovery checks.
+- Active sds-worker version: 79d483ed-4dfe-46ab-931b-c9b9bcb12521,
+  deployed 20:03 UTC. Live release.json reports version 3.5.0, that exact
+  commit and artifact digest
+  57e031cfc92860378462b1a008068a145800b21c61e19aa4f430d81e400a8c5a,
+  the same digest as the hub-qualified production build.
+- Downloaded the release artifact from Deploy and compared HTTPS-delivered
+  bytes for all nine runtime JS/GLB/bin/JSON assets with it: every SHA-256
+  matched, including fence, barn, house, oak, grass and terrain. Fresh live
+  WebGPU desktop and forced-WebGL2 portrait sessions both booted, entered
+  play with 200 sheep and accepted movement without page/console errors.
+  API traffic in those smoke contexts was stubbed; real health/origin checks
+  are the workflow's. No live score or test identity was created.
+- Receipt: captures/release-3.5.0/live-receipt.json (gitignored). Functional,
+  visual, timing evidence and remaining limits are in the preflight below.
+  No community screenshot was created or sent after cancellation.
+
 ## Release 3.5.0 preflight - 2026-10-17, owner-approved fence and homestead
 
 The owner approved the new Kiln fence and farmhouse/barn corrections and
