@@ -86,18 +86,25 @@ The painting is in the game's two materials
 (`app/src/scene/treeline/kilnTreeMaterials.ts`), one opaque material per role,
 no texture, no alpha, no extra pass:
 
-- **Masses within masses.** The crown is lit by a blend of three normals:
-  mostly its lobe's, a quarter of it the whole crown's (the ellipsoid inside
-  its bounds, which the loader derives), and a trace of the cluster's own. A
-  lobe turns from light to shade as one form; its clusters show at its
-  outline and, through the cavity, in its deep folds.
+- **One mass first.** The crown is lit by a blend of three normals: three
+  quarters the whole crown's (the ellipsoid inside its bounds, which the
+  loader derives), the rest mostly its lobe's, and a trace of the cluster's
+  own. The crown turns from light to shade as one form; its lobes show at
+  its outline and where the light turns, its clusters through the cavity in
+  its deep folds. (A quarter until the owner's decision of 2026-10-17.)
 - **Bands, painted.** The game's three bands, each edge a wide soft ramp. Near
   the camera the ramp is laid down in crisp-edged leaf dabs whose share of the
   light follows the ramp, the way a painter breaks a soft turn into strokes;
   from 40 m the dabs give way to the ramp itself, and by 105 m they are gone.
   Warm yellow-green where lit, a greyed blue-green in shade, a warm olive per
-  stand and per cluster; across the field the crown settles a little toward
-  one deep blue-green before the haze.
+  stand and per cluster.
+- **Into the haze.** From 40 m, where the dabs begin to give way, to 160 m the
+  crown leans up to 0.4 toward the haze's hue at its own value: the fog's
+  colour (`PALETTE.skyHorizon`) at unit luminance, times the crown's own
+  luminance. The ring warms into the evening haze without lightening; the
+  haze's lightness stays with the shared aerial term and the scene's fog.
+  Nearer than 40 m nothing changes. It replaced a settle toward a cool
+  blue-green of the oak's own, on the owner's decision of 2026-10-17.
 - **The low sun through the crown.** Looking toward the sun, the crown's own
   edge (its envelope's, not every lobe's) takes the light's clear yellow-green.
 - **Wood.** The same bands, quieter: close values, a wide edge, a warm
@@ -116,25 +123,39 @@ no texture, no alpha, no extra pass:
 | Draws for the treeline | 3 (crowns, wood, pooled shadows) | 3, the same three |
 | Textures, transparency, added passes | none | none |
 | Download | none | `oak-<hash>.glb`, 371,876 bytes, in a `'kiln'` build only |
-| Game JavaScript, gzip | 664,631 bytes, 246 more than `main` (the oak's palette entries and the builder split) | 667,570 bytes |
+| Game JavaScript, gzip | 664,622 bytes, 237 more than `main` (the oak's palette entries and the builder split) | 667,627 bytes |
 | Whole frame, high tier, Follow (production art review) | 54 draws, 3,968,047 triangles | 54 draws, 5,264,222 triangles |
 | Whole frame, low tier, Classic, phone (production art review) | 29 draws, 2,154,954 triangles | 29 draws, 3,451,129 triangles |
 
 The triangle budget the recipe declares is 11,000. Nothing culls the treeline,
 so every tier submits every stand: the 1.30 million triangles the oak adds are
 a third more for the whole frame at the high tier and three fifths more at the
-low tier, and the hub receipt should cover both. Shader cost, counted in scalar
-operations with a vec3 operation as three (the materials' header has the
-breakdown): per vertex, over Three's own instancing, the wood about 50 and
-three sines, the crown about 140 and six sines; per fragment, the crown about
-200 and three sines against about 70 and two for the procedural canopy, the
-wood about 75 and none. The only per-stand data are the matrices both instanced
-meshes already upload and the stand attributes the procedural materials already
-read. No timing here is evidence: the hub receipt decides whether this cost is
-acceptable, and whether a coarser level of detail is needed, for the far stands
-or for the low tier. If it is, it comes from this program with a smaller
-`DETAIL` table (a longer cluster edge, fewer sides on the wood); none is
-authored.
+low tier. Shader cost, counted in scalar operations with a vec3 operation as
+three (the materials' header has the breakdown): per vertex, over Three's own
+instancing, the wood about 50 and three sines, the crown about 140 and six
+sines; per fragment, the crown about 210 and three sines against about 70 and
+two for the procedural canopy, the wood about 75 and none. The only per-stand
+data are the matrices both instanced meshes already upload and the stand
+attributes the procedural materials already read.
+
+No timing on a development PC is evidence. The hub receipt of 2026-10-17
+(`docs/history/status-log.md`) ran both builds on both backends, at the
+desktop viewport's high tier and the phone viewport's low tier:
+
+- Frame times were identical in every view, with no frame over 100 ms and the
+  same draws.
+- The GPU was busy about 3 to 4 points more of the time at the high tier, and
+  0 to 2 points more at the low tier.
+- Warm boots were unchanged.
+- Cold boots, with the driver's shader cache off as on a first visit, were
+  unchanged on WebGPU. On WebGL2 they were about 0.4 s slower at the high
+  tier, where the two materials' programs take longer to compile.
+
+So no coarser level of detail is needed on the hub's evidence. Whether a
+phone's GPU carries the low tier's extra triangles needs a phone, because the
+hub's phone viewport runs the low tier on desktop hardware. If a coarser level
+is needed, it comes from this program with a smaller `DETAIL` table (a longer
+cluster edge, fewer sides on the wood); none is authored.
 
 ## Reference
 
