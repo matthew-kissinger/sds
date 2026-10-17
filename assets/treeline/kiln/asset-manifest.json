@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "id": "kiln-spreading-oak",
+  "author": "Matthew Kissinger",
+  "license": "AGPL-3.0-or-later",
+  "licenseFile": "LICENSE",
+  "digestEncoding": "UTF-8 with LF line endings",
+  "artifactDigestEncoding": "raw bytes",
+  "toolchain": {
+    "name": "@instruktlabs/kiln",
+    "version": "1.2.3",
+    "license": "MIT",
+    "command": "kiln render assets/treeline/kiln/oak.kiln.js --out assets/treeline/kiln/oak.glb",
+    "note": "The tool is not a dependency of this repository. It bakes the artifact; nothing imports it."
+  },
+  "recipe": "assets/treeline/kiln/oak.kiln.js",
+  "artifact": {
+    "path": "assets/treeline/kiln/oak.glb",
+    "bytes": 371876,
+    "sha256": "3aa0cf0e6ff8d67d9829697685bd3e814278b5db22c44714e1b2b0417cac3bf9"
+  },
+  "triangles": 10249,
+  "triangleBudget": 11000,
+  "exportedMeshNodes": 2,
+  "exportedGeometries": 2,
+  "materials": 2,
+  "textures": 0,
+  "images": 0,
+  "gltfExtensions": [],
+  "boundsMetres": {
+    "x": 16.24,
+    "y": 11.32,
+    "z": 12.09
+  },
+  "treeChannels": {
+    "record": "nodes[root].extras.treeChannels",
+    "version": 1,
+    "seed": "TEXCOORD_0",
+    "lobeNormal": "TANGENT",
+    "cavity": "_CAVITY"
+  },
+  "variants": {
+    "record": "nodes[*].extras.treeVariant",
+    "names": [
+      "spreading"
+    ]
+  },
+  "runtime": {
+    "draws": 3,
+    "addedDraws": 0,
+    "stands": 139,
+    "trianglesPerRole": {
+      "crown": 8947,
+      "wood": 1302
+    },
+    "submittedTrianglesBeforeShadows": 1424611,
+    "note": "One instanced draw for every crown and one for all the wood, the procedural treeline's own two, beside its pooled shadows: three draws either way. No texture is sampled, nothing is transparent and no pass is added; the light is computed (treeline/kilnTreeMaterials.ts).",
+    "loader": "app/src/scene/treeline/kilnTree.ts",
+    "distPath": "assets/oak-<hash>.glb"
+  },
+  "qa": {
+    "profile": "asset.requirements.v1",
+    "acceptance": "accepted",
+    "disposition": "pass",
+    "gltfErrors": 0,
+    "gltfWarnings": 0
+  },
+  "consumers": [
+    "app/src/scene/treeline/kilnOak.ts",
+    "app/src/scene/Treeline.tsx",
+    "lab/src/subjects.ts"
+  ],
+  "shipsInProductionBuildWhen": "TREE_SOURCE === 'kiln'",
+  "sources": [
+    {
+      "path": "assets/treeline/kiln/oak.kiln.js",
+      "sha256": "5e2099616a5dbbb25f586d22b7fa6f2d986a6def704d9cd1bd28f60b19b984dc"
+    },
+    {
+      "path": "app/src/scene/treeline/kilnTree.ts",
+      "sha256": "d0a2c3c52e8d81b133c9d36cb42f7e825c5467ad8fb4b5112c542a64378dff22"
+    },
+    {
+      "path": "app/src/scene/treeline/kilnOak.ts",
+      "sha256": "da19d037fd0c67f2e3233532b4e3e1a543c8f322b5b69071f1c603523246e906"
+    },
+    {
+      "path": "lab/src/KilnTreeline.tsx",
+      "sha256": "da6c28c81fb499e1671cb2909d90f46c26031ea6d944aef8940219a4a40d93b8"
+    },
+    {
+      "path": "tools/record-tree-asset.mjs",
+      "sha256": "efb8be6bde981fbbad3ad1b5927fd741fa7addf737c18f4f4ed7abe32d3dd87e"
+    },
+    {
+      "path": "tools/glb-ledger.mjs",
+      "sha256": "951eb035f63ace573c18fd2666a190be22b0f6fa8a4d660a48eade8b3505664f"
+    }
+  ]
+}

@@ -350,6 +350,29 @@ longer claims Neutral.
   numbers and the Kiln feedback. Open: the slate course wander on its long
   pitches (owner's call; it is the shared slate graph's), and folding the two
   Kiln loaders into one with the house's envelope written by its bake.
+- Kiln oak for the treeline (added 2026-10-17 at the owner's request: a
+  performant, painterly oak, one tree type and one variant for now). **In
+  review** on its pull request (pull request 133, branch
+  `release2/oak-kiln`), nothing flipped: `assets/treeline/kiln/` bakes one
+  spreading oak that the treeline instances in all 139 stands behind
+  `TREE_SOURCE` (`app/src/scene/treeline/source.ts`), shipped as
+  `procedural`, whose build carries none of it. Still three draws; 10,249
+  triangles a tree and 1,424,611 across the field against the procedural 924
+  and 128,436; no textures, transparency or added passes; the painting is in
+  the two materials (`treeline/kilnTreeMaterials.ts`). A separate critic's
+  verdict on the production captures was ITERATE, escalated to the owner, who
+  adopted its first note (the crown lit as one mass) and had the far crown
+  warm toward the haze, both the same day (open questions). The hub receipt
+  on both builds, both backends, at the desktop viewport and the phone
+  viewport's low tier, found no frame-time regression and the same draws:
+  the GPU busy about 3 to 4 points more at the high tier and 0 to 2 at the
+  low, warm boots unchanged, and a cold WebGL2 boot at the high tier about
+  0.4 s slower. Next, in order: the owner's look review on the production build
+  (the lab's `Tree (Kiln)` subject and a `TREE_SOURCE = 'kiln'` build), then
+  the flip in its own commit. The status log entries "Kiln oak hub receipt -
+  2026-10-17" and "Kiln oak - 2026-10-17" have the numbers, the decisions,
+  the critic's notes and the Kiln feedback; `assets/treeline/kiln/README.md`
+  documents the asset.
 - Surfaces stay procedural (decided 2026-10-16 on a measured spike,
   `docs/history/spike-surface-atlas-2026-10-16.md`, branch
   `experiment/surface-atlas`, pull request 122, not for merge). The owner
@@ -478,6 +501,23 @@ the record those files carry.
 
 ## Open questions
 
+- The Kiln oak's look, for the owner's review (2026-10-17, pull request 133
+  on `release2/oak-kiln`). A separate critic scored the production captures
+  ITERATE and, past the fifth iteration, escalated: the crown was a pile of
+  spheres, each lobe lit as its own, where the reference paints a few big
+  masses lit as one shape. The owner adopted its first fix the same day, the
+  crown lit as one mass (`CROWN_WEIGHT` 0.75 in
+  `treeline/kilnTreeMaterials.ts`), and had the far crown warm toward the
+  haze; both are in, recaptured, and the critic has not re-scored them. Its
+  other notes are open: a middle and a deep palette stop, crisper dabs, a
+  stronger glow into the sun and three lobe sizes in the recipe. The lobe
+  sizes and the crown's proportions (about 1.45:1 against the reference's
+  1.9:1) change the silhouettes the iteration-3 review kept, so they are the
+  owner's call. Also open: where the first reference image came from, and
+  how a physical phone takes the low tier, whose GPU draws three fifths more
+  triangles and which, on WebGL2, compiles the two materials cold on a first
+  visit; the hub receipt ran the phone viewport's low tier on desktop
+  hardware. Art UNREVIEWED; physical phones NOT_TESTED.
 - Whether to collapse the Pages project and the score Worker into one Worker
   serving static assets and `/api/*` on `sheepdogsim.com` alone. The present
   split works, but the repository asserts invariants it does not own - the

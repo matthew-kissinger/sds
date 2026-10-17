@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { builtClientDir } from '../scripts/build-output.mjs';
+import { builtClientDir, repo } from '../scripts/build-output.mjs';
 import { collectBuiltFiles } from './playtest-profile-receipt.mjs';
 import { renderArtReview, compareReports } from './art-review-report.mjs';
 

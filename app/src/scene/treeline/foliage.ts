@@ -18,20 +18,28 @@ export const AERIAL_NEAR = 100;
 export const AERIAL_FAR = 340;
 const BARK_AERIAL_MAX = 0.10;
 
-const sunNode = uniform(SUN_DIRECTION) as TSLNode;
+/** The sun, as a unit vector toward it: one uniform every tree material shares. */
+export const sunNode = uniform(SUN_DIRECTION) as TSLNode;
 const TERMINATOR = 0.085;
-const HALF = TERMINATOR / 2;
 const SHADOW_EDGE = 0.32;
 const LIT_EDGE = 0.665;
 export const BAND_SHADOW_EDGE = SHADOW_EDGE;
+export const BAND_LIT_EDGE = LIT_EDGE;
 
-export function sunFacing(): TSLNode {
-  return dot(normalWorld, sunNode).mul(0.5).add(0.5);
+export function sunFacing(normal: TSLNode = normalWorld): TSLNode {
+  return dot(normal, sunNode).mul(0.5).add(0.5);
 }
 
-export function threeBand(shadow: TSLNode, body: TSLNode, lit: TSLNode, nDotL: TSLNode): TSLNode {
-  const outOfShadow = smoothstep(float(SHADOW_EDGE - HALF), float(SHADOW_EDGE + HALF), nDotL);
-  const intoKey = smoothstep(float(LIT_EDGE - HALF), float(LIT_EDGE + HALF), nDotL);
+export function threeBand(
+  shadow: TSLNode,
+  body: TSLNode,
+  lit: TSLNode,
+  nDotL: TSLNode,
+  terminator: number = TERMINATOR,
+): TSLNode {
+  const half = terminator / 2;
+  const outOfShadow = smoothstep(float(SHADOW_EDGE - half), float(SHADOW_EDGE + half), nDotL);
+  const intoKey = smoothstep(float(LIT_EDGE - half), float(LIT_EDGE + half), nDotL);
   return mix(mix(shadow, body, outOfShadow), lit, intoKey);
 }
 

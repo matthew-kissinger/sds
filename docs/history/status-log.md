@@ -5,6 +5,358 @@
 
 # Status log
 
+## Kiln oak hub receipt - 2026-10-17, no frame-time regression at either tier; nothing flipped
+
+The owner's decision on pull request 133 (the entry below) ended "then run
+one hub receipt on both builds including the phone low tier". This is that
+receipt, taken after the crown weight and the haze lean went in (`a6750f93`).
+
+Taken on `mk-os` over the `hub` alias, as the house and barn receipts were:
+Chrome 150.0.7871.128 at `/opt/google/chrome/chrome`, Playwright 1.61.1
+read-only, the GTX 1660 Ti Max-Q (driver 615.71.09), 200 sheep, the default
+wander input. "Before" is `a6750f93` built for production with
+`TREE_SOURCE = 'procedural'`: the shipped oak and `main`'s picture, its
+default Classic view reading the same 40 draws and 3,958,239 triangles as the
+barn receipt's after arm. "After" is the same commit built with
+`TREE_SOURCE = 'kiln'`, a temporary flip that was never committed. It has one
+more file, `oak-CWzDrhlk.glb` (371,876 bytes), which every one of its 37
+runs fetched and none of the before arm's did. Each arm ran from its own
+copied `dist/` and copy of the probe, in its own directory on the hub
+(`~/perf/sds-kiln-oak-20261017/`); no other checkout or job was touched.
+Every run reported no page errors and no failed requests.
+
+Before each set of runs, the preflight took two consecutive samples at or
+under 5% GPU and 15% CPU: for the receipt, 0% GPU and 1.4% CPU, then 0% and
+2.1%; for the two cold sets below, 0% GPU and at most 0.7% CPU. The probe
+repeated its own quiet gate before every run, and its last two samples were
+at most 4% GPU and 5% CPU. Receipts and the run scripts (`run.sh`, and
+`cold.sh` and `cold2.sh` for the cold boots below) are under
+`captures/stability/hub-receipts/kiln-oak/`, gitignored, so the numbers here
+are the record.
+
+How the runs were set up:
+
+- Per backend and view, the two arms ran back to back, 60 s each, alternating
+  which went first.
+- Desktop is the native viewport, 1440x900, at the high tier. Phone is the
+  probe's phone viewport, 390x844 with phone emulation, where the game measured
+  itself into the low tier.
+- Follow has the ring in frame, the same frame in both arms (the hub's
+  `active-play.png`). Classic looks down at the field with the ring out of
+  frame, and still submits every stand, because nothing culls the treeline.
+- GPU busy is the mean of nvidia-smi's utilisation, which the probe samples
+  every 5 s through the run (13 or 14 samples).
+
+| | frames | p50 | p95 | p99 | max | over 100 ms | GPU busy | ready | draws | triangles |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Follow, desktop, WebGPU, before | 7,178 | 8.3 | 8.4 | 8.4 | 25.1 | 0 | 52.9% | 2,606 ms | 33 | 3,915,569 |
+| Follow, desktop, WebGPU, after | 7,188 | 8.3 | 8.4 | 8.4 | 24.9 | 0 | 55.6% | 2,759 ms | 33 | 5,211,744 |
+| Classic, desktop, WebGPU, before | 7,188 | 8.3 | 8.4 | 8.4 | 25.0 | 0 | 53.3% | 2,592 ms | 40 | 3,958,239 |
+| Classic, desktop, WebGPU, after | 7,189 | 8.3 | 8.4 | 8.4 | 25.0 | 0 | 56.7% | 2,681 ms | 40 | 5,254,414 |
+| Follow, phone, WebGPU, before | 7,192 | 8.3 | 8.4 | 8.4 | 25.0 | 0 | 39.0% | 2,491 ms | 21 | 2,112,282 |
+| Follow, phone, WebGPU, after | 7,194 | 8.3 | 8.4 | 8.4 | 25.0 | 0 | 38.9% | 2,706 ms | 21 | 3,408,457 |
+| Classic, phone, WebGPU, before | 7,186 | 8.3 | 8.4 | 8.4 | 33.4 | 0 | 39.0% | 2,601 ms | 28 | 2,154,952 |
+| Classic, phone, WebGPU, after | 7,184 | 8.3 | 8.4 | 8.4 | 33.3 | 0 | 39.9% | 2,669 ms | 28 | 3,451,127 |
+| Follow, desktop, WebGL2, before | 7,191 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 57.5% | 1,989 ms | 33 | 3,915,569 |
+| Follow, desktop, WebGL2, after | 7,197 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 60.9% | 3,970 ms | 33 | 5,211,744 |
+| Classic, desktop, WebGL2, before | 7,195 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 58.2% | 1,764 ms | 40 | 3,958,239 |
+| Classic, desktop, WebGL2, after | 7,196 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 62.2% | 1,873 ms | 40 | 5,254,414 |
+| Follow, phone, WebGL2, before | 7,187 | 8.3 | 8.4 | 8.4 | 16.8 | 0 | 39.4% | 3,248 ms | 21 | 2,112,282 |
+| Follow, phone, WebGL2, after | 7,197 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 40.9% | 2,622 ms | 21 | 3,408,457 |
+| Classic, phone, WebGL2, before | 7,196 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 38.9% | 1,787 ms | 28 | 2,154,952 |
+| Classic, phone, WebGL2, after | 7,196 | 8.3 | 8.4 | 8.4 | 16.7 | 0 | 41.1% | 1,832 ms | 28 | 3,451,127 |
+
+**Boot-only, warm: three repetitions per arm and backend, at the native
+viewport in Classic, with medians of `readyMs`.**
+
+| Backend | Before | After |
+| --- | --- | --- |
+| WebGPU | 2,758 ms (2,659 to 2,843) | 2,721 ms (2,676 to 2,727) |
+| WebGL2 | 1,992 ms (1,950 to 1,999) | 1,948 ms (1,897 to 1,967) |
+
+The compile window, from `herd:boot:scene` to `herd:boot:shaders`, is the
+same in both arms: about 1.37 s on WebGPU and 0.77 s on WebGL2.
+
+**Boot-only, cold.** Three of the 60 s WebGL2 runs were slow to boot, and
+each was the first WebGL2 run of its build at its tier in this session: the
+Kiln build's first high-tier run (desktop Follow, 3,970 ms), the procedural
+build's first low-tier run (phone Follow, 3,248 ms) and the Kiln build's
+first low-tier run (phone Follow, 2,622 ms). Their compile windows ran 1.5 to
+2.5 s; every repeat ran 0.6 to 0.8 s. The NVIDIA driver keeps a shader disk
+cache across Chrome launches (`~/.cache/nvidia`), so a repeat finds the
+programs a first run compiled, and only a first run compiles from nothing,
+as a visitor's first visit does. The barn receipt's single 3,625 ms WebGL2
+boot may be the same effect.
+
+A cold set followed, in the same directories, with the same builds:
+boot-only runs with `__GL_SHADER_DISK_CACHE=0`, which turns the driver's
+disk cache off for those Chrome processes alone. The shared cache was neither
+read nor written; its last write stayed at 09:31, during the receipt. Every
+launch had a fresh profile, and the arms alternated. There were ten pairs on
+WebGL2 at each viewport and three on WebGPU. The table gives medians of
+`readyMs` with ranges; the ± is one standard error of the paired mean.
+
+| Cold boot | Before | After | After minus before, paired |
+| --- | --- | --- | --- |
+| WebGL2, desktop, high tier | 4,317 ms (4,212 to 5,072) | 4,912 ms (4,277 to 5,738) | +398 ms ± 145 on average; slower in 10 of 10 |
+| WebGL2, phone, low tier | 4,453 ms (3,862 to 5,050) | 4,767 ms (3,856 to 5,824) | +337 ms ± 287 on average; slower in 5 of 10 |
+| WebGPU, desktop, high tier | 3,566 ms (3,564 to 3,576) | 3,583 ms (3,573 to 3,602) | +18 ms ± 5 on average; slower in 3 of 3 |
+
+What the receipt shows:
+
+- **No frame-time regression.** Every percentile is identical in all sixteen
+  60 s runs, on both backends, in both cameras and at both tiers. No frame
+  went over 100 ms anywhere; the worst single frame was 33.4 ms, in the
+  before arm. Frames on this machine are vsync-locked at 120 Hz, so the
+  percentiles show that the budget is met with headroom, not how much
+  headroom there is.
+- **GPU busy is the only headroom measure this lane gives.** At the high
+  tier, the Kiln oak adds 2.7 to 4.0 points of GPU-busy time on both
+  backends. The cost is no smaller in Classic, where the ring is out of
+  frame, than in Follow, so most of it is the vertex work of 1.3 million
+  triangles that are submitted and then clipped. At the low tier it adds
+  -0.1 to 2.2 points. The 5 s sampling is coarse, but the direction and size
+  agree across all eight pairs.
+- **Triangles: 1,296,175 more in every view.** That is exactly 139 x
+  (10,249 - 924). Every view keeps its draw count.
+- **Boot is unchanged when warm, and on WebGL2 a little slower when cold.**
+  - Warm, the boot-only medians are within 50 ms of each other, the Kiln
+    build slightly faster on both backends.
+  - Cold, as on a first visit with nothing cached, WebGPU is unchanged
+    (+18 ms). WebGL2 at the high tier is about 0.4 s slower, and slower in
+    every one of ten pairs; most of that is the compile window (+0.28 s on
+    average), where the two Kiln materials' programs take longer to compile
+    than the procedural oak's. At the low tier the difference, +0.34 s on
+    average, is within the noise (slower in 5 of 10). The cold WebGL2
+    medians are 4.3 to 4.9 s for either build.
+  - The only failed check not shared by both arms is the Kiln build's first
+    high-tier WebGL2 run (3,970 ms, a cold compile). It missed the probe's
+    2 s startup budget at the desktop viewport, which every desktop WebGPU
+    run misses in both arms (2.6 to 2.8 s), as every receipt since Release
+    1 has shown. Every phone run met the phone viewport's 5 s budget.
+- **Not measured: a phone's own GPU or shader compiler.** The phone viewport
+  runs the low tier's settings at a phone's size, but on this desktop GPU and
+  its driver. With the Kiln oak the low tier draws three fifths more
+  triangles: 3.41 to 3.45 million, against 2.11 to 2.15 million. If anything
+  strains on a real phone, it will be that, or the cold WebGL2 compile.
+  Physical phones are NOT_TESTED.
+
+Nothing measured here argues against the flip, and no far level of detail is
+needed on this evidence. Beyond a few points of GPU-busy time, the one cost
+the hub found is a first visit on WebGL2 at the high tier: about 0.4 s on a
+4.3 s cold boot. The open risk is the low tier on a physical phone. If its
+triangles strain, the remedy is a coarser bake from the same program for the
+low tier (a smaller `DETAIL` table), which leaves the high tier's picture as
+it is. The flip remains the owner's decision, after the look review.
+
+## Kiln oak - 2026-10-17, in review on its pull request, nothing flipped
+
+The owner asked, through the coordinating session, for a performant, painterly
+oak for the treeline, authored in Kiln: "just one tree type and variant for
+now", brought to a pull request ready for the look review and the hub receipt,
+with nothing flipped live. For the leaves the owner approved the plan as a
+whole: "Whatever the plan is, please enact on it." Branch
+`release2/oak-kiln`; `TREE_SOURCE` stays `'procedural'`.
+
+- **The asset.** `assets/treeline/kiln/oak.kiln.js` bakes (Kiln 1.2.3) to
+  `oak.glb`: one spreading oak, a buttressed bole that splits at 2.7 m into
+  five limbs and six branches under nine lobes of 56 geodesic leaf clusters,
+  each cut to one edge length (0.42 m: 180 to 720 faces a cluster). 371,876
+  bytes; 10,249 triangles (crown 8,947, wood 1,302) against a declared budget
+  of 11,000; QA accepted, no glTF errors or warnings. The cold bake reproduces
+  it byte for byte (`KILN_CLI=.../kiln-oss/dist/cli.mjs node
+  tools/record-tree-asset.mjs --check`). The recipe refuses a limb or branch
+  that ends outside a cluster or leaves the crown between two (`requireBuried`,
+  `requireCovered`) and drops faces buried inside another cluster.
+- **The channels.** `extras.treeChannels` version 1 on the root node: the
+  cluster's seed in `TEXCOORD_0.x`, the lobe's normal in `TANGENT`, Kiln's
+  `_CAVITY`; one `treeVariant` node, `spreading`.
+- **The runtime.** `treeline/kilnTree.ts` loads it: one buffer per role in the
+  tree's frame, fitted to the unit stand from the bake's bounds, the crown's
+  envelope derived, and a bake missing any record, attribute, variant or
+  material binding refused. `treeline/kilnTreeMaterials.ts` paints it (one
+  opaque material per role). `treeline/kilnOak.ts` hands both to the treeline
+  as one builder (`treeline/oakRoles.ts`), and `Treeline.tsx` splits into
+  `Treeline`, `KilnTreeline` and `TreelineMeshes`, so either oak takes the
+  same stands, matrices and pooled shadows and a `'procedural'` build carries
+  none of the Kiln oak: no loader, no materials, no GLB, no shader strings in
+  the bundle (checked by name).
+- **The lab and the ledger.** `Tree (Kiln)` and `Tree (procedural)` at one
+  frame, `tools/treeline-lab-capture.mjs` for the eight standard views;
+  `assets/treeline/kiln/asset-manifest.json` written by
+  `tools/record-tree-asset.mjs`.
+
+| | Procedural oak (ships) | Kiln oak |
+| --- | --- | --- |
+| Triangles a tree | 924 | 10,249 |
+| Across 139 stands | 128,436 | 1,424,611 |
+| Treeline draws | 3 | 3 |
+| Whole frame, Follow, high tier | 54 draws, 3,968,047 triangles | 54 draws, 5,264,222 triangles |
+| Whole frame, Classic, phone, low tier | 29 draws, 2,154,954 triangles | 29 draws, 3,451,129 triangles |
+| Crown fragment shader | about 70 operations, 2 sines | about 210, 3 sines |
+| Game JavaScript, gzip | 664,622 bytes (`main` 664,385) | 667,627 bytes |
+| Download | none | 371,876 bytes |
+
+Whole-frame counts are from the production art review (`oak-kiln-final`
+against `oak-procedural-baseline`, both under `captures/profiling/`,
+gitignored); every scenario keeps its draw count. Nothing culls the treeline,
+so the oak's 1.30 million triangles are a third more for the whole frame at
+the high tier and three fifths more at the low tier. Locally: typecheck (app,
+lab, worker), lint (no errors; three warnings in the generated
+`app/.cloudflare/types`), 872 tests in 105 files, the build,
+`verify-deploy-config.mjs --cf` and the release probe (`oakModels` 0, and 1 in
+a `'kiln'` build).
+
+How it got here. Iterations 1 to 3 in the lab: the first bakes, the wood's
+tubes rewound (they were inside out), and the leaf plan - lobe normals,
+subdivision, banded warm and cool light, dabs, swell and sway, backlight,
+banded bark. The review of iteration 3, through the coordinating session,
+kept the silhouettes, the warm-lit and cool-shade split, the solid bole foot
+and the calm Follow treeline, and asked for six things, which iterations 4 to
+7 answered:
+
+- Bubbles: the lighting normal is nine tenths the lobe's, then a quarter the
+  whole crown's (an ellipsoid the loader fits inside the crown's bounds), each
+  band edge a wide soft ramp, and the cavity squared so only deep folds
+  darken. Iteration 4 drew the backlight round every lobe and was itself
+  bubbly; the glow moved to the crown's envelope.
+- Dabs: crisp-edged, near the camera, on the terminator; full to 40 m, gone by
+  105 m. Iteration 6 speckled where a dab's threshold reached the ends of the
+  ramp; the thresholds now span its middle seven tenths.
+- Facets: clusters cut to one edge length, 3 to 6 subdivisions by size.
+- Shade: a greyer blue-green; the lit band held close to the body.
+- Wood: 18, 12 and 8 sides; a warm grey-brown with close bands and the field's
+  warm bounce on its shade side. The branch tip above the crown in view 04 is
+  buried: a new guard in the recipe, `requireCovered`, refuses a limb or
+  branch that comes back out of the crown between two clusters; it refused
+  branch 0's old route, and branch 0 now leaves the central leader.
+- Into the sun: the crown's edge takes a yellow-green glow (faint, by the
+  critic's reading below).
+
+The final pass split the builder out so the procedural build carries nothing;
+no change to the picture. Stills: `captures/treeline/final/` (both backends,
+both subjects) and the production review above.
+
+Decisions:
+
+- **Widened deliberately.** `tests/treeline-assets.spec.ts` allowed the runtime
+  two GLBs, the farmhouse and the barn, each pinned by its ledger. It now
+  allows the oak as a third, from one table of loader, model, ledger and built
+  name; the test's comment says so with the date. The release probe counts
+  each Kiln model in `dist/` and fails one that enters more than once.
+- **The reference images are not committed.** The owner supplied two; the
+  first's provenance is unknown and the second is a Studio Ghibli film frame
+  (the repository is public). `assets/treeline/kiln/README.md` describes both
+  with size and SHA-256. Open with the owner: where the first came from.
+- **The lobe normal rides in `TANGENT`.** Kiln's GLB bridge writes no other
+  vertex attribute; `treeChannels` records the substitution.
+- **The crown's envelope comes from the loader**, from the bake's bounds,
+  rather than from a record in the bake or per stand.
+- **Fixed in passing.** `tools/art-review.mjs` has used `repo` without
+  importing it since `e964cd21` and failed "repo is not defined"; the import
+  is back.
+
+Kiln, as used here (bug, missing capability, docs gap, fine):
+
+| What | Class | Worked around |
+| --- | --- | --- |
+| No tree, branch, canopy or cluster helpers | missing capability | The recipe builds its own geodesic clusters, tubes and Catmull-Rom limbs |
+| The cavity bake is a hemisphere about the surface normal; foliage wants sky visibility | missing capability | Used for deep folds only, squared |
+| The GLB bridge drops any vertex attribute beyond POSITION, NORMAL, TEXCOORD_0, TANGENT and `_EDGE`/`_CAVITY` | missing capability | The lobe normal in TANGENT, recorded |
+| An error thrown in a recipe surfaces as "Generated asset execution was rejected", with no message or line, and there is no `validate` command | bug | A local dry run of the recipe outside Kiln |
+| `gameMaterial` defaults to flat shading | fine | `flatShading: false` |
+| Byte-identical cold bake; `programRef` is the recipe's SHA-256 prefix | fine | |
+| QA cannot certify part volumes for open shells ("Not manifold") | fine | The crown is open by design |
+
+Self-review, by a separate critic on `spec/prompts/harsh-critic.md`, from the
+production captures (the lab stills only to name causes): silhouette 6, ramp
+discipline 6, palette cohesion 7, painterly conviction 5, readability 7, life
+6 (provisional; stills cannot judge motion), screenshot test 4. **ITERATE**,
+and past the fifth iteration the template makes that **ESCALATE**, with this
+diagnosis: the crown is a pile of spheres, each lobe lit as its own sphere,
+where the reference paints a few big masses lit as one shape and breaks them
+into leaf-shaped strokes only where the light turns; until the light comes
+from the crown's overall shape, changes to colour, dabs or contrast will keep
+reading as bubbles. Like for like at Follow the critic would still take the
+Kiln oak over the shipped one, a full, soft countryside tree against a flat
+slab on a long maroon trunk, by a modest margin: a nicer generic tree, not yet
+the Ghibli oak. At Classic the ring is out of frame in both builds. Its notes,
+by impact:
+
+1. Light the crown as one shape: about three quarters of the light from the
+   crown's envelope, the lobe's normal kept for the dabs and the rim (the leaf
+   material). One constant: a trial with `CROWN_WEIGHT` at 0.75 is in
+   `captures/treeline/option-crown75/` (views 01, 02, 03, 05), where the
+   body of the crown reads as one shaded mass under lit tops. Left for the
+   owner, the loop being past five iterations, and adopted on the owner's
+   decision below.
+2. A sap-green middle stop at the turn, a deeper blue-green for the crown's
+   interior from an occlusion value the recipe would bake, the lit stop a
+   tenth darker and still warm, and the bark's shade toward violet-brown
+   (palette and materials).
+3. Three lobe sizes, sunk into one another, instead of equal scallops (the
+   recipe). It keeps the outline but changes its rhythm.
+4. Dabs as crisp cellular clusters around the turn, gone by 60 to 70 m (the
+   leaf material).
+5. A stronger glow into the sun, and a Follow capture that faces it.
+6. Seen from directly below (lab view 04), where a limb enters a cluster's
+   underside it reads as a blunt end. The critic took these for limb ends;
+   they are entries, since the recipe's guards bury every tip, but the read
+   is the same. Not visible on the ring.
+
+Outside the notes, because it changes a kept silhouette: the crown is about
+1.45:1 wide to tall against the reference's 1.9:1, with its limbs hidden, and
+that is most of why it reads as a round tree rather than a spreading oak at
+Follow. Art is UNREVIEWED by the owner; physical phones are NOT_TESTED.
+
+**The owner's decision, the same day:** "Yes: set CROWN_WEIGHT to 0.75 and
+warm the far crown colour toward the haze on PR 133, recapture, then run one
+hub receipt on both builds including the phone low tier." Both are in the
+leaf material (`a6750f93`); the GLB and its ledger are unchanged, and
+`record-tree-asset.mjs --check` still re-bakes it byte for byte.
+
+- `CROWN_WEIGHT` 0.75: the crown turns from light to shade as one mass, and
+  the lime crescent on each lobe the critic named is gone from the shaded
+  body; the lobes show at the outline and where the light turns.
+- The far colour leans toward the haze at the layer that owns it, the
+  crown's own distance term: from 40 m, where the dabs begin to give way, to
+  160 m, up to 0.4 toward the haze's hue at the crown's own value - the
+  fog's one colour, `PALETTE.skyHorizon`, at unit luminance (`hazeHue`),
+  times the crown's luminance. It replaces the settle toward a cool
+  blue-green of the oak's own (`oakLeafFar`, gone from the palette), so no
+  far tint is authored and the crown follows the sky's horizon. Leaning on
+  the haze's hue rather than the haze itself warms the ring without
+  lightening it, which the shared aerial term and the scene's fog already
+  do further out. A first trial (70 to 220 m, up to 0.35) barely moved the
+  ring in the lab's Follow view; the shipped range starts where the dabs
+  fade. Nearer than 40 m nothing changes: in lab view 01 the near crowns of
+  the trial and of the shipped range differ by under a tenth of a level on
+  average.
+- Measured on the Follow capture of the production review, over the crown
+  pixels the change moved: the mean crown colour went from hue 91 degrees
+  (green) to 63 (yellow-olive) at the same saturation, 0.26, and the same
+  value, 0.57. Warmer, not paler or greyer.
+- Cost: about eight more scalar operations a crown fragment (a luminance dot
+  and a vec3 scale), so about 210 and three sines in all; no uniform, texture,
+  alpha or pass, still three draws. The bundle: 664,622 bytes of game
+  JavaScript gzip with `'procedural'` (237 over `main`), 667,627 with
+  `'kiln'`.
+- `tests/tree-kiln.spec.ts` holds `hazeHue` to the haze: unit luminance,
+  the haze's own proportions, warm, and no far tint of the oak's own left.
+- Recaptured: the lab's eight views of both oaks on both renderers in
+  `captures/treeline/final-v2/`, and the production review in
+  `captures/profiling/oak-kiln-v2/` against `oak-procedural-baseline`
+  (Classic and Follow, WebGPU and WebGL2, phone high and low, landscape low;
+  the same draws and triangles per scenario as before).
+
+Performance is the hub receipt's, the entry above; this PC's timings are not
+evidence, and the art review's boot and frame checks fail here for the
+procedural baseline exactly as for the Kiln build. Motion is judged from
+three frames a scenario only; physical phones are untested. Next, in order:
+the owner's look review on the production build (the lab's `Tree (Kiln)`
+subject and a `TREE_SOURCE = 'kiln'` build), then the flip in its own
+commit, with the CHANGELOG entry in the release that ships it.
+
 ## Release 3.3.2 - 2026-10-17, the route deleted, the Custom Domain alone serves `sheepdogsim.com`
 
 The owner: "Do this task here: Release after 3.3.1: delete the route, drop
