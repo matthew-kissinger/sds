@@ -51,6 +51,20 @@ branch tip poking through the crown is. The clusters are geodesic spheres cut
 to one edge length (`DETAIL`), and a triangle buried inside another cluster's
 drawn surface is dropped (`BURIED`).
 
+After Kiln's exposure bake, the program leaves out every face that no viewer
+could see from any direction (`dropUnseen`, under "unseen faces" in the
+recipe): 364 of the wood's 1,302 triangles, the limbs and branches inside the
+crown, and none of the crown's. A face goes only when the clusters hide it
+from every direction it faces, with the clusters taken smaller than drawn by
+more than the sway moves one height of a tree against another (0.3 m against
+0.24 m at the stand whose box is narrowest for its height) and the face
+pushed out past the most the swell carries a leaf (0.4 m against 0.29 m).
+The bake still samples the whole tree, so every face that stays keeps the
+cavity it had: the crown is bit-identical, the wood keeps every vertex it
+still uses as it was, and the fit is unchanged. The root node records the two
+allowances (`treeUnseen`), and `tests/tree-kiln.spec.ts` holds the game's
+sway and swell inside them.
+
 ## Where it stands
 
 The bake is authored in metres, roots at y 0. The loader fits it to the unit
@@ -118,17 +132,17 @@ no texture, no alpha, no extra pass:
 
 | | Procedural oak | Kiln oak |
 | --- | --- | --- |
-| Triangles a tree | 924 (crown 560, wood 364) | 10,249 (crown 8,947, wood 1,302) |
-| Across 139 stands, before pooled shadows | 128,436 | 1,424,611 |
+| Triangles a tree | 924 (crown 560, wood 364) | 9,885 (crown 8,947, wood 938); 10,249 before the unseen faces were left out |
+| Across 139 stands, before pooled shadows | 128,436 | 1,374,015 (1,424,611 before) |
 | Draws for the treeline | 3 (crowns, wood, pooled shadows) | 3, the same three |
 | Textures, transparency, added passes | none | none |
-| Download | none | `oak-<hash>.glb`, 371,876 bytes, in a `'kiln'` build only |
-| Game JavaScript, gzip | 664,622 bytes, 237 more than `main` (the oak's palette entries and the builder split) | 667,627 bytes |
-| Whole frame, high tier, Follow (production art review) | 54 draws, 3,968,047 triangles | 54 draws, 5,264,222 triangles |
-| Whole frame, low tier, Classic, phone (production art review) | 29 draws, 2,154,954 triangles | 29 draws, 3,451,129 triangles |
+| Download | none | `oak-<hash>.glb`, 363,500 bytes (371,876 before), in a `'kiln'` build only |
+| Game JavaScript, gzip | 664,622 bytes, 237 more than `main` (the oak's palette entries and the builder split) | 667,631 bytes |
+| Whole frame, high tier, Follow (production art review) | 54 draws, 3,968,047 triangles | 54 draws, 5,213,626 triangles |
+| Whole frame, low tier, Classic, phone (production art review) | 29 draws, 2,154,954 triangles | 29 draws, 3,400,533 triangles |
 
-The triangle budget the recipe declares is 11,000. Nothing culls the treeline,
-so every tier submits every stand: the 1.30 million triangles the oak adds are
+The triangle budget the recipe declares is 10,000. Nothing culls the treeline,
+so every tier submits every stand: the 1.25 million triangles the oak adds are
 a third more for the whole frame at the high tier and three fifths more at the
 low tier. Shader cost, counted in scalar operations with a vec3 operation as
 three (the materials' header has the breakdown): per vertex, over Three's own
@@ -151,11 +165,22 @@ desktop viewport's high tier and the phone viewport's low tier:
   unchanged on WebGPU. On WebGL2 they were about 0.4 s slower at the high
   tier, where the two materials' programs take longer to compile.
 
+Both programs compile inside the scene-ready gate (`compileScene.ts`), with
+the rest of the scene, before Play is offered. The treeline's meshes are never
+frustum-culled, so the gate always includes them, and no gameplay frame waits
+on them. The cost trim's receipt (the status log's "Kiln oak cost trim -
+2026-10-17") put this oak against the one before its unseen faces were left
+out: the same frame times and draws, 50,596 fewer triangles in every view, and
+boots within their noise.
+
 So no coarser level of detail is needed on the hub's evidence. Whether a
 phone's GPU carries the low tier's extra triangles needs a phone, because the
 hub's phone viewport runs the low tier on desktop hardware. If a coarser level
 is needed, it comes from this program with a smaller `DETAIL` table (a longer
-cluster edge, fewer sides on the wood); none is authored.
+cluster edge, fewer sides on the wood); none is authored. The cost trim
+measured the crown's side of that: 5,000 to 6,000 triangles a tree needs
+`DETAIL.frequency` to start at 2 and an edge of 0.55 to 0.6 m, and then the
+outline's scallops turn into straight runs and corners from 12 to 34 m.
 
 ## Reference
 
@@ -183,6 +208,9 @@ capability, docs gap, fine):
 | `gameMaterial` defaults to flat shading | fine | Set `flatShading: false`; right for hard-surface work |
 | The cold bake is byte-identical, and `programRef` is the recipe's own SHA-256 prefix | fine | |
 | The QA report cannot certify part volumes for open shells ("Not manifold") | fine | The crown is a union of clusters with buried faces removed, open by design |
+| No step that leaves out the faces no viewer can see, after the bake and keeping its per-vertex values | missing capability | `dropUnseen` in the program: an analytic test against the clusters as ellipsoids, run after `bakeSurfaceAttributes`, giving each part a new geometry |
+| A part's geometry can be replaced after `bakeSurfaceAttributes`, and the export, the budget and the QA report all read the replacement | fine | |
+| The source check names a refused construct and its line (`DYNAMIC_CODE_ACCESS` for `attribute.array.constructor`) | fine | `new Float32Array`, with any other array type refused |
 
 ## Not in this asset
 

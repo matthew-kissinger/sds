@@ -5,6 +5,250 @@
 
 # Status log
 
+## Kiln oak cost trim - 2026-10-17, on its pull request; nothing tagged or deployed
+
+The owner asked, through the coordinating session, to trim the Kiln oak's
+cost: lower its runtime cost with no visible change in the look. The brief
+named a target of about 5,000 to 6,000 triangles a tree, from 10,249, by
+giving the crown clusters buried inside their lobe coarser spheres, decided
+by measurement, with the wood left as it is unless something there is
+plainly wasted. It also asked for the two oak materials to be compiled during
+loading, behind the gate that already exists. Branch `release2/oak-cost-trim`
+from `main` `f650f043`.
+
+**What the branch ships.** After Kiln's exposure bake, the recipe leaves out
+every face that no viewer could see from any direction (`dropUnseen` in
+`assets/treeline/kiln/oak.kiln.js`). That is 364 of the wood's 1,302
+triangles, the limbs and branches inside the crown, and none of the crown's.
+
+| | `main`, 3.4.0 | This branch |
+| --- | --- | --- |
+| Triangles a tree | 10,249 (crown 8,947, wood 1,302) | 9,885 (crown 8,947, wood 938) |
+| Vertices a tree | 6,140 (crown 5,371, wood 769) | 5,960 (crown 5,371, wood 589) |
+| Across 139 stands | 1,424,611 | 1,374,015 |
+| Treeline draws | 3 | 3 |
+| GLB | 371,876 bytes | 363,500 bytes |
+| Triangle budget | 11,000 | 10,000 |
+| Game JavaScript, gzip | 667,627 bytes | 667,631 bytes |
+
+- Checked against `main`'s GLB, the crown is bit-identical. Every wood vertex
+  that stays is the old vertex, every attribute bit for bit and in the old
+  order, and every triangle that stays is an old one, in the old order. The
+  crown's bounds, and with them the loader's fit and envelope, are unchanged.
+  The wood's own bounds shrink by its buried ends, which nothing reads.
+- A face goes only when the clusters hide it from every direction it faces.
+  The clusters count as ellipsoids at their polyhedra's inradius, and 0.3 m
+  smaller for the sway. The most the game's sway moves one height of a tree
+  against another is 0.24 m in the recipe's metres, at stand 59, whose box is
+  narrowest for its height. Each face is tried at seven points, where it is and
+  pushed out by up to 0.4 m for the swell, which moves a leaf at most 0.29 m.
+  The directions are 600 over the whole sphere; 2,400 and 9,600 leave out the
+  same number of faces.
+- The bake records both allowances on its root node (`treeUnseen`, version 1),
+  and the ledger repeats them. A new test in `tests/tree-kiln.spec.ts` reads
+  the game's sway (`SWAY_REACH`, now exported by
+  `treeline/kilnTreeMaterials.ts`) and its swell back into the recipe's metres,
+  through the loader's fit and every stand's box, and holds them inside the
+  allowances. So that test reads the boxes the treeline draws, `standMatrices`
+  moved from `Treeline.tsx` to `treeline/stands.ts`, unchanged.
+- The cold Kiln bake reproduces the GLB byte for byte
+  (`KILN_CLI=.../kiln-oss/dist/cli.mjs node tools/record-tree-asset.mjs
+  --check`).
+
+**Why the target is not met.** The measurements, made outside Kiln on the
+recipe's own geometry (the scripts stayed in the session's scratchpad):
+
+- Every one of the 56 clusters reaches the crown's outline from some
+  direction except one small shell cluster, which keeps 18 faces. The overlap
+  cull (`BURIED`) had already dropped the faces buried inside other clusters,
+  so a buried cluster has almost nothing left to coarsen. The seven shells
+  that reach the outline least (under 1.5% of their outline samples) keep 334
+  faces among them, and going down a subdivision would save about 190.
+- What remains is the outline's own detail. The crown's triangles at other
+  cluster edge lengths (`DETAIL.edge`) and least subdivisions
+  (`DETAIL.frequency[0]`); the trimmed wood adds about 940:
+
+  | Edge | Least subdivision 3 | Least subdivision 2 |
+  | --- | --- | --- |
+  | 0.42 m (ships) | 8,947 | 8,348 |
+  | 0.5 m | 7,710 | 6,296 |
+  | 0.55 m | 7,501 | 5,658 |
+  | 0.6 m | 6,987 | 4,782 |
+  | 0.7 m | 6,860 | 4,392 |
+
+- The target needs a least subdivision of 2 and an edge of 0.55 to 0.6 m. A
+  bake at 0.6 m (5,730 triangles a tree) was captured in the lab with the
+  clock pinned, against this branch. Its outline turns from scallops into
+  straight runs and corners from 12 to 34 m: 3,100 to 26,000 pixels change by
+  more than 24 levels in the field-side, sun-side, into-sun, bole-foot and
+  silhouette views. These are the facets on the outline that the iteration-3
+  review rejected. At the Follow and Classic reads, about 700 and 100 pixels
+  change, along the outlines. That is a visible change, so it is not shipped;
+  it is the owner's call.
+
+**The compile.** The two oak materials already compile during loading, inside
+the scene-ready gate the homestead uses: `SceneReadySignal` stops the loop
+and runs `compileMountedScene` (`compileScene.ts`), which runs Three's
+`compileAsync` over everything the title camera could submit. The treeline's
+meshes are never frustum-culled, so they are always included. Nothing was
+added; `Treeline.tsx` now says why the gate covers them.
+
+- A WebGL2 shader trace on this PC (the functional lane) found the two oak
+  programs linking at 1.6 to 2.6 s, inside the gate (`herd:boot:scene` 0.75 to
+  1.25 s, `herd:boot:shaders` 2.6 to 4.1 s). Through Play and the switch to
+  Follow, no oak program compiled after the scene was ready. One other program
+  did, in both builds: the pen gate's opening marker (`GateOpeningMarker`),
+  which is hidden at boot and not marked `COMPILE_WHEN_HIDDEN`, on its first
+  showing.
+- A diagnostic on the hub (not a receipt; three cold boots an arm, the driver
+  cache off) put the procedural build of the earlier receipt against `main`.
+  The leaf program compiles in about 85 ms against the procedural canopy's 53
+  with the parallel-compile extension hidden, and about 129 against 53 as
+  shipped. The bark compiles as fast as the procedural wood with the extension
+  hidden (42 ms each), and in about 97 against 78 as shipped. Three r186's
+  `compileAsync` waits for each object's program before starting the next, so
+  a cold WebGL2 compile window is the sum of about 40 programs, 1.7 to 3.7 s
+  on the hub in either build. Three boots an arm cannot place the rest of the
+  earlier receipt's +0.28 s window difference: identical programs also ran
+  slower in some of the Kiln runs.
+- So the oak's compile on a cold first WebGL2 visit is paid inside the gate,
+  before Play is offered, and no gameplay frame waits on it. Making it
+  smaller needs cheaper programs or programs compiled side by side, and
+  neither was in this brief. Leaving the faces out changes no program.
+
+**The look.** Lab stills at the eight standard views, both renderers, with
+the new `--freeze` option of `tools/treeline-lab-capture.mjs` (it pins the
+page's clock, so the sway and the grass hold one pose):
+
+- `main`'s GLB against this branch's: 14 of the 16 view and renderer pairs are
+  bit-identical. 02-sun-side differs in a few pixels of far grass and
+  07-follow-far in grass near the camera, by what a second run of this branch
+  shows against its first: 02, 6 to 8 pixels over 24 levels against 7 to 11;
+  07, 3,345 to 3,703 against 3,319 to 4,472. The trees do not change.
+- The production art review (`oak-trim` against `oak-trim-before`, `main`'s
+  sources) keeps every scenario's draws. Each has exactly 50,596 fewer
+  triangles: Follow at the high tier 5,213,626 against 5,264,222, and Classic
+  on the phone at the low tier 3,400,533 against 3,451,129. The stills read
+  the same.
+- Captures, all gitignored: `captures/treeline/trim/` (before, after,
+  after-repeat, variant-5730 and the two diff sets), and
+  `captures/profiling/oak-trim/` with its baseline
+  `captures/profiling/oak-trim-before/`.
+
+**The hub receipt.** One receipt, on `mk-os` over the `hub` alias, as the
+earlier oak receipt was taken: Chrome 150.0.7871.128, Playwright 1.61.1
+read-only, the GTX 1660 Ti Max-Q (driver 615.71.09), 200 sheep and the
+default wander input. Desktop is the native 1440x900 viewport at the high
+tier, and phone is the probe's 390x844 phone viewport at the low tier.
+
+- Both arms are copied production builds. "Before" is `main` `f650f043`, the
+  build live as 3.4.0; its artifact digest `07354925...` is the deployed one.
+  "After" is this branch at `a42ae789`, artifact `8f8ed4c8...`: the same 37
+  files, 8,372 bytes smaller (the GLB 8,376 bytes smaller, the game script
+  4 bytes larger).
+- Each arm ran from its own `dist/` and copy of the probe, in
+  `~/perf/sds-oak-trim-20261017/`. Nothing else on the hub was touched.
+- The preflight took two consecutive quiet samples before the timed runs (0%
+  GPU and 0.4% CPU, then 0% and 0.5%), and again before the cold boots. The
+  probe repeated its own gate before every run, and its last two samples were
+  at most 3% GPU and 13.5% CPU.
+- All 74 runs reported no page errors and no failed requests, and every run of
+  both arms fetched an oak GLB. The run script and the receipts are under
+  `captures/stability/hub-receipts/oak-trim/`, gitignored.
+- A diagnostic followed straight after, not a second receipt: ten more
+  alternating pairs of warm boots a backend, from the same arms and probe
+  copies, behind the same preflight (0% GPU and 1.0% CPU, then 0% and 1.9%).
+  Its 40 boots also reported no errors or failed requests, and each fetched
+  an oak GLB. Its script and receipts are beside the receipt's
+  (`warm-check.sh`, `warm.log`, `<arm>/receipts/warm*`).
+
+Per backend and view, the arms ran back to back, 60 s each, alternating which
+went first. GPU busy is the mean of nvidia-smi's utilisation, which the probe
+samples every 5 s (13 or 14 samples a run).
+
+| View | Backend | p50 / p95 / p99 ms, both arms | Over 100 ms | Draws | Triangles, before → after | GPU busy, before → after |
+| --- | --- | --- | --- | --- | --- | --- |
+| Follow, desktop | WebGPU | 8.3 / 8.4 / 8.4 | 0 / 0 | 33 | 5,211,744 → 5,161,148 | 57.4% → 57.6% |
+| Classic, desktop | WebGPU | 8.3 / 8.4 / 8.4 | 0 / 0 | 40 | 5,254,414 → 5,203,818 | 56.5% → 56.9% |
+| Follow, phone (low) | WebGPU | 8.3 / 8.4 / 8.4 | 0 / 0 | 21 | 3,408,457 → 3,357,861 | 39.4% → 38.6% |
+| Classic, phone (low) | WebGPU | 8.3 / 8.4 / 8.4 | 0 / 0 | 28 | 3,451,127 → 3,400,531 | 39.2% → 39.1% |
+| Follow, desktop | WebGL2 | 8.3 / 8.4 / 8.4 | 0 / 0 | 33 | 5,211,744 → 5,161,148 | 61.9% → 62.8% |
+| Classic, desktop | WebGL2 | 8.3 / 8.4 / 8.4 | 0 / 0 | 40 | 5,254,414 → 5,203,818 | 61.6% → 62.3% |
+| Follow, phone (low) | WebGL2 | 8.3 / 8.4 / 8.4 | 0 / 0 | 21 | 3,408,457 → 3,357,861 | 41.2% → 41.3% |
+| Classic, phone (low) | WebGL2 | 8.3 / 8.4 / 8.4 | 0 / 0 | 28 | 3,451,127 → 3,400,531 | 41.1% → 40.5% |
+
+Boot-only runs at the native viewport in Classic, as medians of `readyMs`
+with ranges. Warm runs are three alternating pairs a backend in the receipt
+and ten in the diagnostic. Cold runs had the driver's shader disk cache off
+for those Chrome processes alone (`__GL_SHADER_DISK_CACHE=0`; nothing shared
+was read, written or cleared) and a fresh profile each launch, in alternating
+pairs. The ± is one standard error of the paired mean.
+
+| Boot | Before | After | After minus before, paired |
+| --- | --- | --- | --- |
+| Warm, WebGPU, desktop, 3 pairs | 2,704 ms (2,592 to 2,804) | 2,741 ms (2,627 to 2,946) | +71 ms ± 35 on average; slower in 3 of 3 |
+| Warm, WebGL2, desktop, 3 pairs | 1,842 ms (1,822 to 1,949) | 2,039 ms (1,959 to 2,146) | +177 ms ± 65 on average; slower in 3 of 3 |
+| Warm, WebGPU, desktop, 10 more pairs (diagnostic) | 2,636 ms (2,574 to 2,705) | 2,646 ms (2,571 to 2,695) | +6 ms ± 20 on average; slower in 7 of 10 |
+| Warm, WebGL2, desktop, 10 more pairs (diagnostic) | 1,915 ms (1,794 to 3,569) | 1,890 ms (1,775 to 1,963) | -254 ms ± 183 on average; slower in 5 of 10 |
+| Cold, WebGL2, desktop, high tier, 10 pairs | 5,081 ms (4,147 to 5,652) | 5,107 ms (4,288 to 5,340) | -76 ms ± 164 on average; slower in 5 of 10 |
+| Cold, WebGL2, phone, low tier, 10 pairs | 4,052 ms (3,966 to 5,735) | 4,733 ms (3,958 to 5,709) | +375 ms ± 245 on average; slower in 7 of 10 |
+| Cold, WebGPU, desktop, high tier, 3 pairs | 3,553 ms (3,501 to 3,613) | 3,547 ms (3,526 to 3,604) | +3 ms ± 51 on average; slower in 1 of 3 |
+
+What the receipt shows:
+
+- **Frame times are identical.** Every percentile matches in all sixteen
+  60 s runs, on both backends, in both cameras and at both tiers. No frame
+  went over 100 ms; the worst single frame was 33.4 ms, in the before arm.
+  Every view keeps its draws and has 50,596 fewer triangles, 139 x 364.
+- **GPU busy moves -0.8 to +0.9 points, with no consistent direction.** The
+  saving to expect is about 4% of the oak's 3 to 4 points, a tenth of a
+  point or so, which the 5 s sampling cannot resolve.
+- **Boots agree within their noise.** Both builds compile byte-identical
+  shaders: all 78 WebGL2 sources were compared on this PC. A boot difference
+  has only the 8 KB smaller GLB to come from.
+  - Warm, the receipt's three pairs were slower in the after arm on both
+    backends, which is why the diagnostic ran. Its ten pairs a backend show
+    no difference: on WebGPU +6 ms ± 20, slower in 7 of 10 (all thirteen
+    pairs together, +21 ms ± 19), and on WebGL2 slower in 5 of 10.
+  - The WebGL2 mean of -254 ms comes from two before-arm boots whose shader
+    window (`herd:boot:scene` to `herd:boot:shaders`) took 1.6 and 2.4 s
+    against the usual 0.7 s, as the before arm's two 60 s WebGL2 runs did
+    (1.5 and 1.6 s, 2,725 and 2,753 ms to ready). No after-arm warm boot
+    did: 4 of 15 against 0 of 15. The programs are byte-identical, so the
+    change gives no cause for it, and four slow boots fall all in one arm
+    by chance about one time in ten.
+  - At the high tier, the cold WebGL2 pairs split 5 to 5.
+  - At the low tier, the after arm was slower in 7 of 10 pairs (+375 ms ±
+    245). The earlier receipt found the same spread at that tier between two
+    different oaks (+337 ms ± 287).
+  - The slowest single boots are 5.7 s in either arm.
+- **The startup budget.** Every desktop WebGPU run missed the probe's 2 s
+  startup budget in both arms (2.6 to 2.7 s), as every receipt since Release 1
+  has shown. Two desktop WebGL2 runs of the before arm missed it too (2,725 and
+  2,753 ms), and the after arm's met it (1,885 and 1,902 ms). Every phone run
+  met the phone viewport's 5 s budget.
+
+Nothing in the receipt argues against the trim, and nothing in it is a
+regression. It is too small to show up in this lane: 3.6% of the oak's
+triangles, all of them the wood's.
+
+**Kiln.** Classified as before (bug, missing capability, docs gap, fine);
+the README's table has them:
+
+- No step leaves out the faces no viewer can see after a bake while keeping
+  its per-vertex values: missing capability. `dropUnseen` does it in the
+  recipe.
+- A part's geometry can be replaced after `bakeSurfaceAttributes`, and the
+  export, the budget and the QA report all read the replacement: fine.
+- The sandbox's source check refused `attribute.array.constructor` and named
+  the construct and its line (`DYNAMIC_CODE_ACCESS`): fine. A runtime error
+  inside a recipe still surfaces with no message (the README's existing bug).
+
+**Checks**, locally: typecheck (app, lab, worker); lint with no errors (three
+warnings, all in the generated `app/.cloudflare/types`); 874 tests in 105
+files; the build; `npm run probe:release` (`oakModels` 1, initial JavaScript
+667,631 bytes gzip); `node scripts/verify-deploy-config.mjs --cf`.
+
 ## Release 3.4.0 - 2026-10-17, the Kiln oak is the treeline
 
 The owner, after the look review of pull request 133 with the crown lit as

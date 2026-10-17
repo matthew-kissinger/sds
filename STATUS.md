@@ -367,13 +367,18 @@ longer claims Neutral.
   viewport's low tier, found no frame-time regression and the same draws:
   the GPU busy about 3 to 4 points more at the high tier and 0 to 2 at the
   low, warm boots unchanged, and a cold WebGL2 boot at the high tier about
-  0.4 s slower. Open: the owner's test on a physical phone in production,
-  and the optional cost work (coarser spheres for buried crown clusters,
-  compiling the two materials during loading, a low-tier bake if a phone
-  needs one). The status log entries "Kiln oak hub receipt -
-  2026-10-17" and "Kiln oak - 2026-10-17" have the numbers, the decisions,
-  the critic's notes and the Kiln feedback; `assets/treeline/kiln/README.md`
-  documents the asset.
+  0.4 s slower. **Cost trim in review** (2026-10-17, branch
+  `release2/oak-cost-trim`, not deployed): the bake leaves out the faces no
+  viewer can see, 9,885 triangles a tree from 10,249 (the 364 left out are
+  wood inside the crown), with no visible change, the same frame times and
+  still three draws. The two materials already compiled during loading, in
+  the scene-ready gate. The brief's 5,000 to 6,000 needs coarser crown
+  clusters, whose facets show on the outline (open questions). Open: the
+  owner's test on a physical phone in production, and a low-tier bake if a
+  phone needs one. The status log entries "Kiln oak cost trim -
+  2026-10-17", "Kiln oak hub receipt - 2026-10-17" and "Kiln oak -
+  2026-10-17" have the numbers, the decisions, the critic's notes and the
+  Kiln feedback; `assets/treeline/kiln/README.md` documents the asset.
 - Surfaces stay procedural (decided 2026-10-16 on a measured spike,
   `docs/history/spike-surface-atlas-2026-10-16.md`, branch
   `experiment/surface-atlas`, pull request 122, not for merge). The owner
@@ -520,7 +525,11 @@ the record those files carry.
   visit; the hub receipt ran the phone viewport's low tier on desktop
   hardware. The first reference image is the owner's, attached in the
   session that commissioned the oak. Art: owner approved. Physical phones:
-  the owner tests in production.
+  the owner tests in production. Also the owner's call: whether the oak goes
+  to the cost brief's 5,000 to 6,000 triangles a tree, which needs
+  `DETAIL.frequency` to start at 2 and an edge of 0.55 to 0.6 m. A captured
+  5,730-triangle bake turns the outline's scallops into straight runs and
+  corners from 12 to 34 m (status log, "Kiln oak cost trim - 2026-10-17").
 - Whether to collapse the Pages project and the score Worker into one Worker
   serving static assets and `/api/*` on `sheepdogsim.com` alone. The present
   split works, but the repository asserts invariants it does not own - the

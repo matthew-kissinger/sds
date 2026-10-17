@@ -6,6 +6,16 @@
 //   node tools/treeline-lab-capture.mjs [--label NAME] [--backend webgl|webgpu|both]
 //                                       [--subject kiln-tree|tree|both]
 //                                       [--views 01,05]  (view id prefixes)
+//                                       [--freeze]  (hold the wind still)
+//
+// --freeze pins the page's clock, so every still is taken at the same instant
+// of the wind. The sway and the grass move on TSL `time`, which three advances
+// from `performance.now()` each frame; with the clock pinned they hold one pose.
+// A before and after comparison of an asset change needs this: without it the
+// diff is mostly the wind. Two runs of one build then give the same pixels in
+// every view but two: some grass near the camera in 07-follow-far, and a few
+// pixels of far grass in 02-sun-side, differ from run to run by themselves, so
+// compare those two against a second run of the same build.
 //
 // The barn's capture tool (tools/barn-lab-capture.mjs) with the tree's
 // subjects and views: it starts the lab's own dev server (vite.lab.config.ts)
@@ -49,6 +59,7 @@ const label = arg('label', new Date().toISOString().slice(0, 10));
 const backends = arg('backend', 'webgpu') === 'both' ? ['webgpu', 'webgl'] : [arg('backend', 'webgpu')];
 const subjects = arg('subject', 'both') === 'both' ? ['kiln-tree', 'tree'] : [arg('subject', 'both')];
 const port = Number(arg('port', '5263'));
+const freeze = process.argv.includes('--freeze');
 
 const SUBJECT_LABEL = { 'kiln-tree': 'Tree (Kiln)', tree: 'Tree (procedural)' };
 
@@ -108,6 +119,7 @@ const settle = (page, ms) => page.waitForTimeout(ms);
 async function capture(browser, backend, subject) {
   const context = await browser.newContext({ viewport: { width: 1600, height: 900 } });
   await stubHarnessNetwork(context);
+  if (freeze) await context.addInitScript(() => { performance.now = () => 1000; });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(String(error)));

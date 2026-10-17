@@ -46,6 +46,13 @@
 // level would be this same program with a smaller table (a longer cluster edge,
 // fewer sides on the wood). None is authored: the hub's timing receipt decides
 // whether one is needed.
+//
+// WHAT NO VIEWER CAN SEE IS NOT EXPORTED. The limbs and branches run on inside
+// the crown to their lobes' centres, so that no tip can show; after Kiln's
+// exposure bake, every face that no viewer could see from any direction is
+// left out (`dropUnseen`, under "unseen faces" below). That is over a quarter
+// of the wood and none of the crown. The bake still samples the whole tree,
+// so every face that stays keeps the cavity it had.
 
 const meta = { name: 'Oak', category: 'vegetation', role: 'tree' };
 
@@ -290,6 +297,7 @@ function lobeClusters(lobe, l) {
  * Every cluster as one indexed geometry, with every triangle buried inside
  * another cluster removed. Each vertex carries its cluster's own smooth normal
  * (NORMAL), its lobe's normal (TANGENT.xyz) and its cluster's seed (uv.x).
+ * `owners` names each triangle's cluster, by its place in `clusters`.
  */
 function crownGeometry(clusters) {
   const positions = [];
@@ -297,6 +305,7 @@ function crownGeometry(clusters) {
   const lobeNormals = [];
   const uvs = [];
   const indices = [];
+  const owners = [];
   clusters.forEach((cluster, k) => {
     const sphere = sphereOf(cluster.detail);
     const lobe = LOBES[cluster.lobe];
@@ -335,6 +344,7 @@ function crownGeometry(clusters) {
         uvs.push(cluster.seed, 0);
       }
       indices.push(remap.get(face[0]), remap.get(face[1]), remap.get(face[2]));
+      owners.push(k);
     }
   });
   const geometry = new THREE.BufferGeometry();
@@ -343,7 +353,7 @@ function crownGeometry(clusters) {
   geometry.setAttribute('tangent', new THREE.Float32BufferAttribute(lobeNormals, 4));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
-  return geometry;
+  return { geometry, owners };
 }
 
 /**
@@ -494,8 +504,150 @@ function requireCovered(path, radius, clusters, label) {
   }
 }
 
+// ============================================================= unseen faces
+/**
+ * A face is left out of the export only when no viewer could see it from any
+ * direction, with the tree moving as the game moves it. Each test is made so
+ * that it can only keep too much, never drop a face that could show:
+ *
+ *  - Only the clusters hide anything, each taken at its polyhedron's inradius
+ *    (its drawn surface is never further in) and then `sway` smaller. The most
+ *    the game's sway moves one height of a tree against another is 0.24 m in
+ *    this program's metres, at the stand whose box is narrowest for its
+ *    height; `sway` leaves room over that. The wood hides nothing.
+ *  - Each face is tried at seven points (its centre, its corners and its edge
+ *    midpoints), each where it is and pushed out along the face's normal by
+ *    each of `margins`, past the most the canopy material's swell carries a
+ *    leaf vertex out (0.29 m across, 0.18 m up).
+ *  - It is looked at from `directions` directions spread over the whole
+ *    sphere, the half it faces: no camera is assumed. It stays if any point
+ *    is in the clear along any of them. Four and sixteen times as many
+ *    directions leave out the same number of faces.
+ *
+ * Seen from a stand's box and yaw instead, everything here is the same: the
+ * stand's matrix maps lines to lines and keeps which side of a face a
+ * direction is on. The two motions are given in this program's metres; the
+ * root node records both (`treeUnseen`), and the game's tests hold its sway
+ * and swell inside them (tests/tree-kiln.spec.ts).
+ */
+const UNSEEN = { directions: 600, sway: 0.3, margins: [0, 0.15, 0.3, 0.4] };
+
+/** `count` directions spread evenly over the sphere, a Fibonacci spiral. */
+function viewDirections(count) {
+  const out = [];
+  for (let i = 0; i < count; i += 1) {
+    const y = 1 - (2 * (i + 0.5)) / count;
+    const ring = Math.sqrt(1 - y * y);
+    const phi = i * Math.PI * (3 - Math.sqrt(5));
+    out.push([Math.cos(phi) * ring, y, Math.sin(phi) * ring]);
+  }
+  return out;
+}
+
+/** Does anything in `solids` (ellipsoids) lie along the ray from `o` toward `d`? */
+function occluded(o, d, solids, skip) {
+  for (let j = 0; j < solids.length; j += 1) {
+    if (j === skip) continue;
+    const { c, r } = solids[j];
+    const p = [(o[0] - c[0]) / r[0], (o[1] - c[1]) / r[1], (o[2] - c[2]) / r[2]];
+    const outside = dot(p, p) - 1;
+    if (outside < 0) return true;
+    const q = [d[0] / r[0], d[1] / r[1], d[2] / r[2]];
+    const b = dot(p, q);
+    const disc = b * b - dot(q, q) * outside;
+    // From outside, both crossings lie on one side: ahead when the far one is.
+    if (disc >= 0 && Math.sqrt(disc) > b) return true;
+  }
+  return false;
+}
+
+/**
+ * One flag per triangle of `geometry`: can some viewer see it? `owners` names
+ * each crown triangle's own cluster, which cannot hide its own outer face and
+ * is not asked; the wood has none. A face with no area draws nothing.
+ */
+function seenFaces(geometry, owners, solids, directions) {
+  const position = geometry.getAttribute('position');
+  const index = geometry.getIndex();
+  const corner = (at) => [position.getX(at), position.getY(at), position.getZ(at)];
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+  const seen = [];
+  for (let t = 0; t < index.count / 3; t += 1) {
+    const [a, b, c] = [0, 1, 2].map((k) => corner(index.getX(t * 3 + k)));
+    const across = cross(sub(b, a), sub(c, a));
+    if (Math.hypot(across[0], across[1], across[2]) === 0) {
+      seen.push(false);
+      continue;
+    }
+    const n = normalise(across);
+    const centre = [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3];
+    const points = [centre, a, b, c, mid(a, b), mid(b, c), mid(c, a)];
+    const facing = directions.filter((d) => dot(d, n) > 0);
+    const skip = owners ? owners[t] : -1;
+    seen.push(UNSEEN.margins.some((m) => points.some((p) => {
+      const o = [p[0] + n[0] * m, p[1] + n[1] * m, p[2] + n[2] * m];
+      return facing.some((d) => !occluded(o, d, solids, skip));
+    })));
+  }
+  return seen;
+}
+
+/**
+ * Give `mesh` only the triangles flagged in `keep` and only the vertices they
+ * use, in their order. Every attribute of a vertex that stays, the baked
+ * `_cavity` among them, is carried over as it was, and so is the bake's record.
+ */
+function keepFaces(mesh, keep) {
+  const source = mesh.geometry;
+  const index = source.getIndex();
+  const used = new Uint8Array(source.getAttribute('position').count);
+  for (let t = 0; t < keep.length; t += 1) {
+    if (keep[t]) for (let k = 0; k < 3; k += 1) used[index.getX(t * 3 + k)] = 1;
+  }
+  const remap = new Int32Array(used.length).fill(-1);
+  let count = 0;
+  for (let v = 0; v < used.length; v += 1) if (used[v]) remap[v] = count++;
+  const geometry = new THREE.BufferGeometry();
+  geometry.name = source.name;
+  for (const [name, attribute] of Object.entries(source.attributes)) {
+    // Every channel here is plain 32-bit floats: anything else is refused, not
+    // converted.
+    if (attribute.isInterleavedBufferAttribute || !(attribute.array instanceof Float32Array)) {
+      throw new Error(`keepFaces: ${name} is not a plain float attribute`);
+    }
+    const size = attribute.itemSize;
+    const values = new Float32Array(count * size);
+    for (let v = 0; v < used.length; v += 1) {
+      if (remap[v] < 0) continue;
+      for (let k = 0; k < size; k += 1) values[remap[v] * size + k] = attribute.array[v * size + k];
+    }
+    geometry.setAttribute(name, new THREE.BufferAttribute(values, size, attribute.normalized));
+  }
+  const indices = [];
+  for (let t = 0; t < keep.length; t += 1) {
+    if (keep[t]) for (let k = 0; k < 3; k += 1) indices.push(remap[index.getX(t * 3 + k)]);
+  }
+  geometry.setIndex(indices);
+  geometry.userData = { ...source.userData };
+  mesh.geometry = geometry;
+}
+
+/** Leave out of the crown and the wood every face no viewer can see. */
+function dropUnseen({ clusters, crown, crownOwners, wood }) {
+  const solids = clusters.map((cluster) => {
+    const inradius = sphereOf(cluster.detail).inradius;
+    return { c: cluster.c, r: cluster.r.map((v) => Math.max(1e-6, v * inradius - UNSEEN.sway)) };
+  });
+  const directions = viewDirections(UNSEEN.directions);
+  keepFaces(crown, seenFaces(crown.geometry, crownOwners, solids, directions));
+  keepFaces(wood, seenFaces(wood.geometry, null, solids, directions));
+}
+
 // ==================================================================== build
-/** The spreading oak, at one level of detail, as its wood and its crown. */
+/**
+ * The spreading oak, at one level of detail, as its wood and its crown: the
+ * two parts, with what `dropUnseen` needs to judge them after the bake.
+ */
 function spreadingOak(parent, leaf, bark) {
   const clusters = [];
   LOBES.forEach((lobe, l) => clusters.push(...lobeClusters(lobe, l)));
@@ -521,8 +673,10 @@ function spreadingOak(parent, leaf, bark) {
     requireCovered(smooth.path, branch.radius, clusters, `branch ${i}`);
     tubes.push(tube(smooth.path, smooth.radius, DETAIL.branch));
   });
-  createPart('Oak_Wood', woodGeometry(tubes), bark, { parent });
-  createPart('Oak_Crown', crownGeometry(clusters), leaf, { parent });
+  const leaves = crownGeometry(clusters);
+  const wood = createPart('Oak_Wood', woodGeometry(tubes), bark, { parent });
+  const crown = createPart('Oak_Crown', leaves.geometry, leaf, { parent });
+  return { clusters, crown, crownOwners: leaves.owners, wood };
 }
 
 function build() {
@@ -537,11 +691,15 @@ function build() {
   const spreading = createRoot('Oak_Spreading');
   spreading.userData.treeVariant = 'spreading';
   root.add(spreading);
-  spreadingOak(spreading, leaf, bark);
+  const oak = spreadingOak(spreading, leaf, bark);
 
+  // The exposure bake samples the whole tree; only then is what no viewer
+  // can see left out, so every face that stays keeps the cavity it had.
   bakeSurfaceAttributes(root, { edge: false, cavity: { rays: 32, radius: 4 } });
-  defineBudget({ triangles: 11000, draws: 2 });
+  dropUnseen(oak);
+  defineBudget({ triangles: 10000, draws: 2 });
   root.userData.treeChannels = TREE_CHANNELS;
+  root.userData.treeUnseen = TREE_UNSEEN;
   return root;
 }
 
@@ -554,4 +712,12 @@ const TREE_CHANNELS = {
   lobeNormal: 'TANGENT',
   lobeNormalMeaning: 'leaf only: xyz is the outward normal of the lobe the vertex belongs to, the gradient of that lobe ellipsoid at the vertex, and w is 1. Not a tangent: nothing normal-maps this asset.',
   cavity: '_CAVITY, Kiln exposure bake: 1 open to the sky, toward 0 under other clusters',
+};
+
+/** What leaving the unseen faces out assumed of the game's motion. */
+const TREE_UNSEEN = {
+  version: 1,
+  sway: UNSEEN.sway,
+  swell: Math.max(...UNSEEN.margins),
+  meaning: 'Faces no viewer can see from any direction were left out. That holds while no part of the tree moves against another by more than `sway`, and no leaf vertex is pushed out by more than `swell`, both in metres of this program.',
 };

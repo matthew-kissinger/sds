@@ -16,11 +16,11 @@
   "recipe": "assets/treeline/kiln/oak.kiln.js",
   "artifact": {
     "path": "assets/treeline/kiln/oak.glb",
-    "bytes": 371876,
-    "sha256": "3aa0cf0e6ff8d67d9829697685bd3e814278b5db22c44714e1b2b0417cac3bf9"
+    "bytes": 363500,
+    "sha256": "b028916376644fa2cff650c718383dc9b1681bfb29e66df3353121f36ed80c9a"
   },
-  "triangles": 10249,
-  "triangleBudget": 11000,
+  "triangles": 9885,
+  "triangleBudget": 10000,
   "exportedMeshNodes": 2,
   "exportedGeometries": 2,
   "materials": 2,
@@ -39,6 +39,12 @@
     "lobeNormal": "TANGENT",
     "cavity": "_CAVITY"
   },
+  "treeUnseen": {
+    "record": "nodes[root].extras.treeUnseen",
+    "version": 1,
+    "swayMetres": 0.3,
+    "swellMetres": 0.4
+  },
   "variants": {
     "record": "nodes[*].extras.treeVariant",
     "names": [
@@ -51,9 +57,9 @@
     "stands": 139,
     "trianglesPerRole": {
       "crown": 8947,
-      "wood": 1302
+      "wood": 938
     },
-    "submittedTrianglesBeforeShadows": 1424611,
+    "submittedTrianglesBeforeShadows": 1374015,
     "note": "One instanced draw for every crown and one for all the wood, the procedural treeline's own two, beside its pooled shadows: three draws either way. No texture is sampled, nothing is transparent and no pass is added; the light is computed (treeline/kilnTreeMaterials.ts).",
     "loader": "app/src/scene/treeline/kilnTree.ts",
     "distPath": "assets/oak-<hash>.glb"
@@ -74,7 +80,7 @@
   "sources": [
     {
       "path": "assets/treeline/kiln/oak.kiln.js",
-      "sha256": "5e2099616a5dbbb25f586d22b7fa6f2d986a6def704d9cd1bd28f60b19b984dc"
+      "sha256": "97cbc1c0cd4d4450a7cc44fbaaecadd7adfaa5fd55fb1c478fad8199df920db4"
     },
     {
       "path": "app/src/scene/treeline/kilnTree.ts",
@@ -90,7 +96,7 @@
     },
     {
       "path": "tools/record-tree-asset.mjs",
-      "sha256": "efb8be6bde981fbbad3ad1b5927fd741fa7addf737c18f4f4ed7abe32d3dd87e"
+      "sha256": "a8ad58f571fe1d3bbc9e4feb2a81349867c15f457712f17eca479ad47324ba33"
     },
     {
       "path": "tools/glb-ledger.mjs",
