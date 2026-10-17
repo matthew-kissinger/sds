@@ -385,8 +385,13 @@ longer claims Neutral.
   Custom Domain path as planned (the deploy owns the apex record, a gap of
   seconds), or the placeholder path the results opened (edit the apex CNAME
   in place to `AAAA 100::` proxied, keep the route, remove the Pages custom
-  domain: no gap, the record stays a zone setting like `www`'s). Then the
-  cutover tag, since merging `domains` arms it and the next tag fires it.
+  domain: no gap, the record stays a zone setting like `www`'s). The owner
+  chose the Custom Domain, 2026-10-17: it was the plan's end state, the
+  route was Release 1's cutover device, and a placeholder would be a stopgap
+  replaced later at the same cost. Release 3.3.1 declares the apex domain
+  and keeps the route; its tag is the first `cf` production deploy and the
+  moment the apex CNAME is deleted by hand; the route goes in the release
+  after.
   The three static pages becoming Vite entries with the analytics snippet
   injected from one constant stays a separate item.
 

@@ -4,6 +4,22 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.3.1] - 2026-10-17
+
+### Changed
+
+- `sheepdogsim.com` is a Custom Domain of the `sds-worker` Worker, declared in
+  `app/cloudflare.config.ts` and published by the deploy, which owns the apex
+  DNS record and its certificate. The route stays for this release as the
+  rollback and goes in the next. The dormant Pages project loses the hostname
+  and keeps its `pages.dev` URL for the immutable v2 deployment. The sequence,
+  the rehearsal on `stage.sheepdogsim.com` and the rollback at each step are
+  in `docs/operations/declarative-hosting.md`.
+- First production deploy through the `cf` CLI (Release 2 Stage B,
+  `docs/operations/deployment.md`): the Build Output the Cloudflare Vite
+  plugin writes is what ships, verified by `scripts/verify-deploy-config.mjs
+  --cf`. No change to the game.
+
 ## [3.3.0] - 2026-10-16
 
 ### Changed

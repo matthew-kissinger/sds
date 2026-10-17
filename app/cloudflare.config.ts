@@ -88,9 +88,19 @@ export default defineConfig(({ mode }) => {
       // pull-request previews use the preview mode instead.
       workersDev: true,
       previewUrls: false,
-      // sheepdogsim.com is served through a route, not a Custom Domain; the
-      // route took the hostname over from the dormant Pages project without
-      // downtime and deleting it is the rollback. www is a zone redirect.
+      // sheepdogsim.com is a Custom Domain of this Worker from 3.3.1
+      // (docs/operations/declarative-hosting.md): the deploy owns the apex
+      // record (a proxied AAAA 100:: placeholder, read-only in the zone) and
+      // the certificate, and removing the domain removes both, measured on
+      // the preview Worker 2026-10-17. The deploy refuses a hostname that has
+      // a record of ours, so the apex CNAME to the retired Pages project is
+      // deleted by hand right before the deploy that publishes this.
+      domains: ['sheepdogsim.com'],
+      // The route stays for this release: it takes precedence over the Custom
+      // Domain on the same hostname, so traffic does not move while the
+      // record changes, and re-publishing it is the rollback of step 3. It
+      // goes in the release after, once the Custom Domain is seen serving.
+      // www is a zone redirect over a placeholder record, by design.
       triggers: [triggers.fetch({ pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' })],
       env: {
         ASSETS: bindings.assets(),
