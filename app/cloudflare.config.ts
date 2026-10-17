@@ -69,15 +69,6 @@ export default defineConfig(({ mode }) => {
         // production hostname is never claimed by a preview.
         workersDev: true,
         previewUrls: true,
-        // REHEARSAL, NOT TO MERGE (docs/operations/declarative-hosting.md).
-        // A Custom Domain on a throwaway hostname of the production zone,
-        // deployed by this pull request's Preview run over a CNAME the owner
-        // put in its way, measures what the production step will do: whether
-        // the non-TTY deploy replaces the record, which authority issues the
-        // certificate under the zone's CAA records, and what removing the
-        // domain leaves behind. The string form is the one the cf reference
-        // documents; it serves production traffic only.
-        domains: ['stage.sheepdogsim.com'],
         env: {
           ASSETS: bindings.assets(),
           DB: bindings.d1({ name: 'sds-db-preview', id: '6d5b0fce-952f-4d94-8936-b51fc559496c' }),

@@ -73,9 +73,6 @@ describe('cloudflare.config.ts says what wrangler.toml says', () => {
     expect(cf('production').domains).toBeUndefined();
     expect(cf('preview').triggers).toBeUndefined();
     expect(wrangler('preview').routes).toEqual([]);
-    // The rehearsal hostname (docs/operations/declarative-hosting.md): a
-    // subdomain of the zone, on the preview Worker only, never the apex.
-    expect(cf('preview').domains).toEqual(['stage.sheepdogsim.com']);
   });
 
   it('binds each Worker to its own D1, the assets and the JWT secret, and to nothing else', () => {
