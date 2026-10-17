@@ -171,6 +171,11 @@ const SWAY_FROM = 0.2;
 const SWAY_GUST = 0.0075;
 const SWAY_DRIFT = 0.0045;
 const SWAY_RATE = 0.45;
+/** The most the sway carries the top of a stand against its foot, as a share
+ *  of the stand's height: a gust (its waves' weights sum to 1) and the drift (a
+ *  sine) at once. The bake left out the faces no viewer sees on a bound for
+ *  this (oak.kiln.js, "unseen faces"), which tests/tree-kiln.spec.ts holds. */
+export const SWAY_REACH = SWAY_GUST + SWAY_DRIFT;
 
 // --------------------------------------------------------------------- bark
 /** The wood takes the leaves' banding, quieter: a wide edge between bands

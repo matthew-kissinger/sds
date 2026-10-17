@@ -15,9 +15,16 @@ import {
   type KilnTree,
   type KilnTreePart,
 } from '@app/scene/treeline/kilnTree';
-import { hazeHue, makeKilnBarkMaterial, makeKilnLeafMaterial } from '@app/scene/treeline/kilnTreeMaterials';
+import {
+  hazeHue,
+  makeKilnBarkMaterial,
+  makeKilnLeafMaterial,
+  SWAY_REACH,
+} from '@app/scene/treeline/kilnTreeMaterials';
+import type { TreelinePlacement } from '@app/scene/treeline/placement';
 import { PALETTE } from '@app/tsl/palette';
 import { TREE_SOURCE } from '@app/scene/treeline/source';
+import { standMatrices } from '@app/scene/treeline/stands';
 import { TRUNK_ATTRIBUTE_SIZE } from '@app/scene/treeline/trunkMaterial';
 
 const GLB = new URL('../assets/treeline/kiln/oak.glb', import.meta.url);
@@ -40,6 +47,7 @@ interface GltfJson {
   nodes: { name?: string; children?: number[]; extras?: Record<string, unknown> }[];
   meshes: { name?: string; primitives: { attributes: Record<string, number> }[] }[];
   materials: { name?: string }[];
+  accessors: { min?: number[]; max?: number[] }[];
 }
 
 /** The GLB's JSON chunk, as written. */
@@ -157,7 +165,7 @@ describe('Kiln oak import', () => {
     expect(ledger.runtime.trianglesPerRole).toEqual(kiln.triangles);
     expect(ledger.triangles).toBe(kiln.triangles.crown + kiln.triangles.wood);
     expect(ledger.triangles).toBeLessThanOrEqual(ledger.triangleBudget);
-    expect(ledger.triangleBudget).toBe(11000);
+    expect(ledger.triangleBudget).toBe(10000);
     expect(ledger.exportedMeshNodes).toBe(kiln.sourceNodes);
     expect(ledger.materials).toBe(gltfJson().materials.length);
     expect(ledger.textures).toBe(0);
@@ -254,6 +262,42 @@ describe('Kiln oak in the treeline', () => {
     expect(timber.index!.count / 3).toBe(triangles(wood));
     leaves.dispose();
     timber.dispose();
+  });
+
+  it('moves the oak no more than the bake allowed for when it left out what no viewer sees', () => {
+    // The recipe left out every face no viewer can see from any direction,
+    // allowing for the sway moving one height of a tree against another and the
+    // swell pushing a leaf out, each up to a bound in its own metres that it
+    // records (oak.kiln.js, "unseen faces"). Read both motions back into those
+    // metres, through the loader's fit and every stand's box.
+    const json = gltfJson();
+    const unseen = json.nodes.find((node) => node.extras?.treeUnseen !== undefined)?.extras?.treeUnseen as
+      | { version: number; sway: number; swell: number }
+      | undefined;
+    expect(unseen?.version).toBe(1);
+    const positions = (name: string) => json.accessors[mesh(json, name).primitives[0]!.attributes.POSITION!]!;
+    const leaves = positions('Mesh_Oak_Crown');
+    const timber = positions('Mesh_Oak_Wood');
+    // Unit-frame lengths per metre of the recipe, as kilnTree.ts fits the bake.
+    const reach = CROWN_FILL - CROWN_SWELL;
+    const across = reach / Math.max(-leaves.min![0]!, leaves.max![0]!);
+    const up = (1 - CROWN_SWELL) / (Math.max(leaves.max![1]!, timber.max![1]!) - Math.min(leaves.min![1]!, timber.min![1]!));
+    const along = reach / Math.max(-leaves.min![2]!, leaves.max![2]!);
+    // The swell pushes a leaf vertex out by at most CROWN_SWELL in the unit frame.
+    expect(CROWN_SWELL / Math.min(across, up, along)).toBeLessThanOrEqual(unseen!.swell);
+    // The sway offsets a height of the tree across the world by up to
+    // SWAY_REACH of its stand's height; in the recipe's metres that is largest
+    // where a stand's box is narrowest for its height.
+    const placement = JSON.parse(readFileSync(PLACEMENT, 'utf8')) as TreelinePlacement;
+    const matrices = standMatrices(placement);
+    let sway = 0;
+    for (let i = 0; i < placement.canopies.length; i++) {
+      const column = (k: number): number =>
+        Math.hypot(matrices[i * 16 + k * 4]!, matrices[i * 16 + k * 4 + 1]!, matrices[i * 16 + k * 4 + 2]!);
+      sway = Math.max(sway, SWAY_REACH * column(1) * Math.max(1 / (column(0) * across), 1 / (column(2) * along)));
+    }
+    expect(sway).toBeGreaterThan(0);
+    expect(sway).toBeLessThanOrEqual(unseen!.sway);
   });
 
   it('shades each role with one opaque material, untextured', async () => {

@@ -30,17 +30,14 @@ import { loadKilnTree } from './treeline/kilnTree';
 import { useTreelineManifest } from './treeline/manifest';
 import type { OakBuilder, OakRoles, OakStands } from './treeline/oakRoles';
 import type { TreelinePlacement } from './treeline/placement';
-import { TRUNK_SINK } from './treeline/placement';
 import { buildTreeShadows } from './treeline/shadowPools';
 import { TREE_SOURCE } from './treeline/source';
+import { standMatrices } from './treeline/stands';
 import { TRUNK_ATTRIBUTE_SIZE, makeTrunkMaterial } from './treeline/trunkMaterial';
 
 const REPORT_TREELINE = import.meta.env.DEV && typeof window !== 'undefined'
   && (debugFlags().has('readout') || debugFlags().has('driver'));
 const TREELINE_DRAWS = 3;
-/** Sink the complete sourced shell just enough that the Round bole enters the
- * grass instead of perching on the sampled terrain plane. */
-const SOURCE_TREE_SINK = 0.28;
 
 /**
  * Start the Kiln oak's download with the other cold field assets
@@ -77,27 +74,12 @@ function triangleCount(geometry: THREE.BufferGeometry): number {
 }
 
 /**
- * Every stand's instance matrix, sixteen floats each, worked once: the unit
- * oak's foot on the leader's ground, a little under the grass, turned by the
- * stand's yaw and scaled to its box. Both oaks are authored to that unit frame,
- * so the crown and the wood of either one take the same matrices.
+ * One role of the oak in every stand, as one draw, never frustum-culled. So
+ * the title camera always submits it, and the scene-ready gate's compile
+ * (compileScene.ts), which compiles whatever that camera could submit, builds
+ * both of the oak's programs before Play is offered: the first gameplay frame
+ * compiles neither.
  */
-function standMatrices(placement: TreelinePlacement): Float32Array {
-  const { canopies, trunks } = placement;
-  const matrices = new Float32Array(canopies.length * 16);
-  const dummy = new THREE.Object3D();
-  canopies.forEach((tree, index) => {
-    const leader = trunks[tree.treeId]!;
-    const ground = leader.y + TRUNK_SINK;
-    dummy.position.set(leader.x, ground - SOURCE_TREE_SINK, leader.z);
-    dummy.rotation.set(0, tree.yaw, 0);
-    dummy.scale.set(tree.width, tree.y + tree.height - ground, tree.depth);
-    dummy.updateMatrix();
-    dummy.matrix.toArray(matrices, index * 16);
-  });
-  return matrices;
-}
-
 function instancedMesh(
   name: string,
   geometry: THREE.BufferGeometry,

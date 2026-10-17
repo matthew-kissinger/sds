@@ -15,7 +15,9 @@
  * family with `treeVariant`; the loader refuses a bake without either. And one
  * tree is drawn 139 times, so the ledger states what the field submits, not
  * only what the file holds: the per-tree count is read from the GLB, the stand
- * count from the placement manifest the treeline instances.
+ * count from the placement manifest the treeline instances. The recipe also
+ * leaves out every face no viewer can see, and records on its root node what
+ * that assumed of the game's motion (`treeUnseen`); the ledger repeats it.
  *
  * THE DETERMINISM CLAIM IS TESTED, NOT ASSERTED. `--check` re-runs Kiln from a
  * scratch working directory, which misses the build cache under `.kiln/`, and
@@ -63,6 +65,8 @@ const json = glbJson(bytes);
 const extras = json.nodes.map((node) => node.extras ?? {});
 const channels = extras.find((entry) => entry.treeChannels !== undefined)?.treeChannels;
 if (channels?.version !== 1) throw new Error(`${artifact} carries no treeChannels record of version 1`);
+const unseen = extras.find((entry) => entry.treeUnseen !== undefined)?.treeUnseen;
+if (unseen?.version !== 1) throw new Error(`${artifact} carries no treeUnseen record of version 1`);
 const variants = extras.flatMap((entry) => typeof entry.treeVariant === 'string' ? [entry.treeVariant] : []);
 const stands = JSON.parse(readFileSync(new URL(placement, repo), 'utf8')).canopies.length;
 
@@ -85,7 +89,7 @@ const ledger = {
   artifact: { path: artifact, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') },
   // As exported, read from the GLB (tools/glb-ledger.mjs): one tree.
   triangles: exported.triangles,
-  triangleBudget: 11000,
+  triangleBudget: 10000,
   exportedMeshNodes: exported.exportedMeshNodes,
   exportedGeometries: exported.exportedGeometries,
   materials: exported.materials,
@@ -102,6 +106,15 @@ const ledger = {
     seed: channels.attribute,
     lobeNormal: channels.lobeNormal,
     cavity: '_CAVITY',
+  },
+  // What leaving the unseen faces out assumed of the game's motion, in the
+  // recipe's metres: tests/tree-kiln.spec.ts holds the game's sway and swell
+  // inside both.
+  treeUnseen: {
+    record: 'nodes[root].extras.treeUnseen',
+    version: unseen.version,
+    swayMetres: unseen.sway,
+    swellMetres: unseen.swell,
   },
   // Every node marked `treeVariant` is a variant the loader instances.
   variants: { record: 'nodes[*].extras.treeVariant', names: variants },
