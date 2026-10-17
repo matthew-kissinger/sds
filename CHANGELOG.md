@@ -4,6 +4,32 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.4.0] - 2026-10-17
+
+### Changed
+
+- The treeline is the Kiln oak. One spreading oak authored in Kiln
+  (`assets/treeline/kiln/oak.kiln.js`, baked to `oak.glb`, 371,876 bytes)
+  stands in all 139 stands, on the same placement manifest, sky gaps and yaw
+  as before. `TREE_SOURCE` is `kiln`; the procedural sculpted oak remains
+  behind that constant.
+- Its painting is in two TSL materials (`treeline/kilnTreeMaterials.ts`), not
+  in textures: each crown lit as one mass through a lobe normal baked into the
+  GLB, soft warm-to-cool bands, a per-cluster tint, object-space leaf dabs on
+  the terminator, a backlit edge, a gentle sway, and far crowns leaning toward
+  the haze. The bark takes a quieter version of the same treatment.
+- Cost, from the hub receipt in `docs/history/status-log.md`: still three
+  treeline draws and the same whole-frame draws; frame percentiles identical
+  to 3.3.2 on both backends at the desktop viewport and the phone viewport's
+  low tier, zero frames over 100 ms; 10,249 triangles a tree (924 before);
+  GPU busy about 3 to 4 points more at the high tier; warm boots unchanged and
+  a cold WebGL2 boot at the high tier about 0.4 s slower while the two
+  materials compile.
+
+### Fixed
+
+- `tools/art-review.mjs` imports `repo` again; it had failed since `e964cd21`.
+
 ## [3.3.2] - 2026-10-17
 
 ### Changed

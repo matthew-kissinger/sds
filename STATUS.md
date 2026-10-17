@@ -41,9 +41,9 @@ investigations are in `docs/history/`.
   live manifest, origin and analytics (`docs/operations/deployment.md`). The
   dormant Pages project and its `sds-frontend.pages.dev` hostname are
   explained there too.
-- The owner selected the CC0 Fox Trees Pack Round and Spreading hybrid for the
-  shipped treeline. The final field contains 139 trees outside the fence, no
-  understory shrubs and no exposed root runs.
+- The treeline is the Kiln oak since 3.4.0 (`TREE_SOURCE = 'kiln'`): one
+  spreading oak authored in Kiln, instanced in 139 stands outside the fence,
+  three draws, no understory shrubs and no exposed root runs.
 
 ## Last candidate - the asset polish pass, shipped 2026-10-16
 
@@ -351,12 +351,13 @@ longer claims Neutral.
   pitches (owner's call; it is the shared slate graph's), and folding the two
   Kiln loaders into one with the house's envelope written by its bake.
 - Kiln oak for the treeline (added 2026-10-17 at the owner's request: a
-  performant, painterly oak, one tree type and one variant for now). **In
-  review** on its pull request (pull request 133, branch
-  `release2/oak-kiln`), nothing flipped: `assets/treeline/kiln/` bakes one
-  spreading oak that the treeline instances in all 139 stands behind
-  `TREE_SOURCE` (`app/src/scene/treeline/source.ts`), shipped as
-  `procedural`, whose build carries none of it. Still three draws; 10,249
+  performant, painterly oak, one tree type and one variant for now).
+  **Shipped in 3.4.0**: merged as pull request 133, then flipped in its own
+  commit on the owner's go after the look review ("I think we should commit,
+  push, and deploy and have the kiln oak as its default"):
+  `assets/treeline/kiln/` bakes one spreading oak that the treeline instances
+  in all 139 stands, `TREE_SOURCE` (`app/src/scene/treeline/source.ts`) is
+  `kiln`, and the procedural oak stays behind it. Still three draws; 10,249
   triangles a tree and 1,424,611 across the field against the procedural 924
   and 128,436; no textures, transparency or added passes; the painting is in
   the two materials (`treeline/kilnTreeMaterials.ts`). A separate critic's
@@ -367,9 +368,10 @@ longer claims Neutral.
   viewport's low tier, found no frame-time regression and the same draws:
   the GPU busy about 3 to 4 points more at the high tier and 0 to 2 at the
   low, warm boots unchanged, and a cold WebGL2 boot at the high tier about
-  0.4 s slower. Next, in order: the owner's look review on the production build
-  (the lab's `Tree (Kiln)` subject and a `TREE_SOURCE = 'kiln'` build), then
-  the flip in its own commit. The status log entries "Kiln oak hub receipt -
+  0.4 s slower. Open: the owner's test on a physical phone in production,
+  and the optional cost work (coarser spheres for buried crown clusters,
+  compiling the two materials during loading, a low-tier bake if a phone
+  needs one). The status log entries "Kiln oak hub receipt -
   2026-10-17" and "Kiln oak - 2026-10-17" have the numbers, the decisions,
   the critic's notes and the Kiln feedback; `assets/treeline/kiln/README.md`
   documents the asset.
@@ -501,8 +503,8 @@ the record those files carry.
 
 ## Open questions
 
-- The Kiln oak's look, for the owner's review (2026-10-17, pull request 133
-  on `release2/oak-kiln`). A separate critic scored the production captures
+- The Kiln oak's remaining notes (2026-10-17; the owner approved the look and
+  shipped it as 3.4.0, so these are refinements, not gates). A separate critic scored the production captures
   ITERATE and, past the fifth iteration, escalated: the crown was a pile of
   spheres, each lobe lit as its own, where the reference paints a few big
   masses lit as one shape. The owner adopted its first fix the same day, the
@@ -517,7 +519,9 @@ the record those files carry.
   how a physical phone takes the low tier, whose GPU draws three fifths more
   triangles and which, on WebGL2, compiles the two materials cold on a first
   visit; the hub receipt ran the phone viewport's low tier on desktop
-  hardware. Art UNREVIEWED; physical phones NOT_TESTED.
+  hardware. The first reference image is the owner's, attached in the
+  session that commissioned the oak. Art: owner approved. Physical phones:
+  the owner tests in production.
 - Whether to collapse the Pages project and the score Worker into one Worker
   serving static assets and `/api/*` on `sheepdogsim.com` alone. The present
   split works, but the repository asserts invariants it does not own - the
