@@ -525,11 +525,14 @@ the record those files carry.
   visit; the hub receipt ran the phone viewport's low tier on desktop
   hardware. The first reference image is the owner's, attached in the
   session that commissioned the oak. Art: owner approved. Physical phones:
-  the owner tests in production. Also the owner's call: whether the oak goes
-  to the cost brief's 5,000 to 6,000 triangles a tree, which needs
-  `DETAIL.frequency` to start at 2 and an edge of 0.55 to 0.6 m. A captured
-  5,730-triangle bake turns the outline's scallops into straight runs and
-  corners from 12 to 34 m (status log, "Kiln oak cost trim - 2026-10-17").
+  the owner tests in production. The cost trim (pull request 136, merged
+  untagged, rides the next release) took the oak to 9,885 triangles a tree
+  with no visible change. The owner kept the full crown (2026-10-17) and held
+  the coarser bake as a phone low-tier option only: `DETAIL.frequency`
+  starting at 2 and a 0.6 m edge give 5,730 triangles a tree, whose outline
+  turns faceted from 12 to 34 m (status log, "Kiln oak cost trim -
+  2026-10-17"). It would ship as a second, low-tier bake, still three draws,
+  only if a physical phone shows the treeline too heavy.
 - Whether to collapse the Pages project and the score Worker into one Worker
   serving static assets and `/api/*` on `sheepdogsim.com` alone. The present
   split works, but the repository asserts invariants it does not own - the
