@@ -5,6 +5,23 @@
 
 # Status log
 
+## Release 3.4.1 - 2026-10-17, the Kiln oak's cost trim live
+
+Pull request 136 (the trim, "Kiln oak cost trim - 2026-10-17" below) merged
+untagged at the owner's word, then released at once on the owner's new
+standing rule: "I would want to be shepherding all work and merging all work,
+work to main and deploying it all so I can test in prod." Pull request 137
+recorded the decision to keep the full crown and hold the 5,730-triangle bake
+as a phone low-tier option. Times UTC.
+
+- Pull request 138 (`release: 3.4.1`) merged `832b915d`; tag `v3.4.1`;
+  `Deploy` run 39055958574 green, every step. `cf deploy` uploaded
+  `/assets/oak-Dh1iYY1z.glb` (363,500 bytes); version
+  `2ac9e4a9-79e5-4d86-b315-8d6cdba212da` live 18:00.
+- Afterwards: `verify-release-manifest --url ... --sha` passed on 3.4.1
+  `832b915d`; the new oak GLB answers 200 at its full size;
+  `verify-public-discovery --require-analytics` passed.
+
 ## Kiln oak cost trim - 2026-10-17, on its pull request; nothing tagged or deployed
 
 The owner asked, through the coordinating session, to trim the Kiln oak's
