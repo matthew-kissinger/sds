@@ -23,12 +23,17 @@ export { BUILD_OUTPUT, BUILT_CLIENT }
 const PRODUCTION = {
   name: 'sds-worker',
   routes: [{ pattern: 'sheepdogsim.com/*', zone_name: 'sheepdogsim.com' }],
+  // Custom Domains the Build Output declares (cf only). The apex is one from
+  // 3.3.1 (docs/operations/declarative-hosting.md); the preview Worker has
+  // none: a preview must never claim a production hostname.
+  domains: ['sheepdogsim.com'],
   previewUrls: false,
   database: { name: 'sds-db', id: '513aa937-e60a-4fb6-b499-9f3814149e88' },
 }
 const PREVIEW = {
   name: 'sds-worker-preview',
   routes: [],
+  domains: [],
   previewUrls: true,
   database: { name: 'sds-db-preview', id: '6d5b0fce-952f-4d94-8936-b51fc559496c' },
 }
@@ -80,7 +85,7 @@ export function checkBuildOutput(outputDir, { preview = false } = {}) {
   expect('workersDev', worker.workersDev, true)
   expect('previewUrls', worker.previewUrls, expected.previewUrls)
   expect('triggers', worker.triggers ?? [], expected.routes.map(({ pattern, zone_name }) => ({ type: 'fetch', pattern, zone: zone_name })))
-  expect('domains', worker.domains, undefined)
+  expect('domains', worker.domains ?? [], expected.domains)
   // The applied v1/v2 history deleted every Durable Object class; the exports
   // map carries live classes only, so there must be none.
   expect('exports', worker.exports, undefined)
@@ -182,7 +187,7 @@ function main() {
     const worker = JSON.parse(readFileSync(resolve(configPath, 'workers/default/worker.config.json'), 'utf8'))
     console.log(
       `Verified Build Output ${options.config} (${options.preview ? 'preview' : 'production'}): ` +
-        `${worker.name}, triggers ${JSON.stringify(worker.triggers ?? [])}, D1 ${worker.env.DB.id}, no exports`,
+        `${worker.name}, triggers ${JSON.stringify(worker.triggers ?? [])}, domains ${JSON.stringify(worker.domains ?? [])}, D1 ${worker.env.DB.id}, no exports`,
     )
     return
   }

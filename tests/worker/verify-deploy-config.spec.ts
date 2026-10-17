@@ -151,7 +151,7 @@ const cfWorker = (preview = false) => ({
   observability: { enabled: true },
   workersDev: true,
   previewUrls: preview,
-  ...(preview ? {} : { triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] }),
+  ...(preview ? {} : { domains: ['sheepdogsim.com'], triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] }),
   env: {
     ASSETS: { type: 'assets' },
     DB: { type: 'd1', name: preview ? 'sds-db-preview' : 'sds-db', id: preview ? PREVIEW_D1 : PRODUCTION_D1 },
@@ -202,6 +202,12 @@ describe('verify-deploy-config --cf', () => {
     expect(check(previewRoute, 'preview', { preview: true }).join('\n')).toMatch(/^triggers:/m);
     const withExports = { ...cfWorker(), exports: { RoomDO: { type: 'durable-object', storage: 'sqlite' } } };
     expect(check(withExports, 'production').join('\n')).toMatch(/^exports:/m);
+    // The apex Custom Domain is production's alone; a preview that declares
+    // one, or a production build without it, fails.
+    const noDomain = { ...cfWorker(), domains: [] };
+    expect(check(noDomain, 'production').join('\n')).toMatch(/^domains:/m);
+    const previewDomain = { ...cfWorker(true), domains: ['sheepdogsim.com'] };
+    expect(check(previewDomain, 'preview', { preview: true }).join('\n')).toMatch(/^domains:/m);
   });
 
   it('fails a missing bundle entry and a missing release.json', () => {

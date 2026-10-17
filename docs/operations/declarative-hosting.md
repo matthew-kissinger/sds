@@ -1,7 +1,9 @@
 # Declarative hosting: `sheepdogsim.com` as a Worker Custom Domain, the Pages project retired
 
-**Plan with its rehearsal done; the production steps are not executed.**
-This is the Release 2 step after the `cf` cutover (`docs/operations/deployment.md`): the apex stops being a proxied
+**Plan with its rehearsal done; the production steps run as release 3.3.1
+(step 1 and 2) and the release after (step 5), each recorded in
+`docs/history/status-log.md`.** This is the Release 2 step after the `cf`
+cutover (`docs/operations/deployment.md`): the apex stops being a proxied
 CNAME to the dormant `sds-frontend` Pages project with a Worker route on top,
 and becomes a Custom Domain of `sds-worker` declared in
 `app/cloudflare.config.ts`, so the deploy owns the DNS record and the

@@ -160,9 +160,16 @@ passes with the API down. Likewise a missing `release.json` is served as
 
 ## Routes and hostnames
 
-Four measured facts govern the hosting declaration (`workersDev`,
-`triggers` and `previewUrls` in `app/cloudflare.config.ts`; `workers_dev`,
-`routes` and `preview_urls` in `wrangler.toml`):
+From 3.3.1 the apex is a Custom Domain of `sds-worker`, declared as
+`domains: ['sheepdogsim.com']` in `app/cloudflare.config.ts`: the deploy owns
+its DNS record (a proxied `AAAA 100::` placeholder, read-only in the zone) and
+its certificate, and removing the domain removes both. The route stays one
+release beside it as the rollback and goes in the release after
+(`docs/operations/declarative-hosting.md` has the sequence, the rehearsal and
+the rollback at each step). Four measured facts govern the rest of the
+hosting declaration (`workersDev`, `triggers` and `previewUrls` in
+`app/cloudflare.config.ts`; `workers_dev`, `routes` and `preview_urls` in
+`wrangler.toml`):
 
 - **`workers_dev` is set explicitly.** Cloudflare infers it as false as soon
   as a config declares routes, which would take the `workers.dev` host off
@@ -333,9 +340,12 @@ repository. Each one is verified by `scripts/verify-public-discovery.mjs` on
 the production host, so a change in the dashboard that breaks one fails the
 next deploy. Dashboard changes are owner-approved, one at a time.
 
-- DNS: `sheepdogsim.com` is a proxied CNAME to `sds-frontend.pages.dev` from
-  the Pages era; the Worker route sits on top of it. `www.sheepdogsim.com` is a
-  proxied CNAME to `sheepdogsim.com`.
+- DNS: from 3.3.1 `sheepdogsim.com` is the record the Custom Domain owns, a
+  proxied `AAAA 100::` created by the deploy and read-only in the zone; before
+  it, a proxied CNAME to `sds-frontend.pages.dev` from the Pages era with the
+  Worker route on top. `www.sheepdogsim.com` is a proxied CNAME to
+  `sheepdogsim.com`, a placeholder the redirect rule answers over, kept by
+  hand on purpose (`docs/operations/declarative-hosting.md`, fact 6).
 - Redirect rule "www to apex": a Single Redirect for requests whose hostname is
   `www.sheepdogsim.com`, dynamic target
   `concat("https://sheepdogsim.com", http.request.uri.path)`, status 301,
