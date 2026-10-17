@@ -5,6 +5,49 @@
 
 # Status log
 
+## Release 3.3.2 - 2026-10-17, the route deleted, the Custom Domain alone serves `sheepdogsim.com`
+
+The owner: "Do this task here: Release after 3.3.1: delete the route, drop
+triggers", then "Yes: when pull request 131 is green, delete the
+sheepdogsim.com/* route in the dashboard, verify, merge, tag v3.3.2, verify
+and record." Steps 3 and 5 of `docs/operations/declarative-hosting.md`,
+which is now complete. Times UTC, 2026-10-17.
+
+- Pull request 131 (`release: 3.3.2`, branch `release2/drop-route`):
+  `triggers` out of `app/cloudflare.config.ts`, `[[routes]]` out of
+  `wrangler.toml` (whose header now says what still reads it: the D1 scripts
+  and the tags before the `cf` move), `verify-deploy-config.mjs` failing a
+  route on either Worker, the three configuration specs pinning it,
+  `deployment.md`, `v2-rollback.md`, the multiplayer spec's routing note and
+  the deploy workflow's comments following. Locally: worker typecheck, 861
+  tests, build, `verify-deploy-config.mjs --cf` reading `triggers [],
+  domains ["sheepdogsim.com"]`. Client CI and Preview green.
+- Route `sheepdogsim.com/*` removed in the dashboard (Workers & Pages >
+  `sds-worker` > Domains > Remove) at 01:11:04, a click in the owner's
+  Chrome session; the zone's route list read empty at once. Live right
+  after, with 3.3.1 still deployed: six of six requests the Worker's 3.3.1,
+  `verify-release-manifest --url`, `verify-worker-origin` on the apex and
+  on `workers.dev`, and `verify-public-discovery --require-analytics` (the
+  `www` redirect included) all passed. Deleting the route changed nothing a
+  player sees, as the plan said it would once the Pages custom domain was
+  gone.
+- Merged `14bdc70a`; tag `v3.3.2` pushed 01:11:46; `Deploy` run 38989814766
+  green at 01:14:53, every step. `cf deploy` listed `workers.dev` and
+  `sheepdogsim.com (custom domain)` under the deployed triggers and no
+  route; version `55b517c1` (`source: cf_cli`) live at 01:14:44; the four
+  live verifiers passed; `release.json` reads 3.3.2, `14bdc70a`,
+  `sourceRef v3.3.2`. Afterwards the zone still has no route, the Custom
+  Domain is `enabled`, the apex `AAAA 100::` record and the active Google
+  certificate pack are unchanged.
+- Measured on the token: a deploy that declares no route passed with the
+  `sds-github-deploy` policy unchanged, so the Workers Routes permission was
+  not needed for the Custom Domain publish; the row stays in the table until
+  the next rotation, when it goes.
+- The zone now holds exactly what the plan's end state names: the apex
+  record and certificate the deploy created, the `www` placeholder record,
+  the redirect rule, the Web Analytics mode, and the CAA and mail-hardening
+  records. The repository declares every hosting fact it owns.
+
 ## Release 3.3.1 - 2026-10-17, the apex is a Worker Custom Domain, the first `cf` production deploy, the Pages custom domain retired
 
 The owner: "Yes: merge pull request 127, finish the 3.3.1 release branch,

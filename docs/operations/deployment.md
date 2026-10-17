@@ -52,7 +52,7 @@ is exactly what the two workflows call, nothing more:
 | Account | Workers Scripts, Edit | upload the Worker and its assets, create preview versions |
 | Account | D1, Read | the `DB` binding is validated at deploy |
 | Account | Account Settings, Read | account resolution |
-| Zone `sheepdogsim.com` only | Workers Routes, Edit | published the route from `app/cloudflare.config.ts` until 3.3.2. Kept until a deploy that declares no route has shown whether the Custom Domain publish needs it; if that deploy passes, this row goes at the next token rotation |
+| Zone `sheepdogsim.com` only | Workers Routes, Edit | published the route from `app/cloudflare.config.ts` until 3.3.2. Not needed since: the 3.3.2 deploy, declaring no route, published the Custom Domain with this policy unchanged. The row goes at the next token rotation |
 
 `cf` keeps its own credentials and does not read wrangler's login; it takes the
 same token from `CLOUDFLARE_API_TOKEN`, and the workflows pass the same two
