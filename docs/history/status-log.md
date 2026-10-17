@@ -5,6 +5,31 @@
 
 # Status log
 
+## Release 3.4.0 - 2026-10-17, the Kiln oak is the treeline
+
+The owner, after the look review of pull request 133 with the crown lit as
+one mass and the far colour leaning to the haze, and the hub receipt below:
+"I think we should commit, push, and deploy and have the kiln oak as its
+default ... deploy it and I can test in prod". Times UTC.
+
+- Pull request 133 merged (`33b43e66`) with `TREE_SOURCE` still
+  `procedural`.
+- Pull request 134 (branch `release2/oak-kiln-flip`): `0542b709`
+  `feat(treeline): ship the Kiln oak; TREE_SOURCE is kiln` in its own
+  commit, then `release: 3.4.0`. Locally: typecheck (app, lab, worker), lint
+  with no errors, 873 tests, build, `probe:release` reading one oak model,
+  `verify-deploy-config.mjs --cf`. CI green; merged `f2b1c41c`.
+- Tag `v3.4.0` pushed 14:35; `Deploy` run 39041378840 green, every step.
+  `cf deploy` uploaded `/assets/oak-CWzDrhlk.glb` (371,876 bytes) and
+  re-published `sheepdogsim.com (custom domain)`; version
+  `c5b68b33-dc34-434b-b020-1dc06c66821f` live 14:38. Artifact 37 files,
+  9,284,262 bytes, sha256 `07354925...`.
+- Afterwards, from here: `release.json` reads 3.4.0, `f2b1c41c`, `sourceRef
+  v3.4.0`, and `verify-release-manifest --url ... --sha` passed; the oak GLB
+  answers 200 `model/gltf-binary` at its full size; `verify-public-discovery
+  --require-analytics` passed.
+- Not yet measured: a physical phone. The owner tests in production.
+
 ## Kiln oak hub receipt - 2026-10-17, no frame-time regression at either tier; nothing flipped
 
 The owner's decision on pull request 133 (the entry below) ended "then run

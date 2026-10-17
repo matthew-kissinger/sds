@@ -17,11 +17,10 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.3.2 (`14bdc70a`, tag `v3.3.2`; the game is 3.3.0's, the Kiln
-  homestead) is live at `https://sheepdogsim.com` since 2026-10-17 01:14 UTC
-  (`Deploy` run 38989814766; 3.3.1 before it was the first production
-  deploy through `cf`; `docs/history/status-log.md`), served by the
-  `sds-worker` Worker.
+- Version 3.4.0 (`f2b1c41c`, tag `v3.4.0`; the Kiln homestead and, new, the
+  Kiln oak as the treeline) is live at `https://sheepdogsim.com` since
+  2026-10-17 14:38 UTC (`Deploy` run 39041378840;
+  `docs/history/status-log.md`), served by the `sds-worker` Worker.
   `sheepdogsim.com` is that Worker's Custom Domain since 00:49 UTC the same
   day, declared in `app/cloudflare.config.ts`, and since 3.3.2 the only
   thing that serves the hostname: the `sheepdogsim.com/*` route from the
@@ -352,7 +351,7 @@ longer claims Neutral.
   Kiln loaders into one with the house's envelope written by its bake.
 - Kiln oak for the treeline (added 2026-10-17 at the owner's request: a
   performant, painterly oak, one tree type and one variant for now).
-  **Shipped in 3.4.0**: merged as pull request 133, then flipped in its own
+  **Live in 3.4.0** since 2026-10-17 14:38 UTC: merged as pull request 133, then flipped in its own
   commit on the owner's go after the look review ("I think we should commit,
   push, and deploy and have the kiln oak as its default"):
   `assets/treeline/kiln/` bakes one spreading oak that the treeline instances
