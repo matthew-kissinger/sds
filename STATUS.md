@@ -17,10 +17,10 @@ investigations are in `docs/history/`.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.4.1 (`832b915d`, tag `v3.4.1`; the Kiln homestead and the Kiln
-  oak as the treeline, 3.4.0's, with the oak's cost trim) is live at
-  `https://sheepdogsim.com` since 2026-10-17 18:00 UTC (`Deploy` run
-  39055958574; `docs/history/status-log.md`), served by the `sds-worker`
+- Version 3.5.0 (`6e8b4ff5`, tag `v3.5.0`; Kiln fence and the aligned,
+  corrected homestead) is live at `https://sheepdogsim.com` since 2026-10-17
+  20:03 UTC (`Deploy` run 39064760796; `docs/history/status-log.md`),
+  served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
   `sheepdogsim.com` is that Worker's Custom Domain since 00:49 UTC the same
@@ -43,7 +43,7 @@ investigations are in `docs/history/`.
   dormant Pages project and its `sds-frontend.pages.dev` hostname are
   explained there too.
 - The treeline is the Kiln oak since 3.4.0 (`TREE_SOURCE = 'kiln'`): one
-  spreading oak authored in Kiln, instanced in 139 stands outside the fence,
+  spreading oak authored in Kiln, instanced in 137 stands outside the fence,
   three draws, no understory shrubs and no exposed root runs.
 
 ## Last candidate - the asset polish pass, shipped 2026-10-16
@@ -510,7 +510,7 @@ the record those files carry.
 ## Open questions
 
 - Kiln fence/homestead release 3.5.0: owner approved shipping on 2026-10-17.
-  Pull request 140. Production captures confirm three fence draws; real herding
+  Shipped in pull request 140, live at 6e8b4ff5. Captures confirm three fence draws; real herding
   completion/replay passes; quiet-hub frame percentiles match 3.4.1 on both
   backends. Owner-approved material look retained; physical-device, cold-start
   and recorded-motion art limits remain open. Full preflight evidence:
