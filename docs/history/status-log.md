@@ -143,8 +143,9 @@ tier, and phone is the probe's 390x844 phone viewport at the low tier.
 
 - Both arms are copied production builds. "Before" is `main` `f650f043`, the
   build live as 3.4.0; its artifact digest `07354925...` is the deployed one.
-  "After" is this branch at `a42ae789`, artifact `8f8ed4c8...`, 37 files and
-  8,372 bytes fewer.
+  "After" is this branch at `a42ae789`, artifact `8f8ed4c8...`: the same 37
+  files, 8,372 bytes smaller (the GLB 8,376 bytes smaller, the game script
+  4 bytes larger).
 - Each arm ran from its own `dist/` and copy of the probe, in
   `~/perf/sds-oak-trim-20261017/`. Nothing else on the hub was touched.
 - The preflight took two consecutive quiet samples before the timed runs (0%
@@ -154,6 +155,12 @@ tier, and phone is the probe's 390x844 phone viewport at the low tier.
 - All 74 runs reported no page errors and no failed requests, and every run of
   both arms fetched an oak GLB. The run script and the receipts are under
   `captures/stability/hub-receipts/oak-trim/`, gitignored.
+- A diagnostic followed straight after, not a second receipt: ten more
+  alternating pairs of warm boots a backend, from the same arms and probe
+  copies, behind the same preflight (0% GPU and 1.0% CPU, then 0% and 1.9%).
+  Its 40 boots also reported no errors or failed requests, and each fetched
+  an oak GLB. Its script and receipts are beside the receipt's
+  (`warm-check.sh`, `warm.log`, `<arm>/receipts/warm*`).
 
 Per backend and view, the arms ran back to back, 60 s each, alternating which
 went first. GPU busy is the mean of nvidia-smi's utilisation, which the probe
@@ -171,16 +178,18 @@ samples every 5 s (13 or 14 samples a run).
 | Classic, phone (low) | WebGL2 | 8.3 / 8.4 / 8.4 | 0 / 0 | 28 | 3,451,127 → 3,400,531 | 41.1% → 40.5% |
 
 Boot-only runs at the native viewport in Classic, as medians of `readyMs`
-with ranges. Warm runs are three per arm and backend. Cold runs had the
-driver's shader disk cache off for those Chrome processes alone
-(`__GL_SHADER_DISK_CACHE=0`; nothing shared was read, written or cleared)
-and a fresh profile each launch, in alternating pairs. The ± is one standard
-error of the paired mean.
+with ranges. Warm runs are three alternating pairs a backend in the receipt
+and ten in the diagnostic. Cold runs had the driver's shader disk cache off
+for those Chrome processes alone (`__GL_SHADER_DISK_CACHE=0`; nothing shared
+was read, written or cleared) and a fresh profile each launch, in alternating
+pairs. The ± is one standard error of the paired mean.
 
 | Boot | Before | After | After minus before, paired |
 | --- | --- | --- | --- |
-| Warm, WebGPU, desktop | 2,704 ms (2,592 to 2,804) | 2,741 ms (2,627 to 2,946) | |
-| Warm, WebGL2, desktop | 1,842 ms (1,822 to 1,949) | 2,039 ms (1,959 to 2,146) | |
+| Warm, WebGPU, desktop, 3 pairs | 2,704 ms (2,592 to 2,804) | 2,741 ms (2,627 to 2,946) | +71 ms ± 35 on average; slower in 3 of 3 |
+| Warm, WebGL2, desktop, 3 pairs | 1,842 ms (1,822 to 1,949) | 2,039 ms (1,959 to 2,146) | +177 ms ± 65 on average; slower in 3 of 3 |
+| Warm, WebGPU, desktop, 10 more pairs (diagnostic) | 2,636 ms (2,574 to 2,705) | 2,646 ms (2,571 to 2,695) | +6 ms ± 20 on average; slower in 7 of 10 |
+| Warm, WebGL2, desktop, 10 more pairs (diagnostic) | 1,915 ms (1,794 to 3,569) | 1,890 ms (1,775 to 1,963) | -254 ms ± 183 on average; slower in 5 of 10 |
 | Cold, WebGL2, desktop, high tier, 10 pairs | 5,081 ms (4,147 to 5,652) | 5,107 ms (4,288 to 5,340) | -76 ms ± 164 on average; slower in 5 of 10 |
 | Cold, WebGL2, phone, low tier, 10 pairs | 4,052 ms (3,966 to 5,735) | 4,733 ms (3,958 to 5,709) | +375 ms ± 245 on average; slower in 7 of 10 |
 | Cold, WebGPU, desktop, high tier, 3 pairs | 3,553 ms (3,501 to 3,613) | 3,547 ms (3,526 to 3,604) | +3 ms ± 51 on average; slower in 1 of 3 |
@@ -197,6 +206,17 @@ What the receipt shows:
 - **Boots agree within their noise.** Both builds compile byte-identical
   shaders: all 78 WebGL2 sources were compared on this PC. A boot difference
   has only the 8 KB smaller GLB to come from.
+  - Warm, the receipt's three pairs were slower in the after arm on both
+    backends, which is why the diagnostic ran. Its ten pairs a backend show
+    no difference: on WebGPU +6 ms ± 20, slower in 7 of 10 (all thirteen
+    pairs together, +21 ms ± 19), and on WebGL2 slower in 5 of 10.
+  - The WebGL2 mean of -254 ms comes from two before-arm boots whose shader
+    window (`herd:boot:scene` to `herd:boot:shaders`) took 1.6 and 2.4 s
+    against the usual 0.7 s, as the before arm's two 60 s WebGL2 runs did
+    (1.5 and 1.6 s, 2,725 and 2,753 ms to ready). No after-arm warm boot
+    did: 4 of 15 against 0 of 15. The programs are byte-identical, so the
+    change gives no cause for it, and four slow boots fall all in one arm
+    by chance about one time in ten.
   - At the high tier, the cold WebGL2 pairs split 5 to 5.
   - At the low tier, the after arm was slower in 7 of 10 pairs (+375 ms ±
     245). The earlier receipt found the same spread at that tier between two
