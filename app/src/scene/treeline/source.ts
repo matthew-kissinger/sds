@@ -21,12 +21,13 @@
  * changed in its own commit and gated on the owner's look review and a hub
  * timing receipt: build once per value, run `tools/hub-presentation-probe.mjs`
  * against both copies of the build, and keep `kiln` only if load time and
- * frame time do not regress. Until a receipt says so, the shipped value is
- * `procedural`.
+ * frame time do not regress. `kiln` ships since 3.4.0, on the owner's look
+ * review and the receipt recorded in docs/history/status-log.md ("Kiln oak -
+ * 2026-10-17"): frame percentiles unchanged, three treeline draws.
  *
  * With `procedural` the Kiln oak is unreachable and the bundle contains none of
  * it: not its loader, not its two materials and not the asset.
  */
 export type TreeSource = 'procedural' | 'kiln';
 
-export const TREE_SOURCE: TreeSource = 'procedural';
+export const TREE_SOURCE: TreeSource = 'kiln';
