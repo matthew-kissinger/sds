@@ -14,14 +14,15 @@
  * behind the tree; a slow sway. One opaque material per role, one instanced
  * draw each, no texture, no alpha and no extra pass.
  *
- * WHAT THE CAMERA SEES IS MASSES. These trees stand 20 to 150 metres from the
- * cameras, so the crown is lit as masses within masses: mostly by its lobes'
- * normals, a share of it by the whole crown's (its envelope, from the loader),
- * and only a trace by each cluster's own, so a lobe turns from light to shade
- * as one soft form and its clusters show at its outline. Everything calms
- * with distance: the dabs give way to the soft ramp they were painted over by
- * `DAB_FADE[1]`, and the crown settles a little toward one deep blue-green
- * (`SETTLE`) before the haze takes it.
+ * WHAT THE CAMERA SEES IS ONE MASS. These trees stand 20 to 150 metres from
+ * the cameras, so the crown is lit as one mass first: three quarters by the
+ * whole crown's normal (its envelope, from the loader), the rest mostly by its
+ * lobes' and only a trace by each cluster's own. The crown turns from light to
+ * shade as one form, its lobes show at its outline and where the light turns,
+ * and its clusters in the deep folds. Everything calms with distance: the dabs
+ * give way to the soft ramp they were painted over by `DAB_FADE[1]`, and across
+ * the field the crown takes on the warmth of the haze at its own value
+ * (`HAZE_LEAN`), leaving the haze's lightness to `recede` and the scene's fog.
  *
  * THE STAND MATRIX, READ AGAIN. Three's instancing transforms a mesh's position
  * and its NORMAL by the stand's matrix and nothing else, but the crown needs the
@@ -46,9 +47,9 @@
  * bark places the vertex from the stand matrix and sways it, about 50 and
  * three sines; the leaf adds the swell (about 30 and three sines), the lobe
  * normal (about 25) and the envelope normal (about 35), about 140 and six sines
- * in all. PER FRAGMENT: the leaf about 200 and three sines - the three-normal
+ * in all. PER FRAGMENT: the leaf about 210 and three sines - the three-normal
  * blend (30), the key (12), the dabs (20 and the sines), the two painted ramps
- * (28), the tone (25), the backlit edge (22), distance and haze (40) - against
+ * (28), the tone (25), the backlit edge (22), distance and haze (48) - against
  * about 70 and two sines for the procedural canopy; the bark about 75 and no
  * sine. No texture fetch, no new per-stand data: the only inputs are the stand
  * matrices both instanced meshes already upload, the stand attributes the
@@ -103,10 +104,12 @@ import { CROWN_SWELL, type KilnCrownEnvelope } from './kilnTree';
  *  cluster's. Nearly all of it: each lobe lights as one soft form, and its
  *  clusters show at its outline and, through the cavity, in its creases. */
 const LOBE_WEIGHT = 0.9;
-/** And how much of that is then the whole crown's (its envelope's): enough
- *  that the lobes low on the crown sit in its shade and the high ones in its
- *  light, so the tree reads as one mass before it reads as lobes. */
-const CROWN_WEIGHT = 0.25;
+/** And how much of that is then the whole crown's (its envelope's): three
+ *  quarters, so the crown turns from light to shade as one mass and no lobe is
+ *  lit as its own ball; the lobes still show at the outline, in the dabs where
+ *  the light turns, and through the cavity. Raised from a quarter on the
+ *  owner's decision of 2026-10-17, the first note of the critic's review. */
+const CROWN_WEIGHT = 0.75;
 /** The sky's share of the light key, so tops read lighter than undersides
  *  even with the sun behind the crown, which from the field it mostly is. */
 const SKY_SHARE = 0.3;
@@ -147,10 +150,16 @@ const STAND_WARMTH = 0.45;
 const GLOW_FROM = 0.35;
 const GLOW_STRENGTH = 0.55;
 const GLOW_FAR = 0.45;
-/** Across the field the crown settles toward one deep blue-green: from where,
- *  to where, and how far, before the haze in `recede` takes it on. */
-const SETTLE = [70, 220] as const;
-const SETTLE_MAX = 0.3;
+/** Across the field the crown leans toward the haze's warmth: from where the
+ *  dabs begin to give way, to past the ring's far side seen from the middle of
+ *  the field, and how far. It takes the haze's hue at its own value
+ *  (`hazeHue`), not the haze itself, so the ring warms without bleaching toward
+ *  the horizon; the haze's lightness is `recede`'s and the fog's. Nearer than
+ *  the dabs' fade the crown is exactly as it was. */
+const HAZE_LEAN = [DAB_FADE[0], 160] as const;
+const HAZE_LEAN_MAX = 0.4;
+/** Rec. 709 luminance, in the linear working space the shaders run in. */
+const LUMA = [0.2126, 0.7152, 0.0722] as const;
 
 // ------------------------------------------------------------------- motion
 /** The swell's frequency in the unit frame: about one lump a cluster. */
@@ -252,6 +261,18 @@ function swell(): TSLNode {
   return smoothstep(float(-1.8), float(2.7), waves);
 }
 
+/**
+ * The haze's colour at unit luminance: its hue and saturation, none of its
+ * lightness. The haze is the scene's fog colour - Atmosphere copies
+ * `PALETTE.skyHorizon` into the fog every frame - so the far crown follows
+ * whatever the sky's horizon is, and no tint of its own is authored here.
+ */
+export function hazeHue(): [number, number, number] {
+  const haze = new THREE.Color(PALETTE.skyHorizon);
+  const value = haze.r * LUMA[0] + haze.g * LUMA[1] + haze.b * LUMA[2];
+  return [haze.r / value, haze.g / value, haze.b / value];
+}
+
 export function makeKilnLeafMaterial(inputs: KilnLeafMaterialInputs): THREE.MeshBasicNodeMaterial {
   const material = new THREE.MeshBasicNodeMaterial();
   const frame = standFrame(inputs.matrices);
@@ -329,9 +350,11 @@ export function makeKilnLeafMaterial(inputs: KilnLeafMaterialInputs): THREE.Mesh
     .mul(mix(float(GLOW_FAR), float(1), near))
     .mul(float(GLOW_STRENGTH));
 
-  const settle = smoothstep(float(SETTLE[0]), float(SETTLE[1]), range).mul(float(SETTLE_MAX));
+  // Across the field: the haze's hue at the crown's own value, then `recede`.
+  const lean = smoothstep(float(HAZE_LEAN[0]), float(HAZE_LEAN[1]), range).mul(float(HAZE_LEAN_MAX));
   const tone = mix(banded.mul(value), color(PALETTE.oakLeafGlow), glow);
-  material.colorNode = recede(mix(tone, color(PALETTE.oakLeafFar), settle));
+  const hazed = vec3(...hazeHue()).mul(dot(tone, vec3(...LUMA)));
+  material.colorNode = recede(mix(tone, hazed, lean));
   return material;
 }
 

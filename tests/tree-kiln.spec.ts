@@ -15,7 +15,8 @@ import {
   type KilnTree,
   type KilnTreePart,
 } from '@app/scene/treeline/kilnTree';
-import { makeKilnBarkMaterial, makeKilnLeafMaterial } from '@app/scene/treeline/kilnTreeMaterials';
+import { hazeHue, makeKilnBarkMaterial, makeKilnLeafMaterial } from '@app/scene/treeline/kilnTreeMaterials';
+import { PALETTE } from '@app/tsl/palette';
 import { TREE_SOURCE } from '@app/scene/treeline/source';
 import { TRUNK_ATTRIBUTE_SIZE } from '@app/scene/treeline/trunkMaterial';
 
@@ -280,5 +281,21 @@ describe('Kiln oak in the treeline', () => {
       expect(material.positionNode).not.toBeNull();
       material.dispose();
     }
+  });
+
+  it("warms the far crown toward the haze, at the crown's own value", () => {
+    // The far lean takes its colour from the fog's one source, PALETTE.skyHorizon,
+    // as a hue: the haze's own proportions at unit luminance, so leaning toward
+    // it warms a crown without lightening it.
+    const haze = new THREE.Color(PALETTE.skyHorizon);
+    const [r, g, b] = hazeHue();
+    expect(r * 0.2126 + g * 0.7152 + b * 0.0722).toBeCloseTo(1, 6);
+    expect(r / g).toBeCloseTo(haze.r / haze.g, 6);
+    expect(g / b).toBeCloseTo(haze.g / haze.b, 6);
+    // The haze is warm, so the lean is a warming: red over green over blue.
+    expect(r).toBeGreaterThan(g);
+    expect(g).toBeGreaterThan(b);
+    // No authored far tint of its own remains in the palette.
+    expect(Object.keys(PALETTE)).not.toContain('oakLeafFar');
   });
 });

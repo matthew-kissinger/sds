@@ -84,8 +84,6 @@ export const PALETTE = {
   oakLeafLit: '#a0aa66',
   /** The warm olive a stand's turn and a cluster's seed lean toward. */
   oakLeafTurning: '#98984c',
-  /** The deep cool blue-green a crown settles to across the field, under the haze. */
-  oakLeafFar: '#4f6e5f',
   /** The low sun through a crown's edge, seen from the shaded side. */
   oakLeafGlow: '#c3cc62',
   // Oak bark: a warm grey-brown, its three bands close in value, with the warm
