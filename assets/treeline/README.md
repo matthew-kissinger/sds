@@ -47,3 +47,12 @@ the runtime tree family. Their attribution remains with those source files.
 Use `docs/art-review.md` for production-build comparison captures and
 `tests/treeline-assets.spec.ts` for provenance, deterministic bake, geometry,
 placement, opaque-material and no-shrub contracts.
+
+## The Kiln oak
+
+`kiln/` holds a second oak, authored in Kiln: one spreading oak that the
+treeline instances in the same 139 stands, at three draws, when `TREE_SOURCE`
+(`app/src/scene/treeline/source.ts`) is `'kiln'`. It ships `'procedural'`
+until the owner's look review and a hub receipt say otherwise, and a
+procedural build carries none of it. Its recipe, channels, cost and ledger are
+in `kiln/README.md`; `tests/tree-kiln.spec.ts` holds the loader to the bake.

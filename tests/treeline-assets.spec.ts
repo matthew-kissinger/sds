@@ -5,7 +5,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain ES module without declarations
@@ -335,25 +335,38 @@ describe('authored sculpted foliage chain', () => {
   // owner ordered the Kiln farmhouse shipped, gated on a hub timing receipt, and
   // that reversed it for exactly one file and one loader. The Kiln barn is a
   // second building under the same terms, so the exception is now this table:
-  // one file per building, named by one loader, pinned by its own ledger, each
+  // one file per model, named by one loader, pinned by its own ledger, each
   // shipping under its own source constant. Anything wider fails.
-  const KILN_BUILDINGS = [
+  //
+  // WIDENED DELIBERATELY, 2026-10-17, for the Kiln oak: the owner asked for
+  // the treeline's oak to be authored in Kiln under the same terms, so it is
+  // the third row - the first that is not a building, which is why the table
+  // now names each loader by its path rather than assuming farmhouse/. It ships
+  // only under TREE_SOURCE (app/src/scene/treeline/source.ts), and the
+  // procedural build still carries no model of it.
+  const KILN_MODELS = [
     {
-      loader: 'kilnHouse.ts',
+      loader: 'app/src/scene/farmhouse/kilnHouse.ts',
       model: 'assets/house/farmhouse.glb',
       ledger: 'assets/house/asset-manifest.json',
       built: /^farmhouse-[\w-]+\.glb$/,
     },
     {
-      loader: 'kilnBarn.ts',
+      loader: 'app/src/scene/farmhouse/kilnBarn.ts',
       model: 'assets/barn/barn.glb',
       ledger: 'assets/barn/asset-manifest.json',
       built: /^barn-[\w-]+\.glb$/,
     },
+    {
+      loader: 'app/src/scene/treeline/kilnTree.ts',
+      model: 'assets/treeline/kiln/oak.glb',
+      ledger: 'assets/treeline/kiln/asset-manifest.json',
+      built: /^oak-[\w-]+\.glb$/,
+    },
   ] as const;
 
-  it('lets the runtime load the Kiln farmhouse and barn GLBs, and only those', () => {
-    const loaders = KILN_BUILDINGS.map(({ loader }) => join('app', 'src', 'scene', 'farmhouse', loader));
+  it('lets the runtime load the Kiln farmhouse, barn and oak GLBs, and only those', () => {
+    const loaders = KILN_MODELS.map(({ loader }) => join(...loader.split('/')));
     const code = (path: string): string => readFileSync(join(repo, path), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/(^|\s)\/\/.*$/gm, '');
@@ -367,12 +380,12 @@ describe('authored sculpted foliage chain', () => {
     const loading = files('app/src').filter((path) => /GLTFLoader|\.gltf\b|\.glb\b/.test(code(path)));
     expect([...loading].sort()).toEqual([...loaders].sort());
 
-    const ledgers = KILN_BUILDINGS.map((building, i) => {
-      // Each loader names exactly one model path, and it is its own building's.
+    const ledgers = KILN_MODELS.map((building, i) => {
+      // Each loader names exactly one model path, and it is its own model's.
       const referenced = [...code(loaders[i]!).matchAll(/['"`]([^'"`]*\/[^'"`]*\.glb)['"`]/g)]
         .map((match) => match[1]!);
       expect(referenced).toHaveLength(1);
-      const resolved = join(repo, 'app', 'src', 'scene', 'farmhouse', referenced[0]!);
+      const resolved = join(repo, dirname(loaders[i]!), referenced[0]!);
       expect(resolved).toBe(join(repo, ...building.model.split('/')));
 
       // The bytes the loader names are the bytes its ledger records.
@@ -393,11 +406,11 @@ describe('authored sculpted foliage chain', () => {
     const built = join(builtClientDir, 'assets');
     if (existsSync(built)) {
       const models = readdirSync(built).filter((name) => /\.(glb|gltf|obj|mtl)$/i.test(name));
-      expect(models.length).toBeLessThanOrEqual(KILN_BUILDINGS.length);
+      expect(models.length).toBeLessThanOrEqual(KILN_MODELS.length);
       for (const name of models) {
-        const i = KILN_BUILDINGS.findIndex((building) => building.built.test(name));
-        expect(i, `${name} in the built assets is not a recorded Kiln building`).toBeGreaterThanOrEqual(0);
-        expect(models.filter((other) => KILN_BUILDINGS[i]!.built.test(other))).toEqual([name]);
+        const i = KILN_MODELS.findIndex((building) => building.built.test(name));
+        expect(i, `${name} in the built assets is not a recorded Kiln model`).toBeGreaterThanOrEqual(0);
+        expect(models.filter((other) => KILN_MODELS[i]!.built.test(other))).toEqual([name]);
         expect(digest(readFileSync(join(built, name)))).toBe(ledgers[i]!.artifact.sha256);
       }
     }
@@ -406,6 +419,7 @@ describe('authored sculpted foliage chain', () => {
   it.each([
     ['farmhouse', 'tools/record-house-asset.mjs'],
     ['barn', 'tools/record-barn-asset.mjs'],
+    ['oak', 'tools/record-tree-asset.mjs'],
   ])('keeps the %s ledger in step with its recipe and loader', (_building, tool) => {
     const result = spawnSync(process.execPath, [tool, '--check'], {
       cwd: repo, encoding: 'utf8', windowsHide: true, timeout: 60_000,

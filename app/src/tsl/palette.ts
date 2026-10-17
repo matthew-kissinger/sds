@@ -75,6 +75,24 @@ export const PALETTE = {
   treeBarkBody: '#6d4f33',
   treeBarkShadow: '#503a3b',
   treeBarkBounce: '#a4652f',
+  // The Kiln oak's leaf (scene/treeline/kilnTreeMaterials.ts). Colour carries
+  // more of the form than value: the shade is a cool, greyed blue-green only a
+  // step darker than the body, and the lit tone a soft warm yellow-green held
+  // close to the body, so the bands stay calm.
+  oakLeafShade: '#577168',
+  oakLeafBody: '#728d58',
+  oakLeafLit: '#a0aa66',
+  /** The warm olive a stand's turn and a cluster's seed lean toward. */
+  oakLeafTurning: '#98984c',
+  /** The deep cool blue-green a crown settles to across the field, under the haze. */
+  oakLeafFar: '#4f6e5f',
+  /** The low sun through a crown's edge, seen from the shaded side. */
+  oakLeafGlow: '#c3cc62',
+  // Oak bark: a warm grey-brown, its three bands close in value, with the warm
+  // field bounce (treeBarkBounce) on its shade side.
+  oakBarkShade: '#524840',
+  oakBarkBody: '#74624f',
+  oakBarkLit: '#9c8668',
 
   // Ground.
   /** The pasture inside the fence, lit tone. Green pushed toward gold. */

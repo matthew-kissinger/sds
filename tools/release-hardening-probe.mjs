@@ -186,34 +186,39 @@ for (const path of [
     fail(`procedural foliage source absent: ${String(path)}`);
   }
 }
-// The models the runtime may load are the Kiln buildings: the farmhouse
-// (app/src/scene/farmhouse/kilnHouse.ts) when FARMHOUSE_SOURCE is 'kiln', and the
-// barn (kilnBarn.ts) when BARN_SOURCE is 'kiln'. Each must be its recorded bake,
-// byte for byte. Anything else is a model the licence ledger does not cover.
-const kilnBuildings = [
+// The models the runtime may load are the Kiln models: the farmhouse
+// (app/src/scene/farmhouse/kilnHouse.ts) when FARMHOUSE_SOURCE is 'kiln', the
+// barn (kilnBarn.ts) when BARN_SOURCE is 'kiln', and the treeline's oak
+// (app/src/scene/treeline/kilnTree.ts) when TREE_SOURCE is 'kiln'. Each must be
+// its recorded bake, byte for byte, and in dist at most once. Anything else is
+// a model the licence ledger does not cover.
+const kilnModels = [
   { name: 'farmhouse', ledger: 'assets/house/asset-manifest.json' },
   { name: 'barn', ledger: 'assets/barn/asset-manifest.json' },
+  { name: 'oak', ledger: 'assets/treeline/kiln/asset-manifest.json' },
 ].map(({ name, ledger }) => ({
   name,
   pattern: new RegExp(`(^|[\\\\/])${name}-[\\w-]+\\.glb$`),
   sha256: JSON.parse(readFileSync(join(repo, ledger), 'utf8')).artifact.sha256,
 }));
-const recordedBuilding = (path) => kilnBuildings.find(({ pattern, sha256 }) => pattern.test(path.toLowerCase())
+const recordedModel = (path) => kilnModels.find(({ pattern, sha256 }) => pattern.test(path.toLowerCase())
   && createHash('sha256').update(readFileSync(path)).digest('hex') === sha256)?.name;
 const builtExternalModels = distFiles.filter((path) => {
   const lower = path.toLowerCase();
   if (lower.endsWith('.font.glb')) return false;
-  if (recordedBuilding(path) !== undefined) return false;
+  if (recordedModel(path) !== undefined) return false;
   return ['.glb', '.gltf', '.obj', '.mtl'].includes(extname(lower));
 });
 if (builtExternalModels.length > 0) {
   fail(`external model entered dist: ${builtExternalModels.map((path) => relative(dist, path))}`);
 }
-const builtBuildings = distFiles.map(recordedBuilding);
-const farmhouseModels = builtBuildings.filter((name) => name === 'farmhouse').length;
-const barnModels = builtBuildings.filter((name) => name === 'barn').length;
-if (farmhouseModels > 1 || barnModels > 1) {
-  fail(`a Kiln building entered dist more than once: ${farmhouseModels} farmhouse, ${barnModels} barn`);
+const builtModels = distFiles.map(recordedModel);
+const modelCount = (name) => builtModels.filter((model) => model === name).length;
+const farmhouseModels = modelCount('farmhouse');
+const barnModels = modelCount('barn');
+const oakModels = modelCount('oak');
+if (farmhouseModels > 1 || barnModels > 1 || oakModels > 1) {
+  fail(`a Kiln model entered dist more than once: ${farmhouseModels} farmhouse, ${barnModels} barn, ${oakModels} oak`);
 }
 
 const authoringConcepts = distFiles.filter((path) => {
@@ -285,6 +290,7 @@ const result = {
   builtExternalModels: builtExternalModels.length,
   farmhouseModels,
   barnModels,
+  oakModels,
   launchBoundary: 'solo 25/75/200 with local bests and fail-soft online times',
   clientSecretScan: 'clean',
 };

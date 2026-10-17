@@ -26,11 +26,12 @@ import { BARN_AT, HOUSE_AT } from '@app/scene/farmhouse/plan';
 import { GradedGrass } from './GradedGrass';
 import { KilnBarn } from './KilnBarn';
 import { KilnHouse } from './KilnHouse';
+import { KilnTreeline } from './KilnTreeline';
 import { LibraryGrass } from './LibraryGrass';
 
 export type LabPartId =
   | 'terrain' | 'grass' | 'grass-lib' | 'fence' | 'pen' | 'farmhouse' | 'kiln-house'
-  | 'kiln-barn' | 'farmer' | 'treeline' | 'scatter' | 'flock' | 'dog';
+  | 'kiln-barn' | 'farmer' | 'treeline' | 'kiln-treeline' | 'scatter' | 'flock' | 'dog';
 
 /** Draw order matters, so this record is ordered as `FieldScene` orders it. */
 export const LAB_PARTS: Record<LabPartId, ComponentType> = {
@@ -53,6 +54,9 @@ export const LAB_PARTS: Record<LabPartId, ComponentType> = {
   'kiln-barn': KilnBarn,
   farmer: Farmer,
   treeline: Treeline,
+  // The Kiln-authored oak in every stand of the same placement, whatever
+  // TREE_SOURCE says, so the two oaks can be flipped between at one camera.
+  'kiln-treeline': KilnTreeline,
   scatter: Scatter,
   flock: Flock,
   dog: Dog,
@@ -90,6 +94,15 @@ export interface LabSubject {
 
 const FARM_MID_X = (HOUSE_AT.x + BARN_AT.x) / 2;
 const FARM_MID_Z = (HOUSE_AT.z + BARN_AT.z) / 2;
+
+/**
+ * The oak the two tree subjects look at: stand 18 of the placement manifest, a
+ * full-size front-row stand in the north of the ring with ten metres of air
+ * round it. It is the side of the field both game cameras face, so it is seen
+ * against the low sun, as most trees in the game are. Its field side is at a
+ * bearing of about 2.8.
+ */
+const TREE_AT = { x: -45.4, z: 146.6 } as const;
 
 export const LAB_SUBJECTS = [
   {
@@ -213,6 +226,27 @@ export const LAB_SUBJECTS = [
     target: { kind: 'fixed', x: 0, z: 0 },
     distance: 120,
     height: 26,
+  },
+  {
+    id: 'tree',
+    label: 'Tree (procedural)',
+    // The shipped sculpted oak at the Kiln oak's frame, target and part list,
+    // so flipping between the two holds the camera and changes only the oak.
+    note: 'The shipped sculpted oak (treeline/crownShape.ts) in every stand, framed on one front-row stand in the north of the ring. Context for the Kiln oak, not its reference.',
+    parts: ['terrain', 'grass', 'treeline'],
+    target: { kind: 'fixed', x: TREE_AT.x, z: TREE_AT.z },
+    distance: 34,
+    height: 5,
+  },
+  {
+    id: 'kiln-tree',
+    label: 'Tree (Kiln)',
+    // The same stands, target and frame as the subject above.
+    note: 'The spreading oak authored in Kiln, instanced into every stand of the same placement and painted by the game: lobe-blended bands, leaf dabs on the terminator, a swollen outline, a backlit rim and a slow sway. Swing the bearing to about 2.4 to look into the sun, and draw back past 100 m for the Follow camera\'s read.',
+    parts: ['terrain', 'grass', 'kiln-treeline'],
+    target: { kind: 'fixed', x: TREE_AT.x, z: TREE_AT.z },
+    distance: 34,
+    height: 5,
   },
   {
     id: 'scatter',

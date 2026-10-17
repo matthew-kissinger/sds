@@ -2,7 +2,7 @@
   {
     "system": "Trees",
     "intent": "Distinct crown silhouettes, visible branch structure, irregular spacing and saturated shade. Review whole trees at Follow and treeline rhythm at Classic.",
-    "files": ["assets/treeline/README.md", "assets/treeline/procedural-manifest.json", "assets/treeline/sculpted-oak-family.json", "assets/treeline/manifest.json", "tools/bake-sculpted-trees.mjs", "app/src/scene/Treeline.tsx", "app/src/scene/treeline/crownShape.ts", "app/src/scene/treeline/foliage.ts", "app/src/scene/treeline/canopyMaterial.ts", "app/src/scene/treeline/trunkMaterial.ts"]
+    "files": ["assets/treeline/README.md", "assets/treeline/procedural-manifest.json", "assets/treeline/sculpted-oak-family.json", "assets/treeline/manifest.json", "tools/bake-sculpted-trees.mjs", "app/src/scene/Treeline.tsx", "app/src/scene/treeline/crownShape.ts", "app/src/scene/treeline/foliage.ts", "app/src/scene/treeline/canopyMaterial.ts", "app/src/scene/treeline/trunkMaterial.ts", "app/src/scene/treeline/source.ts", "assets/treeline/kiln/oak.kiln.js", "assets/treeline/kiln/oak.glb", "app/src/scene/treeline/kilnTree.ts", "app/src/scene/treeline/kilnOak.ts", "app/src/scene/treeline/oakRoles.ts", "app/src/scene/treeline/kilnTreeMaterials.ts"]
   },
   {
     "system": "Sky, clouds and sun",

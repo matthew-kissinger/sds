@@ -21,7 +21,7 @@ import { GrassField } from './GrassField';
 import { Pen } from './Pen';
 import { Scatter } from './Scatter';
 import { Terrain } from './Terrain';
-import { Treeline } from './Treeline';
+import { Treeline, preloadTreeline } from './Treeline';
 import { SheepHoverLabel } from './SheepHoverLabel';
 import { loadHeightfield } from '@app/world/heightfield';
 import { loadTufts } from './grass/tuftData';
@@ -43,6 +43,7 @@ export function preloadFieldSceneAssets(report?: BootReporter): void {
   void loadTreelineManifest((value) => report?.('treeline', value));
   void loadScatterManifest((value) => report?.('scatter', value));
   preloadFarmhouse();
+  preloadTreeline();
 }
 
 /**
