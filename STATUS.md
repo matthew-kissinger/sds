@@ -509,6 +509,16 @@ the record those files carry.
 
 ## Open questions
 
+- Score cards and the Monday UTC weekly board are implemented in the working
+  tree and waiting on the owner's deploy tag. The contract is
+  `spec/14-score-cards.md`. Nothing is live until that tag. The owner set
+  that order on 2026-10-19: cards first, then multiplayer (deferred phase 7),
+  then grow your flock (deferred phase 9 in `spec/10-roadmap.md`, roadmap
+  only; opening it amends the `spec/00` cut list in the same change). NPC
+  fill for a short public lobby is undecided; an NPC that steers sheep would
+  be a simulation change. The public all-time boards for 25, 75 and 200 were
+  full at the 100-row cap on 2026-10-19.
+
 - Kiln fence/homestead release 3.5.0: owner approved shipping on 2026-10-17.
   Shipped in pull request 140, live at 6e8b4ff5. Captures confirm three fence draws; real herding
   completion/replay passes; quiet-hub frame percentiles match 3.4.1 on both

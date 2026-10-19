@@ -7,6 +7,7 @@ import { formatRunTime } from '@app/ui/time';
 import { MyTimes } from './MyTimes';
 import { scoresController } from './controller';
 import { useScoreStore } from './store';
+import { previousIsoWeek } from './week';
 
 /**
  * The board tab: a flock size, or the player's own history across all three.
@@ -27,6 +28,8 @@ export function LeaderboardPanel({
   readonly onClose: () => void;
 }) {
   const [tab, setTab] = useState<BoardTab>(initialFlockSize);
+  // null is all-time. 'current' is this week. Any other value is an ISO week.
+  const [weekToken, setWeekToken] = useState<string | null>(null);
   const flockSize = tab === 'mine' ? initialFlockSize : tab;
   const panel = useRef<HTMLElement | null>(null);
   const status = useScoreStore((state) => state.boardStatus);
@@ -35,11 +38,13 @@ export function LeaderboardPanel({
   const runsStatus = useScoreStore((state) => state.runsStatus);
   const runs = useScoreStore((state) => state.runs);
   const runsMessage = useScoreStore((state) => state.runsMessage);
+  const boardWeek = useScoreStore((state) => state.boardWeek);
+  const boardWeekLabel = useScoreStore((state) => state.boardWeekLabel);
 
   useEffect(() => {
     if (tab === 'mine') void scoresController.loadMyRuns();
-    else void scoresController.loadBoard(tab);
-  }, [tab]);
+    else void scoresController.loadBoard(tab, weekToken ?? undefined);
+  }, [tab, weekToken]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -114,7 +119,31 @@ export function LeaderboardPanel({
           </>
         ) : (
           <>
-            <p className="herd-board-caption">Fastest runs with {flockSize} sheep.</p>
+            <div className="herd-board-tabs" aria-label="Board">
+              <button
+                type="button"
+                className="herd-size"
+                aria-pressed={weekToken === null}
+                onClick={() => setWeekToken(null)}
+              >
+                All-time
+              </button>
+              <button
+                type="button"
+                className="herd-size"
+                aria-pressed={weekToken !== null}
+                onClick={() => setWeekToken('current')}
+              >
+                This week
+              </button>
+            </div>
+            <p className="herd-board-caption">
+              {weekToken === null
+                ? `Fastest runs with ${flockSize} sheep.`
+                : weekToken === 'current'
+                  ? `This week, with ${flockSize} sheep.`
+                  : `${boardWeekLabel || 'That week'}, with ${flockSize} sheep.`}
+            </p>
             {status === 'loading' || status === 'offline' || entries.length === 0 ? (
               <p className="herd-board-message" role="status">{message}</p>
             ) : (
@@ -127,6 +156,18 @@ export function LeaderboardPanel({
                 ))}
               </ol>
             )}
+            {weekToken !== null && boardWeek ? (
+              <button
+                type="button"
+                className="herd-mine-more"
+                onClick={() => {
+                  const previous = previousIsoWeek(boardWeek);
+                  if (previous) setWeekToken(previous);
+                }}
+              >
+                Previous week
+              </button>
+            ) : null}
           </>
         )}
       </section>

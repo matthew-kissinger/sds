@@ -18,7 +18,6 @@ import {
   getLeaderboard,
   getAllLeaderboards,
   getPlayerScores,
-  getPlayerScoreStandings,
   isValidGameMode,
   isDailyMode,
   validateDailySubmission,
@@ -33,6 +32,9 @@ import { isKnownScoreScene } from './scorePartitions';
 // Cycle 86 Phase 2: /api/event prop caps + always-valid-JSON encoding. Kept
 // in their own module: the Workers runtime treats every export of THIS entry
 // module as a handler, and an exported const number fails startup.
+import { handleCard } from './cardRoute';
+import { ownedRunEntries, submissionShare } from './cardQuery';
+import { resolveWeek } from './cardWeek';
 import {
   truncateRawString,
   encodePropsJson,
@@ -42,9 +44,8 @@ import {
 } from './eventProps';
 
 interface Env {
-  // The built client in dist/. wrangler.toml runs this script first only for
-  // /api/*, so every other path is answered by the asset layer before the
-  // script is invoked; ASSETS is the fallback should the script ever see one.
+  // The built client. The script runs first for /api/* and /c/*. Every other
+  // path is answered by the asset layer; ASSETS is how a card reads a plate.
   ASSETS: Fetcher;
   DB: D1Database;
   JWT_SECRET: string;
@@ -207,6 +208,20 @@ export default {
     const path = url.pathname;
     const method = request.method;
 
+    // A score card is HTML and a PNG, drawn here. The asset layer would
+    // otherwise answer /c/* with index.html and the post would unfurl as the game.
+    if (path.startsWith('/c/')) {
+      if (method !== 'GET' && method !== 'HEAD') return new Response(null, { status: 404 });
+      const clientIp = request.headers.get('cf-connecting-ip');
+      if (!frontDoorAllowed(clientIp)) {
+        return new Response('rate limit exceeded', {
+          status: 429,
+          headers: { 'content-type': 'text/plain; charset=utf-8', 'retry-after': '1', 'cache-control': 'no-store' },
+        });
+      }
+      return handleCard(request, env, method === 'HEAD');
+    }
+
     // Only /api/* is the API. Anything else is the game's static surface.
     if (!path.startsWith('/api/')) return env.ASSETS.fetch(request);
 
@@ -356,12 +371,16 @@ export default {
         }
 
         const result = await submitScore(env.DB, pid, gameMode, score, body.additionalData || {});
+        const share = result.submissionId === null
+          ? null
+          : await submissionShare(env.DB, result.submissionId, env.JWT_SECRET);
         return json(
           {
             success: true,
             updated: result.updated,
             isNewRecord: result.isNewRecord,
             playerProfile: result.player,
+            ...(share ?? {}),
           },
           200,
           cors,
@@ -384,18 +403,14 @@ export default {
         const scene = url.searchParams.get('scene') || '';
         if (!isKnownScoreScene(scene)) return err('unknown scene', 400, cors);
         const entries = await getPlayerScores(env.DB, payload.persistent_id, scene);
-        // Each run also carries where it would sit on that count public board.
+        // Each run also carries where it would sit on that count's public
+        // board, and, for a version 3 flock time, on the week it was run.
         // A rank the player cannot place against a field size is just a
-        // number, so the two travel together or not at all.
-        const standings = await getPlayerScoreStandings(env.DB, scene, entries);
-        const placed = new Map(standings.map((s) => [`${s.sheepCount}:${s.score}`, s]));
+        // number, so the two travel together or not at all. sharePath is
+        // the same rule: only a row this caller owns, and only when it is
+        // still on the board.
         return json({
-          entries: entries.map((entry) => {
-            const standing = placed.get(`${entry.sheepCount}:${entry.score}`);
-            return standing
-              ? { ...entry, boardRank: standing.rank, boardPlayers: standing.players }
-              : entry;
-          }),
+          entries: await ownedRunEntries(env.DB, scene, entries, env.JWT_SECRET),
         }, 200, cors);
       }
 
@@ -421,12 +436,22 @@ export default {
         // Cycle 67 P7: survival co-op boards partition by party_size.
         const partySizeRaw = url.searchParams.get('partySize');
         const partySize = partySizeRaw ? Number(partySizeRaw) : undefined;
+        // Absent week is the all-time board, byte-identical to before.
+        // current is the worker clock. An ISO week is that Monday UTC.
+        const weekRaw = url.searchParams.get('week');
+        const week = weekRaw === null ? null : resolveWeek(weekRaw, Date.now());
+        if (weekRaw !== null && week === null) return err('invalid week', 400, cors);
         const entries = await getLeaderboard(env.DB, mode, limit, {
           sceneId,
           sheepCount: Number.isFinite(sheepCount) && (sheepCount as number) > 0 ? sheepCount : undefined,
           partySize: Number.isFinite(partySize) && (partySize as number) > 0 ? partySize : undefined,
+          ...(week ? { submittedFrom: week.start, submittedBefore: week.end } : {}),
         });
-        return json({ entries }, 200, cors);
+        return json(
+          week ? { entries, week: week.token, weekLabel: week.label } : { entries },
+          200,
+          cors,
+        );
       }
 
       if (path === '/api/leaderboards' && method === 'GET') {

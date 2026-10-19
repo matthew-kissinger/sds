@@ -118,7 +118,7 @@ Both backends fill the same typed-array layout, so the instanced renderer, grass
 - The flock renders as one raw `<instancedMesh>` (or BatchedMesh) written imperatively. drei `<Instances>` is forbidden for the flock hot path (documented per-instance React overhead); fine for static scatter.
 - Sheep animation is vertex-stage TSL (gait bob, ear flick, wool jiggle driven by per-instance attributes: phase, tint, agitation). No skeletons for sheep.
 - One start path. Solo runs the sim client-local (offline-capable, instant start). Co-op runs the identical sim as predictor against the DO. The difference is who owns `step`, not a separate code path through the app (sds failure mode: four game-start paths).
-- URL params are capped at three: `room` (join code), `seed` (local repro), `debug`. Validation probes live in tools/ and drive the app through its normal path (sds failure mode: ~23 production URL params, each load-bearing for some harness).
+- URL params are capped at three: `room` (join code), `seed` (local repro), `debug`. Validation probes live in tools/ and drive the app through its normal path (sds failure mode: ~23 production URL params, each load-bearing for some harness). `/play/25`, `/play/75` and `/play/200` are paths, not a fourth parameter. The client reads one of those once at boot and calls `startGame` with that flock size. Any other `/play/` value is ignored. `spec/14-score-cards.md` is the reason they exist.
 
 ## Naming and hygiene rules
 

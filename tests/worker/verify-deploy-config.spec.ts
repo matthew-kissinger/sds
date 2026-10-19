@@ -34,7 +34,7 @@ const production = () => ({
   assets: {
     binding: 'ASSETS',
     not_found_handling: 'single-page-application',
-    run_worker_first: ['/api/*'],
+    run_worker_first: ['/api/*', '/c/*'],
     directory: '../../../dist',
   },
 });
@@ -147,7 +147,7 @@ const cfWorker = (preview = false) => ({
   name: preview ? 'sds-worker-preview' : 'sds-worker',
   compatibilityDate: '2026-04-01',
   compatibilityFlags: ['nodejs_compat'],
-  assets: { notFoundHandling: 'single-page-application', runWorkerFirst: ['/api/*'] },
+  assets: { notFoundHandling: 'single-page-application', runWorkerFirst: ['/api/*', '/c/*'] },
   observability: { enabled: true },
   workersDev: true,
   previewUrls: preview,

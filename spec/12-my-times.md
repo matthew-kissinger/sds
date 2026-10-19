@@ -112,3 +112,7 @@ carried a "3 days ago" column, which was dropped with the chronological
 ordering it belonged to. If runs ever need to be told apart beyond their time -
 a season, a rule change, a reset - that is the column to bring back, and it
 wants a relative formatter with its own tests rather than a raw timestamp.
+
+Weekly boards do not add that column. The week a run belongs to is named on
+its score card, from `submitted_at`, and the list here stays ordered by time
+(`spec/14-score-cards.md`).

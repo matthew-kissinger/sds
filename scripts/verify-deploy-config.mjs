@@ -95,7 +95,7 @@ export function checkBuildOutput(outputDir, { preview = false } = {}) {
     DB: { type: 'd1', name: expected.database.name, id: expected.database.id },
     JWT_SECRET: { type: 'secret' },
   })
-  expect('assets', worker.assets, { notFoundHandling: 'single-page-application', runWorkerFirst: ['/api/*'] })
+  expect('assets', worker.assets, { notFoundHandling: 'single-page-application', runWorkerFirst: ['/api/*', '/c/*'] })
 
   const main = worker.manifest?.mainModule
   if (!main || !existsSync(resolve(workerDir, 'bundle', main))) {
@@ -151,7 +151,7 @@ export function checkDeployConfig(config, configPath, { preview = false, distDir
   const assets = config.assets ?? {}
   expect('assets.binding', assets.binding, 'ASSETS')
   expect('assets.not_found_handling', assets.not_found_handling, 'single-page-application')
-  expect('assets.run_worker_first', assets.run_worker_first, ['/api/*'])
+  expect('assets.run_worker_first', assets.run_worker_first, ['/api/*', '/c/*'])
   if (!assets.directory) {
     failures.push('assets.directory is missing: wrangler would refuse to deploy')
   } else {

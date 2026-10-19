@@ -138,11 +138,14 @@ verifiers, the probes and `vite.config.ts` import it. Four consequences:
 
 `app/cloudflare.config.ts` declares `assets` with
 `notFoundHandling: 'single-page-application'` and
-`runWorkerFirst: ['/api/*']` (`wrangler.toml` says the same), over the built
+`runWorkerFirst: ['/api/*', '/c/*']` (`wrangler.toml` says the same), over the built
 game the Build Output supplies:
 
 - `/api/*` always runs the Worker script. An unknown API path is a JSON 404
   from the script, never HTML.
+- `/c/*` always runs the Worker script too. That prefix is a score card
+  (`spec/14-score-cards.md`). The asset layer would answer it with
+  `index.html`, and the link would unfurl as the game.
 - Every other path is answered by the asset layer without invoking the
   script: the file if it exists, otherwise `index.html` with a 200. The array
   form of `run_worker_first` also stops `Sec-Fetch-Mode: navigate` from

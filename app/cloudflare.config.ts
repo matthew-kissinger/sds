@@ -47,12 +47,13 @@ const SHARED = {
   // The score API, relative to this file. The client never imports it;
   // `vite build` bundles it through the Cloudflare Vite plugin.
   entrypoint: '../worker/src/index.ts',
-  // Only /api/* runs the Worker first; every other path is served by the asset
-  // layer, with index.html for anything unmatched. _headers and _redirects
-  // from app/public are honoured by the asset layer itself.
+  // /api/* and /c/* run the Worker first. Every other path is served by the
+  // asset layer, with index.html for anything unmatched. _headers and
+  // _redirects from app/public are honoured by the asset layer itself.
+  // /c/* is a score card. Without it here, the card unfurls as the game.
   assets: {
     notFoundHandling: 'single-page-application' as const,
-    runWorkerFirst: ['/api/*'],
+    runWorkerFirst: ['/api/*', '/c/*'],
   },
   observability: { enabled: true },
 } as const;

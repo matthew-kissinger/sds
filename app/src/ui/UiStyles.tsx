@@ -180,7 +180,12 @@ canvas { display: block; touch-action: none; }
 .herd-mine-runs { display: grid; gap: var(--herd-s1); margin: 0; padding: 0; list-style: none; }
 /* Four columns: position, bar, time, and a stack of the gap to the player's
    own best over where the run sits on the public board. */
-.herd-mine-runs li { min-height: 34px; display: grid; align-items: center; gap: var(--herd-s3); grid-template-columns: 2.2ch minmax(56px, 1fr) auto 7.5ch; font-variant-numeric: tabular-nums lining-nums; }
+.herd-mine-runs li { min-height: 34px; display: grid; align-items: center; gap: var(--herd-s3); grid-template-columns: 2.2ch minmax(40px, 1fr) auto 7.5ch auto; font-variant-numeric: tabular-nums lining-nums; }
+.herd-run__share { justify-self: end; min-height: 32px; padding: 4px 10px; border: 1px solid var(--herd-line); border-radius: var(--herd-control); background: transparent; color: var(--herd-ink-soft); font: inherit; font-size: 12px; cursor: pointer; }
+.herd-run__share[data-copied=true] { border-color: transparent; cursor: default; }
+.herd-share-copied { margin: 0; min-height: var(--herd-target); display: grid; place-items: center; color: var(--herd-ink-soft); font-size: var(--herd-small); }
+.herd-completion-ranks { display: grid; gap: 2px; margin: 0; text-align: center; color: var(--herd-ink-soft); }
+.herd-completion-ranks p { margin: 0; }
 .herd-mine-runs li + li { border-top: 1px solid rgba(92,72,47,.16); }
 .herd-mine-runs--single .herd-run__bar { visibility: hidden; }
 .herd-run__rank { color: var(--herd-ink-soft); font-size: var(--herd-small); text-align: right; }
@@ -419,7 +424,7 @@ canvas { display: block; touch-action: none; }
   .herd-title { font-size: clamp(36px, 11vw, 46px); white-space: nowrap; }
   .herd-title-lockup { gap: var(--herd-s2); }
   .herd-panel { padding: var(--herd-s5); border-radius: 24px; }
-  .herd-mine-runs li { grid-template-columns: 2.2ch auto 7.5ch; }
+  .herd-mine-runs li { grid-template-columns: 2.2ch auto 7.5ch auto; }
   .herd-run__bar { display: none; }
   .herd-run__time { text-align: right; }
   .herd-board-tabs { flex-wrap: wrap; }

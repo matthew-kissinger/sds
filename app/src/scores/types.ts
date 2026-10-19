@@ -59,4 +59,26 @@ export interface PlayerRun {
    */
   readonly boardRank?: number;
   readonly boardPlayers?: number;
+  /** Where the run sat in the UTC week it was finished. Optional, like the all-time pair. */
+  readonly weekRank?: number;
+  readonly weekPlayers?: number;
+  /** `week of 19 Oct`, the Monday of that week. */
+  readonly weekLabel?: string;
+  /** `/c/<id>.<sig>` once the run is on the board. Absent when it cannot be shared. */
+  readonly sharePath?: string;
+}
+
+export interface SubmitReceipt {
+  readonly sharePath?: string;
+  readonly boardRank?: number;
+  readonly boardPlayers?: number;
+  readonly weekRank?: number;
+  readonly weekPlayers?: number;
+  readonly weekLabel?: string;
+}
+
+export interface LeaderboardPage {
+  readonly entries: readonly LeaderboardEntry[];
+  readonly week?: string;
+  readonly weekLabel?: string;
 }

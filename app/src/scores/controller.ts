@@ -6,13 +6,14 @@ import { createScoreApi, ScoreApiError, type ScoreApi } from './api';
 import { scoreApiBase } from './config';
 import { browserIdentityStorage, type IdentityStorage } from './storage';
 import { useScoreStore } from './store';
+import { cardShareTitle, completionShareText, formatCardClock } from './share';
 import type { CompletedRun, ScoreIdentity } from './types';
 
 export interface ScoresController {
   start(): () => void;
   ensureIdentity(): Promise<ScoreIdentity | null>;
   rename(displayName: string): Promise<boolean>;
-  loadBoard(flockSize: FlockSize): Promise<void>;
+  loadBoard(flockSize: FlockSize, week?: string): Promise<void>;
   loadMyRuns(): Promise<void>;
   submit(run: CompletedRun): Promise<void>;
 }
@@ -102,20 +103,45 @@ export function createScoresController(
       submissionStatus: 'submitting',
       submittedFlockSize: run.flockSize,
       entries: [], rank: null, submissionMessage: 'Checking the online times.',
+      sharePath: null, shareTitle: '', shareText: '',
+      resultBoardRank: null, resultBoardPlayers: null,
+      resultWeekRank: null, resultWeekPlayers: null,
     });
     try {
       const identity = await ensureIdentity();
       if (identity === null) throw new ScoreApiError(0, 'offline');
-      await withFreshToken((activeToken) => api.submit(
+      const receipt = await withFreshToken((activeToken) => api.submit(
         activeToken,
         run.flockSize,
         run.completionTimeMs / 1000,
       ));
-      const entries = await api.leaderboard(run.flockSize);
+      if (receipt?.sharePath) {
+        const clock = formatCardClock(run.completionTimeMs / 1000);
+        useScoreStore.getState().patch({
+          submissionStatus: 'ready',
+          rank: receipt.boardRank ?? null,
+          submissionMessage: '',
+          sharePath: receipt.sharePath,
+          shareTitle: cardShareTitle(clock, run.flockSize),
+          shareText: completionShareText({
+            clock,
+            flockSize: run.flockSize,
+            weekRank: receipt.weekRank,
+            weekPlayers: receipt.weekPlayers,
+            newBest: useGameStore.getState().lastRunWasBest,
+          }),
+          resultBoardRank: receipt.boardRank ?? null,
+          resultBoardPlayers: receipt.boardPlayers ?? null,
+          resultWeekRank: receipt.weekRank ?? null,
+          resultWeekPlayers: receipt.weekPlayers ?? null,
+        });
+        return;
+      }
+      const page = await api.leaderboard(run.flockSize);
       const activeIdentity = useScoreStore.getState().identity ?? storage.load() ?? identity;
-      const ownEntry = entries.find((entry) => entry.persistentId === activeIdentity.persistentId);
+      const ownEntry = page.entries.find((entry) => entry.persistentId === activeIdentity.persistentId);
       useScoreStore.getState().patch({
-        submissionStatus: 'ready', entries, rank: ownEntry?.rank ?? null,
+        submissionStatus: 'ready', entries: page.entries, rank: ownEntry?.rank ?? null,
         submissionMessage: ownEntry === undefined
           ? 'Your time is recorded outside the first 100 places.'
           : `Online rank ${ownEntry.rank}.`,
@@ -174,22 +200,33 @@ export function createScoresController(
       }
     },
 
-    async loadBoard(flockSize) {
+    async loadBoard(flockSize, week) {
       const request = ++boardRequest;
       useScoreStore.getState().patch({
         boardStatus: 'loading',
         boardFlockSize: flockSize,
         boardEntries: [],
-        boardMessage: `Loading ${flockSize}-sheep times.`,
+        boardWeek: null,
+        boardWeekLabel: '',
+        boardMessage: week ? `Loading this week's ${flockSize}-sheep times.` : `Loading ${flockSize}-sheep times.`,
       });
       try {
-        const entries = await api.leaderboard(flockSize);
+        const page = await api.leaderboard(flockSize, week);
         if (request !== boardRequest) return;
+        const empty = page.entries.length === 0
+          ? (week === undefined
+            ? 'No times yet. Yours could be first.'
+            : week === 'current'
+              ? 'No times yet this week.'
+              : `No times in the ${page.weekLabel ?? 'week'}.`)
+          : '';
         useScoreStore.getState().patch({
           boardStatus: 'ready',
           boardFlockSize: flockSize,
-          boardEntries: entries,
-          boardMessage: entries.length === 0 ? 'No times yet. Yours could be first.' : '',
+          boardEntries: page.entries,
+          boardWeek: page.week ?? null,
+          boardWeekLabel: page.weekLabel ?? '',
+          boardMessage: empty,
         });
       } catch {
         if (request !== boardRequest) return;
@@ -197,6 +234,8 @@ export function createScoresController(
           boardStatus: 'offline',
           boardFlockSize: flockSize,
           boardEntries: [],
+          boardWeek: null,
+          boardWeekLabel: '',
           boardMessage: 'Online times are unavailable. Play still works.',
         });
       }

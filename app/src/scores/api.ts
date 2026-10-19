@@ -3,7 +3,9 @@
 
 import { FLOCK_SIZES, type FlockSize } from '@app/state/store';
 import { SCORE_SCENE_ID } from './config';
-import type { LeaderboardEntry, PlayerProfile, PlayerRun, RegisterReceipt } from './types';
+import type {
+  LeaderboardEntry, LeaderboardPage, PlayerProfile, PlayerRun, RegisterReceipt, SubmitReceipt,
+} from './types';
 
 type Fetcher = typeof fetch;
 
@@ -54,8 +56,8 @@ async function responseJson(response: Response): Promise<Record<string, unknown>
 export interface ScoreApi {
   register(stored?: { readonly persistentId: string; readonly authSecret: string }): Promise<RegisterReceipt>;
   rename(token: string, displayName: string): Promise<PlayerProfile>;
-  submit(token: string, flockSize: FlockSize, seconds: number): Promise<void>;
-  leaderboard(flockSize: FlockSize): Promise<LeaderboardEntry[]>;
+  submit(token: string, flockSize: FlockSize, seconds: number): Promise<SubmitReceipt | void>;
+  leaderboard(flockSize: FlockSize, week?: string): Promise<LeaderboardPage>;
   myRuns(token: string): Promise<PlayerRun[]>;
 }
 
@@ -99,11 +101,23 @@ export function createScoreApi(base: string, fetcher: Fetcher = fetch, requestTi
     },
 
     async submit(token, flockSize, seconds) {
-      await post('/api/score', {
+      const receipt = await post('/api/score', {
         gameMode: 'soloClassic',
         score: seconds,
         additionalData: { sceneId: SCORE_SCENE_ID, sheepCount: flockSize },
       }, token);
+      const share: SubmitReceipt = {};
+      if (typeof receipt.sharePath === 'string' && receipt.sharePath.startsWith('/c/')) {
+        return {
+          sharePath: receipt.sharePath,
+          ...(typeof receipt.boardRank === 'number' ? { boardRank: receipt.boardRank } : {}),
+          ...(typeof receipt.boardPlayers === 'number' ? { boardPlayers: receipt.boardPlayers } : {}),
+          ...(typeof receipt.weekRank === 'number' ? { weekRank: receipt.weekRank } : {}),
+          ...(typeof receipt.weekPlayers === 'number' ? { weekPlayers: receipt.weekPlayers } : {}),
+          ...(typeof receipt.weekLabel === 'string' ? { weekLabel: receipt.weekLabel } : {}),
+        };
+      }
+      return share;
     },
 
     async myRuns(token) {
@@ -126,30 +140,40 @@ export function createScoreApi(base: string, fetcher: Fetcher = fetch, requestTi
         ) return [];
         // Standing is optional on the wire. A worker that predates it sends
         // neither field, and a run without a rank is shown without one rather
-        // than with a wrong one.
+        // than with a wrong one. The week and the share path are the same.
         const standing = typeof raw.boardRank === 'number' && raw.boardRank > 0
           && typeof raw.boardPlayers === 'number' && raw.boardPlayers > 0
           ? { boardRank: raw.boardRank, boardPlayers: raw.boardPlayers }
+          : {};
+        const week = typeof raw.weekRank === 'number' && raw.weekRank > 0
+          && typeof raw.weekPlayers === 'number' && raw.weekPlayers > 0
+          && typeof raw.weekLabel === 'string'
+          ? { weekRank: raw.weekRank, weekPlayers: raw.weekPlayers, weekLabel: raw.weekLabel }
           : {};
         return [{
           flockSize: raw.sheepCount as FlockSize,
           scoreSeconds: raw.score,
           submittedAt: raw.submittedAt,
           ...standing,
+          ...week,
+          ...(typeof raw.sharePath === 'string' && raw.sharePath.startsWith('/c/')
+            ? { sharePath: raw.sharePath }
+            : {}),
         }];
       });
     },
 
-    async leaderboard(flockSize) {
+    async leaderboard(flockSize, week) {
       const query = new URLSearchParams({
         mode: 'solo',
         scene: SCORE_SCENE_ID,
         sheepCount: String(flockSize),
         limit: '100',
       });
+      if (week) query.set('week', week);
       const receipt = await request(`${base}/api/leaderboard?${query}`);
       if (!Array.isArray(receipt.entries)) throw new ScoreApiError(502, 'leaderboard entries absent');
-      return receipt.entries.flatMap((value): LeaderboardEntry[] => {
+      const entries = receipt.entries.flatMap((value): LeaderboardEntry[] => {
         const raw = (value ?? {}) as Record<string, unknown>;
         const persistentId = raw.persistent_id ?? raw.persistentId;
         if (
@@ -167,6 +191,11 @@ export function createScoreApi(base: string, fetcher: Fetcher = fetch, requestTi
           scoreSeconds: raw.score,
         }];
       });
+      return {
+        entries,
+        ...(typeof receipt.week === 'string' ? { week: receipt.week } : {}),
+        ...(typeof receipt.weekLabel === 'string' ? { weekLabel: receipt.weekLabel } : {}),
+      };
     },
   };
 }

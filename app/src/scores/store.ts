@@ -20,10 +20,19 @@ export interface ScoreStore {
   readonly entries: readonly LeaderboardEntry[];
   readonly rank: number | null;
   readonly submissionMessage: string;
+  readonly sharePath: string | null;
+  readonly shareTitle: string;
+  readonly shareText: string;
+  readonly resultBoardRank: number | null;
+  readonly resultBoardPlayers: number | null;
+  readonly resultWeekRank: number | null;
+  readonly resultWeekPlayers: number | null;
   readonly boardStatus: BoardStatus;
   readonly boardFlockSize: FlockSize;
   readonly boardEntries: readonly LeaderboardEntry[];
   readonly boardMessage: string;
+  readonly boardWeek: string | null;
+  readonly boardWeekLabel: string;
   readonly runsStatus: BoardStatus;
   readonly runs: readonly PlayerRun[];
   readonly runsMessage: string;
@@ -40,10 +49,19 @@ const INITIAL = {
   entries: [] as readonly LeaderboardEntry[],
   rank: null,
   submissionMessage: '',
+  sharePath: null,
+  shareTitle: '',
+  shareText: '',
+  resultBoardRank: null,
+  resultBoardPlayers: null,
+  resultWeekRank: null,
+  resultWeekPlayers: null,
   boardStatus: 'idle' as const,
   boardFlockSize: 25 as FlockSize,
   boardEntries: [] as readonly LeaderboardEntry[],
   boardMessage: '',
+  boardWeek: null,
+  boardWeekLabel: '',
   runsStatus: 'idle' as const,
   runs: [] as readonly PlayerRun[],
   runsMessage: '',

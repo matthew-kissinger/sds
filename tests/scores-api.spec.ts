@@ -48,7 +48,8 @@ describe('score API boundary', () => {
         }],
       });
     }) as typeof fetch;
-    const entries = await createScoreApi('https://scores.test', fetcher).leaderboard(25);
+    const page = await createScoreApi('https://scores.test', fetcher).leaderboard(25);
+    const entries = page.entries;
     const url = new URL(requested);
 
     expect(url.pathname).toBe('/api/leaderboard');

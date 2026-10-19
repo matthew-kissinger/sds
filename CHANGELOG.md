@@ -4,6 +4,15 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.6.0] - 2026-10-19
+
+### Added
+
+- A finished run, and each saved run in My times, can share a link. The page
+  shows the time, the flock size, the name, the rank for that run's week and
+  the all-time rank, and starts that same flock.
+- Weekly boards sit beside all-time. A week opens Monday 00:00 UTC.
+
 ## [3.5.0] - 2026-10-17
 
 ### Changed

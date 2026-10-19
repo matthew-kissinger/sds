@@ -27,14 +27,15 @@ upload_source_maps = true
 # The game. There is no `directory` here on purpose: the Vite plugin supplies
 # the client build output (dist/, with dist/release.json written into it by the
 # releaseManifest plugin in vite.config.ts) when it generates the deploy
-# config. Only /api/* runs the Worker script first; every other path is served
-# by the asset layer, with index.html for anything unmatched (the array form of
-# run_worker_first also stops Sec-Fetch-Mode from deciding that). _headers and
-# _redirects from app/public are honoured natively.
+# config. /api/* and /c/* run the Worker script first; every other path is
+# served by the asset layer, with index.html for anything unmatched (the array
+# form of run_worker_first also stops Sec-Fetch-Mode from deciding that).
+# /c/* is a score card. _headers and _redirects from app/public are honoured
+# natively.
 [assets]
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/c/*"]
 
 # Observability
 [observability]

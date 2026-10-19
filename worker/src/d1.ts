@@ -545,6 +545,8 @@ export interface SubmitScoreResult {
   updated: boolean;
   isNewRecord: boolean;
   player: PlayerRow | null;
+  /** The inserted score_submissions.id, when the driver reports it. */
+  submissionId: number | null;
 }
 
 // Cycle 8 Phase 3: time-modes vs win-mode for submission/leaderboard direction.
@@ -1049,10 +1051,12 @@ async function submitScoreInner(
       break;
   }
 
-  await db.batch(stmts);
+  const batch = await db.batch(stmts);
+  const inserted = Number((batch[0] as { meta?: { last_row_id?: number } } | undefined)?.meta?.last_row_id);
+  const submissionId = Number.isSafeInteger(inserted) && inserted > 0 ? inserted : null;
 
   if (updated) player.last_active = now;
-  return { updated, isNewRecord, player };
+  return { updated, isNewRecord, player, submissionId };
 }
 
 export function scoreColumn(mode: GameMode): string {
@@ -1108,9 +1112,12 @@ export function formatScore(mode: GameMode | 'solo', score: number | null): stri
  * that read, and it adds no writes and no schema.
  */
 export interface PlayerScoreRow {
+  id: number;
   sheepCount: number;
   score: number;
   submittedAt: number;
+  /** True when the row is hidden from the public board. Those rows are not ranked and not shared. */
+  flagged: boolean;
 }
 
 /**
@@ -1133,7 +1140,7 @@ export async function getPlayerScores(
   const slots = counts.map(() => '?').join(', ');
   const { results } = await db
     .prepare(
-      `SELECT sheep_count, score, submitted_at
+      `SELECT id, sheep_count, score, submitted_at, score_anomalies
          FROM score_submissions
         WHERE persistent_id = ?
           AND game_mode = 'soloClassic'
@@ -1143,11 +1150,19 @@ export async function getPlayerScores(
         LIMIT ?`,
     )
     .bind(persistentId, sceneId, ...counts, limit)
-    .all<{ sheep_count: number; score: number; submitted_at: number }>();
+    .all<{
+      id: number;
+      sheep_count: number;
+      score: number;
+      submitted_at: number;
+      score_anomalies: string | null;
+    }>();
   return (results || []).map((row) => ({
+    id: row.id,
     sheepCount: row.sheep_count,
     score: row.score,
     submittedAt: row.submitted_at,
+    flagged: row.score_anomalies != null,
   }));
 }
 
@@ -1243,6 +1258,10 @@ export interface LeaderboardFilters {
   // Cycle 67 P7: survival boards partition by party_size (solo=1, co-op=2..4).
   // Ignored by every non-survival board.
   partySize?: number;
+  /** Inclusive start of a half-open window on submitted_at. Absent means all-time. */
+  submittedFrom?: number;
+  /** Exclusive end of that window. */
+  submittedBefore?: number;
   // P-SEC-5: the public READ path leaves this unset so anomaly-flagged rows
   // (score_anomalies IS NOT NULL — see detectScoreAnomalies + migration 0003)
   // are hidden from the board. Only a trusted/admin caller passes `true` to
@@ -1326,6 +1345,14 @@ export async function getLeaderboard(
   if (isSurvivalLeaderboardMode(mode) && typeof filters.partySize === 'number' && filters.partySize > 0) {
     where.push('s.party_size = ?');
     binds.push(filters.partySize);
+  }
+  if (typeof filters.submittedFrom === 'number') {
+    where.push('s.submitted_at >= ?');
+    binds.push(filters.submittedFrom);
+  }
+  if (typeof filters.submittedBefore === 'number') {
+    where.push('s.submitted_at < ?');
+    binds.push(filters.submittedBefore);
   }
   binds.push(limit);
 

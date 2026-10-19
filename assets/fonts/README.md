@@ -57,6 +57,11 @@ rather than an edited advance width, so the bake stays reproducible from
 upstream and the decision stays where a designer would look for it.
 `spec/11-typography.md` has the reasoning.
 
+The score card rasterizer cannot read the woff2 subset. It uses a byte copy
+of this source at `app/public/fonts/piazzolla-card.ttf` (624,956 bytes,
+SHA-256 `b6b6451daba93a4b71f88ca8e37a66c3fd2b4e57ec54a407cddf6ae65b62c7b7`).
+A test holds the two files equal.
+
 ## Why this replaced a system stack
 
 The client previously declared `ui-serif, Georgia, "Times New Roman", serif` and

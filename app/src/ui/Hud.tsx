@@ -5,6 +5,9 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '@app/state/store';
 import { DOG_MAX_STAMINA, TICK_HZ } from '@sim/tuning';
 import { OnlineTimes } from '@app/scores/OnlineTimes';
+import { formatOrdinal } from '@app/scores/runGroups';
+import { ShareControl } from '@app/scores/ShareControl';
+import { useScoreStore } from '@app/scores/store';
 import { formatRunTime } from './time';
 import { GateIndicator } from './GateIndicator';
 import { DesktopControls } from './DesktopControls';
@@ -125,6 +128,16 @@ function CompletionPanel() {
   const isBest = useGameStore((state) => state.lastRunWasBest);
   const startGame = useGameStore((state) => state.startGame);
   const reset = useGameStore((state) => state.reset);
+  const sharePath = useScoreStore((state) => state.sharePath);
+  const shareTitle = useScoreStore((state) => state.shareTitle);
+  const shareText = useScoreStore((state) => state.shareText);
+  const weekRank = useScoreStore((state) => state.resultWeekRank);
+  const weekPlayers = useScoreStore((state) => state.resultWeekPlayers);
+  const boardRank = useScoreStore((state) => state.resultBoardRank);
+  const boardPlayers = useScoreStore((state) => state.resultBoardPlayers);
+  const shared = sharePath !== null
+    && weekRank !== null && weekPlayers !== null
+    && boardRank !== null && boardPlayers !== null;
   return (
     <div className="herd-modal" data-testid="completion">
       <section className="herd-panel herd-panel--completion">
@@ -133,9 +146,15 @@ function CompletionPanel() {
         <p className="herd-best">
           {isBest ? 'New personal best' : best === null ? '' : `Best ${formatRunTime(best)}`}
         </p>
-        <OnlineTimes />
+        {shared ? (
+          <div className="herd-completion-ranks">
+            <p>{formatOrdinal(weekRank)} of {weekPlayers} this week</p>
+            <p>{formatOrdinal(boardRank)} of {boardPlayers} all-time</p>
+          </div>
+        ) : <OnlineTimes />}
         <div className="herd-panel-actions">
           <button type="button" className="herd-button herd-button--primary" onClick={() => startGame(flockSize)}>Play again</button>
+          {sharePath ? <ShareControl title={shareTitle} text={shareText} path={sharePath} /> : null}
           <button type="button" className="herd-button herd-button--quiet" onClick={reset}>Title</button>
         </div>
       </section>

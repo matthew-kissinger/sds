@@ -38,13 +38,78 @@ Design tokens, boot flow, HUD, settings, completion sequence, the full juice lis
 
 The full spec/07 soundscape and mix. Acceptance: eyes-closed field test and 10-minute fatigue test pass the audio critic.
 
+## After 3.5, the order set on 2026-10-19
+
+Three slices, in this order. A later slice does not start early.
+
+1. Score cards and weekly boards, specified in `spec/14-score-cards.md`.
+   Implemented in the working tree. Live when the owner tags the deploy.
+2. Multiplayer, which remains deferred phase 7, after the cards are live.
+3. Grow your flock, deferred phase 9. Recorded so it is not re-derived. It
+   does not start while the first two are in progress.
+
 ## Deferred phase 7 - Multiplayer
 
-A separate multiplayer Worker, RoomDO, LobbyDO, protocol v1, client netcode, prediction + interpolation, invite links and lobby UI. The version 3.0 solo-times REST client is not multiplayer infrastructure. Acceptance: 4-player LAN-and-remote session completes 75 sheep with no desync (trace-compare client vs server); reconnection and host migration probes pass; ported delta-reconstruction suite green.
+A separate multiplayer Worker, RoomDO, LobbyDO, protocol v1, client netcode,
+prediction + interpolation, invite links and lobby UI. The version 3.0
+solo-times REST client is not multiplayer infrastructure. Acceptance: a
+4-player session completes 75 sheep with no desync (trace-compare client vs
+server); reconnection and host migration probes pass; the ported
+delta-reconstruction suite is green.
+
+The owner put this after score cards (2026-10-19). Invite links and public
+lobbies are part of bringing rooms back. A link that joins a party uses the
+reserved `/r/*` prefix and is a different page from a score card. Filling a
+short public lobby with NPC dogs is not part of this phase. An NPC that
+steers sheep is a simulation change and would move the trace fixtures, so it
+stays an open question until the lobbies exist and the owner decides whether
+those matches are ranked.
 
 ## Deferred phase 8 - Scale toggle and hardening
 
 GpuComputeSim (TSL compute boids) at 5,000 sheep unranked; performance tiering final pass; DoS constants verified; full validation sweep; preview deploy for owner playtest. This work is a separate product slice, not a hidden version 3.0 mode flag.
+
+## Deferred phase 9 - Grow your flock
+
+Roadmap only. Not designed beyond the outline below, and not started.
+
+The owner wants a mode beside the timed runs: tend a flock, grow it, and
+make a living selling wool. The outline, in the owner's words, is the
+requirement this phase has to meet when it opens:
+
+- The player tends the flock and the flock can grow.
+- The farmer is involved.
+- The day ends. Sheep are brought in before night.
+- Shearing is a way to take wool off a sheep and sell it. The money buys
+  food for the flock.
+- Sheep die of old age. Older sheep are slower. Younger sheep are clumsier.
+- The pasture can grow. The fence kit is modular, so a larger field is built
+  out of the same timber.
+
+Opening the phase amends `spec/00-vision.md` in the same change. The cut list
+there currently forbids day and night, a mode roster, a fence editor, and any
+verb beyond move, sprint and bark. The calm pillar forbids failure states and
+punishment. Those lines are the reason this stayed a single timed field.
+They come out only when the owner accepts the replacement text, not as a side
+effect of a prototype.
+
+What already ships, and what it is not:
+
+- The farmer walks a yard route. That route is presentation. It does not
+  read or affect sheep, scores or the dog (`assets/farmer/README.md`). Giving
+  the farmer a role in this mode is a new decision.
+- Sheep already have names and breed variety in the customize panel. That
+  variety is visual. Age, speed and clumsiness would be the simulation, and
+  a simulation change moves the trace fixtures. It is a gameplay decision
+  recorded under `STATUS.md`, not an art pass.
+- The fence is a modular kit on one fixed rectangle. A larger pasture changes
+  the collision outline in `sim/`. It is not a longer run of the same rails.
+
+Night and death have to be written against the calm pillar before any of
+this is built. The working reading, reversible until the phase opens, is
+that night is the reason the pen matters and age is a life coming to an end,
+and that neither is a fail screen or a red timer. If that reading cannot be
+held, the phase says so and waits.
 
 ## Phase 6 - Version 3.0 launch prep
 

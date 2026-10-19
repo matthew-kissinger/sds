@@ -10,6 +10,7 @@ import { useReducedMotion } from './useReducedMotion';
 import { PlayerIdentity } from '@app/scores/PlayerIdentity';
 import { LeaderboardPanel } from '@app/scores/LeaderboardPanel';
 import { bootPercent, bootStatus } from '@app/boot/progress';
+import { flockSizeFromPath } from '@app/boot/playPath';
 
 export function Boot() {
   const startGame = useGameStore((state) => state.startGame);
@@ -25,6 +26,8 @@ export function Boot() {
   const timeout = useRef<number | null>(null);
   const timesButton = useRef<HTMLButtonElement | null>(null);
   const reducedMotion = useReducedMotion();
+  const playPath = flockSizeFromPath(window.location.pathname);
+  const startedFromPath = useRef(false);
   const percent = sceneReady ? 100 : bootPercent(bootProgress);
   const status = sceneReady ? 'Field ready' : bootStatus(bootProgress);
 
@@ -36,6 +39,13 @@ export function Boot() {
   useEffect(() => () => {
     if (timeout.current !== null) window.clearTimeout(timeout.current);
   }, []);
+
+  useEffect(() => {
+    if (playPath === null || !sceneReady || startedFromPath.current) return;
+    startedFromPath.current = true;
+    setFlockSize(playPath);
+    startGame(playPath);
+  }, [playPath, sceneReady, setFlockSize, startGame]);
 
   const play = () => {
     if (!sceneReady || leaving) return;

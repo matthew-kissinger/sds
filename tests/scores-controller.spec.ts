@@ -40,7 +40,7 @@ describe('scores controller', () => {
       async rename() { return freshReceipt.playerProfile; },
       async submit() {},
       async myRuns() { return []; },
-      async leaderboard() { return []; },
+      async leaderboard() { return { entries: [] }; },
     };
 
     const identity = await createScoresController(api, storage).ensureIdentity();
@@ -78,10 +78,10 @@ describe('scores controller', () => {
       },
       async myRuns() { return []; },
       async leaderboard() {
-        return [{
+        return { entries: [{
           rank: 7, persistentId: 'pid-1', displayName: 'GentleGuide',
           fullName: 'GentleGuide#0001', scoreSeconds: 123.4,
-        }];
+        }] };
       },
     };
     const controller = createScoresController(api, storage);
@@ -111,10 +111,10 @@ describe('scores controller', () => {
       async submit() {},
       async myRuns() { return []; },
       async leaderboard() {
-        return [{
+        return { entries: [{
           rank: 4, persistentId: 'pid-new', displayName: 'CalmKeeper',
           fullName: 'CalmKeeper#0001', scoreSeconds: 80,
-        }];
+        }] };
       },
     };
 
@@ -167,7 +167,7 @@ describe('scores controller', () => {
           { flockSize: 25, scoreSeconds: 30, submittedAt: 50 },
         ];
       },
-      async leaderboard() { return []; },
+      async leaderboard() { return { entries: [] }; },
     };
 
     await createScoresController(api, storage).loadMyRuns();
@@ -186,7 +186,7 @@ describe('scores controller', () => {
       async rename() { throw new TypeError('offline'); },
       async submit() {},
       async myRuns() { throw new TypeError('offline'); },
-      async leaderboard() { return []; },
+      async leaderboard() { return { entries: [] }; },
     };
 
     await createScoresController(api, memoryStorage()).loadMyRuns();
@@ -206,10 +206,10 @@ describe('scores controller', () => {
       async myRuns() { return []; },
       async leaderboard(flockSize) {
         expect(flockSize).toBe(75);
-        return [{
+        return { entries: [{
           rank: 1, persistentId: 'pid-fast', displayName: 'SwiftShepherd',
           fullName: 'SwiftShepherd#0001', scoreSeconds: 64.25,
-        }];
+        }] };
       },
     };
 

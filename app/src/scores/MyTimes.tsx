@@ -7,6 +7,8 @@ import { formatRunTime } from '@app/ui/time';
 import {
   COLLAPSED_RUNS, formatDelta, formatOrdinal, groupRunsByFlockSize, type SizeGroup,
 } from './runGroups';
+import { historyShareText, cardShareTitle, formatCardClock } from './share';
+import { ShareControl } from './ShareControl';
 import type { PlayerRun } from './types';
 
 /**
@@ -100,6 +102,22 @@ function Group({ group, expanded, onToggle }: {
                 <span className="herd-run__meta" data-best={position === 1}>
                   <b>{position === 1 ? 'Best' : formatDelta(deltaSeconds)}</b>
                   {run.boardRank === undefined ? null : <em>{formatOrdinal(run.boardRank)}</em>}
+                </span>
+                <span className="herd-run__share-slot">
+                  {run.sharePath ? (
+                    <ShareControl
+                      compact
+                      path={run.sharePath}
+                      title={cardShareTitle(formatCardClock(run.scoreSeconds), flockSize)}
+                      text={historyShareText({
+                        clock: formatCardClock(run.scoreSeconds),
+                        flockSize,
+                        weekRank: run.weekRank,
+                        weekPlayers: run.weekPlayers,
+                        weekLabel: run.weekLabel,
+                      })}
+                    />
+                  ) : null}
                 </span>
               </li>
             ))}
