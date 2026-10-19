@@ -5,6 +5,27 @@
 
 # Status log
 
+## Release 3.6.0 - 2026-10-19, score cards and weekly boards live
+
+- Commit `ee8086a9d8397de12dfbe31515ee6b0d56073ee1` on `main`. Tag `v3.6.0`
+  names it. Deploy run 39328029726 succeeded at 21:34 UTC: lint, both
+  typechecks, the build, discovery, the full suite, the dry-run, and the
+  live identity, origin and discovery checks.
+- Live `release.json` reports version 3.6.0, that commit, source ref
+  `v3.6.0`, and artifact digest
+  `60e12bdcf49fa798764eba9257718e128933340ef2579cd7d9c193c87474564b`
+  (42 files, 10,356,535 bytes).
+- A bad card URL on `sheepdogsim.com` returns the card 404, not the game.
+  `/play/25` returns the game. The weekly board for 25 sheep answers
+  `2026-W43`, `week of 19 Oct`.
+- The first-load probe on the production build of this change, before the
+  version string, estimated 7,982,575 bytes against the 8,388,608 limit.
+  The rasterizer wasm is a worker module, not a client asset. This PC is
+  not the timing lane, and the simulation and frame loop are unchanged, so
+  there is no hub receipt.
+- `lab/src/subjects.ts` stayed uncommitted. It is a lab camera, not this
+  release.
+
 ## Release 3.5.0 - 2026-10-17, Kiln fence and homestead fixes live
 
 - Owner-approved pull request 140 merged at

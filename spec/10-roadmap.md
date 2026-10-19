@@ -43,7 +43,7 @@ The full spec/07 soundscape and mix. Acceptance: eyes-closed field test and 10-m
 Three slices, in this order. A later slice does not start early.
 
 1. Score cards and weekly boards, specified in `spec/14-score-cards.md`.
-   Implemented in the working tree. Live when the owner tags the deploy.
+   Live as 3.6.0 (`ee8086a9`, tag `v3.6.0`).
 2. Multiplayer, which remains deferred phase 7, after the cards are live.
 3. Grow your flock, deferred phase 9. Recorded so it is not re-derived. It
    does not start while the first two are in progress.
