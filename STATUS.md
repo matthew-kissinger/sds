@@ -102,12 +102,12 @@ colour/labels/player icons, three regional boards, interruption after server
 restart, measured transport tuning, PC/hub staging before geographic load,
 estimate before provisioning/paid tests, waiting-only host removal, and neutral
 gate guidance based on geometry regardless of dog or pen ownership.
-Unseen layouts, measured budgets, geographic coverage and
-cost estimates remain gates. Multiplayer implementation remains unopened.
-The [layout review](docs/architecture/multiplayer-layouts.md) proposes square,
-hexagonal and square competitive fields for two, three and four players,
-respectively, with scaled diagrams and an adversarial review. These proposals
-await owner review and do not change the shipped game.
+Layout validation, measured budgets, geographic coverage and cost estimates
+remain gates. Multiplayer implementation remains unopened.
+The owner accepted the [layout review](docs/architecture/multiplayer-layouts.md)
+direction on 2026-10-20: square / equal-area hexagon / square for two / three /
+four players, with dogs starting 45 m from the centre opposite their own pens.
+This selects the prototype direction and does not change the shipped game.
 The history below retains its dates.
 
 The sequence the owner chose, recorded so it is read rather than re-derived.
@@ -559,7 +559,7 @@ the record those files carry.
 - Multiplayer phase 7 has a documentation-only plan; implementation is unopened.
   Competitive forfeit-and-continue and finish-the-flock/highest-eligible/shared-
   ties scoring and Q1-Q12 policies are settled in the plan. Remaining gates:
-  reviewed competitive geometry under neutral guidance, measured region coverage, numerical
+  validation of accepted competitive layouts under neutral guidance, measured region coverage, numerical
   network/server budgets, staging estimate and any new asset proposal.
   Hub SSH was reachable on 2026-10-20 during gate-fix validation; this does not
   qualify multiplayer latency, physical devices or hosted capacity.

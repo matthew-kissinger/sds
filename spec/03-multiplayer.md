@@ -222,6 +222,13 @@ geometry-based handling of equidistant cases reviewed for positional bias.
 Geometry and three-player fairness require owner-reviewed layout evidence
 before gameplay implementation.
 
+Layout review decision, 2026-10-20: square with opposite pens for two players,
+equal-area regular hexagon with alternating pen sides for three, and square
+with one pen per side for four. Dogs start 45 m from the centre opposite their
+own pen. See the [reviewed diagrams](../docs/architecture/multiplayer-layouts.md).
+This accepts the prototype direction, not implementation or passed fairness,
+camera, collision and device gates.
+
 Rules are selected at session construction and owned by small domain modules.
 Do not scatter mode flags through rendering, networking and movement. A match
 records its immutable rules/layout version and starting party size. Initial

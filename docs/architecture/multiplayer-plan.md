@@ -31,13 +31,15 @@ as specified under "Settled decisions" below. This replaces the earlier
 proposal to cancel everyone's round after one permanent departure.
 
 Competitive scoring is also settled: finish the flock, highest eligible count
-wins, shared ties. The layout review approach is accepted; actual geometry
-still needs review.
+wins, shared ties. The layout direction and dog starts were accepted after
+review on 2026-10-20; implementation and playtest qualification remain unopened.
 
 The [competitive layout review](multiplayer-layouts.md) now illustrates
 opposite pens on a square for two players, alternating sides of a regular
 hexagon for three, and four sides of a square for four. These are proposed
-geometry and spawn positions, not accepted layouts or implementation.
+geometry accepted as the prototype direction on 2026-10-20. Dogs start 45 m
+from the centre opposite their own pen. This is not fairness certification or
+implementation authorization.
 
 The owner answered Q1-Q12 below. Product policies are settled; layout evidence,
 placement coverage, numerical transport limits and the staging cost estimate
@@ -321,8 +323,9 @@ highest count wins; every eligible player tied at that count shares the win.
 Use this rule for two, three and four players. No early majority victory,
 sudden death, mandatory countdown or winner chosen by player ID. Already banked
 sheep never transfer. D1's last-eligible-player forfeit victory and no-player
-closure remain separate outcomes. Layout geometry still requires review; Q12
-below settles neutral gate guidance.
+closure remain separate outcomes. The layout direction is accepted in the
+layout review; geometry and gameplay still need validation. Q12 below settles
+neutral gate guidance.
 
 ### Q1-Q12 answers, 2026-10-20
 
@@ -367,7 +370,7 @@ below settles neutral gate guidance.
 | ID | Recommended starting point | Decide before |
 | --- | --- | --- |
 | D1 | Q1-Q3 settled above; verify lifecycle races and readiness | Lifecycle implementation after authorization |
-| D2 (layout only) | Equal gate widths/capacity and comparable approach/spawn opportunity; review layouts for each party size, especially three players, including overlap/equidistant cases under Q12 neutral guidance | Competitive simulation edits; scoring, shared ties and guidance policy are already settled |
+| D2 (layout validation) | Accepted square / equal-area hexagon / square and 45 m opposite-pen dog starts; verify crossings, spawn distribution, cameras and fairness, including overlap/equidistant cases under Q12 | Prototype direction settled; implementation authorization and gameplay qualification remain separate |
 | D3 | Three broad regional boards; candidate `enam`/`weur`/`apac`; manual override and no geography lock | Public labels, after geographic staging results |
 | D4 | 60/30/20 Hz sim/input/snapshot candidate; bounded jitter buffer, stale-input timeout, queue/room limits | Numerical acceptance budgets fixed before qualification and recorded with rationale |
 | D5 | Q7 accepted interruption with party preservation; planned deploy drains first | Prove restart/party recovery and no false result before public release |
@@ -400,8 +403,9 @@ must not be asked again. This sequence opens no implementation or provisioning.
 | Q11 | Public waiting-room abuse | Can a host remove a player who blocks readiness? | Accepted: waiting only, room-scoped rejoin exclusion, no active-match kick |
 | Q12 | Competitive gate guidance | Should guidance depend on geometry rather than ownership? | Accepted: nearest qualifying opening, dog pushing from behind, identical behaviour for every dog and pen including forfeited pens; avoid overlapping zones |
 
-Q4 requires later layout evidence and Q6 requires later geographic evidence;
-accepting their approach does not approve unseen geometry or claim coverage.
+Q4's later layout review accepted square / equal-area hexagon / square and
+45 m opposite-pen dog starts on 2026-10-20. Gameplay and camera evidence remain
+required; Q6 still requires geographic evidence before claiming coverage.
 Q8 selects the tuning method now; exact latency/correction/bandwidth/CPU and
 queue limits are a recorded engineering checkpoint before acceptance. Q10's
 numeric spending ceiling remains pending an estimate, not an invented budget.

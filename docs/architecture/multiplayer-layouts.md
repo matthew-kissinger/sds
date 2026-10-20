@@ -1,10 +1,15 @@
 # Competitive layout review
 
-2026-10-20. **Proposals for owner review, not approved gameplay or implemented
-layouts.** The settled rules remain in [the plan](multiplayer-plan.md). These
+2026-10-20. **Owner accepted the prototype layout direction and dog starts;
+implementation has not started.** The settled rules remain in [the plan](multiplayer-plan.md). These
 are scaled engineering diagrams, not screenshots or new runtime assets.
 
-## Recommendation
+## Accepted prototype direction
+
+Owner decisions, 2026-10-20: use square / equal-area hexagon / square for
+two / three / four players. Start each dog 45 m from the centre, opposite its
+own pen. This selects the prototype direction; it does not certify fairness,
+approve new assets or authorize implementation.
 
 Use the existing 200 x 200 m square for two and four players. For three players,
 use a regular hexagon with gates on alternating sides. It is the smallest
@@ -144,7 +149,7 @@ are geometric facts. They do not prove equal win rates or equal camera views.
 Co-op continues to use the existing square and one north pen for two to four
 players. It does not adopt these competitive pen arrangements.
 
-Review now: accept or revise the square / hexagon / square direction and the
-opposite-pen dog starts. Approval of these drawings would select a prototype
-direction, not close gameplay, visual or device acceptance. Implementation
-still requires the owner's instruction.
+The square / equal-area hexagon / square direction and opposite-pen dog starts
+at 45 m are accepted. Remaining work is the recorded geometry, spawn-distribution,
+camera, gameplay and device validation, after implementation is authorized.
+This design decision does not close those acceptance gates.
