@@ -19,8 +19,10 @@ deploys that service today. Before implementing its release workflow, extend
 this runbook with exact client/realtime revision pairing, protocol/schema
 compatibility, route/invite-shell handling, room drain, rollback and staging
 resource isolation. Ordinary PR version aliases are not a multiplayer staging
-environment. The owner authorized only documentation; no provisioning or
-deployment is opened by that plan.
+environment. The owner subsequently authorized local foundations, but no
+provisioning or deployment. The proposed isolated setup and costs are in
+[multiplayer staging](multiplayer-staging.md); this runbook still describes the
+shipped solo service only.
 
 There is exactly one way the game reaches players.
 

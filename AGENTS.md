@@ -26,12 +26,13 @@ rollback. Keep that service isolated from the client.
 - Do not import `worker/` or `shared/` into the version 3 client.
 - The shipped version 3 client calls only the documented identity and score
   REST endpoints. Multiplayer rooms and WebSockets are absent through 3.6.1.
-  The owner requested a documentation-only multiplayer plan on 2026-10-20:
-  `docs/architecture/multiplayer-plan.md` and `spec/03-multiplayer.md` cover a
-  separate realtime Worker on `/r/*`, regional public/private rooms, co-op and
-  competitive play. Implementation, assets, provisioning and deployment are
-  not authorized by that plan. Follow `STATUS.md` for the next owner-directed
-  cycle. The 5,000-sheep experiment stays out.
+  The owner opened local multiplayer foundations on 2026-10-20 under
+  `docs/architecture/multiplayer-plan.md` and `spec/03-multiplayer.md`.
+  `realtime/` is a separate, tested, undeployed Worker on `/r/*`; its private
+  identity adapter is not exported by the production score router. Keep this
+  cycle local. Present staging setup and cost before provisioning; production
+  deployment and new assets remain separate approvals. Follow `STATUS.md`.
+  The 5,000-sheep experiment stays out.
 - Preserve the `field-v3` score partition and exact 25, 75 and 200 flock-size
   allow-list.
 - Production infrastructure - hosting, routes, bindings, secrets, analytics and

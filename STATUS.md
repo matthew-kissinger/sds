@@ -74,11 +74,13 @@ times. Exact-commit CI, live identity, both renderer smoke checks, full-run
 functional evidence and hub measurements are recorded in
 [Release 3.6.1](docs/history/status-log.md#release-361---2026-10-20-gate-passage-live).
 Startup still misses the two-second target; physical-device evidence remains
-open. Multiplayer implementation remains unopened.
+open. Local multiplayer foundations are now open as described below.
 
 ### Multiplayer planning amendment - 2026-10-20
 
-The owner authorized documentation only and explicitly said not to implement.
+The owner initially authorized documentation only, then opened local foundations
+and tests later in the same discussion. Staging setup and cost must be presented
+before provisioning; this cycle stays local and undeployed.
 [The multiplayer plan](docs/architecture/multiplayer-plan.md) and
 [spec/03](spec/03-multiplayer.md) now cover regional public boards, private
 invites, up to four people, host-controlled starts/rematches, co-op and
@@ -89,8 +91,8 @@ and solo results stay with the existing Worker; staging is isolated.
 This supersedes earlier placement ambiguity, the mandatory room-D1 foundation,
 the single global lobby and the combined solo/co-op leaderboard proposal. The
 solo score-service migration remains separate and must preserve newer shipped
-history/card consumers. No implementation, new asset, resource, workflow or
-deployment is authorized. Spec/09 holds the future acceptance matrix; plan
+history/card consumers. No new asset, resource, workflow, push or deployment is
+authorized in this local cycle. Spec/09 holds the future acceptance matrix; plan
 D1-D7 tracks policy, measurement and setup decisions. The owner settled
 competitive departure later on 2026-10-20: forfeit and continue, with a win by
 forfeit when one competitor remains. The plan's "Settled decisions" records
@@ -102,8 +104,15 @@ colour/labels/player icons, three regional boards, interruption after server
 restart, measured transport tuning, PC/hub staging before geographic load,
 estimate before provisioning/paid tests, waiting-only host removal, and neutral
 gate guidance based on geometry regardless of dog or pen ownership.
-Layout validation, measured budgets, geographic coverage and cost estimates
-remain gates. Multiplayer implementation remains unopened.
+Layout validation, measured budgets, geographic coverage and staging approval
+remain gates. The local `realtime/` service implements identity admission,
+atomic four-seat rooms, regional boards, readiness/start barrier, reconnect and
+durable party recovery. It deliberately stops with `simulation_unavailable`;
+active gameplay and the browser client remain unimplemented. See
+[local service scope/tests](realtime/README.md) and the
+[staging setup and cost review](docs/operations/multiplayer-staging.md).
+Workers Paid is owner-confirmed; remaining allowances and CLI access are
+unverified. No multiplayer release gate is closed by local functional tests.
 The owner accepted the [layout review](docs/architecture/multiplayer-layouts.md)
 direction on 2026-10-20: square / equal-area hexagon / square for two / three /
 four players, with dogs starting 45 m from the centre opposite their own pens.
@@ -556,11 +565,16 @@ the record those files carry.
 
 ## Open questions
 
-- Multiplayer phase 7 has a documentation-only plan; implementation is unopened.
+- Multiplayer phase 7 has an approved design and local foundations in progress;
+  staging and production remain unopened (see the amendment above).
   Competitive forfeit-and-continue and finish-the-flock/highest-eligible/shared-
   ties scoring and Q1-Q12 policies are settled in the plan. Remaining gates:
   validation of accepted competitive layouts under neutral guidance, measured region coverage, numerical
   network/server budgets, staging estimate and any new asset proposal.
+  Reversible local defaults awaiting staging evidence: 10-second admission and
+  start deadlines, two-minute empty-room cleanup, six-hour room lifetime,
+  30/60-second directory refresh/lease, and lobby traffic/ACK limits documented
+  in `realtime/README.md`. These are not the final gameplay transport budgets.
   Hub SSH was reachable on 2026-10-20 during gate-fix validation; this does not
   qualify multiplayer latency, physical devices or hosted capacity.
   Grow your flock stays deferred phase 9 in `spec/10-roadmap.md`; opening it

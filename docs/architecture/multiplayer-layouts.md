@@ -1,7 +1,7 @@
 # Competitive layout review
 
 2026-10-20. **Owner accepted the prototype layout direction and dog starts;
-implementation has not started.** The settled rules remain in [the plan](multiplayer-plan.md). These
+layout implementation has not started; local service foundations are open.** The settled rules remain in [the plan](multiplayer-plan.md). These
 are scaled engineering diagrams, not screenshots or new runtime assets.
 
 ## Accepted prototype direction

@@ -1,10 +1,19 @@
 # 03 - Multiplayer
 
 Updated 2026-10-20 from the owner's multiplayer planning discussion.
-**Planning only. Implementation, resource provisioning and deployment have not
-been authorized.** The shipped version 3 client remains solo. The execution sequence, research,
+**Local foundations authorized; staging provisioning and deployment remain
+unapproved.** The shipped version 3 client remains solo. The execution sequence, research,
 historical evidence and unresolved decisions are in
 [the multiplayer plan](../docs/architecture/multiplayer-plan.md).
+
+The first local slice in `realtime/` implements admission, waiting rooms,
+regional discovery and the start barrier. It stops with `simulation_unavailable`
+after loading; active simulation, forfeit/results and the client are not yet
+implemented. [The local service contract](../realtime/README.md) records actual
+limits and tests; [the staging proposal](../docs/operations/multiplayer-staging.md)
+records resource isolation and the owner-confirmed Workers Paid cost estimate.
+The remainder of this specification is the target contract, not a claim that
+all described behaviour is implemented.
 
 ## Existing solo contract
 

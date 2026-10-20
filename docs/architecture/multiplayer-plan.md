@@ -1,15 +1,23 @@
 # Multiplayer plan
 
-2026-10-20. Status: **design recorded; implementation has not started**.
+2026-10-20. Status: **local foundations opened; first lobby/admission slice implemented**.
 
 The owner requested this plan after score cards shipped, selected shared-flock
 competition with one pen per player, and accepted regional public boards with
-host-controlled starts. This document authorizes no code, dependency, asset,
-Cloudflare resource, test-service purchase, workflow, merge or deployment.
+host-controlled starts. The owner subsequently authorized local implementation
+and tests, with staging setup and costs to be reviewed before provisioning.
+No resource, paid run, workflow change, push or deployment is authorized.
 It is the execution plan; [spec/03](../../spec/03-multiplayer.md) is the product
 and service contract, [spec/09](../../spec/09-testing.md) the acceptance matrix,
 and [STATUS](../../STATUS.md) the current work boundary. Earlier discussion and
 historical plans are evidence, not permission to start a stage.
+
+Current implementation: [local realtime service](../../realtime/README.md).
+Admission, regional boards, readiness and recovery are testable in workerd.
+Start deliberately stops at `simulation_unavailable`; there is no active match
+or client multiplayer yet, and Stage 1 is not declared complete. The
+[staging setup and estimate](../operations/multiplayer-staging.md) assumes the
+owner-confirmed existing Workers Paid account. Allowance balance is unverified.
 
 ## Decisions and limits
 
@@ -274,8 +282,9 @@ cleanup, not CPU alone. Runtime error/overload must never create a valid result.
 | 4. Competitive | Owner-reviewed pen layouts, shared-flock rules and score ownership | Two/three/four-player fairness and gate tests, ties, disconnect policy, 25/75/200 coverage |
 | 5. Release qualification | Full motion/audio/device review, quiet-hub timing, deploy/drain/rollback rehearsal | Exact client/server candidate receipts, known gaps stated, owner playtest and explicit production approval |
 
-Stage 1 is not opened by finishing this document. Staging access/provisioning,
-assets and production deployment remain distinct approvals. Future release
+The owner's later instruction opened Stage 1 for local work and tests.
+Staging provisioning, paid tests, assets and production deployment remain
+distinct approvals. Future release
 workflow changes must extend the [deployment runbook](../operations/deployment.md)
 with exact client/server revision pairing, tagged source on main, protocol
 transition, stored-schema compatibility and rollback. Do not deploy the realtime
@@ -312,7 +321,8 @@ seat during the owner-approved 15-second grace.
 The competitive finish/tie rule for an ordinarily completed round is settled
 under D2 below.
 The later Q1-Q12 answers below settle the remaining lifecycle, guidance and recovery
-policies. Documentation only; implementation remains unopened.
+policies. Local lifecycle foundations now implement the waiting/start subset;
+active-match departure and scoring remain future implementation work.
 
 ### D2 scoring - finish the flock, highest eligible count, shared ties, 2026-10-20
 
@@ -369,7 +379,7 @@ neutral gate guidance.
 
 | ID | Recommended starting point | Decide before |
 | --- | --- | --- |
-| D1 | Q1-Q3 settled above; verify lifecycle races and readiness | Lifecycle implementation after authorization |
+| D1 | Q1-Q3 settled above; verify lifecycle races and readiness | Waiting/start tests implemented locally; active match lifecycle still pending |
 | D2 (layout validation) | Accepted square / equal-area hexagon / square and 45 m opposite-pen dog starts; verify crossings, spawn distribution, cameras and fairness, including overlap/equidistant cases under Q12 | Prototype direction settled; implementation authorization and gameplay qualification remain separate |
 | D3 | Three broad regional boards; candidate `enam`/`weur`/`apac`; manual override and no geography lock | Public labels, after geographic staging results |
 | D4 | 60/30/20 Hz sim/input/snapshot candidate; bounded jitter buffer, stale-input timeout, queue/room limits | Numerical acceptance budgets fixed before qualification and recorded with rationale |
@@ -410,8 +420,8 @@ Q8 selects the tuning method now; exact latency/correction/bandwidth/CPU and
 queue limits are a recorded engineering checkpoint before acceptance. Q10's
 numeric spending ceiling remains pending an estimate, not an invented budget.
 Those evidence checkpoints do not reopen the settled game rules. After the
-questions are resolved, obtain the owner's explicit instruction before starting
-implementation. Staging provisioning and production deployment remain separate.
+questions were resolved, the owner explicitly opened local foundations.
+Staging provisioning and production deployment remain separate.
 
 ## Adversarial review, 2026-10-20
 
