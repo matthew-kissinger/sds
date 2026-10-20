@@ -40,6 +40,9 @@ Every generated asset has an in-repo recipe (script or documented tool flow) tha
 The phase 7 plan (spec/03) reuses the shipped dog, sheep and modular fence kit.
 Co-op keeps one shared pen. Competitive needs two/three/four player-owned pens,
 matching fence openings, clear pen identification and fair spawn positions.
+The [layout review](../docs/architecture/multiplayer-layouts.md) shows scaled
+two/three/four-player proposals. Geometry and spawn positions await owner review;
+the diagrams are documentation, not runtime assets or approved field changes.
 That is layout and simulation work, not just another fence mesh. Review
 approach corridors, terrain pads, homestead clearance, cameras and foliage
 occlusion together. A south/east/west pen cannot inherit a north-only visual or

@@ -104,6 +104,10 @@ estimate before provisioning/paid tests, waiting-only host removal, and neutral
 gate guidance based on geometry regardless of dog or pen ownership.
 Unseen layouts, measured budgets, geographic coverage and
 cost estimates remain gates. Multiplayer implementation remains unopened.
+The [layout review](docs/architecture/multiplayer-layouts.md) proposes square,
+hexagonal and square competitive fields for two, three and four players,
+respectively, with scaled diagrams and an adversarial review. These proposals
+await owner review and do not change the shipped game.
 The history below retains its dates.
 
 The sequence the owner chose, recorded so it is read rather than re-derived.

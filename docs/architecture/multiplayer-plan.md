@@ -34,6 +34,11 @@ Competitive scoring is also settled: finish the flock, highest eligible count
 wins, shared ties. The layout review approach is accepted; actual geometry
 still needs review.
 
+The [competitive layout review](multiplayer-layouts.md) now illustrates
+opposite pens on a square for two players, alternating sides of a regular
+hexagon for three, and four sides of a square for four. These are proposed
+geometry and spawn positions, not accepted layouts or implementation.
+
 The owner answered Q1-Q12 below. Product policies are settled; layout evidence,
 placement coverage, numerical transport limits and the staging cost estimate
 remain engineering gates. None of these answers authorize implementation.
