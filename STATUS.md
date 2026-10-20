@@ -113,6 +113,9 @@ active gameplay and the browser client remain unimplemented. See
 [staging setup and cost review](docs/operations/multiplayer-staging.md).
 Workers Paid is owner-confirmed; remaining allowances and CLI access are
 unverified. No multiplayer release gate is closed by local functional tests.
+Local candidate `382369ab`: 905 existing tests plus 51 workerd checks passed;
+typechecks, lint and an isolated production build passed. The validation note
+in `realtime/README.md` records the main checkout's output-lock workaround.
 The owner accepted the [layout review](docs/architecture/multiplayer-layouts.md)
 direction on 2026-10-20: square / equal-area hexagon / square for two / three /
 four players, with dogs starting 45 m from the centre opposite their own pens.

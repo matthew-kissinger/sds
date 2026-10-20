@@ -109,3 +109,25 @@ hub performance, fairness, or production deployment compatibility.
 
 The proposed hosted setup and spending review are in
 [the staging proposal](../docs/operations/multiplayer-staging.md).
+
+## Local validation, 2026-10-20
+
+Code candidate `382369ab0f3188636ebe87aacb36be21860c30a5`:
+
+- `npm test`: 905 existing checks in Node plus 51 checks in workerd. The latter
+  includes 41 new lobby/protocol/lifecycle checks and the 10 existing trace
+  fixture checks repeated in the Worker runtime. No fixture changed.
+- Application, realtime and retained Worker typechecks passed. Lint passed
+  with six existing generated-declaration warnings, no errors.
+- Clean `npm ci`: zero reported vulnerabilities. Production build, public
+  discovery, exact-SHA release manifest and Build Output configuration checks
+  passed in the attached isolated checkout. The main checkout's first build
+  was stopped at output cleanup because an existing process held the directory
+  open; it was not counted as a pass. That process was left running. The
+  verified generated output was copied back for the existing local preview.
+- Client bundle: 2,444.48 kB raw / 677.80 kB gzip, matching the recorded 3.6.1
+  bundle size. The production configuration still exports no Durable Object
+  classes. No app, simulation, asset or deployment-workflow source changed.
+
+These are local functional/build receipts. No push, hosted test, provisioning,
+geographic or physical-device qualification, or deployment was performed.
