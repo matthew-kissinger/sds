@@ -69,7 +69,7 @@
     },
     {
       "path": "app/src/scene/fence/fieldSections.ts",
-      "sha256": "89461008752653d835d25d1d4e47ba524885519dafb74706a24d8d54efa6bf46"
+      "sha256": "f863d506c4487c3ca3eb62d41ada31ed483287c4caf23c85869ae949332f7592"
     },
     {
       "path": "app/src/tsl/palette.ts",

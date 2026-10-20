@@ -82,8 +82,9 @@ const PAD_RECIPE = {
   gateApproach: 8,
   /** Rim width: the smoothstep from a pad's level back into the roll. */
   penRim: 16,
-  /** The farmhouse site, east of the pen. Offsets from the pen rect. */
-  farmhouse: { eastOffset: 10, width: 36, northOffset: 2, depth: 36, rim: 16 },
+  /** East offset from the pen; north offset from the shared perimeter fence.
+   * Keep the authored building pad fixed when the retirement threshold moves. */
+  farmhouse: { eastOffset: 10, width: 36, northOffset: 4, depth: 36, rim: 16 },
   /** The barn site, centred on the gate behind the retirement pasture. */
   barn: { width: 28, northGap: 5, depth: 18, rim: 14 },
 };
@@ -223,8 +224,8 @@ const PAD_RECTS = [
     id: 'farmhouse',
     minX: pen.maxX + farm.eastOffset,
     maxX: pen.maxX + farm.eastOffset + farm.width,
-    minZ: pen.minZ + farm.northOffset,
-    maxZ: pen.minZ + farm.northOffset + farm.depth,
+    minZ: bounds.maxZ + farm.northOffset,
+    maxZ: bounds.maxZ + farm.northOffset + farm.depth,
     rim: farm.rim,
     terrace: 'farmyard',
   },

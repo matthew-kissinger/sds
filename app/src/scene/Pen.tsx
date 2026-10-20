@@ -29,10 +29,10 @@ import { HOME_FIELD } from '@sim/field';
 import { useHeightfield } from '@app/world/heightfield';
 import { buildBoundaryDressing, type BoundarySpec } from './pen/boundaryDressing';
 import { makePenFloorMaterial, type PenFloorSpec } from './pen/floorMaterial';
+import { PEN_FLOOR_RECT } from './pen/floorLayout';
 
 const { gate, bounds } = HOME_FIELD;
-// Preserve the authored floor while collision follows the visible enclosure.
-const pen = { ...HOME_FIELD.pen, minZ: HOME_FIELD.pen.minZ + 2 };
+const pen = PEN_FLOOR_RECT;
 const PEN_WIDTH = pen.maxX - pen.minX;
 const PEN_DEPTH = pen.maxZ - pen.minZ;
 const PEN_CENTER_X = (pen.minX + pen.maxX) / 2;
