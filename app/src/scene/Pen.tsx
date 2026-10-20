@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * The retirement floor keeps HOME_FIELD.pen, x [-30, 30] z [102, 130], and a
- * short worn tongue reaches the perimeter gate at z = 100 (see the geometry
- * note in sim/field.ts: the simulation's 2 m corridor is open only within the
- * gate width).
+ * The worn floor is inset 2 m from the shared pen/perimeter fence, with a
+ * short tongue reaching the gate. This is ground dressing, not a second
+ * collision boundary: sheep retire on crossing the visible gate at z = 100.
  *
  * The visible enclosure is attached directly to the perimeter rails and adds
  * only three sides (FenceLine.tsx). The existing north field fence is its front
@@ -30,14 +29,16 @@ import { HOME_FIELD } from '@sim/field';
 import { useHeightfield } from '@app/world/heightfield';
 import { buildBoundaryDressing, type BoundarySpec } from './pen/boundaryDressing';
 import { makePenFloorMaterial, type PenFloorSpec } from './pen/floorMaterial';
+import { PEN_FLOOR_RECT } from './pen/floorLayout';
 
-const { pen, gate, bounds } = HOME_FIELD;
+const { gate, bounds } = HOME_FIELD;
+const pen = PEN_FLOOR_RECT;
 const PEN_WIDTH = pen.maxX - pen.minX;
 const PEN_DEPTH = pen.maxZ - pen.minZ;
 const PEN_CENTER_X = (pen.minX + pen.maxX) / 2;
 const PEN_CENTER_Z = (pen.minZ + pen.maxZ) / 2;
 
-/** The corridor floor between the perimeter gate line and the pen's south fence. */
+/** The worn tongue between the shared fence line and the main floor. */
 const CORRIDOR_DEPTH = pen.minZ - bounds.maxZ;
 const CORRIDOR_CENTER_Z = bounds.maxZ + CORRIDOR_DEPTH / 2;
 

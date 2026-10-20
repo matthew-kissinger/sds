@@ -57,6 +57,7 @@ import {
   type HeightfieldManifest,
 } from '@app/world/heightfieldSampler';
 import { HOME_FIELD } from '@sim/field';
+import { PEN_FLOOR_RECT } from '@app/scene/pen/floorLayout';
 
 const repo = fileURLToPath(new URL('..', import.meta.url));
 const committed = join(repo, 'assets', 'grass');
@@ -193,7 +194,8 @@ describe('the committed scatter', () => {
   });
 
   it('grows nothing through the drawn pen floor or the gate corridor', () => {
-    const { pen, gate, bounds } = HOME_FIELD;
+    const { gate, bounds } = HOME_FIELD;
+    const pen = PEN_FLOOR_RECT;
     const halfGate = gate.width / 2;
     let trespassers = 0;
     for (let i = 0; i < bytes.byteLength / stride; i++) {

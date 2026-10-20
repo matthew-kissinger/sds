@@ -158,6 +158,7 @@ writeFileSync(
   entry,
   [
     "export { HOME_FIELD } from '@sim/field';",
+    "export { PEN_FLOOR_RECT } from '@app/scene/pen/floorLayout';",
     "export { mulberry32 } from '@sim/rng';",
     "export { Heightfield } from '@app/world/heightfieldSampler';",
     'export {',
@@ -196,7 +197,8 @@ const heightfield = new Heightfield(
   terrainManifest,
 );
 
-const { bounds, pen, gate } = HOME_FIELD;
+const { bounds, gate } = HOME_FIELD;
+const pen = inputs.PEN_FLOOR_RECT;
 
 // The recipe's fieldHalf is stated as "the fence plus six metres". Stating it
 // and deriving it are different things; assert the relationship rather than
