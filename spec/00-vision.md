@@ -11,8 +11,13 @@ Sheepdog Sim 3 succeeds if a first-time player is herding sheep within five seco
 Sheepdog Sim 3 is defined as much by its cut list as its feature list. These are decisions, not a backlog:
 
 - No biomes, islands, mountains, day/night survival, or wolves. One field.
-- No mode roster. Flock size is a config value, not a mode. There shall be no `if (gameMode === ...)` branch anywhere in this codebase.
-- No dog roster. One dog, authored and animated beautifully.
+- No open-ended mode roster. The planned phase 7 exception is co-op and
+  shared-flock competitive play (spec/03). Select their rules at session
+  construction; do not scatter mode branches through the application. Flock
+  size remains configuration. This exception is design approval, not permission
+  to implement it.
+- No dog roster. One authored dog design; planned multiplayer can instantiate
+  it for up to four players with accessible identification.
 - No sandbox, fence editor, shape editor, achievements, capture mode, replay system, attract mode, or tutorial state machine.
 - No i18n in v1. English only.
 - No dual render paths. One renderer (WebGPURenderer), one material authoring language (TSL). A parallel material implementation for any backend is a spec violation.
@@ -23,6 +28,22 @@ Sheepdog Sim 3 is defined as much by its cut list as its feature list. These are
   never blocks Play, completion or the local personal best.
 - No 5,000-sheep player path in version 3.0. Scale work remains a separate
   experiment until it completes through the pen and passes real-device review.
+
+## Multiplayer scope amendment, 2026-10-20
+
+The owner approved documenting the next slice: regional public lobby boards,
+private invite rooms, host-controlled starts and rematches, co-op with one pen,
+and competitive with a shared flock and one pen per player. Existing solo play
+stays immediate and offline-capable. These are configurations of this field,
+not new biomes or permission for a general game-mode framework. Competition
+adds a quiet comparative result, not punitive progression or a red countdown.
+The calm presentation pillar still applies.
+
+[The multiplayer plan](../docs/architecture/multiplayer-plan.md) records the
+research, proposed defaults and staged acceptance. Spec/03 is its contract.
+Implementation, asset creation, provisioning and deployment have not started
+and require subsequent authorization. The single-goal description above remains
+the shipped solo baseline; it does not prohibit the planned multiplayer slice.
 
 ## Why a clean room
 

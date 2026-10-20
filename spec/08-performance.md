@@ -24,9 +24,25 @@ All-cold: everything built before first interaction.
 
 One small auto-tier: a measured capability probe at boot (renderer backend chosen, a quick offscreen fill test), mapping to high/medium/low presets for grass density, shadow resolution, post toggles. Manual override in settings (auto / high / medium / low). No UA sniffing (sds failure mode), no per-frame quality governor in v1; the scene is small enough to pick once and hold.
 
+## Planned multiplayer measurement
+
+Spec/03 and the multiplayer plan propose 60 Hz authoritative simulation,
+30 input packets/s and 20 snapshots/s as initial experiments, not passed
+budgets. Record actual tick work/lateness, scheduling debt, per-client bytes,
+input acknowledgment delay, jitter, corrections and queue growth at
+25/75/200 sheep and two/three/four players. Do not scale down sheep or silently
+change the host's selected rules to meet a performance target.
+
+Keep renderer timing on the quiet hub, server capacity on deployed staging,
+network latency on named client paths, and phone claims on physical devices.
+Do not certify a single-client renderer baseline while saturating the hub with
+three other rendered players. Plan D4 sets numerical acceptance limits before
+qualification; until then these measurements cannot be called a passed gate.
+No performance run or resource provisioning is authorized by this plan update.
+
 ## GPU-scale mode (the GpuComputeSim toggle)
 
-The TSL compute backend targets thousands of sheep for unranked zen play. Its budget: 5,000 sheep at 60 fps desktop / high mobile, sim fully on GPU (position/heading/state textures or storage buffers), zero per-sheep CPU work per frame. It reuses the same instanced renderer and grass interaction inputs. This is a scale showcase, not the game; it never gates the core experience and ships only when the core is done (roadmap phase 7).
+The TSL compute backend targets thousands of sheep for unranked zen play. Its budget: 5,000 sheep at 60 fps desktop / high mobile, sim fully on GPU (position/heading/state textures or storage buffers), zero per-sheep CPU work per frame. It reuses the same instanced renderer and grass interaction inputs. This is a scale showcase, not the game; it never gates the core experience and ships only when the core is done (roadmap phase 8, separate from multiplayer).
 
 ## Perf discipline
 

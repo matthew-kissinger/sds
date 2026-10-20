@@ -12,6 +12,16 @@ the measurements behind the `cf` move are in `docs/history/status-log.md`
 
 ## One production path
 
+**Planning note, 2026-10-20:** the
+[multiplayer plan](../architecture/multiplayer-plan.md) proposes an independently
+deployed realtime Worker under `/r/*`, with isolated staging. Nothing below
+deploys that service today. Before implementing its release workflow, extend
+this runbook with exact client/realtime revision pairing, protocol/schema
+compatibility, route/invite-shell handling, room drain, rollback and staging
+resource isolation. Ordinary PR version aliases are not a multiplayer staging
+environment. The owner authorized only documentation; no provisioning or
+deployment is opened by that plan.
+
 There is exactly one way the game reaches players.
 
 `Deploy` (`.github/workflows/deploy.yml`) runs when an annotated `v*` tag is

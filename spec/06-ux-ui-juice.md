@@ -11,6 +11,40 @@ All new. Nothing from the sds UI layer carries over as code; a handful of tuned 
 
 ## UI principles
 
+### Planned multiplayer flow, 2026-10-20
+
+Spec/03 and the multiplayer plan define this unimplemented extension. Keep solo
+Play immediate; add a distinct Play online action. Online opens the regional
+public board with a suggested region and manual selection, mode/count filters,
+room occupancy and estimated connection quality. Players can join or create a
+public room, or create a private room and copy its invite link. An empty board
+can show public activity elsewhere without silently changing region.
+
+The lobby shows up to four slots, host, readiness, mode, flock size and region.
+Host can wait or start an eligible ready party; no automatic full-room start.
+Changing settings resets readiness. Names/numbers and restrained colour connect
+players to dogs and competitive pens, with visual icons above players. These
+screen-anchored identifiers follow spec/11 and never rely on colour alone.
+Waiting-room hosts may remove a player; there is no active-match kick control.
+Copy/share acts on `/r/<room-handle>`;
+opening the link presents Join, never consumes a seat before user action.
+Unknown, full, expired and in-progress rooms have distinct recovery messages.
+
+An online pause/menu neutralizes local input; it cannot freeze the shared game.
+Show reconnection honestly and restore the player's seat where allowed. Keep
+host handoff separate from server hosting. Completion offers rematch in the
+same party, with shared co-op progress or each competitive pen's count. No
+mode cycling. Room restart interruption is not a completed run; the policy
+is accepted under D5: preserve the party and return to waiting without a result.
+Connection failures leave solo usable and do not
+reset player identity. No chat, spectators or mid-round player replacement.
+
+All controls retain keyboard/touch support, visible focus and reduced motion.
+Region advice is an estimate, never a promise that a player is geographically
+near a server. This planning update creates no production UI.
+
+### Shared interface rules
+
 - React TSX only, in `app/src/ui/`. Subscribes to the same zustand store as the scene. Zero window globals, zero event-bridge glue, zero polling (the entire sds GameBridge pattern is forbidden).
 - A design-token module (color, spacing, type scale, z-index, motion durations) is the ONLY styling authority, written before the first component. `useReducedMotion` respected from day one. Both were the only parts of sds's UI that converged correctly; start there.
 - In-game HUD is nearly nothing: sheep-penned count (fills as a soft pictogram row or radial), optional timer (off by default; the zen default is no clock on screen), stamina as a subtle ring around or under the dog, not a bar in a corner. Every HUD element must justify existing against the Calm pillar.

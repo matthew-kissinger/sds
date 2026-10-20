@@ -30,6 +30,20 @@ hash-verified originals and publish only the game artifact, never source media.
 
 ## Mixing rules
 
+### Planned multiplayer event ownership
+
+Spec/03's multiplayer remains unimplemented. Each accepted bark/pen event needs
+a stable round/event identity so replay, snapshot recovery and reconnect do not
+sound it twice. Multiple dogs barking on one tick cannot collapse into the
+current single latest-bark slot. Spatialize remote dogs using the existing
+camera listener and shared buses; cap aggregate voices and test the four-dog
+mix. If a local bark cue is predicted, reconcile its event identity with the
+server acknowledgment rather than playing both. Reuse approved audio; request
+owner review before commissioning new sounds. Acceptance requires running
+multiplayer motion/listening evidence, not just event-unit tests.
+
+### Existing mix contract
+
 - Master ducking: events duck the ambient bed by 2-3 dB, never silence it.
 - Flock voice cap: at most 6 concurrent baas, chosen by proximity + agitation. The distance-filtered crowd murmur that once stood in for the rest is omitted by the owner listening decision above and nothing replaces it: six spatial voices are the flock.
 - Everything routes through group buses (ambient / flock / dog / world / ui) with per-bus sliders in settings.
