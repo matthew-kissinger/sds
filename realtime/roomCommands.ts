@@ -14,12 +14,12 @@ export function applyCommand(room: RoomState, id: string, session: string, cmd: 
   if (cmd.type === 'loaded') {
     requireThat(room.phase === 'starting' && room.round === cmd.round, 'stale_round');
     actor.loaded = true;
-    if (room.members.every(m => m.loaded)) {
-      // This local foundation owns admission/readiness, not a simulated match.
-      // Never claim playing or award a result without an authoritative host.
-      interrupt(room, 'simulation_unavailable');
-    }
+    if (room.members.every(m => m.loaded)) { room.phase = 'playing'; room.startDeadline = null; }
     return;
+  }
+  if (cmd.type === 'again') {
+    requireThat(room.phase === 'finished' && room.host === id, 'not_finished');
+    room.phase = 'waiting'; room.result = null; clearReady(room); return;
   }
   requireThat(room.phase === 'waiting', 'not_waiting');
   if (cmd.type === 'ready') { actor.ready = cmd.value; return; }
@@ -31,6 +31,7 @@ export function applyCommand(room: RoomState, id: string, session: string, cmd: 
     requireThat(room.removed.length < 64, 'removal_limit');
     room.removed.push(target.id); room.members = room.members.filter(m => m !== target); return;
   }
+  requireThat(room.settings.mode === 'coop', 'mode_unavailable');
   requireThat(room.members.length >= 2 && room.members.every(m => m.connected && m.ready), 'not_ready');
   room.phase = 'starting'; room.round = round; room.startDeadline = now + START_MS;
   room.interruption = null;

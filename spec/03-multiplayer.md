@@ -6,12 +6,16 @@ unapproved.** The shipped version 3 client remains solo. The execution sequence,
 historical evidence and unresolved decisions are in
 [the multiplayer plan](../docs/architecture/multiplayer-plan.md).
 
-The first local slice in `realtime/` implements admission, waiting rooms,
-regional discovery and the start barrier. It stops with `simulation_unavailable`
-after loading; active simulation, forfeit/results and the client are not yet
-implemented. [The local service contract](../realtime/README.md) records actual
-limits and tests; [the staging proposal](../docs/operations/multiplayer-staging.md)
-records resource isolation and the owner-confirmed Workers Paid cost estimate.
+The local slice now runs authoritative co-op on the Home Field: one shared
+flock and pen, 25/75/200 sheep, two to four starting players, live snapshots,
+client dog prediction, reconnect, departures, shared completion and rematch.
+`npm run coop` enables the local-only client entry; the production build still
+has no online entry. Competitive starts are explicitly unavailable. Full
+snapshots and a fixed 100 ms presentation buffer are reversible pilot choices;
+delta transport, adaptive delay and numerical acceptance budgets remain open.
+[The local contract](../realtime/README.md) records implementation limits.
+The $20 staging budget is approved; [final setup review](../docs/operations/multiplayer-staging.md)
+remains required before any provisioning.
 The remainder of this specification is the target contract, not a claim that
 all described behaviour is implemented.
 

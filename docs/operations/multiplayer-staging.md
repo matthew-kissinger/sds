@@ -1,8 +1,9 @@
 # Multiplayer staging proposal and cost review
 
-2026-10-20. Proposal only. The owner authorized local foundations and tests,
-and asked to review staging setup and costs before provisioning. The owner
-confirmed an existing Workers Paid subscription. A read-only CLI account check
+2026-10-20. Setup pending review. The owner authorized playable local co-op
+and approved a $20 incremental staging pilot budget. Final setup must still
+be presented and approved before provisioning; the budget is not deployment
+or resource-creation authorization. The owner confirmed an existing Workers Paid subscription. A read-only CLI account check
 returned Cloudflare error 9109, Invalid access token; account ID, remaining
 shared allowances and deploy permissions are not independently verified.
 The owner offered to authenticate or validate access when needed. No resource,
@@ -21,8 +22,11 @@ route, secret, deployment, paid run or new asset was created for this work.
 | Browser origin | Proposed `https://staging.sheepdogsim.com`; hostname availability and routing still to verify |
 
 Use one exact staging origin. Its `/r/*` route reaches the staging realtime
-Worker and its remaining paths reach the staging game Worker. The later invite
-shell must render on direct navigation without implicitly joining. Bind realtime
+Worker; exact GET `/r/<handle>` requests must delegate the invite shell to the
+staging game asset service through a binding. `/r/<handle>/status`, `/join` and
+`/ws` remain realtime endpoints. Other paths reach the staging game Worker.
+The local Vite proxy already separates shell and API, but that proxy is not a
+Cloudflare route implementation and must not be mistaken for one. Bind realtime
 to the named private admission entrypoint on the game Worker; do not expose that
 entrypoint through its ordinary public fetch router. Export/configure that
 entrypoint only in the staging implementation cycle. The current local tests
@@ -50,9 +54,9 @@ remain separate; extend the main deployment runbook before changing them.
 
 ## Qualification sequence
 
-1. Finish the local authoritative co-op host and client adapter. The current
-   foundation stops after the load barrier with `simulation_unavailable`;
-   deploying it today would test admission only, not herding.
+1. Validate the local authoritative co-op host and rendered client. The local
+   slice now plays the shared Home Field; competitive, delta transport and
+   hosted acceptance remain open. Review local evidence before staging.
 2. Verify account/resource isolation and access. Present the exact creation
    diff and agreed test duration/cap before provisioning.
 3. Provision the isolated pair after approval. Run one-room protocol smoke:
@@ -107,10 +111,10 @@ billed unit has spare capacity. Round monthly aggregate excess, not each room
 or each test independently; do not add these columns as separate invoices.
 
 These are compute subtotals. Allow for staging identity/D1, Worker CPU/requests,
-storage, limited logs, failed attempts and cleanup. A practical **proposed $20
-incremental reserve for the initial one-hour pilot** covers this small forecast
-and rounding with margin; it is not a guaranteed invoice ceiling or an accepted
-budget. With available allowances and controlled traffic, incremental usage may
+storage, limited logs, failed attempts and cleanup. The owner approved a
+**$20 incremental budget for the initial one-hour pilot**. It covers this small forecast and rounding with margin; it is not a
+guaranteed invoice ceiling. No run may begin before the final setup review.
+With available allowances and controlled traffic, incremental usage may
 be $0. Billing allowance balance is the main outstanding cost input. Ordinary
 existing production usage and the existing subscription are outside this estimate.
 
@@ -123,9 +127,13 @@ Afterward compare metered usage with this forecast before requesting expansion.
 
 ## Review needed before setup
 
-Approve the isolated staging resources, proposed hostname/access approach and
-one-hour pilot reserve after the local playable slice is ready. Then verify or
-refresh Cloudflare credentials if necessary, resolve the actual account and
-namespace IDs, and present the final resource diff. The invalid CLI token is
-not evidence that the owner's account lacks permissions. No auth action is
+The $20 reserve is accepted. Before provisioning, verify or refresh read-only
+Cloudflare access if necessary, resolve the actual account, check existing
+allowance usage and hostname availability, and present one concrete resource
+diff for the isolated staging pair. The final review must name the exact
+account, hostname, Access application/policy (including protocol-client access),
+new D1 and DO bindings, staging-only secret ownership, paired commit SHAs,
+room cap, one-hour stop/cleanup mechanism and rollback pair. Resource IDs that
+Cloudflare assigns on creation will be marked new, not invented. The invalid
+CLI token is not evidence that the owner's account lacks permissions. No auth action is
 required to continue local development.

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { PROTOCOL } from '../net/messages';
 import type { RealtimeEnv } from './bindings';
 import { failure, json, object, requireThat, smallJson, unwrap } from './http';
 import { REGIONS, isRegion, regionOf } from './regions';
@@ -25,7 +26,7 @@ export default {
     try {
       const url = new URL(request.url);
       requireThat(requestAllowed(request.headers.get('CF-Connecting-IP') ?? 'local', Date.now()), 'request_rate', 429);
-      if (url.pathname === '/r/health' && request.method === 'GET') return json({ protocol: 1, gameplay: false });
+      if (url.pathname === '/r/health' && request.method === 'GET') return json({ protocol: PROTOCOL, gameplay: true });
       if (request.method === 'POST' || request.headers.has('Upgrade')) {
         requireThat(request.headers.get('Origin') === env.ALLOWED_ORIGIN, 'origin_denied', 403);
       }
@@ -53,9 +54,9 @@ export default {
       const room = env.ROOMS.get(env.ROOMS.idFromName(handle), { locationHint: REGIONS[region] });
       if (parts.length === 3 && parts[2] === 'join' && request.method === 'POST') return json(unwrap(await room.admit(await identity(request, env), null)));
       if (parts.length === 3 && parts[2] === 'ws' && request.method === 'GET') return room.fetch(request);
-      // A link read never reserves a seat. The rendered invite shell belongs to
-      // the later client slice; this local API returns only availability.
-      if (parts.length === 2 && request.method === 'GET') return json(unwrap(await room.inspect()));
+      // A read never reserves a seat. The local client server handles the invite
+      // shell; /status is the availability endpoint for that shell.
+      if ((parts.length === 2 || parts.length === 3 && parts[2] === 'status') && request.method === 'GET') return json(unwrap(await room.inspect()));
       return json({ error: 'not_found' }, 404);
     } catch (error) { return failure(error); }
   },

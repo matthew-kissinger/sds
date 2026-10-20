@@ -4,7 +4,8 @@
     "strict": true, "skipLibCheck": true, "noEmit": true,
     "lib": ["ES2022"],
     "types": ["@cloudflare/workers-types", "@cloudflare/vitest-plugin/types"],
-    "allowJs": true
+    "allowJs": true,
+    "paths": { "@sim/*": ["./sim/*"] }
   },
   "include": ["realtime/**/*.ts", "worker/src/roomAdmission.ts"]
 }

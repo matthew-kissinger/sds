@@ -105,17 +105,19 @@ restart, measured transport tuning, PC/hub staging before geographic load,
 estimate before provisioning/paid tests, waiting-only host removal, and neutral
 gate guidance based on geometry regardless of dog or pen ownership.
 Layout validation, measured budgets, geographic coverage and staging approval
-remain gates. The local `realtime/` service implements identity admission,
-atomic four-seat rooms, regional boards, readiness/start barrier, reconnect and
-durable party recovery. It deliberately stops with `simulation_unavailable`;
-active gameplay and the browser client remain unimplemented. See
-[local service scope/tests](realtime/README.md) and the
-[staging setup and cost review](docs/operations/multiplayer-staging.md).
-Workers Paid is owner-confirmed; remaining allowances and CLI access are
-unverified. No multiplayer release gate is closed by local functional tests.
-Local candidate `382369ab`: 905 existing tests plus 51 workerd checks passed;
-typechecks, lint and an isolated production build passed. The validation note
-in `realtime/README.md` records the main checkout's output-lock workaround.
+remain gates. The local service now runs authoritative co-op and the normal
+client renders the shared field with up to four dogs. Invite/public lobbies,
+ready/start, prediction/interpolation, reconnect, continue-on-leave, shared
+completion and rematch are implemented locally. Run `npm run coop`; see
+[scope, instructions and evidence](realtime/README.md). The production build
+has no multiplayer entry, and competitive starts remain unavailable.
+The owner approved a $20 staging pilot budget; the
+[final setup review](docs/operations/multiplayer-staging.md) must happen before
+provisioning. Workers Paid is owner-confirmed; remaining allowances and CLI
+access are unverified. Full snapshots and fixed 100 ms buffering are local
+pilot choices; delta/adaptive transport and all hosted/device/performance and
+separate presentation-review gates remain open. No multiplayer release gate
+is closed by local functional tests.
 The owner accepted the [layout review](docs/architecture/multiplayer-layouts.md)
 direction on 2026-10-20: square / equal-area hexagon / square for two / three /
 four players, with dogs starting 45 m from the centre opposite their own pens.

@@ -29,7 +29,7 @@ describe('durability and adversarial admission', () => {
     for (const [body, status] of [
       [{ region: 'na', settings: { ...DEFAULT, flockSize: 5000 } }, 400],
       [{ region: 'na', settings: DEFAULT, padding: 'x'.repeat(2100) }, 413],
-      [{ region: 'na', settings: { ...DEFAULT, mode: 'coop' } }, 409],
+      [{ region: 'na', settings: { ...DEFAULT, mode: 'competitive' } }, 409],
     ] as const) {
       expect((await request('/r/rooms', token, body, { 'Idempotency-Key': key })).status).toBe(status);
     }

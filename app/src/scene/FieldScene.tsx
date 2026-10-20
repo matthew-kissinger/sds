@@ -9,8 +9,10 @@
  * are the same field with a different overlay; nothing here branches on phase.
  */
 
+import { useGameStore } from '@app/state/store';
 import { useGameLoop } from '@app/game/useGameLoop';
 import { Atmosphere } from './Atmosphere';
+import { PlayerLabels } from './PlayerLabels';
 import { Dog } from './Dog';
 import { GateGuidance } from './GateGuidance';
 import { Farmhouse, preloadFarmhouse } from './Farmhouse';
@@ -59,6 +61,7 @@ export function FieldScene() {
   // longer waterfalls heightfield -> grass -> treeline -> scatter.
   preloadFieldSceneAssets();
   useGameLoop();
+  const sim = useGameStore(state => state.sim);
 
   return (
     <>
@@ -72,7 +75,8 @@ export function FieldScene() {
       <Treeline />
       <Scatter />
       <Flock />
-      <Dog />
+      {sim.state.dogs.map((dog, index) => <Dog key={dog.id} index={index} />)}
+      <PlayerLabels />
       <GateGuidance />
       <SheepHoverLabel />
     </>

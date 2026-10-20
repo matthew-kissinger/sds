@@ -37,12 +37,12 @@ describe('real local Worker admission and rooms', () => {
   });
   it('uses single-use tickets, validates origin and rejects protocol mismatch before consumption', async () => {
     const admission = await create(await register('one'));
-    const path = `/r/${admission.handle}/ws?ticket=${admission.ticket}&v=2`;
+    const path = `/r/${admission.handle}/ws?ticket=${admission.ticket}&v=3`;
     expect((await request(path, undefined, undefined, { Upgrade: 'websocket' })).status).toBe(400);
-    expect((await request(path.replace('v=2', 'v=1'), undefined, undefined,
+    expect((await request(path.replace('v=3', 'v=2'), undefined, undefined,
       { Upgrade: 'websocket', Origin: 'https://foreign.test' })).status).toBe(403);
     await connect(admission);
-    expect((await request(path.replace('v=2', 'v=1'), undefined, undefined, { Upgrade: 'websocket' })).status).toBe(401);
+    expect((await request(path.replace('v=3', 'v=2'), undefined, undefined, { Upgrade: 'websocket' })).status).toBe(401);
   });
   it('keeps private rooms out of every regional board', async () => {
     const token = await register('host');
@@ -56,7 +56,7 @@ describe('real local Worker admission and rooms', () => {
       expect(JSON.parse(text).rooms).toEqual([]);
     }
   });
-  it('requires readiness, locks the starting roster, and honestly aborts without a simulation host', async () => {
+  it('requires readiness, locks the starting roster, and starts the authoritative co-op simulation', async () => {
     const a = await create(await register('a')); const ca = await connect(a);
     const b = await join(a.handle, await register('b')); const cb = await connect(b);
     await ca.until(v => v.members.length === 2 && v.members.every(m => m.connected));
@@ -66,8 +66,8 @@ describe('real local Worker admission and rooms', () => {
     const outsider = await request(`/r/${a.handle}/join`, await register('late'), {});
     expect(outsider.status).toBe(409);
     ca.send('loaded', start.round); cb.send('loaded', start.round);
-    const back = await ca.until(v => v.interruption === 'simulation_unavailable');
-    expect(back.phase).toBe('waiting'); expect(back.members.every(m => !m.ready)).toBe(true);
+    const playing = await ca.until(v => v.phase === 'playing');
+    expect(playing.result).toBeNull();
   });
   it('removes only while waiting and blocks that identity for the room lifetime', async () => {
     const a = await create(await register('a')); const ca = await connect(a);
@@ -95,7 +95,7 @@ describe('real local Worker admission and rooms', () => {
     ca.send('ready', true);
     const back = await ca.until(v => v.interruption === 'server_restart');
     expect(back.phase).toBe('waiting'); expect(back.members).toHaveLength(2);
-    expect(back).not.toHaveProperty('result');
+    expect(back.result).toBeNull();
   });
   it('expires pending seats and rejects expired tickets inside workerd', async () => {
     const a = await create(await register('a'));
@@ -105,7 +105,7 @@ describe('real local Worker admission and rooms', () => {
       await state.storage.put('room', room);
     });
     await evictDurableObject(roomStub(a.handle));
-    const response = await request(`/r/${a.handle}/ws?ticket=${a.ticket}&v=1`, undefined, undefined, { Upgrade: 'websocket' });
+    const response = await request(`/r/${a.handle}/ws?ticket=${a.ticket}&v=2`, undefined, undefined, { Upgrade: 'websocket' });
     expect(response.status).toBe(401);
   });
 });

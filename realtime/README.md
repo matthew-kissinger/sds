@@ -1,116 +1,131 @@
-# Local realtime foundations
+# Local co-op
 
-This is an undeployed lobby/admission slice of multiplayer Stage 1. It does
-not expose multiplayer in the game. No production configuration imports it.
-The private identity entrypoint is tested in another local Worker; it is not
-exported by the production score router. No new runtime asset is required.
+Undeployed multiplayer work under spec/03. No production hosting configuration
+imports this service. No new asset or Cloudflare resource was created.
 
-Run `npm run test:realtime` and `npm run typecheck:realtime`. The normal
-`npm test` and `npm run typecheck` commands include these checks, so existing
-CI picks them up without changing deployment workflows. Tests use real local
-workerd, SQLite-backed Durable Objects, D1, service bindings and WebSockets.
-`remoteBindings: false` prevents remote bindings. Tests close sockets and reset
-storage between cases. The existing solo fixture suite runs in both Node and
-workerd, using the same exported simulation and committed fixtures.
+## Play on this PC
 
-## Current boundary
+Run `npm run coop` from the repo, then open `http://localhost:5198`. Choose
+**Play co-op locally**, create a public or invite-only room, and open its link
+in a separate browser profile or another browser. Two tabs in the same profile
+share identity; the newer session replaces the older one. Two to four players
+must all select Ready, then the host chooses Start co-op. Keyboard, gamepad and
+touch use the existing controls. Escape opens a local menu; the match continues.
+Leave removes your dog; remaining players continue. The host returns the party
+to the lobby after completion, everyone readies again, then starts a new round.
 
-Implemented: authenticated admission, four atomic seats, single-use upgrade
-tickets, idempotent regional room allocation, private/public boards, readiness,
-host handoff, waiting-room removal, session replacement, 15-second reconnect
-reservation, durable party settings, start timeout and interruption on restart.
+`npm run coop:built` serves the optimized client instead. The launcher binds
+only loopback ports 5198 and 8799, starts local workerd with SQLite DOs and the
+real identity REST API in a separate Worker, and uses ephemeral D1/storage and
+a random local signing secret. Ctrl+C stops both services. Nothing is persisted
+to a Cloudflare account. Restarting the launcher resets rooms and local test
+identities; the existing browser identity flow can register again afterward.
+The normal production build has no co-op entry. This is a separate Vite mode,
+not a player URL flag or a change to production deployment.
 
-The state machine is `waiting -> starting -> waiting/closed`. Start locks the
-roster and issues a round ID. All `loaded` acknowledgements currently return
-`simulation_unavailable` and clear readiness. This is an explicit incomplete
-boundary: there is no `playing` state, simulation host, movement protocol,
-snapshot interpolation, active-match forfeit/scoring, rematch result, client
-screen, rendered invite shell or staging deployment. Complete those in the
-plan's sequence before calling this playable multiplayer or closing Stage 1.
+## Implemented scope
 
-## Local API
+Co-op uses the existing Home Field, one shared pen and 25/75/200 sheep. A
+RoomDO owns the actual seeded simulation at 60 Hz. The browser predicts only
+its dog, using shared movement code, and presents server sheep/dogs from a
+bounded buffer. Input is sent at up to 30 Hz and full snapshots at about 20 Hz.
+The local dog's slot is first in that client's presentation arrays, so the
+camera, stamina and input follow the correct player. Every dog reuses the same
+editable collie rig. DOM player numbers/icons follow the camera each frame.
 
-All responses are uncached. Mutations and upgrades require the exact configured
-Origin. POST admission uses the existing identity JWT as a Bearer token; the
-private identity service verifies it and resolves the player in its own D1.
-The realtime service never receives the signing secret. Room handles contain
-the region and 128 random bits. Persistent identities, sessions and tickets
-are omitted from board and room snapshots.
+The lifecycle is `waiting -> starting -> playing -> finished -> waiting`.
+All players acknowledge loaded assets before stepping begins. Departures leave
+collected sheep intact; a disconnected dog receives neutral input immediately
+and disappears after 15 seconds if its seat is not reclaimed. New players join
+only while waiting. Last-player departure closes the match. Live simulation
+memory loss returns the persisted party to waiting with an interruption and no
+result. Completed result metadata survives restart. Host rematch resets ready
+state and the next start issues a fresh round ID. Co-op never submits solo
+scores or personal bests.
 
-| Request | Behaviour |
+Competitive configuration remains recognized for future contracts, but starts
+return `mode_unavailable`. It is not selectable in this local UI. No new pen
+layouts have been implemented.
+
+## Local protocol 2 / storage schema 2
+
+HTTP mutations and upgrades require the configured Origin. Admission verifies
+the existing identity JWT via a private service binding; realtime never sees
+the signing secret. Room handles include a region and 128 random bits.
+
+| Endpoint | Behaviour |
 | --- | --- |
-| `GET /r/health` | Protocol 1, `gameplay: false` |
-| `GET /r/lobbies/{na,eu,apac}?after=<handle>` | At most 25 public waiting rooms, opaque continuation handle |
-| `POST /r/rooms` | JSON `{region, settings: {mode, flockSize, visibility}}`; 32-hex `Idempotency-Key`; returns handle, slot, ticket and ticket expiry |
-| `GET /r/<handle>` | Availability only; does not reserve a seat |
-| `POST /r/<handle>/join` | Authenticated admission/reconnect; returns a fresh ticket |
-| `GET /r/<handle>/ws?v=1&ticket=<ticket>` | Single-use WebSocket upgrade |
+| `GET /r/health` | Protocol 2, gameplay true |
+| `GET /r/lobbies/{na,eu,apac}` | Up to 25 public waiting rooms; `after` cursor |
+| `POST /r/rooms` | `{region,settings:{mode,flockSize,visibility}}`, Bearer token and 32-hex Idempotency-Key |
+| `POST /r/<handle>/join` | Bearer token; reservation and single-use upgrade ticket |
+| `GET /r/<handle>/status` | Availability only, no seat reservation |
+| `GET /r/<handle>` | Local Vite serves invite shell; joining is explicit |
+| `GET /r/<handle>/ws?ticket=…&v=2` | WebSocket upgrade |
 
-An invite's possession is not identity proof. Admission requires an explicit
-authenticated POST. Treat tickets as secrets: never log the upgrade query.
-`IDENTITY` is a private service binding, never a public URL supplied by clients.
-`ROOMS` and `LOBBIES` must be independent SQLite namespaces in each environment.
-`ROOM_CAPS` configures each region separately, including zero to disable new
-allocations. Missing/invalid caps fail closed. A proposed one-room pilot uses
-`{na: 1, eu: 0, apac: 0}`; this is not a claim of geographic placement.
+Binary MessagePack commands are `[2,type,sequence,...args]`. Existing controls
+are ready(boolean), settings(mode,count,visibility), start, loaded(round),
+remove(slot), leave, again, ping and ack(roomRevision). Movement is
+`input(round,x,z,sprint,barkId)`; directions must be finite with magnitude at
+most one. Bark ID is monotonic per socket, independent of command sequence,
+so movement coalescing cannot repeat a bark. `seen(round,tick)` acknowledges
+snapshots separately from lobby revisions. Server frames are room, snapshot,
+pong or error objects. `net/messages.ts` owns wire shapes; it imports no Worker
+or identity code.
 
-## Lobby wire protocol 1
+Every snapshot is currently a full keyframe (`basis:null`, rules `coop-1`),
+with sheep x/z/heading/lifecycle, dog movement/stamina/input ACK, shared count,
+and the last 32 accepted bark events. Seed and identity secrets never cross
+this channel. Client history is capped at eight immutable snapshots and 30
+prediction steps. It uses a fixed 100 ms buffer, holds on gaps, neutralizes
+prediction after 500 ms of stale snapshots, and reconnects after five seconds
+without server traffic. No full flock prediction or client-owned scoring.
 
-Client messages are MessagePack arrays `[1, command, sequence, ...arguments]`.
-Sequences are non-negative safe integers, increasing within one connection.
-Duplicates/older sequences are ignored. Supported commands:
+## Bounds and current gaps
 
-| Command | Arguments |
-| --- | --- |
-| `ready` | Boolean |
-| `settings` | `coop` or `competitive`, 25/75/200, `public` or `private` |
-| `start`, `leave`, `ping` | None |
-| `loaded` | Round ID, 32 hex characters |
-| `remove` | Slot 0 through 3 |
-| `ack` | Highest received room revision |
+Four seats, 10-second admission ticket, 15-second disconnect grace, 10-second
+start barrier, six-hour room lifetime and two-minute empty lobby expiry.
+Waiting-only host removal retains at most 64 excluded identities. Per-region
+capacity is configurable 0–50; this local launcher uses four per region.
+Public listings lease for 60 seconds and refresh every 30 seconds.
 
-Server frames are MessagePack objects: `room` snapshots, `pong` with sequence,
-or `error` with a code, each carrying protocol 1. Lobby revisions are not sim
-ticks. An acknowledgement cannot exceed the last revision sent to that socket.
-The later input/snapshot protocol needs a versioned extension and its own
-limits; this control protocol deliberately rejects movement and positions.
+Binary client frames cap at 1 KiB; transport allows a 100-message burst and
+80 messages/second. Controls separately allow 20 burst and 10/second. More than
+eight unacknowledged room revisions or 120 unacknowledged sim ticks closes a
+socket. Stale movement neutralizes after 250 ms. Server catch-up is bounded
+at 500 ms; overload interrupts rather than silently dropping gameplay time.
+Ticks/snapshots do not write storage. Only membership/lifecycle changes and
+directory refresh persist metadata. These are provisional defensive bounds,
+not the still-unmeasured Q8 release acceptance limits.
 
-## Bounds and failure behaviour
+Remaining: delta/quantized transport and adaptive interpolation, measured
+correction/bandwidth limits, remote footstep/grass-trail presentation parity,
+post-completion flock settling, competitive geometry/scoring, board filters and
+pagination UI, public discovery latency suggestions, interrupted mobile/network
+qualification, physical phones, hub performance and a separate critical
+presentation/audio review. Local tests do not close those gates. A local Vite
+proxy is not a hosted routing solution; staging must explicitly route invite
+shell navigation to the game assets before provisioning is approved.
 
-- Four seats; 10-second pending admission and single-use ticket lifetime;
-  15-second disconnect grace; 10-second start barrier; six-hour room lifetime;
-  empty-room idle cleanup after two minutes. A ticket retry cannot extend grace.
-- Settings changes clear readiness. Two connected, ready players minimum;
-  every present seat must be connected and ready. Host removal only in waiting,
-  with up to 64 excluded identities retained until room closure.
-- One live session per identity per room. An old socket's close cannot remove
-  its replacement. The oldest connected member receives host authority.
-- Per-region capacity is 0 to 50, at most two allocation leases per creator
-  per region. Public listings expire after 60 seconds and refresh every 30;
-  revisions prevent delayed publications from undoing privacy changes.
-- JSON create bodies are at most 2 KiB; binary commands at most 1 KiB; decoder
-  structure and command shapes are bounded. Control traffic allows a burst of
-  20, replenishing at 10 messages/second including ACKs. A client more than
-  eight revisions behind is closed. These are lobby limits, not Q8 gameplay
-  acceptance budgets.
-- HTTP uses a bounded per-isolate token bucket (60 burst, one/second per IP,
-  4,096 tracked IPs). This is neither global abuse protection nor a billing cap.
-  Hosted staging needs restricted access and a scheduled test stop before use.
-- Closed rooms retain a tombstone until their allocation lease expires.
-  Failed directory withdrawal retries after five seconds, not a tight alarm
-  loop. Public stale listings expire independently. Final cleanup removes data
-  and alarm. Live simulations will remain in memory; no per-tick storage writes.
+## Repeatable checks
 
-The runtime tests include actual object eviction and hibernating WebSocket
-resumption. Deadline tests also advance stored deadlines or pass a deterministic
-clock to the lifecycle functions; these do not certify real network latency.
-Local functional tests cannot establish geographic placement, phone support,
-hub performance, fairness, or production deployment compatibility.
+- `npm run typecheck`, `npm run test:realtime`: actual workerd, SQLite DOs,
+  service binding, D1 identity and sockets; solo trace fixtures also run there.
+- `npx vitest run`: existing Node suite plus remote-view and camera regression
+  checks. No deterministic fixture has been regenerated.
+- With `npm run coop:built` running: `node tools/coop-browser-probe.mjs` and
+  `node tools/coop-browser-probe.mjs --webgl --mobile --four`. These drive normal
+  controls in independent browser contexts and record ignored local receipts.
+  Mobile viewport checks are composition checks, not phone performance.
+- `node tools/coop-round-probe.mjs` drives two protocol clients, herds through
+  ordinary input packets, checks agreed completion and starts a fresh rematch.
+  It has a five-minute bound and cannot mutate authoritative state.
 
-The proposed hosted setup and spending review are in
-[the staging proposal](../docs/operations/multiplayer-staging.md).
+The [staging proposal](../docs/operations/multiplayer-staging.md) records the
+approved $20 pilot budget and the required final setup review. No provisioning,
+push or deployment is authorized by these local commands.
 
-## Local validation, 2026-10-20
+## Earlier foundation validation, 2026-10-20
 
 Code candidate `382369ab0f3188636ebe87aacb36be21860c30a5`:
 

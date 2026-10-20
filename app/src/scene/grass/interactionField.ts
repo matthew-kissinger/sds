@@ -32,7 +32,7 @@
 
 import * as THREE from 'three/webgpu';
 import { SHEEP_STATE_FLAG } from '@sim/FlockSim';
-import type { CpuDeterministicSim } from '@sim/FlockSim';
+import type { ClientSim } from '@app/game/ClientSim';
 import type { AcceptedBark } from '@app/state/store';
 import { createBarkPulseField } from '../juice/barkPulse';
 
@@ -158,7 +158,7 @@ export interface InteractionField {
   /** Advance the trails and repack. Allocates nothing. */
   update(
     dt: number,
-    sim: CpuDeterministicSim,
+    sim: ClientSim,
     acceptedBark: AcceptedBark | null,
     reducedMotion: boolean,
   ): void;
@@ -214,7 +214,7 @@ export function createInteractionField(): InteractionField {
 
   let elapsed = 0;
   let count = 0;
-  let activeSim: CpuDeterministicSim | null = null;
+  let activeSim: ClientSim | null = null;
 
   /** Write one interactor and file it into every cell it can reach. */
   function add(x: number, z: number, heading: number, isDog: boolean, age: number): void {
@@ -269,7 +269,7 @@ export function createInteractionField(): InteractionField {
 
     update(
       dt: number,
-      sim: CpuDeterministicSim,
+      sim: ClientSim,
       acceptedBark: AcceptedBark | null,
       reducedMotion: boolean,
     ): void {

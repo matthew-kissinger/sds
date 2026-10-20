@@ -4,9 +4,15 @@ import { publicRoom, type RoomState } from './roomState';
 export interface Attachment {
   id: string; session: string; seq: number; ack: number; sent: number;
   tokens: number; at: number;
+  traffic: number; trafficAt: number; matchAck: number; matchSent: number;
 }
 export function attached(ws: WebSocket): Attachment { return ws.deserializeAttachment() as Attachment; }
-export function budget(a: Attachment, now: number): boolean {
+export function budget(a: Attachment, now: number, transport = false): boolean {
+  if (transport) {
+    a.traffic = Math.min(100, a.traffic + Math.max(0, now - a.trafficAt) * 0.08); a.trafficAt = now;
+    if (a.traffic < 1) return false;
+    a.traffic--; return true;
+  }
   a.tokens = Math.min(20, a.tokens + Math.max(0, now - a.at) * 0.01); a.at = now;
   if (a.tokens < 1) return false;
   a.tokens--; return true;

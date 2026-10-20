@@ -38,6 +38,7 @@
  * `hasPassedGate` flag; the lifecycle enum answers it without one.
  */
 
+import { advanceDog } from './dogMovement';
 import { Vector2D } from './Vector2D';
 import {
   calculateFlockingForce,
@@ -45,7 +46,7 @@ import {
   calculateSeek,
   getNeighbors,
 } from './FlockingAlgorithms';
-import { updateMovement, applyAcceleration, updateStamina, validateEntityState } from './MovementPhysics';
+import { updateMovement, validateEntityState } from './MovementPhysics';
 import { startBarkSteering, tickBarkSteering } from './BarkImpulse';
 import { calculateBoundaryAvoidanceWithGate, applyHardBoundaryConstraints } from './boundary';
 import { resolveDogSheepCollisions, resolveSheepSheepCollisions } from './EntityCollision';
@@ -56,11 +57,6 @@ import {
   AMBIENT_STRENGTH_MOVING,
   AMBIENT_WANDER_TICKS,
   BARK_COOLDOWN_TICKS,
-  DOG_HEADING_MIN_SPEED,
-  DOG_MAX_SPEED,
-  DOG_MOVEMENT,
-  DOG_SPRINT_SPEED,
-  DOG_STAMINA,
   FIXED_DT,
   GATE_ATTRACTION,
   GATE_ATTRACTION_DOG_REACH,
@@ -75,7 +71,6 @@ import {
   SHEEP_MAX_SPEED_PER_TICK,
   SHEEP_MOVEMENT,
   SHEEP_PERCEPTION_RADIUS,
-  DOG_TURN_RATE,
 } from './tuning';
 import type { Rng } from './rng';
 import type { Dog, PlayerInputs, Sheep, SimState } from './types';
@@ -87,45 +82,11 @@ import type { Dog, PlayerInputs, Sheep, SimState } from './types';
  * nothing leaks between calls or between SimState instances.
  */
 const _active: Sheep[] = [];
-const _dogTarget = new Vector2D(0, 0);
 const _gateTarget = new Vector2D(0, 0);
 const _fallback = new Vector2D(0, 0);
-/** Only `maxSpeed` varies (sprint), so the config object is reused, not rebuilt. */
-const _dogAccel = { ...DOG_MOVEMENT };
 
 /** A player who sent nothing this tick stands still. */
 const IDLE_INPUT: PlayerInputs = { direction: { x: 0, z: 0 }, sprint: false, bark: false };
-
-/**
- * Slew the dog's heading toward its velocity direction without trig: lerp the
- * unit vector and renormalize. Opposing unit vectors otherwise normalize back
- * to the original heading forever at our fixed step. Start that ambiguous
- * reversal with a small, deterministic right turn, then use the usual slew.
- */
-function updateHeading(dog: Dog, dt: number): void {
-  const speed = dog.velocity.magnitude();
-  if (speed <= DOG_HEADING_MIN_SPEED) return;
-
-  const inv = 1 / speed;
-  const dx = dog.velocity.x * inv;
-  const dz = dog.velocity.z * inv;
-
-  let k = DOG_TURN_RATE * dt;
-  if (k > 1) k = 1;
-
-  if (dog.heading.x * dx + dog.heading.z * dz < -0.999999) {
-    const hx = dog.heading.x;
-    dog.heading.x += dog.heading.z * k;
-    dog.heading.z -= hx * k;
-    dog.heading.normalize();
-    return;
-  }
-
-  dog.heading.x += (dx - dog.heading.x) * k;
-  dog.heading.z += (dz - dog.heading.z) * k;
-  dog.heading.normalize();
-  if (dog.heading.magnitude() < 0.5) dog.heading.set(dx, dz);
-}
 
 /**
  * Ambient grazing drift. herd's replacement for sds's `updateAmbientMotion`,
@@ -186,28 +147,7 @@ export function step(state: SimState, inputs: readonly PlayerInputs[], rng: Rng)
     const dog = dogs[i]!;
     const input = inputs[i] ?? IDLE_INPUT;
 
-    if (dog.barkCooldownTicks > 0) dog.barkCooldownTicks -= 1;
-
-    // sds gated the sprint on movement as well as on stamina; updateStamina
-    // applies the same test internally, so the two agree by construction.
-    const isMoving = dog.velocity.magnitude() > 0.1;
-    const stamina = updateStamina(dog, input.sprint, dt, DOG_STAMINA);
-    dog.sprinting = stamina.isConsuming && isMoving;
-
-    const maxSpeed = dog.sprinting ? DOG_SPRINT_SPEED : DOG_MAX_SPEED;
-    _dogAccel.maxSpeed = maxSpeed;
-    _dogTarget.set(input.direction.x, input.direction.z);
-    // Partial stick/thumb travel gives precise walking near the flock. Keep
-    // unit/digital input on the exact existing full-speed arithmetic path.
-    const intentLength = _dogTarget.magnitude();
-    const effort = intentLength >= 0.9999 ? 1 : intentLength;
-    _dogTarget.normalize().multiply(maxSpeed * effort);
-    applyAcceleration(dog, _dogTarget, dt, _dogAccel);
-
-    dog.position.x += dog.velocity.x * dt;
-    dog.position.z += dog.velocity.z * dt;
-
-    updateHeading(dog, dt);
+    advanceDog(dog, input);
 
     // --- 2. bark ----------------------------------------------------------
     if (input.bark && dog.barkCooldownTicks === 0) {

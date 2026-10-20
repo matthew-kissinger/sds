@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { PROTOCOL } from '../net/messages';
 import { requireThat } from './http';
 import type { Region } from './regions';
 
@@ -13,11 +14,12 @@ export interface Member extends Identity {
   deadline: number | null; ticket: string | null; ticketExpires: number; loaded: boolean;
 }
 export interface RoomState {
-  schema: 1; handle: string; region: Region; settings: Settings; revision: number;
-  phase: 'waiting' | 'starting' | 'closed'; host: string | null; members: Member[];
+  schema: 2; handle: string; region: Region; settings: Settings; revision: number;
+  phase: 'waiting' | 'starting' | 'playing' | 'finished' | 'closed'; host: string | null; members: Member[];
+  result: { tick: number; count: number; started: number; remaining: number } | null;
   removed: string[]; nextOrder: number; expiresAt: number; idleExpires: number;
   round: string | null; startDeadline: number | null;
-  interruption: 'server_restart' | 'start_timeout' | 'player_departed' | 'simulation_unavailable' | null;
+  interruption: 'server_restart' | 'start_timeout' | 'player_departed' | 'overload' | null;
 }
 export function settings(value: Record<string, unknown>): Settings {
   requireThat(Object.keys(value).every(k => ['mode', 'flockSize', 'visibility'].includes(k)), 'invalid_settings', 400);
@@ -27,15 +29,15 @@ export function settings(value: Record<string, unknown>): Settings {
   return { mode: value.mode, flockSize: value.flockSize, visibility: value.visibility };
 }
 export function newRoom(handle: string, region: Region, config: Settings, now: number): RoomState {
-  return { schema: 1, handle, region, settings: config, revision: 0, phase: 'waiting',
-    host: null, members: [], removed: [], nextOrder: 0, expiresAt: now + ROOM_LIFETIME_MS,
+  return { schema: 2, handle, region, settings: config, revision: 0, phase: 'waiting',
+    result: null, host: null, members: [], removed: [], nextOrder: 0, expiresAt: now + ROOM_LIFETIME_MS,
     idleExpires: now + 120_000, round: null, startDeadline: null, interruption: null };
 }
 export function clearReady(room: RoomState): void {
   for (const member of room.members) { member.ready = false; member.loaded = false; }
 }
 export function interrupt(room: RoomState, reason: RoomState['interruption']): void {
-  room.phase = 'waiting'; room.startDeadline = null; room.interruption = reason;
+  room.result = null; room.phase = 'waiting'; room.startDeadline = null; room.interruption = reason;
   clearReady(room);
 }
 export function hostHandoff(room: RoomState): void {
@@ -48,6 +50,7 @@ export function expire(room: RoomState, now: number): void {
   room.members = room.members.filter(m => m.deadline === null || now < m.deadline);
   if (before !== room.members.length && room.phase === 'starting') interrupt(room, 'player_departed');
   if (room.startDeadline !== null && now >= room.startDeadline) interrupt(room, 'start_timeout');
+  if (room.phase === 'playing' && !room.members.length) { room.phase = 'closed'; room.result = null; }
   if (now >= room.expiresAt || (!room.members.length && now >= room.idleExpires)) {
     room.phase = 'closed'; room.members = []; room.host = null; room.removed = []; room.startDeadline = null;
   }
@@ -87,7 +90,7 @@ export function disconnect(room: RoomState, id: string, session: string, now: nu
   room.idleExpires = now + 120_000; hostHandoff(room);
 }
 export function publicRoom(room: RoomState) {
-  return { protocol: 1, handle: room.handle, region: room.region, settings: room.settings,
+  return { protocol: PROTOCOL, result: room.result, handle: room.handle, region: room.region, settings: room.settings,
     revision: room.revision, phase: room.phase, round: room.round, interruption: room.interruption,
     hostSlot: room.members.find(m => m.id === room.host)?.slot ?? null,
     members: room.members.map(m => ({ slot: m.slot, name: m.name, connected: m.connected, ready: m.ready })) };

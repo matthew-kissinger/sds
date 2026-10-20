@@ -50,6 +50,14 @@ export function useGameLoop(): void {
     }
     const playing = store.gamePhase === 'playing';
 
+    if (sim.frame) {
+      const input = playing && !document.hidden ? currentIntent() : NEUTRAL_INTENT;
+      sim.frame(delta, input);
+      if (input.bark) clearBark();
+      accumulator.current = 0;
+      return;
+    }
+
     // Pause is a true simulation freeze. Reset the partial fixed-step so a
     // long pause cannot leak one stale remainder into the first resumed frame.
     if (!advancesSoloSimulation(store.gamePhase)) {

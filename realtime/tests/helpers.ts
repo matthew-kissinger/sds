@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { env } from 'cloudflare:workers';
+import type { MatchFrame } from '../../net/messages';
 import { decode } from '@msgpack/msgpack';
 import { signJwt } from '../../worker/src/jwt';
 import worker from '../index';
@@ -10,7 +11,7 @@ import type { publicRoom, Settings } from '../roomState';
 export const bindings = env as unknown as RealtimeEnv & { IDENTITY_DB: D1Database };
 export const ORIGIN = 'http://localhost:5199';
 export const SECRET = 'local-test-secret-not-a-production-credential';
-export const DEFAULT: Settings = { mode: 'competitive', flockSize: 25, visibility: 'public' };
+export const DEFAULT: Settings = { mode: 'coop', flockSize: 25, visibility: 'public' };
 export type Admission = { handle: string; ticket: string; slot: number; expiresAt: number };
 export type View = ReturnType<typeof publicRoom> & { type: 'room' };
 export async function register(id: string) {
@@ -41,11 +42,17 @@ export const clients: Client[] = [];
 export class Client {
   seq = 0;
   frames: View[] = [];
+  snapshots: MatchFrame[] = [];
   private wake: (() => void) | null = null;
   constructor(public socket: WebSocket, autoAck: boolean) {
     socket.binaryType = 'arraybuffer';
     socket.addEventListener('message', event => {
-      const frame = decode(new Uint8Array(event.data as ArrayBuffer)) as View;
+      const frame = decode(new Uint8Array(event.data as ArrayBuffer)) as View | MatchFrame;
+      if (frame.type === 'snapshot') {
+        this.snapshots.push(frame);
+        if (autoAck) this.send('seen', frame.round, frame.tick);
+        this.wake?.();
+      }
       if (frame.type === 'room') {
         this.frames.push(frame);
         if (autoAck) this.send('ack', frame.revision);
@@ -54,7 +61,15 @@ export class Client {
     });
     socket.accept(); clients.push(this);
   }
-  send(type: string, ...args: unknown[]) { this.socket.send(packet([1, type, this.seq++, ...args])); }
+  send(type: string, ...args: unknown[]) { if (this.socket.readyState !== WebSocket.OPEN) return; this.socket.send(packet([2, type, this.seq++, ...args])); }
+  async snapshotUntil(predicate: (frame: MatchFrame) => boolean): Promise<MatchFrame> {
+    const end = Date.now() + 4000;
+    for (;;) {
+      const found = this.snapshots.find(predicate); if (found) return found;
+      if (Date.now() >= end) throw new Error('Snapshot timeout');
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+  }
   async until(predicate: (view: View) => boolean): Promise<View> {
     const end = Date.now() + 3000;
     for (;;) {
@@ -65,7 +80,7 @@ export class Client {
   }
 }
 export async function connect(admission: Admission, autoAck = true): Promise<Client> {
-  const response = await request(`/r/${admission.handle}/ws?ticket=${admission.ticket}&v=1`, undefined, undefined, { Upgrade: 'websocket' });
+  const response = await request(`/r/${admission.handle}/ws?ticket=${admission.ticket}&v=2`, undefined, undefined, { Upgrade: 'websocket' });
   if (!response.webSocket) throw new Error(`upgrade ${response.status}: ${await response.text()}`);
   return new Client(response.webSocket, autoAck);
 }

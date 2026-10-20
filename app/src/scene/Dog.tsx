@@ -23,9 +23,10 @@ import {
 const REPORT_PRESENTATION = import.meta.env.DEV && typeof window !== 'undefined'
   && (debugFlags().has('readout') || debugFlags().has('driver'));
 
-export function Dog() {
+export function Dog({ index = 0 }: { index?: number }) {
   const sim = useGameStore((state) => state.sim);
   const field = useHeightfield();
+  const dogPositions = useMemo(() => sim.dogPositions.subarray(index * 2, index * 2 + 2), [sim, index]);
   const bodyRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Group>(null);
   const geometry = useMemo(() => buildDogGeometry(), []);
@@ -38,12 +39,12 @@ export function Dog() {
   const diagnostics = useMemo(() => ({ elapsed: 0, turnStepMax: 0, receipt: { dogTurnStep: 0 } }), []);
   const coat = useGameStore((state) => state.dogCoatPreset);
   useLayoutEffect(() => {
-    resetPositionPresentationBuffers(position, sim.dogPositions, sim.tick);
+    resetPositionPresentationBuffers(position, dogPositions, sim.tick);
     resetDogMotion(motion);
     rig.reset();
     diagnostics.elapsed = 0;
     diagnostics.turnStepMax = 0;
-  }, [diagnostics, position, sim, motion, rig]);
+  }, [diagnostics, position, sim, motion, rig, dogPositions]);
   useLayoutEffect(() => {
     const preset = DOG_COAT_PRESETS[coat] ?? DOG_COAT_PRESETS.classic;
     material.coatUniforms.shadow.value.set(preset.shadow);
@@ -63,13 +64,13 @@ export function Dog() {
   useFrame((state, delta) => {
     const body = bodyRef.current;
     const patch = shadowRef.current;
-    const dog = sim.state.dogs[0];
+    const dog = sim.state.dogs[index];
     if (!body || !patch || !dog) return;
     const store = useGameStore.getState();
     const customize = store.uiPanel === 'customize';
-    const paused = store.gamePhase === 'paused' && !customize;
+    const paused = sim.authoritative && store.gamePhase === 'paused' && !customize;
     const secondary = store.reduceMotion ? 0.25 : 1;
-    const acceptedBark = bark.sample(store.acceptedBark) !== null;
+    const acceptedBark = bark.sample(sim.barkForDog ? sim.barkForDog(index) : store.acceptedBark) !== null;
     const speed = customize ? 0 : Math.sqrt(dog.velocity.x ** 2 + dog.velocity.z ** 2);
     const headingStep = advanceDogMotion(motion, delta, speed, dog.heading.x, dog.heading.z,
       secondary, paused, acceptedBark);
@@ -84,10 +85,10 @@ export function Dog() {
         store.reportRuntimeDiagnostics(diagnostics.receipt);
       }
     }
-    advancePositionPresentationBuffers(position, sim.dogPositions, sim.tick, delta, true);
+    advancePositionPresentationBuffers(position, dogPositions, sim.tick, delta, true);
     const alpha = position.interpolationAlpha;
-    const x = position.previousPositions[0]! + (position.currentPositions[0]! - position.previousPositions[0]!) * alpha;
-    const z = position.previousPositions[1]! + (position.currentPositions[1]! - position.previousPositions[1]!) * alpha;
+    const x = !sim.authoritative ? dog.position.x : position.previousPositions[0]! + (position.currentPositions[0]! - position.previousPositions[0]!) * alpha;
+    const z = !sim.authoritative ? dog.position.z : position.previousPositions[1]! + (position.currentPositions[1]! - position.previousPositions[1]!) * alpha;
     const ground = field.groundY(x, z);
     const yaw = Math.PI / 2 - Math.atan2(motion.headingZ, motion.headingX);
     body.position.set(x, ground - DOG_PAW_BASELINE, z);
@@ -103,7 +104,7 @@ export function Dog() {
   });
   return (
     <>
-      <DogGroundFeedback />
+      <DogGroundFeedback index={index} />
       <group ref={shadowRef}><mesh geometry={shadow.geometry} material={shadow.material} /></group>
       <group ref={bodyRef}>
         <primitive object={rig.outline} />

@@ -1,6 +1,6 @@
 # Multiplayer plan
 
-2026-10-20. Status: **local foundations opened; first lobby/admission slice implemented**.
+2026-10-20. Status: **playable local co-op in validation; hosted setup remains gated**.
 
 The owner requested this plan after score cards shipped, selected shared-flock
 competition with one pen per player, and accepted regional public boards with
@@ -13,11 +13,15 @@ and [STATUS](../../STATUS.md) the current work boundary. Earlier discussion and
 historical plans are evidence, not permission to start a stage.
 
 Current implementation: [local realtime service](../../realtime/README.md).
-Admission, regional boards, readiness and recovery are testable in workerd.
-Start deliberately stops at `simulation_unavailable`; there is no active match
-or client multiplayer yet, and Stage 1 is not declared complete. The
-[staging setup and estimate](../operations/multiplayer-staging.md) assumes the
-owner-confirmed existing Workers Paid account. Allowance balance is unverified.
+The local host now runs the shared Home Field simulation and the normal client
+renders two to four dogs. It covers movement, bark, reconnect, continue-on-leave,
+shared results and host-controlled rematch. Production has no multiplayer entry.
+The local pilot uses full snapshots and fixed 100 ms interpolation; delta
+compression/adaptive buffering, competitive and the full acceptance matrix are
+still outstanding. These reversible choices do not close Stage 2 or Q8.
+The [staging setup and estimate](../operations/multiplayer-staging.md) assumes
+the owner-confirmed Workers Paid account. The owner approved $20; allowance
+balance remains unverified and final setup approval precedes provisioning.
 
 ## Decisions and limits
 
