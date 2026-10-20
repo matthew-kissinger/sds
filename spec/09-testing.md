@@ -22,10 +22,11 @@
 
 ## Multiplayer acceptance (planned)
 
-Documentation only, 2026-10-20. Spec/03 owns the contract; the
+Target matrix, 2026-10-20. Local co-op evidence is recorded in
+[the local service README](../realtime/README.md#playable-local-candidate-validation-2026-10-20);
+no complete multiplayer release gate is claimed closed. Spec/03 owns the contract; the
 [multiplayer plan](../docs/architecture/multiplayer-plan.md#staging-and-test-plan)
-owns staging topology, sequence and research. No result in this matrix is
-claimed passed. Fix numerical budgets under plan D4 before qualification;
+owns staging topology, sequence and research. Local receipts cover only their named cases, not entire matrix rows. Fix numerical budgets under plan D4 before qualification;
 unreviewed layouts and unavailable multiplayer/device evidence remain explicit gaps.
 
 | Area | Required evidence |

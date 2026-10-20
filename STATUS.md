@@ -117,7 +117,10 @@ provisioning. Workers Paid is owner-confirmed; remaining allowances and CLI
 access are unverified. Full snapshots and fixed 100 ms buffering are local
 pilot choices; delta/adaptive transport and all hosted/device/performance and
 separate presentation-review gates remain open. No multiplayer release gate
-is closed by local functional tests.
+is closed by local functional tests. Local implementation `7bded51f` passed
+912 Node tests, 61 workerd checks, two/four-player browser flows and a live
+25-sheep protocol completion/rematch. Full limits and build receipts are in
+[the local validation note](realtime/README.md#playable-local-candidate-validation-2026-10-20).
 The owner accepted the [layout review](docs/architecture/multiplayer-layouts.md)
 direction on 2026-10-20: square / equal-area hexagon / square for two / three /
 four players, with dogs starting 45 m from the centre opposite their own pens.

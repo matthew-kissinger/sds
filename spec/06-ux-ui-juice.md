@@ -13,7 +13,9 @@ All new. Nothing from the sds UI layer carries over as code; a handful of tuned 
 
 ### Planned multiplayer flow, 2026-10-20
 
-Spec/03 and the multiplayer plan define this unimplemented extension. Keep solo
+Spec/03 and the multiplayer plan define the target extension. The local co-op
+pilot implements a subset under `npm run coop`; the normal production build
+still has no online entry. `realtime/README.md` records current UI gaps. Keep solo
 Play immediate; add a distinct Play online action. Online opens the regional
 public board with a suggested region and manual selection, mode/count filters,
 room occupancy and estimated connection quality. Players can join or create a

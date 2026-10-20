@@ -101,7 +101,7 @@ not the still-unmeasured Q8 release acceptance limits.
 Remaining: delta/quantized transport and adaptive interpolation, measured
 correction/bandwidth limits, remote footstep/grass-trail presentation parity,
 post-completion flock settling, competitive geometry/scoring, board filters and
-pagination UI, public discovery latency suggestions, interrupted mobile/network
+pagination UI, host settings edits after creation, public discovery latency suggestions, interrupted mobile/network
 qualification, physical phones, hub performance and a separate critical
 presentation/audio review. Local tests do not close those gates. A local Vite
 proxy is not a hosted routing solution; staging must explicitly route invite
@@ -124,6 +124,64 @@ shell navigation to the game assets before provisioning is approved.
 The [staging proposal](../docs/operations/multiplayer-staging.md) records the
 approved $20 pilot budget and the required final setup review. No provisioning,
 push or deployment is authorized by these local commands.
+
+## Playable local candidate validation, 2026-10-20
+
+Implementation commit `7bded51f99239033c9dde487baff04c75d92909c`, local only:
+
+- Node: **912 tests in 111 files passed**. Workerd: **61 checks in five files
+  passed**, including the ten unchanged solo trace checks repeated in that
+  runtime. Added coverage includes multi-dog deterministic stepping at all
+  flock sizes, stale input, departures, real socket snapshot agreement,
+  reconnect, actual object eviction, completed-result persistence/rematch,
+  local-player camera selection and isolation from solo submissions.
+- Application/realtime and retained score-Worker typechecks passed. Lint has
+  zero errors and six existing generated-declaration warnings. Clean `npm ci`
+  reported zero vulnerabilities.
+- The optimized local client passed two independent rendered contexts on genuine
+  WebGPU at 1280 x 800 and four on forced WebGL2 at 390 x 844. Both runs exercised
+  public creation, direct invite navigation, readiness/start, actual keyboard
+  movement, two accepted barks, same-tick snapshot agreement, reload/reclaim,
+  and continuing after departure. No uncaught browser errors. The four-player
+  sequence also exercised the three-player state during departures. These are
+  functional/layout checks on this PC, not physical-phone or timing receipts.
+- Local ignored receipts: `captures/multiplayer/local-coop/webgpu-desktop-2/`
+  and `webgl2-mobile-4/`, each with `receipt.json`, `waiting.png`, `playing.png`.
+  The mobile waiting-room screenshot fits without horizontal overflow; player
+  markers are DOM text sampled each frame. Separate visual/motion/audio
+  acceptance is still open; these stills do not close it.
+- A live local protocol run finished all **25 sheep in 12,576 ticks (209.6 s)**,
+  with two players still present, identical results at both clients, and a
+  fresh ready/start/rematch. It used normal inputs, no authoritative-state
+  mutation or completion shortcut. `captures/multiplayer/local-coop/round.json`
+  records it. An earlier randomized run exceeded the five-minute tool bound;
+  a separate half-speed driver experiment reached 18/25 and also timed out.
+  The committed tool retains the successful normal-input driver. This proves
+  one real completion, not reliable automated completion for every seed or the
+  required four-renderer/75-sheep release matrix.
+- Production `npm run build` and discovery checks passed in the clean attached
+  `gate-passage-fix` checkout, temporarily detached at the implementation SHA
+  and restored afterward. The main checkout's existing output-lock issue was
+  left alone. The release manifest names the implementation SHA and artifact
+  digest `772c514389ca594189ae5f462a0d8fcbca9b8c99700a6a0280f2c233a62416d1`.
+  Production client: **2,446.33 kB raw / 678.59 kB gzip**. Inspection confirms
+  no CoopRoot chunk or co-op entry in that build. Hosting config is unchanged.
+- Local co-op build: **2,448.30 kB / 679.49 kB gzip** main chunk, plus
+  **38.03 kB / 12.05 kB gzip** co-op chunk. The local configuration removes
+  the production analytics beacon. The dog source ledger was refreshed for
+  the multi-dog renderer wrapper; geometry, skeleton and source asset are
+  unchanged. No deterministic fixture was regenerated.
+
+The camera originally passed all dogs to a single-dog buffer; the browser
+check caught this before acceptance. The fix selects the local dog, with a
+regression test. Native Escape handling and roster changes closing an open
+co-op menu were also corrected and the browser flows rerun. A server-restart
+review caught a missing party broadcast on a ping-only wake; eviction tests now
+exercise that path. The unrelated lab edit was preserved byte-for-byte.
+
+No push, provision, hosted test, production deployment, hub timing or physical
+phone qualification occurred. Competitive, network optimization and the other
+limits above remain explicit work; this does not close a release gate.
 
 ## Earlier foundation validation, 2026-10-20
 
