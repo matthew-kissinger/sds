@@ -65,6 +65,16 @@ settles are in `docs/history/status-log.md`.
 
 ## Master plan - agreed 2026-10-16, decisions settled the same day
 
+### Owner-directed gate fix - 2026-10-20
+
+The owner authorized fixing, committing, pushing and deploying the solo gate
+rubber-band independently of multiplayer planning. Align the simulation pen
+threshold with the visible opening; preserve the fence/floor appearance and
+existing `field-v3` records. This is an intentional gameplay correction, so
+old and new times are not strictly comparable. The completion fixture changes
+from 3260 to 3108 ticks; the other four traces remain unchanged. Release
+validation is pending. Multiplayer implementation remains unopened.
+
 The sequence the owner chose, recorded so it is read rather than re-derived.
 The decisions below were taken with the owner on 2026-10-16 and are not open.
 Measured facts behind them are in `docs/operations/deployment.md`.

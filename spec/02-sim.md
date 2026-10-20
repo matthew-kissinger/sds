@@ -23,7 +23,15 @@ Not lifted, by decision: CompetitiveLayout/Mode, objective.js state machine, Obj
 
 Win condition: every sheep is penned. One predicate, no stage machine, no timers in the sim.
 
-**Geometry (Home Field layout, playtested numbers):** 200 x 200 m field, perimeter fence, north gate at x=0, z=100, 8 m wide, pen (pasture) rect behind it spanning x [-30, 30], z [102, 130]. Flock spawns clustered near (-20, -20) with spread radius 25. These numbers are the starting point; retune freely in playtesting, but start here.
+**Geometry (Home Field layout, playtested numbers):** 200 x 200 m field, perimeter fence, north gate at x=0, z=100, 8 m wide, pen (pasture) rect behind it spanning x [-30, 30], z [100, 130]. Flock spawns clustered near (-20, -20) with spread radius 25.
+
+Owner-directed gate fix, 2026-10-20: the pen now begins on the visible fence
+line, instead of two metres behind it. A sheep crossing the opening retires
+before another flocking tick can turn it sideways and make the perimeter clamp
+snap it back into the field. The worn floor stays inset as presentation only.
+This intentionally changes completion traces and historical time comparability;
+existing `field-v3` records are preserved. The fixed-seed 25-sheep trace changes
+from 3260 to 3108 ticks; drift, bark, stamina and rotation fixtures are unchanged.
 
 **Gate attraction (restored from sds, cycle: camera-movement-comfort):** the
 fence force near the gate is purely permissive - suppressed inside the passage

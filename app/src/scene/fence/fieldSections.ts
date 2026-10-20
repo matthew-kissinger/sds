@@ -14,13 +14,8 @@ const PERIMETER_GAPS: Partial<Record<FenceSide, FenceGap>> = {
   } satisfies FenceGap,
 };
 
-/** Visual enclosure shares the perimeter rail at z = 100. The simulation keeps
- *  its specified retirement threshold at z = 102; only the static timber moves
- *  to express one attached, three-sided pasture. */
-export const RETIREMENT_PASTURE_FENCE = {
-  ...HOME_FIELD.pen,
-  minZ: HOME_FIELD.bounds.maxZ,
-};
+/** Collision and visible enclosure share the perimeter rail at z = 100. */
+export const RETIREMENT_PASTURE_FENCE = HOME_FIELD.pen;
 
 const RETIREMENT_PASTURE_SIDES = ['north', 'west', 'east'] as const;
 

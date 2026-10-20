@@ -4,6 +4,15 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.6.1] - 2026-10-20
+
+### Fixed
+
+- Sheep count as penned when they cross the visible gate, removing the hidden
+  two-metre corridor that could snap angled crossings back into the field.
+  The fence and worn ground keep their appearance. Existing times are retained;
+  runs under the corrected gate rule are not strictly comparable to older runs.
+
 ## [3.6.0] - 2026-10-19
 
 ### Added

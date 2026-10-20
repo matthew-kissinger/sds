@@ -140,6 +140,6 @@ describe('isWithinArea', () => {
 
   it('excludes a point just outside', () => {
     expect(isWithinArea({ x: -30.001, z: 110 }, HOME_FIELD.pen)).toBe(false);
-    expect(isWithinArea({ x: 0, z: 101.999 }, HOME_FIELD.pen)).toBe(false);
+    expect(isWithinArea({ x: 0, z: HOME_FIELD.pen.minZ - 0.001 }, HOME_FIELD.pen)).toBe(false);
   });
 });

@@ -35,7 +35,7 @@ function sheep(x: number, z: number, id = 0): PenSheep & { position: Vector2D; v
 describe('the fence', () => {
   it('blocks a sheep that walks at the pen wall away from the gate', () => {
     const pen = barrier();
-    const s = sheep(-25, 101.9);
+    const s = sheep(-25, HOME_FIELD.pen.minZ - 0.1);
     pen.update([s], null, true, FIXED_DT);
     expect(s.state).toBe('active');
     expect(s.position.z).toBeLessThan(HOME_FIELD.pen.minZ);
@@ -51,7 +51,7 @@ describe('the fence', () => {
 
   it('kills the velocity component that ran into the wall', () => {
     const pen = barrier();
-    const s = sheep(-25, 101.9);
+    const s = sheep(-25, HOME_FIELD.pen.minZ - 0.1);
     s.velocity.set(0, 0.12);
     pen.update([s], null, true, FIXED_DT);
     expect(s.velocity.z).toBe(0);
@@ -63,7 +63,7 @@ describe('the fence', () => {
     pen.update([through], null, true, FIXED_DT);
     expect(through.state).toBe('retiring');
 
-    const beside = sheep(HOME_FIELD.gate.width / 2 + 3, 101.9);
+    const beside = sheep(HOME_FIELD.gate.width / 2 + 3, HOME_FIELD.pen.minZ - 0.1);
     pen.update([beside], null, true, FIXED_DT);
     expect(beside.state).toBe('active');
     expect(beside.position.z).toBeLessThan(HOME_FIELD.pen.minZ);
@@ -71,7 +71,7 @@ describe('the fence', () => {
 
   it('closes the gap when the gate is shut', () => {
     const pen = barrier();
-    const s = sheep(0, 101.9);
+    const s = sheep(0, HOME_FIELD.pen.minZ - 0.1);
     pen.update([s], null, false, FIXED_DT);
     expect(s.state).toBe('active');
     expect(s.position.z).toBeLessThan(HOME_FIELD.pen.minZ);
@@ -171,12 +171,12 @@ describe('the dog and the fence', () => {
     const pen = barrier();
     const memory = { inside: false };
 
-    const atTheWall = new Vector2D(-25, 101.5);
+    const atTheWall = new Vector2D(-25, HOME_FIELD.pen.minZ - 0.5);
     pen.containDog(atTheWall, true, memory);
     expect(memory.inside).toBe(false);
     expect(atTheWall.z).toBeLessThan(HOME_FIELD.pen.minZ);
 
-    const inTheGap = new Vector2D(0, 103);
+    const inTheGap = new Vector2D(0, HOME_FIELD.pen.minZ + 1);
     pen.containDog(inTheGap, true, memory);
     expect(memory.inside).toBe(true);
 

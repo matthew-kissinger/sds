@@ -1,7 +1,7 @@
 {
   "seed": 20260821,
   "flockSize": 25,
-  "completedAtTick": 3260,
+  "completedAtTick": 3108,
   "pennedPer100": [
     0,
     0,
@@ -31,10 +31,9 @@
     0,
     0,
     0,
-    12,
-    22,
-    22,
-    22
+    19,
+    23,
+    23
   ],
   "finalPenned": 25
 }
