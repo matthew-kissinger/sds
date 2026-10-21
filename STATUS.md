@@ -84,7 +84,7 @@ Competitive terrain is level with symmetric grass and distant reused oaks;
 Classic camera/input bearing is fixed toward each player's pen. Solo retains
 its original field, input basis and deterministic traces. No new asset is needed.
 Protocol/storage move to 3; drain live rooms before deploying both Workers from
-the same SHA. This candidate is not yet deployed. Local evidence and remaining
+the same SHA. The owner authorized production release 3.8.0 on 2026-10-20; deployment is in progress. Local evidence and remaining
 human fairness/device review are recorded in `docs/history/status-log.md`.
 
 ### Owner-directed co-op release - 2026-10-20
