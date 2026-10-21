@@ -78,9 +78,10 @@ open. Local multiplayer foundations are now open as described below.
 
 ### Multiplayer planning amendment - 2026-10-20
 
-The owner initially authorized documentation only, then opened local foundations
-and tests later in the same discussion. Staging setup and cost must be presented
-before provisioning; this cycle stays local and undeployed.
+The owner initially authorized documentation only, then local foundations,
+and subsequently the simplified isolated staging deployment after setup/cost
+review. This cycle uses the approved $20 pilot budget. Production multiplayer
+deployment remains unopened.
 [The multiplayer plan](docs/architecture/multiplayer-plan.md) and
 [spec/03](spec/03-multiplayer.md) now cover regional public boards, private
 invites, up to four people, host-controlled starts/rematches, co-op and
@@ -91,8 +92,8 @@ and solo results stay with the existing Worker; staging is isolated.
 This supersedes earlier placement ambiguity, the mandatory room-D1 foundation,
 the single global lobby and the combined solo/co-op leaderboard proposal. The
 solo score-service migration remains separate and must preserve newer shipped
-history/card consumers. No new asset, resource, workflow, push or deployment is
-authorized in this local cycle. Spec/09 holds the future acceptance matrix; plan
+history/card consumers. Staging resources/deployment are now authorized; no new
+asset or production release/workflow change is authorized. Spec/09 holds the future acceptance matrix; plan
 D1-D7 tracks policy, measurement and setup decisions. The owner settled
 competitive departure later on 2026-10-20: forfeit and continue, with a win by
 forfeit when one competitor remains. The plan's "Settled decisions" records
@@ -104,17 +105,20 @@ colour/labels/player icons, three regional boards, interruption after server
 restart, measured transport tuning, PC/hub staging before geographic load,
 estimate before provisioning/paid tests, waiting-only host removal, and neutral
 gate guidance based on geometry regardless of dog or pen ownership.
-Layout validation, measured budgets, geographic coverage and staging approval
+Layout validation, measured budgets and geographic coverage
 remain gates. The local service now runs authoritative co-op and the normal
 client renders the shared field with up to four dogs. Invite/public lobbies,
 ready/start, prediction/interpolation, reconnect, continue-on-leave, shared
 completion and rematch are implemented locally. Run `npm run coop`; see
 [scope, instructions and evidence](realtime/README.md). The production build
 has no multiplayer entry, and competitive starts remain unavailable.
-The owner approved a $20 staging pilot budget; the
-[final setup review](docs/operations/multiplayer-staging.md) must happen before
-provisioning. Workers Paid is owner-confirmed; remaining allowances and CLI
-access are unverified. Full snapshots and fixed 100 ms buffering are local
+The owner approved the simplified [staging setup](docs/operations/multiplayer-staging.md)
+and its $20 one-room pilot. Workers Paid is owner-confirmed. The October 20 read-only review
+verified working Wrangler OAuth, the account, staging hostname vacancy and hub
+reachability; billing allowances and Access enrollment remain unverified.
+Hosted wrappers, passcode-cookie access and the server-enforced cutoff pass
+local typechecks, bundle dry runs and 64 workerd checks; deployment is in progress.
+Full snapshots and fixed 100 ms buffering are local
 pilot choices; delta/adaptive transport and all hosted/device/performance and
 separate presentation-review gates remain open. No multiplayer release gate
 is closed by local functional tests. Local implementation `7bded51f` passed

@@ -3,6 +3,7 @@ import { DurableObject } from 'cloudflare:workers';
 import type { RealtimeEnv } from './bindings';
 import { requireThat, rpc } from './http';
 import { randomKey, type Region } from './regions';
+import { deploymentDeadline } from './deadline';
 import { ROOM_LIFETIME_MS, type Settings, type publicRoom } from './roomState';
 type Summary = ReturnType<typeof publicRoom>;
 interface Lease {
@@ -26,6 +27,8 @@ export class LobbyDO extends DurableObject<RealtimeEnv> {
     // rejecting blockConcurrencyWhile resets the object in workerd.
     return this.ctx.blockConcurrencyWhile(() => rpc(async () => {
       const now = Date.now(); this.prune(now);
+      const end = deploymentDeadline(this.env);
+      requireThat(now < end, 'pilot_closed', 410);
       const old = this.leases.find(l => l.owner === owner && l.key === key);
       if (old) { requireThat(old.config === JSON.stringify(config), 'idempotency_conflict'); return old.handle; }
       requireThat(this.leases.filter(l => l.owner === owner).length < 2, 'creation_limit', 429);
@@ -33,7 +36,7 @@ export class LobbyDO extends DurableObject<RealtimeEnv> {
       requireThat(Number.isInteger(cap) && cap >= 0 && cap <= 50, 'capacity_unconfigured', 503);
       requireThat(this.leases.length < cap, 'region_capacity', 429);
       const handle = `${region}_${randomKey()}`;
-      this.leases.push({ handle, owner, key, config: JSON.stringify(config), expiresAt: now + ROOM_LIFETIME_MS,
+      this.leases.push({ handle, owner, key, config: JSON.stringify(config), expiresAt: Math.min(now + ROOM_LIFETIME_MS, end),
         revision: -1, summary: null, listedUntil: 0 });
       await this.persist(); return handle;
     }));

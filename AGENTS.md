@@ -30,8 +30,9 @@ rollback. Keep that service isolated from the client.
   `docs/architecture/multiplayer-plan.md` and `spec/03-multiplayer.md`.
   `realtime/` is a separate, tested, undeployed Worker on `/r/*`; its private
   identity adapter is not exported by the production score router. Keep this
-  cycle local. Present staging setup and cost before provisioning; production
-  deployment and new assets remain separate approvals. Follow `STATUS.md`.
+  cycle isolated. The owner approved the simplified $20 staging deployment
+  after setup/cost review; `staging/` owns its access gate and bounded pilot.
+  Production deployment and new assets remain separate approvals. Follow `STATUS.md`.
   The 5,000-sheep experiment stays out.
 - Preserve the `field-v3` score partition and exact 25, 75 and 200 flock-size
   allow-list.

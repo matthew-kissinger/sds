@@ -6,6 +6,7 @@ import { command, packet } from './protocol';
 import { REGIONS, randomKey, type Region } from './regions';
 import { applyCommand } from './roomCommands';
 import { CoopMatch } from './CoopMatch';
+import { deploymentDeadline } from './deadline';
 import { PROTOCOL } from '../net/messages';
 import { attached, broadcast, budget, type Attachment } from './roomSockets';
 import { bind, disconnect, expire, interrupt, newRoom, publicRoom, reserve,
@@ -22,6 +23,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
     ctx.blockConcurrencyWhile(async () => {
       this.room = await ctx.storage.get<RoomState>('room') ?? null;
       if (!this.room) return;
+      this.room.expiresAt = Math.min(this.room.expiresAt, deploymentDeadline(env));
       requireThat(this.room.schema === 2, 'storage_version', 503);
       if (this.room.phase === 'starting' || this.room.phase === 'playing') interrupt(this.room, 'server_restart');
       for (const member of this.room.members) {
@@ -94,6 +96,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
     if (init) await this.ctx.blockConcurrencyWhile(async () => {
       if (!this.room) {
         this.room = newRoom(init.handle, init.region, init.settings, Date.now());
+        this.room.expiresAt = Math.min(this.room.expiresAt, deploymentDeadline(this.env));
         await this.persist();
       }
     });
@@ -203,6 +206,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
     if (this.advancing || !this.match || this.current().phase !== 'playing') return;
     this.advancing = true;
     try {
+      if (Date.now() >= this.current().expiresAt) { await this.change(() => {}, true); return; }
       const outcome = this.match.advance(Date.now(), this.current());
       if (this.match.sim.tick - this.lastSnapshot >= 3 || outcome === 'finished') this.sendSnapshot();
       if (outcome !== 'playing') {

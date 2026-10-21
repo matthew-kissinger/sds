@@ -5,6 +5,7 @@ import { failure, json, object, requireThat, smallJson, unwrap } from './http';
 import { REGIONS, isRegion, regionOf } from './regions';
 import { settings, type Identity } from './roomState';
 import { requestAllowed } from './traffic';
+import { deploymentDeadline } from './deadline';
 export { RoomDO } from './RoomDO';
 export { LobbyDO } from './LobbyDO';
 
@@ -25,6 +26,7 @@ export default {
   async fetch(request: Request, env: RealtimeEnv): Promise<Response> {
     try {
       const url = new URL(request.url);
+      requireThat(Date.now() < deploymentDeadline(env), 'pilot_closed', 410);
       requireThat(requestAllowed(request.headers.get('CF-Connecting-IP') ?? 'local', Date.now()), 'request_rate', 429);
       if (url.pathname === '/r/health' && request.method === 'GET') return json({ protocol: PROTOCOL, gameplay: true });
       if (request.method === 'POST' || request.headers.has('Upgrade')) {

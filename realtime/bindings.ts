@@ -8,4 +8,5 @@ export interface RealtimeEnv {
   IDENTITY: Fetcher;
   ALLOWED_ORIGIN: string;
   ROOM_CAPS: Record<Region, number>;
+  STAGING_END?: string;
 }

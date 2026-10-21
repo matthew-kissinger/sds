@@ -1,5 +1,10 @@
 # Deploying Sheepdog Sim
 
+The owner-approved isolated multiplayer pilot has a separate, bounded staging
+procedure in [multiplayer-staging.md](multiplayer-staging.md). Its two Workers,
+database and hostname do not use production tags or change this production
+workflow. Staging-only Wrangler configs live under ignored `.wrangler/staging/`.
+
 This is the single answer to "how does a change reach production". It describes
 the shape the repository deploys, from Release 1 (3.2.0) on: one Worker serves
 the game and its API on `sheepdogsim.com`. From 3.2.1 it is one package: the

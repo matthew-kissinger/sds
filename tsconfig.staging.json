@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.worker.json",
+  "compilerOptions": { "paths": { "@sim/*": ["./sim/*"] } },
+  "include": ["staging/**/*.ts", "worker/src/**/*.d.ts"]
+}

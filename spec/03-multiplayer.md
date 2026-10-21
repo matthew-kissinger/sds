@@ -1,8 +1,9 @@
 # 03 - Multiplayer
 
 Updated 2026-10-20 from the owner's multiplayer planning discussion.
-**Local foundations authorized; staging provisioning and deployment remain
-unapproved.** The shipped version 3 client remains solo. The execution sequence, research,
+**Local foundations and simplified isolated staging deployment are authorized.**
+The owner approved the $20 pilot after setup/cost review. Production remains
+solo; its multiplayer release is not authorized. The execution sequence, research,
 historical evidence and unresolved decisions are in
 [the multiplayer plan](../docs/architecture/multiplayer-plan.md).
 
@@ -14,8 +15,9 @@ has no online entry. Competitive starts are explicitly unavailable. Full
 snapshots and a fixed 100 ms presentation buffer are reversible pilot choices;
 delta transport, adaptive delay and numerical acceptance budgets remain open.
 [The local contract](../realtime/README.md) records implementation limits.
-The $20 staging budget is approved; [final setup review](../docs/operations/multiplayer-staging.md)
-remains required before any provisioning.
+The [staging setup](../docs/operations/multiplayer-staging.md) uses one room,
+a private passcode gate and a server-enforced one-hour cutoff. Broader release
+qualification follows the first hosted PC/hub playtest, not before it.
 The remainder of this specification is the target contract, not a claim that
 all described behaviour is implemented.
 
