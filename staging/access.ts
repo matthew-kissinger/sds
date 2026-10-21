@@ -3,7 +3,8 @@
 export interface PilotEnv { STAGING_PASSCODE: string; STAGING_END: string }
 const COOKIE = '__Host-sds-pilot';
 const headers = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow',
-  'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' };
+  // no-referrer makes browsers send Origin: null on the login form POST.
+  'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' };
 async function digest(value: string) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, '0')).join('');
