@@ -4,6 +4,16 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.7.0] - 2026-10-20
+
+### Added
+
+- Co-op for two to four players, with invite links and public waiting rooms in
+  North America, Europe and Asia-Pacific. Herd 25, 75 or 200 sheep together,
+  reconnect within 15 seconds, and continue when another player leaves.
+- A separate authoritative realtime Worker. Solo identities, records and score
+  cards retain their existing database and signing secret. Competitive is planned.
+
 ## [3.6.1] - 2026-10-20
 
 ### Fixed

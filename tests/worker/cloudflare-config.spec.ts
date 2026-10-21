@@ -39,8 +39,8 @@ describe('cloudflare.config.ts says what wrangler.toml says', () => {
 
   it('runs the same entry on the same runtime', () => {
     for (const [, worker, config] of PAIRS) {
-      expect(worker.entrypoint).toBe('../worker/src/index.ts');
-      expect(String(config.main).replaceAll('\\', '/').endsWith('/worker/src/index.ts')).toBe(true);
+      expect(worker.entrypoint).toBe('../worker/src/game.ts');
+      expect(String(config.main).replaceAll('\\', '/').endsWith('/worker/src/game.ts')).toBe(true);
       expect(worker.compatibilityDate).toBe(config.compatibility_date);
       expect(worker.compatibilityFlags).toEqual(config.compatibility_flags);
     }
@@ -97,7 +97,7 @@ describe('cloudflare.config.ts says what wrangler.toml says', () => {
     // wrangler.toml keeps the v1/v2 migrations as the append-only record; the
     // exports map carries live classes only, and there are none.
     for (const [, worker, config] of PAIRS) {
-      expect(worker.exports).toBeUndefined();
+      expect(worker.exports).toEqual({ RoomAdmission: { type: 'worker' }, InviteShell: { type: 'worker' } });
       expect(config.migrations.at(-1)).toEqual({ tag: 'v2', deleted_classes: ['RoomDO', 'LobbyDO'] });
       expect(config.durable_objects.bindings).toEqual([]);
     }

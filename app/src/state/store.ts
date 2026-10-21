@@ -3,6 +3,7 @@
 
 import { create } from 'zustand';
 import type { GateCue } from '@app/ui/gateProjection';
+import type { ClientSim } from '@app/game/ClientSim';
 import { CpuDeterministicSim } from '@sim/FlockSim';
 import { HOME_FIELD } from '@sim/field';
 import type { AutoTierReceipt } from '@app/quality/autoTier';
@@ -160,7 +161,7 @@ export interface GameStore {
   readonly audioLevels: AudioLevels;
   readonly runtimeDiagnostics: RuntimeDiagnostics;
   readonly seed: number;
-  readonly sim: CpuDeterministicSim;
+  readonly sim: ClientSim;
   readonly dogCoatPreset: DogCoatId;
   readonly dogName: string;
   readonly flockVarietyMode: FlockVarietyId;

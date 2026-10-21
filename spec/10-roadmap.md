@@ -44,26 +44,38 @@ Three slices, in this order. A later slice does not start early.
 
 1. Score cards and weekly boards, specified in `spec/14-score-cards.md`.
    Live as 3.6.0 (`ee8086a9`, tag `v3.6.0`).
-2. Multiplayer, which remains deferred phase 7, after the cards are live.
+2. Multiplayer, phase 7, after the cards are live. Design/spec work was
+   authorized 2026-10-20; implementation remains unopened.
 3. Grow your flock, deferred phase 9. Recorded so it is not re-derived. It
    does not start while the first two are in progress.
 
-## Deferred phase 7 - Multiplayer
+## Phase 7 - Multiplayer design recorded, implementation unopened
 
-A separate multiplayer Worker, RoomDO, LobbyDO, protocol v1, client netcode,
-prediction + interpolation, invite links and lobby UI. The version 3.0
-solo-times REST client is not multiplayer infrastructure. Acceptance: a
-4-player session completes 75 sheep with no desync (trace-compare client vs
-server); reconnection and host migration probes pass; the ported
-delta-reconstruction suite is green.
+The owner authorized the plan/spec update on 2026-10-20 and explicitly said not
+to implement yet. [The multiplayer plan](../docs/architecture/multiplayer-plan.md)
+is the execution sequence and evidence register; spec/03 owns the contract.
+Spec/00 records the narrow two-mode scope amendment, not a general mode roster.
 
-The owner put this after score cards (2026-10-19). Invite links and public
-lobbies are part of bringing rooms back. A link that joins a party uses the
-reserved `/r/*` prefix and is a different page from a score card. Filling a
-short public lobby with NPC dogs is not part of this phase. An NPC that
-steers sheep is a simulation change and would move the trace fixtures, so it
-stays an open question until the lobbies exist and the owner decides whether
-those matches are ranked.
+Scope: separate realtime Worker, one RoomDO per room and LobbyDO per region,
+up to four people, regional public boards and private invite rooms, host wait
+or start, readiness and rematches, one-pen co-op and shared-flock competitive
+with one pen per player. Region advice is measured and overridable. A room
+link uses `/r/<room-handle>`; score cards keep `/c/*`. No NPC fill, mid-round
+backfill, spectators, chat, ranked ladder or 5,000-sheep work.
+
+After later implementation authorization, proceed through local foundations,
+private staged two-player co-op, four players/regional public boards,
+competitive layouts/rules, and release qualification. Provisioning staging,
+creating new assets and production deployment remain separate boundaries.
+Plan D1-D7 records proposed defaults and decisions needed at each stage.
+
+Acceptance is spec/09's matrix: real four-player 75-sheep completion in both
+rulesets, additional two/three-player and 25/200 coverage, atomic admissions,
+regional discovery/placement, auth, reconnection/handoff, documented restart
+outcomes, deployment isolation, motion/audio and physical-device evidence.
+Compare reconstruction with authoritative snapshots at the same tick; compare
+deterministic traces separately from delayed render interpolation. Legacy
+no-canvas tests and synthetic network load cannot close the gameplay gate.
 
 ## Deferred phase 8 - Scale toggle and hardening
 

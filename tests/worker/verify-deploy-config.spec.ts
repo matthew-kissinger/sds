@@ -144,6 +144,7 @@ describe('verify-deploy-config', () => {
  * worker.config.json, its bundle and the assets.
  */
 const cfWorker = (preview = false) => ({
+  exports: { RoomAdmission: { type: 'worker' }, InviteShell: { type: 'worker' } },
   name: preview ? 'sds-worker-preview' : 'sds-worker',
   compatibilityDate: '2026-04-01',
   compatibilityFlags: ['nodejs_compat'],

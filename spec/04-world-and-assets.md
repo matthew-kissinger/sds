@@ -35,6 +35,34 @@ Nothing visual ships from sds. The purchased dog/farmhouse packs are not redistr
 
 Every generated asset has an in-repo recipe (script or documented tool flow) that can rebake it. Opaque binaries with no authoring source are forbidden (sds's original fence blocked every visual ask until it was rebuilt procedurally). If a DCC tool authored it, commit the source file. Pipeline: bake/author to staging, review in a gallery scene, integrate, compress (gltf-transform weld/prune/dedup + meshopt).
 
+## Planned multiplayer assets and layouts
+
+The phase 7 plan (spec/03) reuses the shipped dog, sheep and modular fence kit.
+Co-op keeps one shared pen. Competitive needs two/three/four player-owned pens,
+matching fence openings, clear pen identification and fair spawn positions.
+The [layout review](../docs/architecture/multiplayer-layouts.md) shows scaled
+two/three/four-player layouts. On 2026-10-20 the owner accepted square /
+equal-area hexagon / square as the prototype direction, with dogs starting
+45 m from the centre opposite their own pens. The diagrams are documentation;
+implementation and gameplay/visual qualification remain unopened.
+That is layout and simulation work, not just another fence mesh. Review
+approach corridors, terrain pads, homestead clearance, cameras and foliage
+occlusion together. A south/east/west pen cannot inherit a north-only visual or
+collision assumption.
+
+One shared geometry definition must drive visual openings and authoritative
+boundaries. Keep one pen mechanism with multiple explicit instances, not three
+destination types. Player identity must remain readable without colour alone.
+Use colour, labels and visual icons above players, reusing current
+markers/material parameters before proposing new collars, flags,
+signs or meshes. Tell the owner what new assets are needed BEFORE authoring
+them. No assets are commissioned by this documentation update.
+
+The opening scene/asset descriptions above are the solo baseline; multiplayer
+does not prescribe a new dog rig, renderer or environment. The asset lab can
+help review layouts after authorization, but only running production-build
+desktop/mobile motion evidence can close presentation acceptance.
+
 ## Atmosphere
 
 Golden hour, permanently. No day/night cycle in v1; the game IS the hour before sunset. One Atmosphere component owns sun direction, sky, and updates `scene.fog` per frame so fog always matches the sky horizon. No per-material fog uniforms anywhere (the sds rule that kept every pass coherent for years). A feature that ships must be reachable in the shipped configuration; no lamps wired to states that cannot occur (sds shipped a dusk lamp on a scene with no dusk for eight cycles).

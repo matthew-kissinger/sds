@@ -103,9 +103,10 @@ error from the host.
 The card's action is `Play 25 sheep`, `Play 75 sheep` or `Play 200 sheep`.
 It goes to `/play/25`, `/play/75` or `/play/200`.
 
-That path is not a query parameter. `spec/01` caps the game's query
-parameters at `room`, `seed` and `debug`, and this change does not add a
-fourth. The single-page-application fallback already serves `index.html` for
+That path is not a query parameter. `spec/01` caps the game's player query
+parameters at `seed` and `debug`. The 2026-10-20 multiplayer plan removes the
+unimplemented `room` query from the earlier text; invites will use `/r/*`.
+The single-page-application fallback already serves `index.html` for
 an unknown path, so `/play/25` needs no Worker route. The client reads the
 path once, at boot, and calls the existing `startGame` with that flock size.
 Any other `/play/` value is ignored and the title comes up at 25, which is

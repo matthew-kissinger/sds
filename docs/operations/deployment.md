@@ -1,5 +1,10 @@
 # Deploying Sheepdog Sim
 
+The owner-approved isolated multiplayer pilot has a separate, bounded staging
+procedure in [multiplayer-staging.md](multiplayer-staging.md). Its two Workers,
+database and hostname do not use production tags or change this production
+workflow. Staging-only Wrangler configs live under ignored `.wrangler/staging/`.
+
 This is the single answer to "how does a change reach production". It describes
 the shape the repository deploys, from Release 1 (3.2.0) on: one Worker serves
 the game and its API on `sheepdogsim.com`. From 3.2.1 it is one package: the
@@ -11,6 +16,30 @@ the measurements behind the `cf` move are in `docs/history/status-log.md`
 (Release 2 Stage B).
 
 ## One production path
+
+**3.7.0 co-op promotion, owner-authorized 2026-10-20:** `Deploy` now ships
+`sds-realtime` from `realtime/wrangler.json` after the game Worker. It owns only
+`sheepdogsim.com/r/*`, two new SQLite Durable Object namespaces, and private
+service bindings to `sds-worker`'s `RoomAdmission` and `InviteShell` entrypoints.
+No production D1 migration or secret replacement occurs. An exact invite GET
+serves the game through the asset service; `/status` remains JSON. Both services
+carry the tagged SHA (`release.json` and `/r/health`), protocol 2 / room schema 2.
+The first release caps occupied rooms at one per NA/EU/APAC region; it has no
+staging gate or cutoff. This is a capacity bound, not an account billing cap.
+No paid load test or increased staging allowance is part of this release.
+
+The first deploy has no existing production rooms to drain. Before later
+realtime releases, stop new room creation (set all regional caps to zero),
+allow occupied rooms to finish and leave, then deploy. An unavoidable restart
+returns the party with an explicit interruption and no result. Version/schema
+changes need compatible clients or the same empty-room cutover. The initial
+workflow pairs both services; client-only independent releases are future work.
+
+Rollback both services to a compatible tagged SHA using that tag's workflow.
+To return to pre-multiplayer 3.6.1, delete only the `sds-realtime` `/r/*` route
+and dispatch the 3.6.1 tag workflow with its exact SHA; retain its namespaces
+for recovery. Never restore the old v2 classes on `sds-worker`. Staging's
+hostname, Workers, D1, namespaces and temporary credentials remain separate.
 
 There is exactly one way the game reaches players.
 
@@ -112,16 +141,17 @@ verifiers, the probes and `vite.config.ts` import it. Four consequences:
   generated `wrangler.json` and no `--config`.
 - **The paths are the plugin's, not ours.** The plugin reads
   `cloudflare.config.ts` from the Vite root and nowhere else, which is why the
-  file lives in `app/` with `entrypoint: '../worker/src/index.ts'`, and `cf`
+  file lives in `app/` with `entrypoint: '../worker/src/game.ts'`, and `cf`
   runs from `app/` because it finds the file by walking up from its working
   directory. The plugin also forces every environment's `build.outDir` into the
   Build Output after Vite has merged the user config, so nothing is written to
   `dist/` and no Vite option can put it back. Measured with the plugin
   2.0.0-beta.v.1 and `cf` 1.0.0-beta.18 (status log, Release 2 Stage B).
-- **No Durable Object export.** `cf` carries Durable Object classes in an
+- **No Durable Object export on the game Worker.** `cf` carries Durable Object classes in an
   `exports` map and has no migrations array; the applied v1/v2 history deleted
   every class, and the docs say not to copy applied deletions. The config
-  declares no export, the verifier fails one, and the account keeps the
+  declares only the two private WorkerEntrypoint exports; the verifier rejects
+  any Durable Object export, and the account keeps the
   `migration_tag` (`v2`) across `cf`'s uploads: measured by a wrangler deploy
   of an older commit and a rollback across a `cf` deploy on the preview
   Worker.
@@ -202,10 +232,8 @@ that govern the hosting declaration (`workersDev`, `domains` and
   no trigger and no domain. `tests/worker/wrangler-config.spec.ts` and
   `tests/worker/cloudflare-config.spec.ts` pin this and the rest.
 
-`/r/*` is left unclaimed on purpose. A route takes precedence over a Custom
-Domain on the same hostname, so a realtime Worker can take
-`sheepdogsim.com/r/*` later (`spec/03-multiplayer.md`) without touching this
-Worker's declaration. Until then `/r/*` is just the single-page fallback.
+`sds-realtime` now claims only `sheepdogsim.com/r/*`. That route takes
+precedence over the game Custom Domain, without changing its declaration.
 
 ## Durable Objects
 

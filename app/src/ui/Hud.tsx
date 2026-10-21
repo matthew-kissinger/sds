@@ -237,8 +237,8 @@ export function Hud() {
           </svg>
         </button>
       ) : null}
-      {gamePhase === 'paused' && uiPanel === 'pause' ? <PausePanel /> : null}
-      {gamePhase === 'complete' ? <CompletionPanel /> : null}
+      {useGameStore.getState().sim.authoritative && gamePhase === 'paused' && uiPanel === 'pause' ? <PausePanel /> : null}
+      {useGameStore.getState().sim.authoritative && gamePhase === 'complete' ? <CompletionPanel /> : null}
     </div>
   );
 }

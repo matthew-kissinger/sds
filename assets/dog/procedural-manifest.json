@@ -17,7 +17,7 @@
   "sources": [
     {
       "path": "app/src/scene/Dog.tsx",
-      "sha256": "30d1a004bd0f9cc9e5a37530672d3520f48619b4fbde96e58fbfcf2960e4f0b0"
+      "sha256": "fd07070496a979b1052af5baa2a73e43b0924e8ea5f66d935efbe9630b2c96e7"
     },
     {
       "path": "app/src/scene/dog/dogParts.ts",

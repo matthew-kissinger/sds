@@ -89,7 +89,7 @@ export function checkBuildOutput(outputDir, { preview = false } = {}) {
   expect('domains', worker.domains ?? [], expected.domains)
   // The applied v1/v2 history deleted every Durable Object class; the exports
   // map carries live classes only, so there must be none.
-  expect('exports', worker.exports, undefined)
+  expect('exports', worker.exports, { RoomAdmission: { type: 'worker' }, InviteShell: { type: 'worker' } })
   expect('env', worker.env, {
     ASSETS: { type: 'assets' },
     DB: { type: 'd1', name: expected.database.name, id: expected.database.id },
@@ -188,7 +188,7 @@ function main() {
     const worker = JSON.parse(readFileSync(resolve(configPath, 'workers/default/worker.config.json'), 'utf8'))
     console.log(
       `Verified Build Output ${options.config} (${options.preview ? 'preview' : 'production'}): ` +
-        `${worker.name}, triggers ${JSON.stringify(worker.triggers ?? [])}, domains ${JSON.stringify(worker.domains ?? [])}, D1 ${worker.env.DB.id}, no exports`,
+        `${worker.name}, triggers ${JSON.stringify(worker.triggers ?? [])}, domains ${JSON.stringify(worker.domains ?? [])}, D1 ${worker.env.DB.id}, private service exports`,
     )
     return
   }

@@ -1,7 +1,7 @@
 {
   "name": "sheepdog-sim",
   "private": true,
-  "version": "3.6.1",
+  "version": "3.7.0",
   "description": "A focused browser herding game built with Three.js, React and a deterministic simulation.",
   "author": "Matthew Kissinger",
   "license": "AGPL-3.0-or-later",
@@ -35,9 +35,11 @@
     "build": "tsc -b && vite build",
     "build:preview": "tsc -b && vite build --mode preview",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run && npm run test:realtime",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:realtime": "vitest run --config vitest.realtime.config.ts",
+    "typecheck:realtime": "tsc --noEmit -p tsconfig.realtime.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && npm run typecheck:realtime",
     "typecheck:lab": "tsc --noEmit -p tsconfig.lab.json",
     "typecheck:worker": "tsc --noEmit -p tsconfig.worker.json",
     "probe:release": "node tools/release-hardening-probe.mjs",
@@ -53,9 +55,12 @@
     "bake:audio": "node tools/bake-audio.mjs",
     "check:audio-bake": "node tools/bake-audio.mjs --check",
     "bake:font": "uv run --quiet --with fonttools[woff] --with brotli python tools/subset-font.py",
-    "check:font-bake": "uv run --quiet --with fonttools[woff] --with brotli python tools/subset-font.py --check"
+    "check:font-bake": "uv run --quiet --with fonttools[woff] --with brotli python tools/subset-font.py --check",
+    "coop": "node tools/coop-local.mjs",
+    "coop:built": "node tools/coop-local.mjs --built"
   },
   "dependencies": {
+    "@msgpack/msgpack": "3.1.3",
     "@react-three/fiber": "9.8.2",
     "@resvg/resvg-wasm": "2.6.2",
     "kdbush": "^4.0.2",
@@ -66,6 +71,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^2.0.0-beta.v.1",
+    "@cloudflare/vitest-plugin": "1.4.6",
     "@cloudflare/workers-types": "5.20261016.1",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
@@ -77,14 +83,17 @@
     "cf": "^1.0.0-beta.18",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
+    "miniflare": "5.20261012.0-beta",
     "playwright": "^1.64.1",
     "typescript": "~6.0.3",
     "vite": "^8.3.4",
     "vitest": "^5.0.5",
-    "wrangler": "4.151.0"
+    "wrangler": "4.151.0",
+    "ws": "8.21.0"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
-    "workerd@1.20261012.1": true
+    "workerd@1.20261012.1": true,
+    "workerd@1.20261019.1": true
   }
 }

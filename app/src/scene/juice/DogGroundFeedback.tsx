@@ -39,7 +39,7 @@ function makeGroundMaterial(tone: string, opacity: number): THREE.MeshBasicNodeM
   return material;
 }
 
-export function DogGroundFeedback() {
+export function DogGroundFeedback({ index = 0 }: { index?: number }) {
   const sim = useGameStore((state) => state.sim);
   const field = useHeightfield();
   const arcRef = useRef<THREE.Mesh>(null);
@@ -65,7 +65,7 @@ export function DogGroundFeedback() {
   }, [dust, sim]);
 
   useFrame((_, delta) => {
-    const dog = sim.state.dogs[0];
+    const dog = sim.state.dogs[index];
     const arc = arcRef.current;
     const motes = dustRef.current;
     if (!dog || !arc || !motes) return;

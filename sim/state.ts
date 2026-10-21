@@ -59,7 +59,7 @@ function createSheep(id: number, position: Vector2D): Sheep {
   };
 }
 
-function createDog(id: number, x: number, z: number): Dog {
+export function createDog(id: number, x: number, z: number): Dog {
   return {
     id,
     position: new Vector2D(x, z),
@@ -81,7 +81,8 @@ function createDog(id: number, x: number, z: number): Dog {
  * @param flockSize 25 / 75 / 200. A config value, never a mode.
  * @param seed the per-game seed. Same seed, same starting positions, always.
  */
-export function createSimState(field: FieldDef, flockSize: number, seed: number): SimState {
+export function createSimState(field: FieldDef, flockSize: number, seed: number, slots: readonly number[] = [0]): SimState {
+  if (slots.length < 1 || slots.length > 4 || new Set(slots).size !== slots.length || slots.some(s => !Number.isInteger(s) || s < 0 || s > 3)) throw new Error('Invalid dog roster');
   const spawnRng = mulberry32(seed >>> 0);
   const positions = generateInitialSheepPositions(
     flockSize,
@@ -109,7 +110,7 @@ export function createSimState(field: FieldDef, flockSize: number, seed: number)
     seed,
     tick: 0,
     sheep,
-    dogs: [createDog(0, field.dogSpawn.x, field.dogSpawn.z)],
+    dogs: slots.map((slot, i) => createDog(slot, field.dogSpawn.x + (i - (slots.length - 1) / 2) * 3, field.dogSpawn.z)),
     penBarrier,
     collisionScratch: createSheepCollisionScratch(),
     pennedCount: 0,

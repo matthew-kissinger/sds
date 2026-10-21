@@ -86,8 +86,8 @@ export class CpuDeterministicSim implements FlockSim {
   private readonly rng: Rng;
   private readonly previousBarkCooldowns: Uint16Array;
 
-  constructor(field: FieldDef, flockSize: number, seed: number) {
-    this.state = createSimState(field, flockSize, seed);
+  constructor(field: FieldDef, flockSize: number, seed: number, slots: readonly number[] = [0]) {
+    this.state = createSimState(field, flockSize, seed, slots);
     this.rng = createTickRng(seed);
     const n = this.state.sheep.length;
     this.positions = new Float32Array(n * 2);

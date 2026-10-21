@@ -5,6 +5,65 @@
 
 # Status log
 
+## Release 3.6.1 - 2026-10-20, gate passage live
+
+- Owner authorized a focused solo gate fix, commit, push and deploy separately
+  from multiplayer planning. PR #142 merged as
+  `32e720a771d23f8c930cd0bd5e95707054b39b4b`; its tree matches tested head
+  `e088cceaafbd2241eee73d27706f1e5e47535c72`. Exact-merge Client CI
+  39492190145 passed before annotated tag `v3.6.1` was pushed. Deploy
+  [39493160586](https://github.com/matthew-kissinger/sds/actions/runs/39493160586)
+  passed at 20:39 UTC, including the repeated suite, dry-run, deployment,
+  live manifest, both origins, discovery and analytics checks.
+- Live `release.json` reports version 3.6.1, that merge commit, source ref
+  `v3.6.1`, 42 files / 10,356,546 bytes and artifact SHA-256
+  `dae56be17e62d4899c8a9389e67c1aed5da77bc44063a022c9b71a3d19541290`,
+  identical to the tested candidate's artifact digest. Live client
+  `assets/index-D69_7Wl-.js` also matches the candidate at SHA-256
+  `5f95115a8071b1370d47912e750cbd2337599b47682155e0977d8af32af32c55`.
+  The live API health check passed. Fresh WebGPU desktop and forced-WebGL2
+  portrait contexts each opened Play, observed gate/pen z=100, advanced normal
+  movement/ticks and reported no page errors. Browser API calls were stubbed
+  unavailable to avoid test identities/results in production; this is not a
+  new live score-submission receipt. Report and screenshots are in the gate
+  worktree's `captures/live-gate-*`; browser contexts were closed.
+- Reproduced five failing centre/edge/oblique crossing cases: sheep were still
+  active beyond the visible z=100 fence, and oblique crossings snapped to 99.5.
+  The pen now shares the visible threshold. Nine new regression cases cover
+  those crossings and blocked fence approaches. The completion fixture changes
+  intentionally from 3260 to 3108 ticks; the other four fixtures are unchanged.
+  Existing `field-v3` records remain, with historical comparability explicitly
+  limited. No scoring service or multiplayer runtime was changed.
+- First CI caught the grass/terrain recipes still treating collision bounds as
+  the worn floor and farmhouse reference. The final change shares the visual
+  floor footprint between rendering and baking and anchors the house pad to
+  the existing fence. Terrain, grass and model binaries are unchanged and their
+  byte-for-byte bake checks pass. The fence ledger updates its source digest.
+  Final PR Client CI 39491545433 passed 905 tests in 109 files, lint, client and
+  Worker typechecks, build, discovery and packaged deployment identity checks.
+- Production client bundle: 2,444.48 kB raw, 677.80 kB gzip. Functional probe
+  `gate-passage-361-measured-input` on the final head completed 25 sheep through
+  normal touch input at 155.4 s, with no page errors and stable artifact hashes;
+  deflection 0.7, no state injection or near-complete shortcut. Completion,
+  replay and reload captures/video are under the isolated gate worktree's
+  `captures/stability/`. This is neither a feel verdict nor physical-phone proof.
+  Record the failures too: an earlier run completed but its receipt was invalid
+  because HEAD changed mid-run; a stable earlier candidate completed in 108.2 s;
+  the final full-deflection automated driver failed to finish within 300 s with
+  no page errors. The driver is timing-sensitive and is not a benchmark of feel.
+- Hub final-head receipts: `sds-gate-20261020-e088ccea` isolated directory,
+  `tools/hub-presentation-probe.mjs`, 200 sheep, 1440x900, Follow/homestead,
+  60 seconds per backend. Two idle samples passed before each run. Genuine
+  NVIDIA WebGPU and forced WebGL2 each recorded p95/p99 8.4 ms, zero frames over
+  100 ms, no page errors, stable artifacts and passing sampled draw limits.
+  Local copies: `captures/stability/hub-receipts/gate-361/` in the gate worktree.
+- **Startup remains open.** Final candidate WebGPU 2643.5 ms and WebGL2
+  2025.6 ms both miss the 2000 ms target. Boot-only comparison using the actual
+  3.6.0 deployment artifact measured 2580.6 and 1940.1 ms respectively. These
+  single samples establish neither a startup pass nor a statistically supported
+  regression. Frame-time success does not close this gap. No physical-device
+  receipt was produced. All completed probe browsers and servers were closed.
+
 ## Release 3.6.0 - 2026-10-19, score cards and weekly boards live
 
 - Commit `ee8086a9d8397de12dfbe31515ee6b0d56073ee1` on `main`. Tag `v3.6.0`

@@ -12,14 +12,14 @@ investigations are in `docs/history/`.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Multiplayer and the 5,000-sheep player path are absent from the version 3
-  client. Solo-time boards use only the isolated `field-v3` partition.
+- Co-op is the owner-authorized 3.7.0 production candidate; competitive and the
+  5,000-sheep player path remain absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.6.0 (`ee8086a9`, tag `v3.6.0`; score cards and the Monday UTC
-  weekly board) is live at `https://sheepdogsim.com` since 2026-10-19
-  21:34 UTC (`Deploy` run 39328029726; `docs/history/status-log.md`),
+- Version 3.6.1 (`32e720a7`, tag `v3.6.1`; gate passage correction)
+  is live at `https://sheepdogsim.com` since 2026-10-20
+  20:39 UTC (`Deploy` run 39493160586; `docs/history/status-log.md`),
   served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
@@ -67,16 +67,87 @@ settles are in `docs/history/status-log.md`.
 
 ### Owner-directed gate fix - 2026-10-20
 
-The owner authorized fixing, committing, pushing and deploying the solo gate
-rubber-band independently of multiplayer planning. Align the simulation pen
-threshold with the visible opening; preserve the fence/floor appearance and
-existing `field-v3` records. This is an intentional gameplay correction, so
-old and new times are not strictly comparable. The completion fixture changes
-from 3260 to 3108 ticks; the other four traces remain unchanged. Release
-validation is pending. Multiplayer implementation remains unopened.
+Shipped as 3.6.1 through PR #142. The simulation pen threshold now aligns with
+the visible opening, preserving fence/floor appearance and existing `field-v3`
+records. This intentional gameplay correction limits comparison with older
+times. Exact-commit CI, live identity, both renderer smoke checks, full-run
+functional evidence and hub measurements are recorded in
+[Release 3.6.1](docs/history/status-log.md#release-361---2026-10-20-gate-passage-live).
+Startup still misses the two-second target; physical-device evidence remains
+open. Local multiplayer foundations are now open as described below.
+
+### Owner-directed co-op release - 2026-10-20
+
+3.7.0 promotes the tested co-op slice to the main site, with one room per region
+(NA/EU/APAC), up to four players, public/private invites and the existing solo
+service. The tagged workflow deploys the game and separate `sds-realtime`
+service from the same SHA. Production has no staging passcode or hourly cutoff.
+Keep the existing identity database and signing secret. Competitive and broader
+latency/device qualification remain follow-up work; a short live co-op check
+and identity continuity check close this release.
+
+### Multiplayer planning amendment - 2026-10-20
+
+The owner initially authorized documentation only, then local foundations,
+and subsequently the simplified isolated staging deployment after setup/cost
+review. This cycle uses the approved $20 pilot budget. Production multiplayer
+deployment is now explicitly authorized after the hosted PC/hub smoke passed.
+[The multiplayer plan](docs/architecture/multiplayer-plan.md) and
+[spec/03](spec/03-multiplayer.md) now cover regional public boards, private
+invites, up to four people, host-controlled starts/rematches, co-op and
+shared-flock competitive play with one pen per player. The planned service is
+a separate realtime Worker, RoomDO per room and LobbyDO per region. Identity
+and solo results stay with the existing Worker; staging is isolated.
+
+This supersedes earlier placement ambiguity, the mandatory room-D1 foundation,
+the single global lobby and the combined solo/co-op leaderboard proposal. The
+solo score-service migration remains separate and must preserve newer shipped
+history/card consumers. The owner authorized production promotion, its separate realtime Worker and
+release workflow on 2026-10-20. No new asset is required. Spec/09 holds the future acceptance matrix; plan
+D1-D7 tracks policy, measurement and setup decisions. The owner settled
+competitive departure later on 2026-10-20: forfeit and continue, with a win by
+forfeit when one competitor remains. The plan's "Settled decisions" records
+dog removal, unchanged pens, retained banked sheep and later unclaimed entries.
+Competitive scoring was also settled: finish the flock, highest eligible count
+wins, shared ties. Q1-Q12 are answered in the plan: two ready players to start,
+15-second reconnect grace, continuing co-op, reviewed symmetric layouts,
+colour/labels/player icons, three regional boards, interruption after server
+restart, measured transport tuning, PC/hub staging before geographic load,
+estimate before provisioning/paid tests, waiting-only host removal, and neutral
+gate guidance based on geometry regardless of dog or pen ownership.
+Layout validation, measured budgets and geographic coverage
+remain gates. The local service now runs authoritative co-op and the normal
+client renders the shared field with up to four dogs. Invite/public lobbies,
+ready/start, prediction/interpolation, reconnect, continue-on-leave, shared
+completion and rematch are implemented locally. Run `npm run coop`; see
+[scope, instructions and evidence](realtime/README.md). The production build
+exposes the co-op entry; competitive starts remain unavailable.
+The owner approved the simplified [staging setup](docs/operations/multiplayer-staging.md)
+and its $20 one-room pilot. Workers Paid is owner-confirmed. The October 20 read-only review
+verified working Wrangler OAuth, the account, staging hostname vacancy and hub
+reachability; billing allowances and Access enrollment remain unverified.
+Hosted wrappers, passcode-cookie access and the server-enforced cutoff passed
+local typechecks, bundle dry runs and 64 workerd checks. Staging source `cf15f61a`
+is deployed at `staging.sheepdogsim.com`; the real PC/hub smoke passed invite,
+start, movement/barks, snapshot agreement, reload and leave/continue. The window
+closes October 20 at 10:42 p.m. EDT; [live receipt](docs/operations/multiplayer-staging.md#live-pilot-receipt-october-20)
+records versions, access instructions, cleanup and limitations. No production change.
+Full snapshots and fixed 100 ms buffering are local
+pilot choices; delta/adaptive transport and all hosted/device/performance and
+separate presentation-review gates remain open. No multiplayer release gate
+is closed by local functional tests. Local implementation `7bded51f` passed
+912 Node tests, 61 workerd checks, two/four-player browser flows and a live
+25-sheep protocol completion/rematch. Full limits and build receipts are in
+[the local validation note](realtime/README.md#playable-local-candidate-validation-2026-10-20).
+The owner accepted the [layout review](docs/architecture/multiplayer-layouts.md)
+direction on 2026-10-20: square / equal-area hexagon / square for two / three /
+four players, with dogs starting 45 m from the centre opposite their own pens.
+This selects the prototype direction and does not change the shipped game.
+The history below retains its dates.
 
 The sequence the owner chose, recorded so it is read rather than re-derived.
-The decisions below were taken with the owner on 2026-10-16 and are not open.
+The decisions below were taken with the owner on 2026-10-16; the dated
+multiplayer amendment above supersedes only the items it names.
 Measured facts behind them are in `docs/operations/deployment.md`.
 
 ### End state
@@ -403,9 +474,10 @@ longer claims Neutral.
   invisible beyond 3 m; and every geometry-dependent term (eave band, damp
   course, slate courses) has to stay in the shader anyway. Richer surfaces
   come from the TSL materials, which the barn work extends.
-- Multiplayer foundations: the Durable Object placement decision recorded with
-  its reasoning, room D1 migration 0001, and a CI-tested realtime skeleton on
-  `/r/*`. Not deployed unless the owner says otherwise.
+- Multiplayer foundations: superseded by the 2026-10-20 planning amendment and
+  `docs/architecture/multiplayer-plan.md`. RoomDO storage serves rooms; D1 is
+  introduced only with an approved multiplayer result-query consumer. No
+  skeleton implementation or deployment is currently authorized.
 - Hosting made fully declarative: with Pages retired, `sheepdogsim.com`
   becomes a Worker Custom Domain declared in `app/cloudflare.config.ts`, so
   the deploy creates its DNS record and certificate; the route goes in the
@@ -519,10 +591,20 @@ the record those files carry.
 
 ## Open questions
 
-- Multiplayer stays deferred phase 7. Grow your flock stays deferred
-  phase 9 in `spec/10-roadmap.md`: roadmap only, and opening it amends the
-  `spec/00` cut list in the same change. NPC fill for a short public lobby
-  is undecided; an NPC that steers sheep would be a simulation change.
+- Multiplayer phase 7 has an approved design and local foundations in progress;
+  staging and production are authorized (see the amendment above).
+  Competitive forfeit-and-continue and finish-the-flock/highest-eligible/shared-
+  ties scoring and Q1-Q12 policies are settled in the plan. Remaining gates:
+  validation of accepted competitive layouts under neutral guidance, measured region coverage, numerical
+  network/server budgets, staging estimate and any new asset proposal.
+  Reversible local defaults awaiting staging evidence: 10-second admission and
+  start deadlines, two-minute empty-room cleanup, six-hour room lifetime,
+  30/60-second directory refresh/lease, and lobby traffic/ACK limits documented
+  in `realtime/README.md`. These are not the final gameplay transport budgets.
+  Hub SSH was reachable on 2026-10-20 during gate-fix validation; this does not
+  qualify multiplayer latency, physical devices or hosted capacity.
+  Grow your flock stays deferred phase 9 in `spec/10-roadmap.md`; opening it
+  amends its own `spec/00` cut-list items. NPC fill is outside multiplayer scope.
   Score cards shipped as 3.6.0. The contract is `spec/14-score-cards.md`.
   Evidence is `docs/history/status-log.md`, "Release 3.6.0".
 

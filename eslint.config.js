@@ -46,6 +46,7 @@ export default [
             { group: ['react', 'react-dom', 'react/*'], message: 'sim/ is react-free (spec/01 fence).' },
             { group: ['*app/*', '@app/*'], message: 'sim/ never imports from app/ (spec/01 fence).' },
             { group: ['*worker/*'], message: 'sim/ never imports from worker/ (spec/01 fence).' },
+            { group: ['*realtime/*'], message: 'sim/ never imports from realtime/ (spec/01 fence).' },
           ],
         },
       ],

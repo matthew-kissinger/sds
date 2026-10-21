@@ -12,6 +12,7 @@ import type { CompletedRun, ScoreIdentity } from './types';
 export interface ScoresController {
   start(): () => void;
   ensureIdentity(): Promise<ScoreIdentity | null>;
+  roomToken(refresh?: boolean): Promise<string | null>;
   rename(displayName: string): Promise<boolean>;
   loadBoard(flockSize: FlockSize, week?: string): Promise<void>;
   loadMyRuns(): Promise<void>;
@@ -161,7 +162,7 @@ export function createScoresController(
       void ensureIdentity();
       let previousPhase = useGameStore.getState().gamePhase;
       return useGameStore.subscribe((state) => {
-        if (state.gamePhase === 'complete' && previousPhase !== 'complete') {
+        if (state.sim.authoritative && state.gamePhase === 'complete' && previousPhase !== 'complete') {
           void submit({
             flockSize: state.flockSize,
             completionTimeMs: state.completionTimeMs,
@@ -173,6 +174,11 @@ export function createScoresController(
     },
 
     ensureIdentity,
+    async roomToken(refresh = false) {
+      if (refresh) token = null;
+      await ensureIdentity();
+      return token;
+    },
 
     async rename(displayName) {
       const requested = displayName.trim();

@@ -65,25 +65,36 @@ sds/
     src/audio/     audio system
     src/ui/        DOM UI components (TSX only)
     src/tsl/       TSL node materials, one module per material
-  worker/          Cloudflare Worker + Durable Objects + D1 migrations
+  worker/          shipped identity, solo scores and cards + D1 migrations
+  realtime/        planned separate multiplayer Worker + Durable Objects (not created)
   assets/          asset sources and recipes (see spec/04)
   tools/           bake scripts, validation probes. Never imported by app/.
   tests/           vitest suites incl. sim trace fixtures
 ```
 
-`sim/` is the successor of sds `shared/` and carries the same fence, enforced by ESLint from day one: `no-restricted-imports` scoped to `sim/**` bans three (and sub-paths), react, `app/`, `worker/`; a DOM-free globals map makes browser API access an error. The Worker bundles `sim/` through the Vite plugin's Worker build environment; the client bundles it via Vite; tests run it in Node. TypeScript is fine in all three toolchains (verify in phase 0).
+`sim/` is the successor of sds `shared/` and carries the same fence, enforced
+by ESLint: no Three.js, React, app, Worker or DOM dependencies. The client
+bundles it via Vite and tests execute it in Node. The planned realtime Worker
+must consume the same source through its Worker build, with cross-runtime
+determinism verified before acceptance. The shipped score Worker is not a
+v3 simulation host.
 
 ## The sim is a pure function
 
 The tick loop is an exported pure function:
 
 ```ts
-step(state: SimState, inputs: PlayerInputs, rng: Rng): SimState
+step(state: SimState, inputs: readonly PlayerInputs[], rng: Rng): SimState
 ```
 
-Production Durable Object, client predictor, and trace tests all import this same function. There is no separate test harness reimplementation (sds failure mode: an 810-line hand-mirrored harness meant fixtures pinned the harness, not the sim).
+Solo and trace tests use this function today. The planned RoomDO will use it;
+there is no deployed v3 room yet. The function mutates and returns the state and
+is deterministic in its arguments. Local-dog prediction reuses the movement
+rules, not a second whole-flock simulation. There is no hand-mirrored test sim
+(sds failure mode: an 810-line harness pinned itself, not the production sim).
 
-Determinism rules (lifted from sds, they produced zero live desyncs):
+Determinism rules carried from sds (trace evidence must establish each new
+client/Worker candidate; historical claims are not a current desync receipt):
 
 - No trig or transcendentals in per-tick paths. IEEE-754-pinned ops and Math.sqrt only. Precomputed cosine constants for cone tests.
 - No Math.random anywhere in `sim/`. Lint-banned. Every entry point that needs randomness takes a required seeded rng (mulberry32). No default parameter fallback.
@@ -91,9 +102,10 @@ Determinism rules (lifted from sds, they produced zero live desyncs):
 - The per-game seed is drawn once at room creation, lives server-side, and never reaches the wire. Clients copy positions from snapshots; they never re-derive spawns.
 - In the client, useFrame's variable delta accumulates into fixed 1/60 s steps (same accumulator the server uses). Variable dt never enters `step`.
 
-## FlockSim: dual backend from day one
+## FlockSim buffer contract
 
-Sheep logic runs behind one interface with two implementations:
+Sheep logic runs behind one interface. CPU is implemented; GPU-scale work is
+deferred and outside multiplayer:
 
 ```ts
 interface FlockSim {
@@ -105,10 +117,17 @@ interface FlockSim {
 }
 ```
 
-1. **CpuDeterministicSim** (authoritative). The lifted sds sim. Used for all ranked solo play and ALL multiplayer. This is the only backend the Worker knows about.
-2. **GpuComputeSim** (presentation-grade). TSL compute shaders running the boid rules on the GPU. Used for unranked local zen/scale play (thousands of sheep). Never authoritative: GPU float ordering is not deterministic across devices and the Durable Object cannot run compute shaders. Scores from this backend are never submitted.
+1. **CpuDeterministicSim** (authoritative). Used by shipped solo play and planned
+   room simulation. Multiplayer presentation reads authoritative snapshots and
+   predicts only local movement, rather than running a competing flock sim.
+2. **GpuComputeSim** (deferred, presentation-grade). Proposed TSL compute for
+   unranked local scale play. GPU float ordering is not deterministic across
+   devices; this is not the multiplayer authority. It never submits scores.
 
-Both backends fill the same typed-array layout, so the instanced renderer, grass interaction, and audio triggers do not know which is running. The toggle is a config value on the local game setup (and a debug URL param), not a mode. Build the interface in phase 1 even though GpuComputeSim ships later; retrofitting the buffer contract is the expensive part.
+Presentation consumes the same typed-array layout regardless of session
+authority. The buffer contract is useful now; it does not authorize a GPU
+toggle, dormant flags or extra query parameters. The network snapshot adapter
+must expose all consumers' required state without pretending to own `step`.
 
 ## State and rendering rules
 
@@ -117,8 +136,31 @@ Both backends fill the same typed-array layout, so the instanced renderer, grass
 - A per-frame value that would re-render React at 60 Hz if it went through the store is published instead as a named module-scope value behind an accessor, in the module that owns it: the player intent (`input/intent.ts`), the conditioner's commanded speed and direction (`input/conditioning.ts`), the Follow rig's bearing (`camera/followFraming.ts`) and the eased Classic-to-Follow blend weight (`camera/CameraRig.tsx`), the last two read by the input and audio layers. That is the exception to the rule above rather than a hole in it, and it holds only on these terms: nothing on `window`, no events, no subscribers, no game state, and exactly one writer for each, because the app builds one of each owner and a second would fight over the value.
 - The flock renders as one raw `<instancedMesh>` (or BatchedMesh) written imperatively. drei `<Instances>` is forbidden for the flock hot path (documented per-instance React overhead); fine for static scatter.
 - Sheep animation is vertex-stage TSL (gait bob, ear flick, wool jiggle driven by per-instance attributes: phase, tint, agitation). No skeletons for sheep.
-- One start path. Solo runs the sim client-local (offline-capable, instant start). Co-op runs the identical sim as predictor against the DO. The difference is who owns `step`, not a separate code path through the app (sds failure mode: four game-start paths).
-- URL params are capped at three: `room` (join code), `seed` (local repro), `debug`. Validation probes live in tools/ and drive the app through its normal path (sds failure mode: ~23 production URL params, each load-bearing for some harness). `/play/25`, `/play/75` and `/play/200` are paths, not a fourth parameter. The client reads one of those once at boot and calls `startGame` with that flock size. Any other `/play/` value is ignored. `spec/14-score-cards.md` is the reason they exist.
+- One session lifecycle. Solo owns its sim locally and starts offline. Planned
+  multiplayer uses authoritative room snapshots, local-dog prediction and
+  remote-entity interpolation through the same presentation buffer contract.
+  The client never advances an authoritative online flock or locally pauses
+  everyone else's game. Rules are selected at session construction (spec/03).
+- Player-page query parameters are exactly `seed` (local repro) and `debug`,
+  matching shipped readers and AGENTS.md. The old third `room` parameter was
+  aspirational and is removed from the contract. Planned invites use
+  `/r/<room-handle>`, not a query or hash alias. Online seed comes from the
+  room. `/play/25`, `/play/75` and `/play/200` remain spec/14 paths, consumed
+  once at boot to select flock size; other `/play/` values are ignored.
+  Probes live in tools/ and drive normal UI, without new player URL switches.
+
+## Planned multiplayer ownership
+
+Spec/03 and [the plan](../docs/architecture/multiplayer-plan.md) supersede the
+earlier co-op-only backend research. One separately deployed realtime Worker
+hosts a RoomDO per room and a LobbyDO per region. Identity and solo scoring
+remain with the existing Worker, accessed for admission through a service
+binding. Source imports stay one-way into pure `sim/`; the v3 client imports
+neither `worker/` nor `shared/`. The sim import fence must also exclude the
+future `realtime/` tree when that first consumer is introduced.
+
+No service code, network dependency, dormant flag or new directory lands merely
+because this layout names it. All multiplayer implementation remains unopened.
 
 ## Naming and hygiene rules
 

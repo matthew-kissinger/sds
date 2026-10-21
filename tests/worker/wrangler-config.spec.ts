@@ -47,7 +47,7 @@ describe('sds-worker hosting configuration', () => {
 
   it('runs the Worker entry from worker/src and leaves the assets directory to the Vite plugin', () => {
     for (const config of [production, preview]) {
-      expect(String(config.main).replaceAll('\\', '/').endsWith('/worker/src/index.ts')).toBe(true);
+      expect(String(config.main).replaceAll('\\', '/').endsWith('/worker/src/game.ts')).toBe(true);
       expect(config.assets.directory).toBeUndefined();
     }
   });

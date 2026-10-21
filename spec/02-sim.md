@@ -17,9 +17,9 @@ The herding feel is the single most valuable artifact in sds. It lifts into `sim
 | mulberry32 | `sds/shared/Random.js` | Verbatim. The rng parameter is REQUIRED at every call site. |
 | State factory | `sds/shared/index.js` (pattern only) | One factory assembles field geometry + params into the canonical SimState both sides construct identically. No multi-shape input resolution. |
 
-Not lifted, by decision: CompetitiveLayout/Mode, objective.js state machine, ObjectiveLogic, counting/survival/difficulty registries, CoastlineField, Heightfield-in-sim, SceneObstacles/TreePlacement as sim collision, GameStateValidation and its shims.
+Not lifted, by decision: CompetitiveLayout/Mode, objective.js state machine, ObjectiveLogic, counting/survival/difficulty registries, CoastlineField, Heightfield-in-sim, SceneObstacles/TreePlacement as sim collision, GameStateValidation and its shims. The phase 7 competitive work uses the old layout/scoring as evidence only; it does not reverse this no-port decision.
 
-## The one mode
+## Shipped solo and planned co-op baseline
 
 Win condition: every sheep is penned. One predicate, no stage machine, no timers in the sim.
 
@@ -50,7 +50,10 @@ gameplay change under tripwire 9.
 
 **Sheep lifecycle is one enum:** `active | retiring | penned`. Single source of truth for "is this sheep in play." No boolean accretion (sds failure mode: five flags conjoined to answer that question).
 
-**Flock sizes:** 25 / 75 / 200 as a config value on game setup. Leaderboard identity is the flock size. Score is completion time. In co-op, sheep flee all dogs equally.
+**Flock sizes:** 25 / 75 / 200 as a config value on game setup. Solo leaderboards
+are separated by flock size and score completion time. Multiplayer results are
+separate (spec/03); party size and rules cannot be collapsed into those solo
+boards. In co-op, sheep flee all dogs equally.
 
 ## Tuning constants appendix (the real asset)
 
@@ -88,8 +91,37 @@ Committed 60 Hz fixed-seed traces (JSON, values rounded to 4 decimals to absorb 
 
 ## Forbidden in sim/
 
-- Mode flags of any kind. A hypothetical second mode is a new sim composition, not a boolean.
+- Scattered mode flags. Planned competitive rules are an explicit sim
+  composition selected at construction, not booleans across tick systems.
 - Math.random (lint error), trig in per-tick paths, default rng parameters.
 - Imports from three, react, DOM, app/, worker/ (lint error).
 - Scene-id strings, magic map coordinates, console.log in tick paths (sds shipped emoji logging inside its deterministic spawn path).
 - Render state on sim objects (sds's Heightfield grew a mesh cache that was null on the Worker, blurring the exact boundary the fence protects).
+
+## Planned multiplayer extension, not implemented
+
+Spec/03 defines co-op and shared-flock competitive play for up to four people.
+The multiple-dog loop is useful groundwork, but the current factory constructs
+one dog and the field/pen paths assume one north-facing gate. Introduce stable
+player slots and explicit pen geometry only with their actual consumers.
+
+Competitive ownership is assigned once on valid pen entry. A sheep retains the
+same lifecycle enum and settles into its destination; no parallel retirement
+flag system. The server owns the counts and result. The owner settled D2's
+scoring on 2026-10-20: finish the flock, highest eligible count wins, shared
+ties. D1's forfeit outcomes remain distinct; unclaimed sheep still count toward
+clearing the field. Layout geometry still requires review. Q12 selects neutral
+guidance toward the nearest qualifying opening only while a dog pushes from
+behind the sheep, independent of dog/pen ownership or eligibility. Forfeited
+pens retain the same physical behaviour. Avoid overlapping guidance zones;
+select at most one opening and review deterministic geometry-based handling
+of equidistant cases. Boundary openings, attraction selection, crossing, containment and
+settlement must agree for every gate orientation. Three-player fairness needs
+evidence; the old cardinal table is not sufficient.
+
+Keep solo's geometry, tuning, system order and arithmetic trace-identical.
+Add co-op/competitive trace fixtures rather than regenerate the solo fixtures
+to accommodate a refactor. A changed solo trace is an owner gameplay decision
+and must address `field-v3` comparability. Timers and networking stay outside
+`sim/`. Restart recovery, if required, must serialize RNG progress and all
+authoritative state; the original seed does not reconstruct a running match.
