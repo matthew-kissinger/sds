@@ -29,6 +29,7 @@
  * that moment there is no world drawn to be above.
  */
 
+import { useGameStore } from '@app/state/store';
 import { use } from 'react';
 import {
   Heightfield,
@@ -58,6 +59,7 @@ export { TERRAIN_MANIFEST, TERRAIN_PADS };
  */
 const HEIGHTFIELD_URL = new URL('../../../assets/terrain/heightfield.bin', import.meta.url).href;
 
+const arenaField = flatHeightfield(TERRAIN_MANIFEST);
 let field: Heightfield = flatHeightfield(TERRAIN_MANIFEST);
 let pending: Promise<Heightfield> | null = null;
 
@@ -77,7 +79,9 @@ export function loadHeightfield(onProgress?: LoadProgress): Promise<Heightfield>
  * `groundY`.
  */
 export function useHeightfield(): Heightfield {
-  return use(loadHeightfield());
+  const competitive = useGameStore(s => !!s.sim.state.field.competition);
+  const loaded = use(loadHeightfield());
+  return competitive ? arenaField : loaded;
 }
 
 /**
@@ -87,5 +91,5 @@ export function useHeightfield(): Heightfield {
  * callers that are not components, like the camera's ridge clamp.
  */
 export function groundY(x: number, z: number): number {
-  return field.groundY(x, z);
+  return useGameStore.getState().sim.state.field.competition ? 0 : field.groundY(x, z);
 }

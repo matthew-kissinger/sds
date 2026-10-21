@@ -10,7 +10,10 @@ The execution sequence, research and historical evidence remain in
 The local slice now runs authoritative co-op on the Home Field: one shared
 flock and pen, 25/75/200 sheep, two to four starting players, live snapshots,
 client dog prediction, reconnect, departures, shared completion and rematch.
-`npm run coop` enables the local entry; production now exposes Play co-op. Competitive starts are explicitly unavailable. Full
+`npm run coop` enables the local entry. Production 3.7.0 has co-op; the current
+competitive candidate is authorized for implementation and not yet deployed.
+It enables shared-flock competitive starts, the reviewed 2/3/4-player layouts,
+per-pen scores, forfeits, eligible shared ties and explicit no-winner closure. Full
 snapshots and a fixed 100 ms presentation buffer are reversible pilot choices;
 delta transport, adaptive delay and numerical acceptance budgets remain open.
 [The local contract](../realtime/README.md) records implementation limits.
@@ -240,8 +243,12 @@ Layout review decision, 2026-10-20: square with opposite pens for two players,
 equal-area regular hexagon with alternating pen sides for three, and square
 with one pen per side for four. Dogs start 45 m from the centre opposite their
 own pen. See the [reviewed diagrams](../docs/architecture/multiplayer-layouts.md).
-This accepts the prototype direction, not implementation or passed fairness,
-camera, collision and device gates.
+The owner subsequently authorized implementation of this direction on 2026-10-20.
+Automated collision/camera checks and local browser receipts do not constitute
+human balance review or physical-device qualification. Competitive Classic is
+world-locked toward the local pen for the entire round, with the same fixed
+input bearing. Level ground and symmetric reused scenery remove the solo
+homestead/terrain bias; solo and co-op retain their existing field.
 
 Rules are selected at session construction and owned by small domain modules.
 Do not scatter mode flags through rendering, networking and movement. A match

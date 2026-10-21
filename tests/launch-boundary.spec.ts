@@ -9,14 +9,14 @@ function source(path: string): string {
   return readFileSync(`${repo}${path}`, 'utf8');
 }
 
-describe('3.0 launch client boundary', () => {
+describe('client ownership boundary', () => {
   it('exposes only the three solo flock sizes', () => {
     const store = source('app/src/state/store.ts');
     expect(store).toContain('readonly FlockSize[] = [25, 75, 200]');
     expect(store).not.toMatch(/startScaleGame|startMultiplayer|sessionKind|flockRuntime/);
   });
 
-  it('keeps network, GPU scale, and diagnostic helpers out of the app entry graph', () => {
+  it('keeps legacy network, GPU scale, and diagnostic helpers out of the app entry graph', () => {
     for (const path of [
       'app/src/net',
       'app/src/sim-gpu',
@@ -26,7 +26,7 @@ describe('3.0 launch client boundary', () => {
       'app/src/game/tickDriver.ts',
     ]) expect(existsSync(`${repo}${path}`)).toBe(false);
     expect(source('app/src/App.tsx')).not.toMatch(
-      /Multiplayer|RemoteDogs|ScriptedDog|DebugReadout|app\/src\/net|\.\/net\/|worker\/|shared\//,
+      /RemoteDogs|ScriptedDog|DebugReadout|app\/src\/net|\.\/net\/|worker\/|shared\//,
     );
     expect(source('app/src/scene/FieldScene.tsx')).not.toMatch(/GpuFlock|sim-gpu/);
     expect(source('app/src/game/useGameLoop.ts')).not.toMatch(/tickDriver|multiplayer|debug=driver/);

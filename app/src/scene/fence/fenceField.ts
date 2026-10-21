@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 // Authored joinery on the game's exact collision outline, shared with the lab.
+import type { RectFenceSection } from '../RectFence';
 import { FIELD_FENCE_SECTIONS } from './fieldSections';
 import { rectFenceLayout, runDivisions, postKey, hash01 } from '../fenceGeometry';
 import { buildPosts, buildRails } from './buildMeshes';
@@ -20,7 +21,7 @@ export const OAK_FENCE_STYLE: TimberStyle = {
   gatePaintStrength: 0,
 };
 
-export function fenceFieldPlacements(kit: FenceKit, groundY: GroundSampler) {
+export function fenceFieldPlacements(kit: FenceKit, groundY: GroundSampler, sections: readonly RectFenceSection[] = FIELD_FENCE_SECTIONS) {
   const straight = kit.modules.find(m => m.id === 'straight')!;
   const corner = kit.modules.find(m => m.id === 'corner')!;
   const gate = kit.modules.find(m => m.id === 'gate')!;
@@ -30,7 +31,7 @@ export function fenceFieldPlacements(kit: FenceKit, groundY: GroundSampler) {
   const rails: RailPlacement[] = [], leaves: GateLeafAssembly[] = [];
   const bayMin = Math.min(...straight.posts.map(p => p.x));
   const bayMax = Math.max(...straight.posts.map(p => p.x));
-  const layouts = FIELD_FENCE_SECTIONS.map(section => ({ section,
+  const layouts = sections.map(section => ({ section,
     layout: rectFenceLayout(section.rect, section.postSpacing ?? 5, section.gaps, section.sides),
   }));
   // An adjoining pen terminates on the perimeter's rail. Split that rail FIRST,
@@ -139,8 +140,8 @@ export function fenceFieldPlacements(kit: FenceKit, groundY: GroundSampler) {
   return { posts: [...postsByKey.values()], rails, leaves };
 }
 
-export function buildFenceField(kit: FenceKit, groundY: GroundSampler) {
-  const { posts, rails, leaves } = fenceFieldPlacements(kit, groundY);
+export function buildFenceField(kit: FenceKit, groundY: GroundSampler, placements = fenceFieldPlacements(kit, groundY)) {
+  const { posts, rails, leaves } = placements;
   const postMeshes = buildPosts(posts, OAK_FENCE_STYLE), railBatch = buildRails(rails, leaves, OAK_FENCE_STYLE);
   for (const mesh of postMeshes) { mesh.geometry.dispose(); mesh.geometry = kit.post.clone(); }
   for (const mesh of railBatch.meshes) { mesh.geometry.dispose(); mesh.geometry = kit.rail.clone(); }

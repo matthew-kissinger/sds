@@ -4,6 +4,7 @@ import type { PlayerInputs, SimState } from '@sim/types';
 import type { AcceptedBark } from '@app/state/store';
 /** Render/input contract. A remote view never advances the flock or awards a score. */
 export interface ClientSim extends FlockSim {
+  readonly playerNames?: ReadonlyMap<number, string>;
   readonly state: SimState;
   readonly tick: number;
   readonly completed: boolean;

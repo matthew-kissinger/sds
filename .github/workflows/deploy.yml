@@ -165,7 +165,7 @@ jobs:
             try {
               const r = await fetch('https://sheepdogsim.com/r/health', { cache: 'no-store' });
               const h = await r.json();
-              if (!r.ok || h.protocol !== 2 || h.commit !== '${{ steps.source.outputs.sha }}') throw Error(JSON.stringify(h));
+              if (!r.ok || h.protocol !== 3 || h.commit !== '${{ steps.source.outputs.sha }}') throw Error(JSON.stringify(h));
               console.log(h);
               break;
             } catch (error) {

@@ -36,7 +36,7 @@ import {
 } from './quality/autoTier';
 import { RuntimeQualityGovernor } from './quality/RuntimeQualityGovernor';
 
-const CoopRoot = ['production', 'coop', 'coop-staging'].includes(import.meta.env.MODE) ? lazy(() => import('./coop/CoopRoot')) : null;
+const MultiplayerRoot = ['production', 'coop', 'coop-staging'].includes(import.meta.env.MODE) ? lazy(() => import('./multiplayer/MultiplayerRoot')) : null;
 
 function trackedGlFactory(props: Parameters<typeof glFactory>[0]) {
   const report = useGameStore.getState().reportBootStep;
@@ -192,7 +192,7 @@ function HerdApp() {
           <AudioScene />
         </Canvas>
         <NameplateBadge />
-        {CoopRoot ? <Suspense fallback={null}><CoopRoot /></Suspense> : uiPanel === 'none' ? <Boot /> : null}
+        {MultiplayerRoot ? <Suspense fallback={null}><MultiplayerRoot /></Suspense> : uiPanel === 'none' ? <Boot /> : null}
         {gamePhase !== 'title' ? <Hud /> : null}
         {uiPanel === 'settings' ? <SettingsPanel /> : null}
         {uiPanel === 'customize' ? <CustomizePanel /> : null}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, it } from 'vitest';
-import { CoopMatch } from '../realtime/CoopMatch';
+import { RoomMatch } from '../realtime/RoomMatch';
 import { newRoom, reserve, bind } from '../realtime/roomState';
 import { createSimState } from '@sim/state';
 import { HOME_FIELD } from '@sim/field';
@@ -8,7 +8,7 @@ import { createHerdingDriver } from './helpers/herding-driver';
 it('herds from 20 Hz public snapshots through 30 Hz inputs', () => {
   const room = newRoom('na_' + 'a'.repeat(32), 'na', { mode: 'coop', flockSize: 25, visibility: 'private' }, 0);
   for (let i = 0; i < 2; i++) { reserve(room, { id: String(i), name: 'Dog' }, String(i), String(i), 0); bind(room, String(i), String(i), 0); }
-  const match = new CoopMatch('a'.repeat(32), 25, [0, 1], 42, 0);
+  const match = new RoomMatch('a'.repeat(32), 25, [0, 1], 42, 0);
   const state = createSimState(HOME_FIELD, 25, 0, [0, 1]); const drive = createHerdingDriver();
   for (let t = 0; t < 18000 && !match.sim.completed; t++) {
     if (t % 3 === 0) {

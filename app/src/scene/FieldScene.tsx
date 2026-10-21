@@ -20,6 +20,7 @@ import { Farmer } from './Farmer';
 import { FenceLine, preloadFence } from './FenceLine';
 import { Flock } from './Flock';
 import { GrassField } from './GrassField';
+import { CompetitivePens } from './CompetitivePens';
 import { Pen } from './Pen';
 import { Scatter } from './Scatter';
 import { Terrain } from './Terrain';
@@ -69,11 +70,9 @@ export function FieldScene() {
       <Terrain />
       <GrassField />
       <FenceLine />
-      <Pen />
-      <Farmhouse />
-      <Farmer />
+      {sim.state.field.competition ? <CompetitivePens layout={sim.state.field.competition} /> : <Pen />}
+      {sim.state.field.competition ? null : <><Farmhouse /><Farmer /><Scatter /></>}
       <Treeline />
-      <Scatter />
       <Flock />
       {sim.state.dogs.map((dog, index) => <Dog key={dog.id} index={index} />)}
       <PlayerLabels />

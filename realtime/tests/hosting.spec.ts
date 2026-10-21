@@ -15,5 +15,5 @@ it('serves production invites through the private shell while status stays JSON'
   expect(status.headers.get('Content-Type')).toContain('application/json');
   expect(shells).toBe(1);
   const health = await realtime.fetch(new Request('https://sheepdogsim.com/r/health'), env);
-  expect(await health.json()).toEqual({ protocol: 2, gameplay: true, commit: 'a'.repeat(40) });
+  expect(await health.json()).toEqual({ protocol: 3, gameplay: true, commit: 'a'.repeat(40) });
 });

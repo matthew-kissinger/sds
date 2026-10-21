@@ -35,6 +35,8 @@ const CLASSIC_DISTANCE_FALLOFF = 0.015;
 const FOLLOW_DISTANCE_FALLOFF = 0.00888;
 
 export interface AudioStoreSnapshot {
+  readonly competitive?: boolean;
+  readonly gate?: { x: number; z: number };
   readonly gamePhase: GamePhase;
   readonly uiPanel: UiPanel;
   readonly acceptedBark: AcceptedBark | null;
@@ -87,7 +89,7 @@ export function scheduleStoreAudio(
         gain: 0.18,
         durationSeconds: 0.82,
         delaySeconds: i * 0.07,
-        point: { x: 0, z: 102 },
+        ...(next.competitive ? {} : { point: { x: 0, z: 102 } }),
         transient: true,
       });
     }
@@ -103,7 +105,7 @@ export function scheduleStoreAudio(
       assetId: 'gate-creak',
       bus: 'world',
       gain: 0.2,
-      point: { x: 0, z: 100 },
+      point: next.gate ?? { x: 0, z: 100 },
     });
     for (let i = 0; i < COMPLETION_RESOLVE.length; i++) {
       commands.push({
@@ -113,7 +115,7 @@ export function scheduleStoreAudio(
         gain: 0.13,
         durationSeconds: 2.2,
         delaySeconds: 0.32 + i * 0.18,
-        point: { x: 0, z: 108 },
+        point: next.gate ?? { x: 0, z: 108 },
       });
     }
   }
@@ -125,7 +127,7 @@ export function scheduleStoreAudio(
       bus: 'world',
       gain: 0.12,
       playbackRate: 0.84,
-      point: { x: 0, z: 100 },
+      point: next.gate ?? { x: 0, z: 100 },
     });
   }
 

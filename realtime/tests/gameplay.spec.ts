@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, describe, expect, it } from 'vitest';
 import { reset, evictDurableObject, runInDurableObject } from 'cloudflare:test';
-import { CoopMatch } from '../CoopMatch';
+import { RoomMatch } from '../RoomMatch';
 import { bind, newRoom, reserve, type RoomState } from '../roomState';
 import { createHerdingDriver } from '../../tests/helpers/herding-driver';
 import { clients, connect, create, DEFAULT, join, register, request, roomStub } from './helpers';
@@ -18,8 +18,8 @@ afterEach(async () => { for (const c of clients.splice(0)) c.socket.close(1000, 
 describe('authoritative co-op gameplay', () => {
   it.each([25, 75, 200])('uses deterministic shared flock stepping for %i sheep and four dogs', count => {
     const room = party(count, [0, 1, 2, 3]);
-    const a = new CoopMatch(room.round!, count, [0, 1, 2, 3], 42, 0);
-    const b = new CoopMatch(room.round!, count, [0, 1, 2, 3], 42, 0);
+    const a = new RoomMatch(room.round!, count, [0, 1, 2, 3], 42, 0);
+    const b = new RoomMatch(room.round!, count, [0, 1, 2, 3], 42, 0);
     for (let tick = 1; tick <= 180; tick++) {
       const now = 500 + tick * 1000 / 60;
       for (const match of [a, b]) {
@@ -33,7 +33,7 @@ describe('authoritative co-op gameplay', () => {
     expect(a.snapshot()).not.toHaveProperty('seed');
   });
   it('stops stale input and removes departed dogs without losing flock progress', () => {
-    const room = party(); const match = new CoopMatch(room.round!, 25, [0, 1], 42, 0);
+    const room = party(); const match = new RoomMatch(room.round!, 25, [0, 1], 42, 0);
     match.input(0, 1, 0, 1, true, 1, 500);
     for (let t = 520; t <= 1200; t += 20) match.advance(t, room);
     expect(match.sim.state.dogs[0].sprinting).toBe(false);
@@ -44,7 +44,7 @@ describe('authoritative co-op gameplay', () => {
     expect(match.started).toBe(2);
   });
   it('finishes a real herding run after a co-op departure, without teleporting sheep', () => {
-    const room = party(); const match = new CoopMatch(room.round!, 25, [0, 1], 42, 0);
+    const room = party(); const match = new RoomMatch(room.round!, 25, [0, 1], 42, 0);
     room.members.splice(1, 1);
     const drive = createHerdingDriver(); let outcome = '';
     for (let tick = 1; tick <= 15000; tick++) {
@@ -55,7 +55,7 @@ describe('authoritative co-op gameplay', () => {
     expect(outcome).toBe('finished'); expect(match.snapshot().count).toBe(25);
   });
   it('can finish with two dogs and a stationary partner', () => {
-    const room = party(); const match = new CoopMatch(room.round!, 25, [0, 1], 42, 0);
+    const room = party(); const match = new RoomMatch(room.round!, 25, [0, 1], 42, 0);
     const drive = createHerdingDriver(); let outcome = '';
     for (let tick = 1; tick <= 15000; tick++) {
       const input = drive(match.sim.state), now = 500 + tick * 1000 / 60;
@@ -65,14 +65,14 @@ describe('authoritative co-op gameplay', () => {
     expect(outcome).toBe('finished'); expect(match.snapshot().count).toBe(25);
   });
   it('interrupts a clock backlog instead of fabricating a successful result', () => {
-    const room = party(); const match = new CoopMatch(room.round!, 25, [0, 1], 42, 0);
+    const room = party(); const match = new RoomMatch(room.round!, 25, [0, 1], 42, 0);
     expect(match.advance(1200, room)).toBe('overload'); expect(match.sim.completed).toBe(false);
   });
   it('rejects nonfinite, oversized direction and malformed movement commands', () => {
     for (const vector of [[NaN, 0], [Infinity, 0], [1, 1], ['1', 0]]) {
-      expect(() => command(packet([2, 'input', 0, 'a'.repeat(32), ...vector, false, 1]))).toThrow();
+      expect(() => command(packet([3, 'input', 0, 'a'.repeat(32), ...vector, false, 1]))).toThrow();
     }
-    expect(command(packet([2, 'input', 0, 'a'.repeat(32), 0.6, 0.8, false, 1])).type).toBe('input');
+    expect(command(packet([3, 'input', 0, 'a'.repeat(32), 0.6, 0.8, false, 1])).type).toBe('input');
   });
   it('persists a completed-result fixture and requires a fresh ready barrier for rematch', async () => {
     const a = await create(await register('host')); const ca = await connect(a);
@@ -83,7 +83,7 @@ describe('authoritative co-op gameplay', () => {
     await runInDurableObject(roomStub(a.handle), async (_instance, state) => {
       const room = (await state.storage.get<RoomState>('room'))!;
       room.phase = 'finished'; room.round = 'c'.repeat(32);
-      room.result = { tick: 3000, count: 25, started: 2, remaining: 2 };
+      room.result = { mode: 'coop', reason: 'flock', standings: [], unclaimed: 0, winners: [], tick: 3000, count: 25, started: 2, remaining: 2 };
       await state.storage.put('room', room);
     });
     await evictDurableObject(roomStub(a.handle)); ca.send('ping');

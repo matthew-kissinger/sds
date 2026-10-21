@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { PROTOCOL } from '../net/messages';
+import { PROTOCOL, type MatchResult } from '../net/messages';
 import { requireThat } from './http';
 import type { Region } from './regions';
 
@@ -14,9 +14,9 @@ export interface Member extends Identity {
   deadline: number | null; ticket: string | null; ticketExpires: number; loaded: boolean;
 }
 export interface RoomState {
-  schema: 2; handle: string; region: Region; settings: Settings; revision: number;
+  schema: 3; handle: string; region: Region; settings: Settings; revision: number;
   phase: 'waiting' | 'starting' | 'playing' | 'finished' | 'closed'; host: string | null; members: Member[];
-  result: { tick: number; count: number; started: number; remaining: number } | null;
+  result: MatchResult | null;
   removed: string[]; nextOrder: number; expiresAt: number; idleExpires: number;
   round: string | null; startDeadline: number | null;
   interruption: 'server_restart' | 'start_timeout' | 'player_departed' | 'overload' | null;
@@ -29,7 +29,7 @@ export function settings(value: Record<string, unknown>): Settings {
   return { mode: value.mode, flockSize: value.flockSize, visibility: value.visibility };
 }
 export function newRoom(handle: string, region: Region, config: Settings, now: number): RoomState {
-  return { schema: 2, handle, region, settings: config, revision: 0, phase: 'waiting',
+  return { schema: 3, handle, region, settings: config, revision: 0, phase: 'waiting',
     result: null, host: null, members: [], removed: [], nextOrder: 0, expiresAt: now + ROOM_LIFETIME_MS,
     idleExpires: now + 120_000, round: null, startDeadline: null, interruption: null };
 }

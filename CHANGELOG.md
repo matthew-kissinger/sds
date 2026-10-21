@@ -4,6 +4,19 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Competitive multiplayer for two to four players sharing one flock, using the
+  reviewed square/hexagon/square layouts and one pen each. Finish the flock;
+  highest eligible count wins, including shared ties. Forfeits preserve banked
+  sheep and leave later captures unclaimed; one remaining player wins by forfeit.
+- Mode selection, live pen scores, immutable results, player/pen identifiers,
+  and fixed own-pen Classic camera/input bearings. Existing assets are reused.
+- Protocol 3 snapshots preserve the original layout through departures and
+  reconnects. Completed co-op results migrate from storage schema 2.
+
 ## [3.7.0] - 2026-10-20
 
 ### Added

@@ -5,7 +5,7 @@ import { failure, requireThat, RoomError, rpc } from './http';
 import { command, packet } from './protocol';
 import { REGIONS, randomKey, type Region } from './regions';
 import { applyCommand } from './roomCommands';
-import { CoopMatch } from './CoopMatch';
+import { RoomMatch } from './RoomMatch';
 import { deploymentDeadline } from './deadline';
 import { PROTOCOL } from '../net/messages';
 import { attached, broadcast, budget, type Attachment } from './roomSockets';
@@ -14,7 +14,7 @@ import { bind, disconnect, expire, interrupt, newRoom, publicRoom, reserve,
 
 export class RoomDO extends DurableObject<RealtimeEnv> {
   private room: RoomState | null = null;
-  private match: CoopMatch | null = null;
+  private match: RoomMatch | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private advancing = false;
   private lastSnapshot = -1;
@@ -24,7 +24,12 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
       this.room = await ctx.storage.get<RoomState>('room') ?? null;
       if (!this.room) return;
       this.room.expiresAt = Math.min(this.room.expiresAt, deploymentDeadline(env));
-      requireThat(this.room.schema === 2, 'storage_version', 503);
+      if ((this.room.schema as number) === 2) {
+        this.room.schema = 3;
+        if (this.room.result) this.room.result = Object.assign({ mode: 'coop' as const, reason: 'flock' as const,
+          standings: [], unclaimed: 0, winners: [] }, this.room.result);
+      }
+      requireThat(this.room.schema === 3, 'storage_version', 503);
       if (this.room.phase === 'starting' || this.room.phase === 'playing') interrupt(this.room, 'server_restart');
       for (const member of this.room.members) {
         const live = ctx.getWebSockets().some(ws => {
@@ -83,6 +88,9 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
       const draft = structuredClone(room);
       let result: T | undefined; let error: unknown;
       try { result = fn(draft, Date.now()); this.room = draft; } catch (e) { error = e; }
+      if (this.current().phase === 'closed' && this.match?.score && !this.current().result) {
+        this.match.advance(Date.now(), this.current()); this.current().result = this.match.result();
+      }
       const changed = before !== JSON.stringify(this.current());
       if (changed) this.current().revision++;
       if (changed || refresh) await this.persist();
@@ -183,8 +191,8 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
       this.timer = null; this.match = null; return;
     }
     if (!this.match) {
-      this.match = new CoopMatch(room.round!, room.settings.flockSize, room.members.map(m => m.slot),
-        crypto.getRandomValues(new Uint32Array(1))[0], Date.now());
+      this.match = new RoomMatch(room.round!, room.settings.flockSize, room.members.map(m => m.slot),
+        crypto.getRandomValues(new Uint32Array(1))[0], Date.now(), room.settings.mode, new Map(room.members.map(m => [m.slot, m.name])));
       this.lastSnapshot = -1;
       for (const ws of this.ctx.getWebSockets()) {
         const a = attached(ws); a.matchAck = a.matchSent = 0; ws.serializeAttachment(a);
@@ -213,11 +221,10 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
       const outcome = this.match.advance(Date.now(), this.current());
       if (this.match.sim.tick - this.lastSnapshot >= 3 || outcome === 'finished') this.sendSnapshot();
       if (outcome !== 'playing') {
-        const result = { tick: this.match.sim.tick, count: this.match.sim.pennedCount,
-          started: this.match.started, remaining: this.match.sim.state.dogs.length };
+        const result = this.match.result();
         await this.change(room => {
           if (outcome === 'finished') { room.phase = 'finished'; room.result = result; }
-          else if (outcome === 'empty') { room.phase = 'closed'; room.members = []; room.result = null; }
+          else if (outcome === 'empty') { room.phase = 'closed'; room.members = []; room.result = result.mode === 'competitive' ? result : null; }
           else interrupt(room, 'overload');
         });
       }

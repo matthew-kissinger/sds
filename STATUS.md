@@ -75,6 +75,18 @@ functional evidence and hub measurements are recorded in
 Startup still misses the two-second target; physical-device evidence remains
 open. Local multiplayer foundations are now open as described below.
 
+### Owner-directed competitive implementation - 2026-10-20
+
+The owner authorized implementing the accepted layouts and rules after 3.7.0.
+The candidate adds 2/3/4-player square/hexagon/square fields, per-pen banked
+scores, forfeit-and-continue, shared ties, and explicit no-winner closure.
+Competitive terrain is level with symmetric grass and distant reused oaks;
+Classic camera/input bearing is fixed toward each player's pen. Solo retains
+its original field, input basis and deterministic traces. No new asset is needed.
+Protocol/storage move to 3; drain live rooms before deploying both Workers from
+the same SHA. This candidate is not yet deployed. Local evidence and remaining
+human fairness/device review are recorded in `docs/history/status-log.md`.
+
 ### Owner-directed co-op release - 2026-10-20
 
 Shipped as 3.7.0 through PR #143, with the live PC/hub flow and identity

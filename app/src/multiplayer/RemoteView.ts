@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createSimState } from '@sim/state';
+import { competitiveField } from '@sim/competitiveLayout';
 import { HOME_FIELD } from '@sim/field';
 import { advanceDog, containDog } from '@sim/dogMovement';
 import { FIXED_DT } from '@sim/tuning';
@@ -29,10 +30,10 @@ export class RemoteView implements ClientSim {
   correction = 0;
   constructor(first: MatchFrame, readonly slot: number,
     private transmit: (input: PlayerInputs, bark: number) => number,
-    private accepted: (bark: AcceptedBark) => void, barkId = 0) {
+    private accepted: (bark: AcceptedBark) => void, barkId = 0, readonly playerNames = new Map<number, string>()) {
     this.barkId = barkId;
     const slots = [slot, ...first.dogs.map(d => d.slot).filter(s => s !== slot)];
-    this.state = createSimState(HOME_FIELD, first.sheep.length / 4, 0, slots);
+    this.state = createSimState(first.rules === 'competitive-1' ? competitiveField(first.roster) : HOME_FIELD, first.sheep.length / 4, 0, slots);
     this.positions = new Float32Array(first.sheep.length / 2);
     this.headings = new Float32Array(first.sheep.length / 4);
     this.stateFlags = new Uint8Array(first.sheep.length / 4);

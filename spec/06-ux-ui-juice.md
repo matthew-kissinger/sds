@@ -193,3 +193,12 @@ Owned by `app/src/scene/juice/` + audio hooks; driven by sim events and per-inst
 - HUD churn per frame through React state; HUD numbers read the store transiently.
 - Exclamation marks, hype copy, or emoji in player-facing text. The voice is quiet and concrete.
 - Dark-pattern retention anything: no streaks, no badges, no popups.
+
+## Competitive camera amendment - 2026-10-20
+
+In the owner-authorized competitive implementation, Classic remains world-locked
+but its fixed bearing is the local player's pen normal, shared by camera and
+input. This gives every starting seat an equivalent view toward the central
+flock. It never tracks the dog's turns. Solo/co-op retain world +z. Competitive
+shared-flock progress tones are non-positional; the final resolve is located at
+the local pen. Scores and the result identify ownership, including forfeits.

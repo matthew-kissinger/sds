@@ -67,7 +67,8 @@ export function advanceDog(dog: Dog, input: PlayerInputs): void {
 
 }
 
-export function containDog(dog: Dog, state: Pick<SimState, 'field' | 'penBarrier'>): void {
+export function containDog(dog: Dog, state: Pick<SimState, 'field' | 'penBarrier' | 'arena'>): void {
+  if (state.arena) { state.arena.containDog(dog); return; }
   state.penBarrier.containDog(dog.position, true, dog.penMemory);
   if (!dog.penMemory.inside) dog.position = applyHardBoundaryConstraints(dog, state.field.bounds, state.field.gate, HARD_BOUNDARY);
   _fallback.set(state.field.spawn.center.x, state.field.spawn.center.z);

@@ -52,12 +52,20 @@
   },
   "sources": [
     {
+      "path": "app/src/scene/fence/arenaFence.ts",
+      "sha256": "b021dd5c74735f6a58f37e995e87ffddf220cd28fd0fbf53815f87d59910fa65"
+    },
+    {
+      "path": "sim/competitiveLayout.ts",
+      "sha256": "f38c9d0ed12e71310dd305c68c4a562c0b941389721217929095755b808fa982"
+    },
+    {
       "path": "app/src/scene/fence/fenceKit.ts",
       "sha256": "713e8f2ab628a41e63b0b2750ce37528b0101f4b1ad763f1c3ec01ccfd9dacf8"
     },
     {
       "path": "app/src/scene/fence/fenceField.ts",
-      "sha256": "4cbfe53031e878004b5e12fae4b4ac3370d6dab22f0ba088b5103abc7791dd9f"
+      "sha256": "fac873eea2225bea376de49410cd322006c8a2030e0996ababeb0d45cd79b21b"
     },
     {
       "path": "app/src/scene/fence/fenceShadowMotion.ts",
@@ -65,7 +73,7 @@
     },
     {
       "path": "app/src/scene/FenceLine.tsx",
-      "sha256": "b69823199f524f166c536b486a7d945eda83301184bd0b898aa4aab83c0b9cf5"
+      "sha256": "040cff402586eb7f9185f4fbb052a6f458074efdda0fb6682ee71b39cfc4f42b"
     },
     {
       "path": "app/src/scene/fence/fieldSections.ts",

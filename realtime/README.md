@@ -1,4 +1,4 @@
-# Co-op pilot
+# Multiplayer service
 
 Multiplayer work under spec/03. The owner-approved isolated staging pilot is
 deployed; see [access and live receipt](../docs/operations/multiplayer-staging.md#live-pilot-receipt-october-20).
@@ -8,10 +8,10 @@ remain entirely local; the dated validation notes retain their original scope.
 ## Play on this PC
 
 Run `npm run coop` from the repo, then open `http://localhost:5198`. Choose
-**Play co-op locally**, create a public or invite-only room, and open its link
+**Play multiplayer locally**, create a public or invite-only room, and open its link
 in a separate browser profile or another browser. Two tabs in the same profile
 share identity; the newer session replaces the older one. Two to four players
-must all select Ready, then the host chooses Start co-op. Keyboard, gamepad and
+must all select Ready, then the host chooses Start for the selected mode. Keyboard, gamepad and
 touch use the existing controls. Escape opens a local menu; the match continues.
 Leave removes your dog; remaining players continue. The host returns the party
 to the lobby after completion, everyone readies again, then starts a new round.
@@ -22,7 +22,7 @@ real identity REST API in a separate Worker, and uses ephemeral D1/storage and
 a random local signing secret. Ctrl+C stops both services. Nothing is persisted
 to a Cloudflare account. Restarting the launcher resets rooms and local test
 identities; the existing browser identity flow can register again afterward.
-Production exposes Play co-op. The local launcher remains a separate Vite mode,
+Production 3.7.0 exposes co-op; the competitive candidate is not deployed. The local launcher remains a separate Vite mode,
 not a player URL flag; it never connects to production rooms.
 
 ## Implemented scope
@@ -45,11 +45,14 @@ result. Completed result metadata survives restart. Host rematch resets ready
 state and the next start issues a fresh round ID. Co-op never submits solo
 scores or personal bests.
 
-Competitive configuration remains recognized for future contracts, but starts
-return `mode_unavailable`. It is not selectable in this local UI. No new pen
-layouts have been implemented.
+Competitive is now selectable at creation and through waiting-room host settings.
+It uses the reviewed square/hexagon/square, 8 m openings and 45 m opposite starts.
+Forfeits keep banked scores and unchanged pens; later captures there are unclaimed.
+Two or more eligible players finish the flock; highest eligible count wins with
+shared ties. One remaining player wins by forfeit; zero closes with no winner.
+Completed results are immutable. The initial roster fixes geometry after departure.
 
-## Local protocol 2 / storage schema 2
+## Local protocol 3 / storage schema 3
 
 HTTP mutations and upgrades require the configured Origin. Admission verifies
 the existing identity JWT via a private service binding; realtime never sees
@@ -57,15 +60,15 @@ the signing secret. Room handles include a region and 128 random bits.
 
 | Endpoint | Behaviour |
 | --- | --- |
-| `GET /r/health` | Protocol 2, gameplay true |
+| `GET /r/health` | Protocol 3, gameplay true |
 | `GET /r/lobbies/{na,eu,apac}` | Up to 25 public waiting rooms; `after` cursor |
 | `POST /r/rooms` | `{region,settings:{mode,flockSize,visibility}}`, Bearer token and 32-hex Idempotency-Key |
 | `POST /r/<handle>/join` | Bearer token; reservation and single-use upgrade ticket |
 | `GET /r/<handle>/status` | Availability only, no seat reservation |
 | `GET /r/<handle>` | Local Vite serves invite shell; joining is explicit |
-| `GET /r/<handle>/ws?ticket=…&v=2` | WebSocket upgrade |
+| `GET /r/<handle>/ws?ticket=…&v=3` | WebSocket upgrade |
 
-Binary MessagePack commands are `[2,type,sequence,...args]`. Existing controls
+Binary MessagePack commands are `[3,type,sequence,...args]`. Existing controls
 are ready(boolean), settings(mode,count,visibility), start, loaded(round),
 remove(slot), leave, again, ping and ack(roomRevision). Movement is
 `input(round,x,z,sprint,barkId)`; directions must be finite with magnitude at
@@ -75,13 +78,17 @@ snapshots separately from lobby revisions. Server frames are room, snapshot,
 pong or error objects. `net/messages.ts` owns wire shapes; it imports no Worker
 or identity code.
 
-Every snapshot is currently a full keyframe (`basis:null`, rules `coop-1`),
+Every snapshot is currently a full keyframe (`basis:null`, rules `coop-1` or `competitive-1`),
 with sheep x/z/heading/lifecycle, dog movement/stamina/input ACK, shared count,
-and the last 32 accepted bark events. Seed and identity secrets never cross
+initial roster, competitive standings/unclaimed count, and the last 32 accepted bark events. Seed and identity secrets never cross
 this channel. Client history is capped at eight immutable snapshots and 30
 prediction steps. It uses a fixed 100 ms buffer, holds on gaps, neutralizes
 prediction after 500 ms of stale snapshots, and reconnects after five seconds
 without server traffic. No full flock prediction or client-owned scoring.
+
+Schema 2 completed co-op metadata migrates without losing the result. In-memory
+live matches still interrupt on restart. A release must drain rooms and deploy
+client and realtime from the same commit; old protocol clients must reload.
 
 ## Bounds and current gaps
 
@@ -102,7 +109,7 @@ not the still-unmeasured Q8 release acceptance limits.
 
 Remaining: delta/quantized transport and adaptive interpolation, measured
 correction/bandwidth limits, remote footstep/grass-trail presentation parity,
-post-completion flock settling, competitive geometry/scoring, board filters and
+post-completion flock settling, board filters and
 pagination UI, host settings edits after creation, public discovery latency suggestions, interrupted mobile/network
 qualification, physical phones, hub performance and a separate critical
 presentation/audio review. Local tests do not close those gates. A local Vite

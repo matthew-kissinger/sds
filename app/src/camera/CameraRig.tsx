@@ -28,6 +28,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three/webgpu';
 import { debugFlags } from '@app/scene/glFactory';
 import { useGameStore } from '@app/state/store';
+import { competitiveBearing } from './competitiveBearing';
 import { studioLayout } from './studioLayout';
 import { createComposedRig, type ComposedRigInput } from './composedRig';
 import { useReducedMotion } from '@app/ui/useReducedMotion';
@@ -61,6 +62,7 @@ export function cameraModeBlend(): number {
 export function CameraRig() {
   const camera = useThree((state) => state.camera);
   const size = useThree((state) => state.size);
+  const bearing = useGameStore(s => competitiveBearing(s.sim));
   const reducedMotion = useReducedMotion();
   const studio = useMemo(() => studioLayout(size.width, size.height), [size.width, size.height]);
   const view = useMemo(
@@ -92,10 +94,10 @@ export function CameraRig() {
     // every blend in flight.
     return {
       subject: createCameraSubject(),
-      pipeline: createComposedRig({ follow, sim: state.sim }),
+      pipeline: createComposedRig({ follow, sim: state.sim, classicBearing: bearing }),
       input,
     };
-  }, []);
+  }, [bearing]);
 
   useLayoutEffect(() => {
     rig.pipeline.setFollowView(view.follow);

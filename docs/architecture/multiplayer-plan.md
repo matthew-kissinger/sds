@@ -504,3 +504,24 @@ architecture and policy choices above are project judgements.
   Explicit match lifecycle/tick policies and bounded client delivery.
 - **R13:** [Cloudflare: In-memory state](https://developers.cloudflare.com/durable-objects/reference/in-memory-state/).
   Restarts discard memory; party preservation needs durable metadata.
+
+## Competitive implementation cycle - 2026-10-20
+
+The owner authorized implementation after the co-op release. `sim/competitiveLayout.ts`
+and `sim/ArenaGeometry.ts` own the accepted layouts and neutral geometry;
+`realtime/RoomMatch.ts` and `CompetitiveScore.ts` own live eligibility and scores.
+The shared client lives under `app/src/multiplayer/`. Initial roster and layout
+remain fixed through departure/reconnect. Protocol 3 carries initial roster,
+standings/unclaimed totals and explicit flock/forfeit/no-winner result reasons.
+Schema 2 completed co-op results migrate; live state loss still interrupts.
+
+Competitive presentation reuses the oak, grass, fence, dog and floor recipes.
+Ground is level; an authored scatter wedge repeats symmetrically; distant oaks
+stay beyond pen/camera approaches. The solo homestead and near scatter are
+omitted. Classic camera and input use a fixed own-pen bearing. This is a recorded
+competitive-only presentation amendment, not a change to solo physics or records.
+
+Before any rollout, drain protocol-2 rooms and deploy game/realtime together.
+Production stays at 3.7.0 until that release cycle. Human 2/3/4-player balance,
+physical phones, geographic latency and the previously open numerical transport
+budgets remain honest follow-ups; they are not proved by local automation.

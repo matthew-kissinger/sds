@@ -4205,3 +4205,50 @@ Initial capacity: one room per NA/EU/APAC region, four players per room.
 Production has no pilot passcode or hourly cutoff. Staging retains its isolated
 resources and existing cutoff; no paid load experiment was added. Competitive,
 geographic latency qualification and physical-device receipts remain open.
+
+
+## Competitive implementation candidate - 2026-10-20
+
+Owner requested competitive next, using the settled layouts/rules. Production
+remains 3.7.0; no infrastructure was provisioned and no deployment was run.
+The candidate uses opposite square pens for two, alternating hexagon sides for
+three (40,000 m²), and four square sides. All openings are 8 m, pens 60×30 m,
+and starts 45 m opposite the player's pen. Initial roster fixes the layout for
+the entire round. Geometry owns neutral assistance; the realtime match owns
+banking, irreversible forfeits, unclaimed entries and eligible tied winners.
+
+Local validation:
+- 24 focused competitive tests: every oriented mouth/corner, dog entry/exit,
+  200-sheep settling capacity at every pen, neutral assistance/ties, retained
+  geometry after departure, grace expiry, final unclaimed capture, forfeit/no
+  winner, all 25/75/200 configurations, camera bearing and hex grass coverage.
+  Three scripted normal-input runs finish 25-sheep competitive flocks through
+  rotated pens; these are functional evidence, not human balance certification.
+- All 71 workerd tests in eight files pass, including socket-driven 2/3/4-player
+  starts/forfeits, immutable finished results, no-winner alarm closure and a
+  schema-2 completed co-op migration. No solo fixture was regenerated.
+- The 114-test focused simulation/camera/input run passed; the unchanged solo
+  trace suite passed all ten fixtures. Both multiplayer modes skip solo scores.
+- Built-client browser flows passed 2/3-player WebGPU desktop and 4-player
+  WebGL2 at 390×844, with independent profiles, invite/ready/start, movement,
+  both barks, same-tick snapshots, reload/reconnect, and forfeiture continuation
+  (or win at one remaining). No uncaught page errors. Receipts/screens/video:
+  `captures/multiplayer/local-competitive/` (ignored, functional PC lane only).
+- Optimized local build: main JS 2,458.10 kB / 682.59 kB gzip; multiplayer chunk
+  40.70 kB / 12.78 kB gzip before the final compact mobile HUD adjustment.
+  CI provides the exact production-build check for the committed candidate.
+
+Separate critical review found and corrected no-winner history loss, a grass
+interaction grid too narrow for the hexagon, unequal starting Classic views,
+and mobile HUD overlap. Pen floor/fence materials, dog rig and distant oaks
+are reused. Competitive-only level ground and symmetric scatter preserve
+clearances; the solo field remains unchanged. The reviewed interface uses
+colour, distinct shapes, numbers and names, including pen ownership.
+
+Open: human competitive balance/standoff review, physical phones, geographic
+latency and measured transport budgets. Local PC receipts do not certify
+performance; no hub timing or new audio/motion acceptance is claimed. Remote
+footstep/wake parity and post-completion settling remain earlier pilot gaps.
+Protocol 3 requires client/realtime rollout together after draining protocol-2
+rooms. The live solo score database, signing key and field-v3 partition are
+untouched. The unrelated asset-lab edit was preserved outside this candidate.

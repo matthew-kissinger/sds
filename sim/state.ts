@@ -20,6 +20,7 @@
  * draws the other streams see.
  */
 
+import { ArenaGeometry } from './ArenaGeometry';
 import { Vector2D } from './Vector2D';
 import { mulberry32 } from './rng';
 import { PenBarrier } from './PenBarrier';
@@ -110,8 +111,14 @@ export function createSimState(field: FieldDef, flockSize: number, seed: number,
     seed,
     tick: 0,
     sheep,
-    dogs: slots.map((slot, i) => createDog(slot, field.dogSpawn.x + (i - (slots.length - 1) / 2) * 3, field.dogSpawn.z)),
+    dogs: slots.map((slot, i) => {
+      const pen = field.competition?.pens.find(p => p.slot === slot);
+      if (!pen) return createDog(slot, field.dogSpawn.x + (i - (slots.length - 1) / 2) * 3, field.dogSpawn.z);
+      const dog = createDog(slot, -45 * pen.normal.x, -45 * pen.normal.z);
+      dog.heading.set(pen.normal.x, pen.normal.z); return dog;
+    }),
     penBarrier,
+    arena: field.competition ? new ArenaGeometry(field.competition, seed, flockSize) : null,
     collisionScratch: createSheepCollisionScratch(),
     pennedCount: 0,
     completed: false,

@@ -55,7 +55,7 @@ export function GateGuidance() {
     const dog = state.sim.state.dogs[0];
     if (!dog) return;
 
-    const { x, z } = HOME_FIELD.gate.position;
+    const { x, z } = state.sim.state.field.competition?.pens.find(p => p.slot === dog.id)?.position ?? HOME_FIELD.gate.position;
     // Project the opening at the marker's ground level, not above a ridge.
     const target = scratch.target.set(x, field.groundY(x, z) + GATE_OPENING_LIFT, z);
 

@@ -77,7 +77,6 @@ import {
 import {
   DOG_FOOTPRINT,
   GHOST_BIRTH_DURATION,
-  GRID_HALF_EXTENT,
   INTERACTION_RADIUS,
   KIND_OFFSET,
   INTERACTION_STRENGTH,
@@ -503,8 +502,8 @@ export function makeGrassMaterial(inputs: GrassMaterialInputs): THREE.MeshBasicN
       { at: 'vec2', slot: 'float', record: 'vec4', return: 'vec3' },
     );
     const cellUV = root
-      .add(vec2(float(GRID_HALF_EXTENT), float(GRID_HALF_EXTENT)))
-      .div(float(GRID_HALF_EXTENT * 2));
+      .add(vec2(float(inputs.interaction.halfExtent), float(inputs.interaction.halfExtent)))
+      .div(float(inputs.interaction.halfExtent * 2));
     const slots: TSLNode = texture(cells, cellUV, 0);
     // Sample the records in the caller. Capturing a texture inside a reusable
     // Fn can omit its uniform dependency from generated WGSL, leaving the
