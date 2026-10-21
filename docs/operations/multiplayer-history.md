@@ -1,7 +1,18 @@
 # Multiplayer history setup
 
-Owner-directed implementation, 2026-10-21. Local code is separate from solo
-scores. No new Cloudflare resource has been provisioned for this candidate.
+Owner-directed implementation and deployment, 2026-10-21. The owner authorized
+database/key setup, merge and deployment after authentication. OAuth refresh
+restored actual D1 access. The dedicated `sds-multiplayer` database is
+`36748fbc-ef4d-4dae-90be-aeb431ea653b`, bound only to `sds-realtime` as `MATCH_DB`.
+Migration `0001_match_history.sql` is applied and `OWNER_STATS_TOKEN` is set.
+The 3.9.0 release is the first code deployment that enables history queries.
+
+The owner's local key is Windows-user encrypted at
+`.wrangler/owner-stats-token.dpapi` (ignored). Run
+`powershell -File .wrangler/copy-owner-key.ps1` on this PC to copy it, then paste
+into `https://sheepdogsim.com/r/owner`. The helper prints no secret and the page
+keeps it only in tab memory. The encrypted backup cannot be decrypted under a
+different Windows account; use the owner's password manager for another device.
 
 ## What deployment needs
 
@@ -9,7 +20,8 @@ scores. No new Cloudflare resource has been provisioned for this candidate.
   Never reuse `sds-db`, `sds-db-preview` or the staging identity database.
 - One random `OWNER_STATS_TOKEN` secret on `sds-realtime` (32 random bytes,
   encoded as 64 hex characters). It authorizes read-only dashboard queries.
-  Keep it in the owner's password manager, not source, logs, URL or chat.
+  Keep it encrypted on the owner's PC or in their password manager, never in
+  source, logs, URL or chat.
 - The existing `/r/*` route and `GAME_SHELL`/`IDENTITY` service bindings suffice.
   No new Worker, hostname, Access application or third-party service is needed.
   Do not change room capacity, identity secrets or the solo database.
@@ -20,7 +32,8 @@ credentials also failed that read. Refresh OAuth with
 `node tools/staging-wrangler.mjs login`, then repeat
 `node tools/staging-wrangler.mjs d1 list`. The wrapper omits a stale inherited
 API token for its child process; it does not change machine credentials.
-Do not infer usable D1 access from the login summary alone.
+The subsequent OAuth login and D1 list request succeeded. Do not infer usable
+D1 access from the login summary alone.
 
 ## One-time setup, after access and deployment authorization
 
@@ -92,7 +105,7 @@ The existing account is Workers Paid, as confirmed by the owner. Current
 the account. Above those shared allowances, reads cost $0.001 per million,
 writes $1 per million and storage $0.75 per GB-month. Index writes count too.
 No separate fixed database fee applies. Remaining account allowances could not
-be verified because the actual D1 request failed.
+be verified during the initial estimate. OAuth access is now restored.
 
 Planning example, not a billing measurement: 10,000 rounds at a conservative
 100 billable row writes each, 100 million rows read and 0.1 GB-month would add

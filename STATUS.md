@@ -75,12 +75,15 @@ new asset, simulation change or solo migration is included.
 Local implementation, production-build browser flow and separate UI review
 passed; [candidate evidence](docs/history/status-log.md#multiplayer-history-and-owner-dashboard---2026-10-21-local-candidate)
 records the checks. [PR #145](https://github.com/matthew-kissinger/sds/pull/145)
-tracks the candidate and CI result. Production remains 3.8.0;
-no resource was provisioned or deployed for this slice. Deployment needs the
-new `MATCH_DB` binding and an `OWNER_STATS_TOKEN` secret, described in
-[the setup note](docs/operations/multiplayer-history.md). Wrangler's login
-summary succeeds, but the actual D1 API read returns authentication error
-10000; refresh access before setup. Retention is initially indefinite, with
+tracks the candidate and CI result. The owner explicitly authorized database
+and key setup, merge and deployment on 2026-10-21. OAuth refresh restored actual
+D1 access. The separate `sds-multiplayer` database is created and its `MATCH_DB`
+binding is committed for the 3.9.0 candidate. The migration is applied and the
+owner secret is configured, with a Windows-encrypted local backup.
+Production remains 3.8.0 until
+the tagged release completes. Setup is described in
+[the operations note](docs/operations/multiplayer-history.md).
+Retention is initially indefinite, with
 no automatic deletion; records begin at enablement and cannot backfill old
 rooms. This reversible initial policy is flagged for owner review.
 

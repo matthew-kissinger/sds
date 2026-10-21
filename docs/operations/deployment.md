@@ -17,6 +17,13 @@ the measurements behind the `cf` move are in `docs/history/status-log.md`
 
 ## One production path
 
+**3.9.0 multiplayer history, owner-authorized 2026-10-21:** the separate
+`sds-multiplayer` D1 is bound as `MATCH_DB` only on `sds-realtime`, with a
+read-only `OWNER_STATS_TOKEN` secret. Apply only the multiplayer migration
+before the tagged deploy. Hold the three regional slots while updating the
+secret and releasing, as described below. Setup and rollback preserve the
+database and pending room exports; see [the history operations note](multiplayer-history.md).
+
 **3.8.0 competitive release, owner-authorized 2026-10-20:** both services
 move together to protocol 3 / room schema 3. Existing routes, bindings, secrets
 and the one-room-per-region capacity remain unchanged. Refresh an older open
