@@ -70,7 +70,7 @@ this does not create a fifth seat or a hidden spectator connection.
 | Separate realtime Worker, proposed source `realtime/` | `/r/*` routing, admission, room/public-board API, WebSocket upgrade |
 | One SQLite-backed RoomDO per room | Membership, settings, authoritative sim, input acceptance, snapshots and round results |
 | One SQLite-backed LobbyDO per enabled region | Public waiting-room directory, bounded creation leases and stale-entry cleanup |
-| Optional new multiplayer D1 | Only durable multiplayer result queries if approved; migrations begin at 0001 |
+| Separate multiplayer D1, owner-approved 2026-10-21 | Match history, per-player stats and owner activity queries; migrations begin at 0001 |
 
 Room state belongs in Durable Object storage; D1 is not required to list or
 play rooms. No per-tick database query, cross-region lobby call or identity
@@ -256,6 +256,53 @@ records its immutable rules/layout version and starting party size. Initial
 scope is a shared post-round result, not a new ranked ladder. Any future
 multiplayer leaderboard needs an approved separate schema and eligibility
 rules; it cannot combine solo/co-op or differing party sizes into one ranking.
+
+## Persistent history and activity - owner-directed 2026-10-21
+
+Keep multiplayer history physically separate from the solo database and
+`field-v3` boards. Reuse verified player identity through the private admission
+service; never copy the identity signing secret or device proof. A normal
+player can read only rounds they joined. Public rankings remain out of scope.
+
+Freeze the round ID, initial roster and names, region, mode, flock size,
+visibility, rules/layout version and starting party size at the loading barrier.
+Record start/end time, server simulation duration, final team/pen counts,
+unclaimed sheep, outcomes, departures and disconnect/reconnect counts.
+Preserve departed players in that roster. Shared wins and wins by forfeit are
+distinct from outright flock-completion wins. Co-op counts team completions
+only for players who finish; its captures are team totals, never individual
+sheep credits. Failed loading attempts are visible but are not matches started.
+Interruptions and abandonment create history without a completed result;
+unknown partial capture counts stay null. Server expiry is not a player forfeit.
+
+Persist the latest record per round in a RoomDO outbox atomically with lifecycle
+state. Export from alarms to D1 using transactional batches and revision-guarded
+upserts. Retried exports cannot double-count or overwrite a newer result.
+Database failure leaves active play running. Keep at most 64 unexported rounds
+per room; at that bound refuse new starts until export recovers. Cleanup must
+retain pending records. Retry with bounded backoff, independently of platform
+alarm retries. No simulation tick reads or writes D1. Existing room schema 3
+and protocol 3 remain compatible; live simulation recovery is unchanged.
+
+The player view has separate co-op/competitive summaries and paged history.
+The owner view shows 1/7/30-day activity by region/mode, distinct identities,
+started/finished/interrupted/abandoned rounds, average lobby wait, connection
+losses/rejoins, recent rounds and daily regional capacity rejections. Capacity
+counts are attempts, not unique people; keep up to 64 days of unsaved counters.
+Daily totals cover whole days overlapping the requested interval. These are
+delayed lifecycle statistics, not a live presence or latency monitor.
+
+The initial owner gate is a separate, random, read-only bearer secret, entered
+at `/r/owner` and held only in tab memory. Never embed it in a URL, bundle or
+browser storage. All stats responses use `no-store`; expose no player IDs,
+invite handles or identity secrets. Ordinary player tokens cannot authorize
+owner access. No new login provider or analytics service is required.
+
+History begins at enablement; old ephemeral rounds cannot be reconstructed.
+Initial retention is indefinite pending an explicit retention/deletion policy
+in STATUS. Clearing a browser identity does not delete server history, and a
+new device identity starts new stats. The privacy page describes these records.
+Setup and rollback are in [the operations note](../docs/operations/multiplayer-history.md).
 
 ## Timing, protocol and client presentation
 

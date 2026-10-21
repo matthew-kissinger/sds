@@ -74,7 +74,8 @@ new asset, simulation change or solo migration is included.
 
 Local implementation, production-build browser flow and separate UI review
 passed; [candidate evidence](docs/history/status-log.md#multiplayer-history-and-owner-dashboard---2026-10-21-local-candidate)
-records the checks. CI is pending. Production remains 3.8.0;
+records the checks. [PR #145](https://github.com/matthew-kissinger/sds/pull/145)
+tracks the candidate and CI result. Production remains 3.8.0;
 no resource was provisioned or deployed for this slice. Deployment needs the
 new `MATCH_DB` binding and an `OWNER_STATS_TOKEN` secret, described in
 [the setup note](docs/operations/multiplayer-history.md). Wrangler's login
