@@ -4,6 +4,15 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.9.0] - 2026-10-21
+
+### Added
+
+- Persistent multiplayer round history and separate co-op/competitive player
+  statistics, backed by a dedicated database and durable result exports.
+- A read-only owner activity dashboard with regional/mode totals, interruptions,
+  waiting times, connection events and capacity rejections. No solo-score changes.
+
 ## [3.8.0] - 2026-10-20
 
 ### Added

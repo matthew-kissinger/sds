@@ -27,8 +27,11 @@ well-timed bark to bring stragglers home.
 Online identity and score requests are fail-soft. Play, completion and local
 personal bests continue when the score service is unavailable.
 
-No account is required to play. This is the single-player version 3 client;
-campaign, survival and multiplayer modes are not included.
+No account is required to play. Solo, co-op and shared-flock competitive are
+available; multiplayer supports two to four players through invite links and
+regional public lobbies. Campaign and survival modes are not included.
+See [multiplayer development](realtime/README.md) for local play and the
+persistent history/owner-dashboard candidate.
 
 ## Controls
 
@@ -144,8 +147,8 @@ the live release, the API and the discovery pages.
 Contributor checks additionally cover:
 
 - deterministic fixtures and a running production preview;
-- a built-artifact scan that permits only the score REST client and excludes
-  rooms, WebSockets, multiplayer, deferred scale and debug code;
+- a built-artifact scan that checks the declared production multiplayer
+  surface and excludes deferred scale and development-only code;
 - complete 25, 75 and 200 sheep runs on both renderer backends;
 - desktop and mobile interaction, layout and audio checks;
 - asset source, license, secret and local-artifact checks;
@@ -156,10 +159,9 @@ the source commit and artifact identity. Device coverage and performance numbers
 in [STATUS.md](STATUS.md) describe measured configurations, not a guarantee for
 every phone or PC. Production publication requires owner approval.
 
-Public builds contain no multiplayer client, room flow, bundled Worker or
-5,000-sheep code. Solo-time boards use the existing score service through the
-isolated `field-v3` partition. Multiplayer remains a future product decision,
-not a dormant launch flag.
+Production serves the multiplayer client with a separate realtime Worker at
+`/r/*`. Solo-time boards keep the existing `field-v3` partition; multiplayer
+history uses a separate database. The 5,000-sheep experiment remains excluded.
 
 ## Contributing
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const path = (name: string) => fileURLToPath(new URL(name, import.meta.url));
 const proxy = {
   '/api': { target: 'http://127.0.0.1:8799' },
-  '^/r/(health|rooms|lobbies)(/|$)': { target: 'http://127.0.0.1:8799' },
+  '^/r/(health|rooms|lobbies|stats)(/|$)': { target: 'http://127.0.0.1:8799' },
   '^/r/(na|eu|apac)_[a-f0-9]{32}/(join|ws|status)': { target: 'http://127.0.0.1:8799', ws: true },
 };
 export default defineConfig(({ mode }) => ({ root: path('./app'), plugins: [react(), { name: 'coop-analytics-isolation', transformIndexHtml: html => html.replace(/<!-- Cloudflare Web Analytics -->[\s\S]*?<!-- End Cloudflare Web Analytics -->/, '') }], mode: 'coop',

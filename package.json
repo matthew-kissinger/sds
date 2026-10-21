@@ -1,7 +1,7 @@
 {
   "name": "sheepdog-sim",
   "private": true,
-  "version": "3.8.0",
+  "version": "3.9.0",
   "description": "A focused browser herding game built with Three.js, React and a deterministic simulation.",
   "author": "Matthew Kissinger",
   "license": "AGPL-3.0-or-later",

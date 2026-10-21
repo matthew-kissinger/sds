@@ -18,6 +18,12 @@
     { "binding": "IDENTITY", "service": "sds-worker", "entrypoint": "RoomAdmission" },
     { "binding": "GAME_SHELL", "service": "sds-worker", "entrypoint": "InviteShell" }
   ],
+  "d1_databases": [{
+    "binding": "MATCH_DB",
+    "database_name": "sds-multiplayer",
+    "database_id": "36748fbc-ef4d-4dae-90be-aeb431ea653b",
+    "migrations_dir": "migrations"
+  }],
   "durable_objects": { "bindings": [
     { "name": "ROOMS", "class_name": "RoomDO" },
     { "name": "LOBBIES", "class_name": "LobbyDO" }

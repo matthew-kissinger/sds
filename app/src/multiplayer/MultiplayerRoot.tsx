@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef, useState } from 'react';
+import { PlayerHistory } from './PlayerHistory';
 import { Boot } from '@app/ui/Boot';
 import { useGameStore } from '@app/state/store';
 import { MultiplayerClient, INITIAL } from './MultiplayerClient';
@@ -20,6 +21,7 @@ export default function MultiplayerRoot() {
   const [rooms, setRooms] = useState<RoomView[]>([]);
   const [boardMessage, setBoardMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [historyOpen,setHistoryOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const phase = useGameStore(s => s.gamePhase);
   const panel = useGameStore(s => s.uiPanel);
@@ -64,11 +66,13 @@ export default function MultiplayerRoot() {
     <dialog ref={dialog} className="coop-dialog" aria-labelledby="coop-title" onCancel={event => event.preventDefault()} onKeyDown={event => {
       if (event.key !== 'Escape') return;
       event.preventDefault(); event.stopPropagation();
+      if (historyOpen) { setHistoryOpen(false); return; }
       if (room?.phase === 'playing') useGameStore.getState().resume(); else if (!room) setOpen(false);
     }}>
       <h2 id="coop-title">{room?.phase === 'finished' ? 'Round finished' : room?.phase === 'playing' ? 'Multiplayer menu' : 'Multiplayer'}</h2>
       {status.message ? <p role="status">{status.message.replaceAll('_', ' ')}</p> : null}
-      {!room ? <>
+      {historyOpen ? <PlayerHistory close={() => setHistoryOpen(false)} /> : !room ? <>
+        <button onClick={() => setHistoryOpen(true)}>Your multiplayer stats</button>
         <p>Herd together or compete for the same flock with up to four players. Send an invite link or join a public room.</p>
         <label>Region <select value={region} onChange={e => {
           const value = e.target.value as Region; setRegion(value); try { localStorage.setItem('coop-region', value); } catch { /* optional preference */ }
@@ -104,7 +108,7 @@ export default function MultiplayerRoot() {
         </> : null}
         {room.phase === 'starting' ? <p>Waiting for everyone’s field to load.</p> : null}
         {room.phase === 'playing' ? <><p>The shared game continues while this menu is open.</p><button onClick={() => useGameStore.getState().resume()}>Resume</button></> : null}
-        {room.result ? <>{room.result.mode === 'competitive' ? <><p>{room.result.reason === 'no_winner' ? 'No winner' : `${room.result.winners.map(s => `Player ${s + 1}`).join(' and ')} ${room.result.winners.length > 1 ? 'share the win' : 'wins'}${room.result.reason === 'forfeit' ? ' by forfeit' : ''}`}</p><Scoreboard standings={room.result.standings} unclaimed={room.result.unclaimed} /></> : null}<p>{room.result.count} sheep home in {(room.result.tick / 60).toFixed(1)} seconds. {room.result.remaining} of {room.result.started} players finished.</p>
+        {room.result ? <><button onClick={() => setHistoryOpen(true)}>Your multiplayer stats</button>{room.result.mode === 'competitive' ? <><p>{room.result.reason === 'no_winner' ? 'No winner' : `${room.result.winners.map(s => `Player ${s + 1}`).join(' and ')} ${room.result.winners.length > 1 ? 'share the win' : 'wins'}${room.result.reason === 'forfeit' ? ' by forfeit' : ''}`}</p><Scoreboard standings={room.result.standings} unclaimed={room.result.unclaimed} /></> : null}<p>{room.result.count} sheep home in {(room.result.tick / 60).toFixed(1)} seconds. {room.result.remaining} of {room.result.started} players finished.</p>
           {host ? <button onClick={() => client.send('again')}>Return party to lobby</button> : <p>Waiting for the host to return the party to the lobby.</p>}</> : null}
         <button onClick={leave}>{room.settings.mode === 'competitive' && room.phase === 'playing' ? 'Forfeit and leave' : 'Leave room'}</button>
       </>}

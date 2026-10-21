@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { LobbyMetrics } from './LobbyMetrics';
 import { DurableObject } from 'cloudflare:workers';
 import type { RealtimeEnv } from './bindings';
 import { requireThat, rpc } from './http';
@@ -11,16 +12,19 @@ interface Lease {
   revision: number; summary: Summary | null; listedUntil: number;
 }
 export class LobbyDO extends DurableObject<RealtimeEnv> {
+  private metrics: LobbyMetrics;
   private leases: Lease[] = [];
   constructor(ctx: DurableObjectState, env: RealtimeEnv) {
     super(ctx, env);
-    ctx.blockConcurrencyWhile(async () => { this.leases = await ctx.storage.get<Lease[]>('leases') ?? []; });
+    this.metrics = new LobbyMetrics(ctx,env);
+    ctx.blockConcurrencyWhile(async () => { this.leases = await ctx.storage.get<Lease[]>('leases') ?? []; await this.metrics.load(); });
   }
   private prune(now: number) { this.leases = this.leases.filter(l => l.expiresAt > now); }
   private async persist() {
-    if (!this.leases.length) { await this.ctx.storage.deleteAll(); return; }
+    if (!this.leases.length) { await this.ctx.storage.delete('leases'); await this.metrics.schedule(); return; }
     await this.ctx.storage.put('leases', this.leases);
     await this.ctx.storage.setAlarm(Math.min(...this.leases.map(l => l.expiresAt)));
+    await this.metrics.schedule();
   }
   async allocate(region: Region, owner: string, key: string, config: Settings) {
     // Expected admission failures must be caught inside the input gate:
@@ -34,6 +38,7 @@ export class LobbyDO extends DurableObject<RealtimeEnv> {
       requireThat(this.leases.filter(l => l.owner === owner).length < 2, 'creation_limit', 429);
       const cap = this.env.ROOM_CAPS?.[region];
       requireThat(Number.isInteger(cap) && cap >= 0 && cap <= 50, 'capacity_unconfigured', 503);
+      if (this.leases.length >= cap) await this.metrics.reject(region);
       requireThat(this.leases.length < cap, 'region_capacity', 429);
       const handle = `${region}_${randomKey()}`;
       this.leases.push({ handle, owner, key, config: JSON.stringify(config), expiresAt: Math.min(now + ROOM_LIFETIME_MS, end),
@@ -62,5 +67,5 @@ export class LobbyDO extends DurableObject<RealtimeEnv> {
     const page = active.slice(0, 25);
     return { rooms: page.map(l => l.summary!), next: active.length > 25 ? page.at(-1)!.handle : null };
   }
-  async alarm() { this.prune(Date.now()); await this.persist(); }
+  async alarm() { this.prune(Date.now()); await this.persist(); await this.metrics.flush(); }
 }

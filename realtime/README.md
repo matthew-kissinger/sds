@@ -27,6 +27,29 @@ not a player URL flag; it never connects to production rooms.
 
 ## Implemented scope
 
+### Match history and stats candidate
+
+Choose **Your multiplayer stats** in the multiplayer menu or after a round.
+The local launcher supplies a separate disposable match database. Records
+survive room cleanup and DO restarts; restarting this disposable launcher
+clears all local test databases. Production persistence requires the separate
+Cloudflare database in [the setup note](../docs/operations/multiplayer-history.md).
+
+The local owner page is `http://localhost:5198/r/owner`; its development-only
+key is `local-owner-key-for-development-only`. This key is never a production
+credential. The owner page loads no game canvas and keeps its key in memory.
+For a production-client receipt, run `npm run build`, then
+`node tools/coop-local.mjs --production-assets` and
+`node tools/multiplayer-history-probe.mjs`. These commands use only local APIs.
+
+Stats endpoints are `GET /r/stats/me` (verified identity, optional `before`
+cursor) and `GET /r/stats/owner?days=7` (separate owner bearer key; 1/7/30 days).
+Records export a few seconds after lifecycle events. A database outage retains
+an outbox and retries; 64 pending rounds blocks new starts without cancelling
+the active game. Owner queries are manual refresh, not a live player monitor.
+
+### Gameplay
+
 Co-op uses the existing Home Field, one shared pen and 25/75/200 sheep. A
 RoomDO owns the actual seeded simulation at 60 Hz. The browser predicts only
 its dog, using shared movement code, and presents server sheep/dogs from a
