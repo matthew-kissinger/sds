@@ -22,7 +22,7 @@ real identity REST API in a separate Worker, and uses ephemeral D1/storage and
 a random local signing secret. Ctrl+C stops both services. Nothing is persisted
 to a Cloudflare account. Restarting the launcher resets rooms and local test
 identities; the existing browser identity flow can register again afterward.
-Production 3.7.0 exposes co-op; the competitive candidate is not deployed. The local launcher remains a separate Vite mode,
+Production 3.8.0 exposes co-op and competitive. The local launcher remains a separate Vite mode,
 not a player URL flag; it never connects to production rooms.
 
 ## Implemented scope

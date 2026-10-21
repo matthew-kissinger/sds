@@ -10,8 +10,8 @@ The execution sequence, research and historical evidence remain in
 The local slice now runs authoritative co-op on the Home Field: one shared
 flock and pen, 25/75/200 sheep, two to four starting players, live snapshots,
 client dog prediction, reconnect, departures, shared completion and rematch.
-`npm run coop` enables the local entry. Production 3.7.0 has co-op; the current
-competitive candidate is authorized for implementation and not yet deployed.
+`npm run coop` enables the local entry. Production 3.8.0 ships co-op and
+competitive after explicit owner deployment approval on 2026-10-20.
 It enables shared-flock competitive starts, the reviewed 2/3/4-player layouts,
 per-pen scores, forfeits, eligible shared ties and explicit no-winner closure. Full
 snapshots and a fixed 100 ms presentation buffer are reversible pilot choices;

@@ -4252,3 +4252,42 @@ footstep/wake parity and post-completion settling remain earlier pilot gaps.
 Protocol 3 requires client/realtime rollout together after draining protocol-2
 rooms. The live solo score database, signing key and field-v3 partition are
 untouched. The unrelated asset-lab edit was preserved outside this candidate.
+
+
+## Release 3.8.0 - 2026-10-21 competitive live
+
+Owner explicitly requested deployment after reviewing the completed candidate.
+PR #144 merged at `9b16bc15e6ff4c46dd21b8fff7533406aee42b73`; annotated tag
+`v3.8.0` triggered successful Deploy run `39539963866`. Main Client CI run
+`39539629930` passed first. Both runs passed 938 client tests in 112 files
+and 71 workerd tests in eight files, lint, both typechecks, build and discovery.
+
+Live at 03:46 UTC: game Worker version `50aae9ba-204a-4a1e-8c46-5f72f56c8206`,
+realtime version `e191ea75-1f34-4feb-9246-757db11b0540`. The live release manifest
+reports 3.8.0 and the tagged SHA; `/r/health` reports protocol 3 and that same
+SHA. Artifact: 43 files, 10,410,896 bytes, digest
+`75ebfc7a0468baaa57aa6148b334d67628dc89828981c1701a5bfd1aebb0e5df`.
+Main JS: 2,458.10 kB / 682.59 kB gzip; multiplayer: 40.72 / 12.80 kB.
+The workflow passed live identity, apex/API, workers.dev, discovery and analytics
+checks. A saved pre-deploy identity retained its token, persistent ID and name;
+wrong identity proof still returned 401.
+
+Each region's sole allocation was acquired as a private operator waiting room,
+proving no prior room lease remained. Those three sockets held capacity through
+cutover without starting a simulation, then left using protocol 3. No player
+match was interrupted. Routes, secrets, D1 and one-room-per-region caps remain
+unchanged; no paid load or extra infrastructure was provisioned. Existing OAuth
+worked without owner authentication. Operator receipts remain ignored under
+`.wrangler/release380-*`; no credentials or captures are committed.
+
+
+All three operator rooms were confirmed closed with zero members before the
+live gameplay check. Two independent rendered browser profiles on this PC
+passed competitive invite, ready/start, movement, both barks, identical
+same-tick snapshots, reload/seat reclaim and last-eligible-player forfeit win.
+No uncaught page errors; genuine WebGPU. Both clients left and browser contexts
+closed. Receipt/screens/video (ignored):
+`captures/multiplayer/production-competitive-380/webgpu-desktop-2/`.
+This is functional evidence, not hub timing, physical-phone performance or
+human competitive balance acceptance. The earlier three/four-player local
+receipts and remaining pilot limitations still apply.

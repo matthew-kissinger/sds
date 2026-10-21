@@ -12,14 +12,14 @@ investigations are in `docs/history/`.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Co-op is live in 3.7.0. Competitive and the 5,000-sheep player path remain
+- Co-op and competitive are live in 3.8.0. The 5,000-sheep player path remains
   absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.7.0 (`a57b8406`, tag `v3.7.0`; co-op multiplayer)
+- Version 3.8.0 (`9b16bc15`, tag `v3.8.0`; competitive multiplayer)
   is live at `https://sheepdogsim.com` since 2026-10-21
-  02:18 UTC (`Deploy` run 39531810610; live verification in `docs/history/status-log.md`),
+  03:46 UTC (`Deploy` run 39539963866; live verification in `docs/history/status-log.md`),
   served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
@@ -83,9 +83,10 @@ scores, forfeit-and-continue, shared ties, and explicit no-winner closure.
 Competitive terrain is level with symmetric grass and distant reused oaks;
 Classic camera/input bearing is fixed toward each player's pen. Solo retains
 its original field, input basis and deterministic traces. No new asset is needed.
-Protocol/storage move to 3; drain live rooms before deploying both Workers from
-the same SHA. The owner authorized production release 3.8.0 on 2026-10-20; deployment is in progress. Local evidence and remaining
-human fairness/device review are recorded in `docs/history/status-log.md`.
+Shipped as 3.8.0 after explicit owner deployment approval. Both Workers use
+protocol/storage 3 and the same tagged SHA; no player rooms were occupied
+during cutover. Release evidence and remaining human fairness/device review:
+[Release 3.8.0](docs/history/status-log.md#release-380---2026-10-21-competitive-live).
 
 ### Owner-directed co-op release - 2026-10-20
 
@@ -137,7 +138,7 @@ client renders the shared field with up to four dogs. Invite/public lobbies,
 ready/start, prediction/interpolation, reconnect, continue-on-leave, shared
 completion and rematch are implemented locally. Run `npm run coop`; see
 [scope, instructions and evidence](realtime/README.md). The production build
-exposes the co-op entry; competitive starts remain unavailable.
+exposes both co-op and competitive as of release 3.8.0 above.
 The owner approved the simplified [staging setup](docs/operations/multiplayer-staging.md)
 and its $20 one-room pilot. Workers Paid is owner-confirmed. The October 20 read-only review
 verified working Wrangler OAuth, the account, staging hostname vacancy and hub
