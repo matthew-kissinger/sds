@@ -1,7 +1,9 @@
-# Local co-op
+# Co-op pilot
 
-Undeployed multiplayer work under spec/03. No production hosting configuration
-imports this service. No new asset or Cloudflare resource was created.
+Multiplayer work under spec/03. The owner-approved isolated staging pilot is
+deployed; see [access and live receipt](../docs/operations/multiplayer-staging.md#live-pilot-receipt-october-20).
+The public game remains solo. No new asset was created. Local commands below
+remain entirely local; the dated validation notes retain their original scope.
 
 ## Play on this PC
 

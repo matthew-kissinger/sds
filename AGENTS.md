@@ -28,7 +28,7 @@ rollback. Keep that service isolated from the client.
   REST endpoints. Multiplayer rooms and WebSockets are absent through 3.6.1.
   The owner opened local multiplayer foundations on 2026-10-20 under
   `docs/architecture/multiplayer-plan.md` and `spec/03-multiplayer.md`.
-  `realtime/` is a separate, tested, undeployed Worker on `/r/*`; its private
+  `realtime/` is a separate, tested Worker on `/r/*`, deployed only to staging; its private
   identity adapter is not exported by the production score router. Keep this
   cycle isolated. The owner approved the simplified $20 staging deployment
   after setup/cost review; `staging/` owns its access gate and bounded pilot.

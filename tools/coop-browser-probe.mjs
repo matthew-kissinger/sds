@@ -41,7 +41,11 @@ try {
   await host.waitForFunction(() => document.querySelector('.herd-app')?.dataset.ready === 'true', {}, { timeout: 90000 });
   await host.getByRole('button', { name: hosted ? 'Play co-op' : 'Play co-op locally', exact: true }).click();
   await host.getByLabel('Visibility').selectOption('public');
-  await host.getByRole('button', { name: 'Create co-op room' }).click();
+  const emptyRoom = host.getByRole('button', { name: /^Co-op · 0\/4 · 25 sheep$/ });
+  // An earlier aborted smoke may leave an empty waiting room for its 2-minute grace.
+  // Reuse it through the public UI; never delete live state to make a probe pass.
+  if (hosted && await emptyRoom.isVisible()) await emptyRoom.click();
+  else await host.getByRole('button', { name: 'Create co-op room' }).click();
   await host.getByRole('button', { name: 'Start co-op', exact: true }).waitFor({ timeout: 20000 });
   const link = await host.getByLabel('Invite link', { exact: true }).inputValue();
   console.log('Host waiting room created');
@@ -89,4 +93,11 @@ try {
     backend: await host.locator('.herd-app').getAttribute('data-backend'), snapshots: snapshots.map(s => s.length),
     checks: [`${players} independent identities`, 'invite shell', 'ready barrier', 'movement', 'two barks', 'same-tick snapshot agreement', 'reload reconnect', `leave continues with ${players - 1}`] }, null, 2));
   console.log('PASS: co-op browser flow');
+} catch (error) {
+  console.error('Browser errors:', errors);
+  for (const [i, p] of pages.entries()) if (!p.isClosed()) {
+    console.error(`Player ${i + 1}:`, (await p.locator('body').innerText()).slice(0,2000));
+    await p.screenshot({ path: `${output}/failure-${i + 1}.png` }).catch(() => {});
+  }
+  throw error;
 } finally { await Promise.all(contexts.map(c => c.close())); await hubBrowser?.close(); await browser.close(); }

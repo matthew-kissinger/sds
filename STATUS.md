@@ -116,8 +116,12 @@ The owner approved the simplified [staging setup](docs/operations/multiplayer-st
 and its $20 one-room pilot. Workers Paid is owner-confirmed. The October 20 read-only review
 verified working Wrangler OAuth, the account, staging hostname vacancy and hub
 reachability; billing allowances and Access enrollment remain unverified.
-Hosted wrappers, passcode-cookie access and the server-enforced cutoff pass
-local typechecks, bundle dry runs and 64 workerd checks; deployment is in progress.
+Hosted wrappers, passcode-cookie access and the server-enforced cutoff passed
+local typechecks, bundle dry runs and 64 workerd checks. Staging source `cf15f61a`
+is deployed at `staging.sheepdogsim.com`; the real PC/hub smoke passed invite,
+start, movement/barks, snapshot agreement, reload and leave/continue. The window
+closes October 20 at 10:42 p.m. EDT; [live receipt](docs/operations/multiplayer-staging.md#live-pilot-receipt-october-20)
+records versions, access instructions, cleanup and limitations. No production change.
 Full snapshots and fixed 100 ms buffering are local
 pilot choices; delta/adaptive transport and all hosted/device/performance and
 separate presentation-review gates remain open. No multiplayer release gate

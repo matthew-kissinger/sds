@@ -1,5 +1,59 @@
 # Multiplayer staging proposal and cost review
 
+## Live pilot receipt, October 20
+
+Deployed and PC/hub smoke-tested. Source:
+`cf15f61a0852051b2ae378b7cf17930344a82570` on `codex/multiplayer-foundations`.
+The staging-only direct deployment is authorized in the conversation; no push,
+merge, production tag or production deployment was performed.
+
+| Resource | Live identifier |
+| --- | --- |
+| Game Worker version | `b440b8da-ed04-403e-af52-d7959461dcff` |
+| Realtime Worker version | `d8def202-dcac-46cc-9e68-3796fbff7ebc` |
+| Staging D1 | `0770de39-a50d-4340-8907-b61f8a4b297a` |
+| Open window | 2026-10-21 01:42:55.815 to 02:42:55.815 UTC, October 20 9:42–10:42 p.m. EDT |
+| Client bundle digest | `ae4365dcf7a19d6d4d27044f004755bc233a44a298415d4e59223569fc14f60a` |
+
+Play at `https://staging.sheepdogsim.com`. The temporary passcode and instructions
+are in ignored `.wrangler/staging/playtest.txt`, never committed. Choose North
+America, create a room, open its invite on the other machine, both select Ready,
+and the host selects Start co-op. Maximum one room/four players. The cutoff is
+server enforced and opening a link does not renew it. No authentication action
+was needed: the existing Wrangler OAuth authorized creation, secrets and deploys.
+
+PC and hub independently rendered the hosted build, joined through a direct
+invite, readied/started, moved, barked, received identical same-tick snapshots,
+reloaded/reclaimed a seat and continued after one left. Zero uncaught browser
+errors. PC backend was WebGPU; no timing/device certification is claimed. Receipt:
+`captures/multiplayer/staging-coop/webgpu-desktop-2/receipt.json` (ignored), with
+151 PC and 62 hub snapshots observed. Both test contexts and the owned hub Chrome
+and SSH tunnel were closed. Final authenticated board read returned zero rooms;
+unauthenticated root and realtime requests return 401. The initial closed
+deployment returned 410; the local active-room cutoff test passed.
+
+The real-browser check caught `Referrer-Policy: no-referrer` making the login
+form's Origin null; changed to `same-origin` and repeated the hosted flow. Hub
+headless Vulkan hit graphics recovery; the successful run used its normal
+display session. Aborted smoke rooms respected the two-minute empty-lobby grace;
+the probe can reuse an empty public room through normal UI. These failures were
+not counted as passes.
+
+The inherited migration set contained a committed historical player snapshot.
+It briefly populated the new staging database during preparation, before any
+Worker deployment. Those 207 player/discriminator rows and 15 derived scores
+were removed, and zero players/scores/archived scores verified before exposure.
+The config generator now excludes that seed migration. No production database
+was queried or modified. Production `/release.json` still reports solo 3.6.1 at
+`32e720a771d23f8c930cd0bd5e95707054b39b4b`.
+
+The approved $20 envelope covers the existing bounded one-room estimate. No paid
+add-on, load service or subscription upgrade was bought. Actual account billing
+remains unverified; the estimate is not an invoice. Do not automatically reopen
+the window or expand load. To disable early, regenerate closed configs (without
+`--open`) and redeploy the pair; the existing deadline also bounds live rooms.
+No multiplayer release gate is closed by this pilot smoke.
+
 ## Simplified pilot approved, October 20
 
 The owner explicitly authorized provisioning and deployment after the review
