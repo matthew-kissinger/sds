@@ -24,16 +24,10 @@ consumer of that client. The retained `worker/`, `shared/`, `tests/worker/` and
 rollback. Keep that service isolated from the client.
 
 - Do not import `worker/` or `shared/` into the version 3 client.
-- The shipped version 3 client calls only the documented identity and score
-  REST endpoints. Multiplayer rooms and WebSockets are absent through 3.6.1.
-  The owner opened local multiplayer foundations on 2026-10-20 under
-  `docs/architecture/multiplayer-plan.md` and `spec/03-multiplayer.md`.
-  `realtime/` is a separate, tested Worker on `/r/*`, deployed only to staging; its private
-  identity adapter is not exported by the production score router. Keep this
-  cycle isolated. The owner approved the simplified $20 staging deployment
-  after setup/cost review; `staging/` owns its access gate and bounded pilot.
-  Production deployment and new assets remain separate approvals. Follow `STATUS.md`.
-  The 5,000-sheep experiment stays out.
+- Co-op rooms and WebSockets ship as a separate realtime Worker on `/r/*`
+  under the owner-directed 3.7.0 release in `STATUS.md` and `spec/03-multiplayer.md`.
+  The production game exports private identity and invite-shell service entrypoints.
+  Competitive remains planned. The 5,000-sheep experiment stays out.
 - Preserve the `field-v3` score partition and exact 25, 75 and 200 flock-size
   allow-list.
 - Production infrastructure - hosting, routes, bindings, secrets, analytics and

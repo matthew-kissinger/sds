@@ -6,6 +6,8 @@ export interface RealtimeEnv {
   ROOMS: DurableObjectNamespace<RoomDO>;
   LOBBIES: DurableObjectNamespace<LobbyDO>;
   IDENTITY: Fetcher;
+  GAME_SHELL?: Fetcher;
+  RELEASE_SHA?: string;
   ALLOWED_ORIGIN: string;
   ROOM_CAPS: Record<Region, number>;
   STAGING_END?: string;

@@ -36,7 +36,7 @@ import {
 } from './quality/autoTier';
 import { RuntimeQualityGovernor } from './quality/RuntimeQualityGovernor';
 
-const CoopRoot = import.meta.env.MODE === 'coop' || import.meta.env.MODE === 'coop-staging' ? lazy(() => import('./coop/CoopRoot')) : null;
+const CoopRoot = ['production', 'coop', 'coop-staging'].includes(import.meta.env.MODE) ? lazy(() => import('./coop/CoopRoot')) : null;
 
 function trackedGlFactory(props: Parameters<typeof glFactory>[0]) {
   const report = useGameStore.getState().reportBootStep;

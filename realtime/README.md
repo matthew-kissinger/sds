@@ -2,7 +2,7 @@
 
 Multiplayer work under spec/03. The owner-approved isolated staging pilot is
 deployed; see [access and live receipt](../docs/operations/multiplayer-staging.md#live-pilot-receipt-october-20).
-The public game remains solo. No new asset was created. Local commands below
+The owner authorized promotion to the public game as 3.7.0 after that smoke. No new asset was created. Local commands below
 remain entirely local; the dated validation notes retain their original scope.
 
 ## Play on this PC
@@ -22,8 +22,8 @@ real identity REST API in a separate Worker, and uses ephemeral D1/storage and
 a random local signing secret. Ctrl+C stops both services. Nothing is persisted
 to a Cloudflare account. Restarting the launcher resets rooms and local test
 identities; the existing browser identity flow can register again afterward.
-The normal production build has no co-op entry. This is a separate Vite mode,
-not a player URL flag or a change to production deployment.
+Production exposes Play co-op. The local launcher remains a separate Vite mode,
+not a player URL flag; it never connects to production rooms.
 
 ## Implemented scope
 

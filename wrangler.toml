@@ -6,7 +6,7 @@
 # tests/worker/cloudflare-config.spec.ts keeps the two in step;
 # docs/operations/deployment.md explains the handoff.
 name = "sds-worker"
-main = "worker/src/index.ts"
+main = "worker/src/game.ts"
 compatibility_date = "2026-04-01"
 compatibility_flags = ["nodejs_compat"]
 

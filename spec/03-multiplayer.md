@@ -1,17 +1,16 @@
 # 03 - Multiplayer
 
 Updated 2026-10-20 from the owner's multiplayer planning discussion.
-**Local foundations and simplified isolated staging deployment are authorized.**
-The owner approved the $20 pilot after setup/cost review. Production remains
-solo; its multiplayer release is not authorized. The execution sequence, research,
-historical evidence and unresolved decisions are in
+**Production co-op deployment is authorized (2026-10-20).** After the hosted
+PC/hub smoke passed, the owner requested promotion to the main site with a
+short live check. This supersedes the earlier local/staging-only restriction.
+The execution sequence, research and historical evidence remain in
 [the multiplayer plan](../docs/architecture/multiplayer-plan.md).
 
 The local slice now runs authoritative co-op on the Home Field: one shared
 flock and pen, 25/75/200 sheep, two to four starting players, live snapshots,
 client dog prediction, reconnect, departures, shared completion and rematch.
-`npm run coop` enables the local-only client entry; the production build still
-has no online entry. Competitive starts are explicitly unavailable. Full
+`npm run coop` enables the local entry; production now exposes Play co-op. Competitive starts are explicitly unavailable. Full
 snapshots and a fixed 100 ms presentation buffer are reversible pilot choices;
 delta transport, adaptive delay and numerical acceptance budgets remain open.
 [The local contract](../realtime/README.md) records implementation limits.

@@ -28,7 +28,10 @@ export default {
       const url = new URL(request.url);
       requireThat(Date.now() < deploymentDeadline(env), 'pilot_closed', 410);
       requireThat(requestAllowed(request.headers.get('CF-Connecting-IP') ?? 'local', Date.now()), 'request_rate', 429);
-      if (url.pathname === '/r/health' && request.method === 'GET') return json({ protocol: PROTOCOL, gameplay: true });
+      if (url.pathname === '/r/health' && request.method === 'GET') return json({ protocol: PROTOCOL, gameplay: true, commit: env.RELEASE_SHA });
+      if (env.GAME_SHELL && request.method === 'GET' && /^\/r\/(na|eu|apac)_[a-f0-9]{32}$/.test(url.pathname)) {
+        return env.GAME_SHELL.fetch(request);
+      }
       if (request.method === 'POST' || request.headers.has('Upgrade')) {
         requireThat(request.headers.get('Origin') === env.ALLOWED_ORIGIN, 'origin_denied', 403);
       }

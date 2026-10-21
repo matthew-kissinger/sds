@@ -46,7 +46,8 @@ const SHARED = {
   compatibilityFlags: ['nodejs_compat'],
   // The score API, relative to this file. The client never imports it;
   // `vite build` bundles it through the Cloudflare Vite plugin.
-  entrypoint: '../worker/src/index.ts',
+  entrypoint: '../worker/src/game.ts',
+  exports: { RoomAdmission: { type: 'worker' as const }, InviteShell: { type: 'worker' as const } },
   // /api/* and /c/* run the Worker first. Every other path is served by the
   // asset layer, with index.html for anything unmatched. _headers and
   // _redirects from app/public are honoured by the asset layer itself.

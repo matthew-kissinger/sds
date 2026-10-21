@@ -39,7 +39,7 @@ export function verifyReleaseManifest(manifest, { sha, requireV3Static = false }
     const capabilities = manifest.capabilities
     if (!capabilities) throw new Error('A v3 production release requires release-capabilities.json.')
     if (capabilities.singlePlayer !== true) throw new Error('The v3 release must declare singlePlayer: true.')
-    if (capabilities.multiplayer !== false) throw new Error('The v3 release must declare multiplayer: false.')
+    if (capabilities.multiplayer !== true && capabilities.multiplayer !== false) throw new Error('The v3 release must declare a boolean multiplayer capability.')
     if (!Number.isInteger(capabilities.maxSheep) || capabilities.maxSheep > 200) {
       throw new Error('The v3 release must declare an integer maxSheep no greater than 200.')
     }

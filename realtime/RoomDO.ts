@@ -74,6 +74,9 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
     }
   }
   private async change<T>(fn: (room: RoomState, now: number) => T, refresh = false): Promise<T> {
+    // Missing/expired invites are ordinary admission failures. Throwing inside
+    // blockConcurrencyWhile resets the object and erases the structured 404.
+    this.current();
     const result = await this.ctx.blockConcurrencyWhile(async () => {
       const room = this.current(); const before = JSON.stringify(room); expire(room, Date.now());
       // Invalid commands must not partly change settings or consume a seat.

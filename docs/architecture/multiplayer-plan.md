@@ -1,12 +1,14 @@
 # Multiplayer plan
 
-2026-10-20. Status: **playable local co-op in validation; hosted setup remains gated**.
+2026-10-20. Status: **co-op production release authorized after the hosted PC/hub smoke**.
 
 The owner requested this plan after score cards shipped, selected shared-flock
 competition with one pen per player, and accepted regional public boards with
 host-controlled starts. The owner subsequently authorized local implementation
 and tests, with staging setup and costs to be reviewed before provisioning.
-No resource, paid run, workflow change, push or deployment is authorized.
+The owner subsequently approved the bounded staging pilot and then production
+co-op deployment, including its hosting and release workflow. Competitive remains
+planned. Remaining qualification work does not block this initial release.
 It is the execution plan; [spec/03](../../spec/03-multiplayer.md) is the product
 and service contract, [spec/09](../../spec/09-testing.md) the acceptance matrix,
 and [STATUS](../../STATUS.md) the current work boundary. Earlier discussion and
@@ -15,13 +17,14 @@ historical plans are evidence, not permission to start a stage.
 Current implementation: [local realtime service](../../realtime/README.md).
 The local host now runs the shared Home Field simulation and the normal client
 renders two to four dogs. It covers movement, bark, reconnect, continue-on-leave,
-shared results and host-controlled rematch. Production has no multiplayer entry.
+shared results and host-controlled rematch. The production candidate exposes Play co-op.
 The local pilot uses full snapshots and fixed 100 ms interpolation; delta
 compression/adaptive buffering, competitive and the full acceptance matrix are
 still outstanding. These reversible choices do not close Stage 2 or Q8.
 The [staging setup and estimate](../operations/multiplayer-staging.md) assumes
 the owner-confirmed Workers Paid account. The owner approved $20; allowance
-balance remains unverified and final setup approval precedes provisioning.
+balance remains unverified. Staging was deployed and the hosted PC/hub smoke
+passed; the owner then requested production promotion.
 
 ## Decisions and limits
 

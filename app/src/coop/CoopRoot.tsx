@@ -54,7 +54,7 @@ export default function CoopRoot() {
   const me = room?.members.find(m => m.slot === status.slot);
   return <>
     {!open && panel === 'none' ? <Boot /> : null}
-    {!open && phase === 'title' ? <button className="herd-button coop-entry" onClick={() => setOpen(true)}>{import.meta.env.MODE === 'coop-staging' ? 'Play co-op' : 'Play co-op locally'}</button> : null}
+    {!open && phase === 'title' ? <button className="herd-button coop-entry" onClick={() => setOpen(true)}>{import.meta.env.MODE === 'coop' ? 'Play co-op locally' : 'Play co-op'}</button> : null}
     {room?.phase === 'playing' ? <aside className="coop-connection" aria-live="polite">
       <span>Co-op · Player {status.slot + 1} · {status.connected ? `${status.rtt ?? '…'} ms` : 'Reconnecting'}</span>
       {status.message ? <p>{status.message}</p> : null}
@@ -67,7 +67,7 @@ export default function CoopRoot() {
       <h2 id="coop-title">{room?.phase === 'finished' ? 'Flock home' : room?.phase === 'playing' ? 'Co-op menu' : 'Co-op'}</h2>
       {status.message ? <p role="status">{status.message.replaceAll('_', ' ')}</p> : null}
       {!room ? <>
-        <p>Herd together with up to four players. Use separate browser profiles for independent players.</p>
+        <p>Herd together with up to four players. Send an invite link or join a public room.</p>
         <label>Region <select value={region} onChange={e => {
           const value = e.target.value as Region; setRegion(value); try { localStorage.setItem('coop-region', value); } catch { /* optional preference */ }
         }}>{Object.entries(regions).map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>

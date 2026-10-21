@@ -12,8 +12,8 @@ investigations are in `docs/history/`.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Multiplayer and the 5,000-sheep player path are absent from the version 3
-  client. Solo-time boards use only the isolated `field-v3` partition.
+- Co-op is the owner-authorized 3.7.0 production candidate; competitive and the
+  5,000-sheep player path remain absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
@@ -76,12 +76,22 @@ functional evidence and hub measurements are recorded in
 Startup still misses the two-second target; physical-device evidence remains
 open. Local multiplayer foundations are now open as described below.
 
+### Owner-directed co-op release - 2026-10-20
+
+3.7.0 promotes the tested co-op slice to the main site, with one room per region
+(NA/EU/APAC), up to four players, public/private invites and the existing solo
+service. The tagged workflow deploys the game and separate `sds-realtime`
+service from the same SHA. Production has no staging passcode or hourly cutoff.
+Keep the existing identity database and signing secret. Competitive and broader
+latency/device qualification remain follow-up work; a short live co-op check
+and identity continuity check close this release.
+
 ### Multiplayer planning amendment - 2026-10-20
 
 The owner initially authorized documentation only, then local foundations,
 and subsequently the simplified isolated staging deployment after setup/cost
 review. This cycle uses the approved $20 pilot budget. Production multiplayer
-deployment remains unopened.
+deployment is now explicitly authorized after the hosted PC/hub smoke passed.
 [The multiplayer plan](docs/architecture/multiplayer-plan.md) and
 [spec/03](spec/03-multiplayer.md) now cover regional public boards, private
 invites, up to four people, host-controlled starts/rematches, co-op and
@@ -92,8 +102,8 @@ and solo results stay with the existing Worker; staging is isolated.
 This supersedes earlier placement ambiguity, the mandatory room-D1 foundation,
 the single global lobby and the combined solo/co-op leaderboard proposal. The
 solo score-service migration remains separate and must preserve newer shipped
-history/card consumers. Staging resources/deployment are now authorized; no new
-asset or production release/workflow change is authorized. Spec/09 holds the future acceptance matrix; plan
+history/card consumers. The owner authorized production promotion, its separate realtime Worker and
+release workflow on 2026-10-20. No new asset is required. Spec/09 holds the future acceptance matrix; plan
 D1-D7 tracks policy, measurement and setup decisions. The owner settled
 competitive departure later on 2026-10-20: forfeit and continue, with a win by
 forfeit when one competitor remains. The plan's "Settled decisions" records
@@ -111,7 +121,7 @@ client renders the shared field with up to four dogs. Invite/public lobbies,
 ready/start, prediction/interpolation, reconnect, continue-on-leave, shared
 completion and rematch are implemented locally. Run `npm run coop`; see
 [scope, instructions and evidence](realtime/README.md). The production build
-has no multiplayer entry, and competitive starts remain unavailable.
+exposes the co-op entry; competitive starts remain unavailable.
 The owner approved the simplified [staging setup](docs/operations/multiplayer-staging.md)
 and its $20 one-room pilot. Workers Paid is owner-confirmed. The October 20 read-only review
 verified working Wrangler OAuth, the account, staging hostname vacancy and hub
@@ -582,7 +592,7 @@ the record those files carry.
 ## Open questions
 
 - Multiplayer phase 7 has an approved design and local foundations in progress;
-  staging and production remain unopened (see the amendment above).
+  staging and production are authorized (see the amendment above).
   Competitive forfeit-and-continue and finish-the-flock/highest-eligible/shared-
   ties scoring and Q1-Q12 policies are settled in the plan. Remaining gates:
   validation of accepted competitive layouts under neutral guidance, measured region coverage, numerical
