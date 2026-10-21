@@ -12,14 +12,14 @@ investigations are in `docs/history/`.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Co-op and competitive are live in 3.8.0. The 5,000-sheep player path remains
+- Co-op, competitive and persistent multiplayer stats are live in 3.9.0. The 5,000-sheep player path remains
   absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.8.0 (`9b16bc15`, tag `v3.8.0`; competitive multiplayer)
+- Version 3.9.0 (`af94d276`, tag `v3.9.0`; multiplayer history and stats)
   is live at `https://sheepdogsim.com` since 2026-10-21
-  03:46 UTC (`Deploy` run 39539963866; live verification in `docs/history/status-log.md`),
+  09:36 UTC (`Deploy` run 39577792798; live verification in `docs/history/status-log.md`),
   served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
@@ -67,7 +67,7 @@ settles are in `docs/history/status-log.md`.
 ### Owner-directed multiplayer history and stats - 2026-10-21
 
 The owner authorized persistent match history, player stats and an owner
-dashboard, separate from solo scores. This candidate adds lifecycle records
+dashboard, separate from solo scores. This release adds lifecycle records
 in RoomDO storage, retry-safe export to a new multiplayer-only D1, private
 player history and a read-only owner dashboard at `/r/owner`. No leaderboard,
 new asset, simulation change or solo migration is included.
@@ -80,8 +80,10 @@ and key setup, merge and deployment on 2026-10-21. OAuth refresh restored actual
 D1 access. The separate `sds-multiplayer` database is created and its `MATCH_DB`
 binding is committed for the 3.9.0 candidate. The migration is applied and the
 owner secret is configured, with a Windows-encrypted local backup.
-Production remains 3.8.0 until
-the tagged release completes. Setup is described in
+Shipped as 3.9.0 through PR #145. The exact-commit workflow, returning identity,
+live two-player history and owner dashboard passed;
+[release evidence](docs/history/status-log.md#release-390---2026-10-21-multiplayer-history-live).
+Setup is described in
 [the operations note](docs/operations/multiplayer-history.md).
 Retention is initially indefinite, with
 no automatic deletion; records begin at enablement and cannot backfill old

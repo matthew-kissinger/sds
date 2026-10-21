@@ -6,6 +6,9 @@ restored actual D1 access. The dedicated `sds-multiplayer` database is
 `36748fbc-ef4d-4dae-90be-aeb431ea653b`, bound only to `sds-realtime` as `MATCH_DB`.
 Migration `0001_match_history.sql` is applied and `OWNER_STATS_TOKEN` is set.
 The 3.9.0 release is the first code deployment that enables history queries.
+It is live from tag `v3.9.0`, commit `af94d27674c5dc32bbb4fc93bc9565c6cb10a450`;
+the live gameplay/history/owner check passed. Full release evidence is in
+[the status log](../history/status-log.md#release-390---2026-10-21-multiplayer-history-live).
 
 The owner's local key is Windows-user encrypted at
 `.wrangler/owner-stats-token.dpapi` (ignored). Run

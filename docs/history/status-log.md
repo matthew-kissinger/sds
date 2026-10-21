@@ -4331,3 +4331,53 @@ No new resources, secrets, remote migrations or deploys occurred. Wrangler
 operational/bootstrap credentials. The new database and owner key remain
 enablement prerequisites in `docs/operations/multiplayer-history.md`. Production
 is still 3.8.0. New history begins at enablement; old rooms cannot be backfilled.
+
+## Release 3.9.0 - 2026-10-21 multiplayer history live
+
+The owner explicitly requested Cloudflare login, database/key setup, merge and
+deployment. OAuth refresh succeeded and an actual D1 list request confirmed
+access. Created only `sds-multiplayer` (`36748fbc-ef4d-4dae-90be-aeb431ea653b`,
+ENAM); applied `realtime/migrations/0001_match_history.sql`. It is bound as
+`MATCH_DB` only to `sds-realtime`. Created the read-only `OWNER_STATS_TOKEN`
+secret; its local backup is Windows-user encrypted under ignored `.wrangler/`.
+No secret value reached source, logs or chat. Solo D1 and identity secrets
+were preserved. Room caps remain one per region, with no paid load experiment.
+
+PR #145 merged to `af94d27674c5dc32bbb4fc93bc9565c6cb10a450`. Client CI on
+that merge passed (39577169441), then annotated tag `v3.9.0` triggered successful
+Deploy run 39577792798. The release reran lint, typechecks, build, discovery,
+942 Node/client tests in 113 files and 80 workerd tests in nine files, plus
+release/artifact verification and live origin, revision, discovery and
+analytics checks. Both services report the tagged SHA and protocol remains 3.
+
+Live from 09:36 UTC: game Worker `c4fdef31-c9a1-4a10-836a-6dd491a14d7e`,
+realtime Worker `92be06a5-f24e-408d-b153-3974c6cfe0ea`. The live manifest is
+3.9.0, 45 files, 10,423,008 bytes, artifact SHA-256
+`7b615bb68dd836eea0ac950e496dab0bd628a0979b89f0cb638901c2ec1f71cc`.
+Main JS 2,458.59 / 682.72 kB gzip; multiplayer 42.31 / 13.39 kB;
+shared history 5.74 / 2.15 kB; owner dashboard 3.43 / 1.48 kB.
+
+All three regional slots were acquired as private operator waiting rooms
+before updating the secret, proving no existing player room was occupied.
+They held capacity through the tagged rollout without starting a simulation,
+then left. The NA room was reused through its normal invite UI for the live
+check, avoiding another allocation while its empty-room lease expired. An
+initial probe selected Mode before admission completed; waiting for the room's
+Ready control fixed that harness race. No application fix or redeploy was needed.
+
+Two independent rendered browser profiles on this PC passed competitive
+start/forfeit, alarm-driven D1 export, the departed player's retained forfeit,
+the remaining player's separate win-by-forfeit, private history and owner
+activity. D1 independently confirmed one finished round and two participant
+rows with those outcomes. Owner rejection/acceptance, no canvas, memory-only
+key, Lock/reload, Escape and desktop/mobile composition passed without
+uncaught page errors. All test/operator rooms had zero occupants at cleanup;
+EU/APAC were closed, NA's empty finished room retained its normal expiry.
+Browser contexts closed. Returning pre-deploy identity and token still worked;
+the wrong identity proof returned 401.
+
+Ignored captures and receipt: `captures/multiplayer/production-history-390/`.
+This is functional and composition proof, not hub timing or physical-phone
+performance. Existing multiplayer latency, device and human fairness gaps
+remain. History begins at enablement and cannot reconstruct earlier rounds;
+the owner view currently includes the single controlled release-check round.
