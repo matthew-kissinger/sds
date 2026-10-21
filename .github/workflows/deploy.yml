@@ -159,7 +159,21 @@ jobs:
 
       - name: Verify realtime revision
         run: |
-          node --input-type=module -e "const r=await fetch('https://sheepdogsim.com/r/health'); const h=await r.json(); if(!r.ok || h.protocol!==2 || h.commit!=='${{ steps.source.outputs.sha }}') throw Error(JSON.stringify(h)); console.log(h)"
+          node --input-type=module <<'JS'
+          // A new route can briefly serve the previous SPA while edges converge.
+          for (let attempt = 0; attempt < 12; attempt++) {
+            try {
+              const r = await fetch('https://sheepdogsim.com/r/health', { cache: 'no-store' });
+              const h = await r.json();
+              if (!r.ok || h.protocol !== 2 || h.commit !== '${{ steps.source.outputs.sha }}') throw Error(JSON.stringify(h));
+              console.log(h);
+              break;
+            } catch (error) {
+              if (attempt === 11) throw error;
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+          }
+          JS
 
       - name: Verify live release identity
         run: node scripts/verify-release-manifest.mjs --url https://sheepdogsim.com/release.json --sha "${{ steps.source.outputs.sha }}" --retries 12

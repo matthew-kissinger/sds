@@ -12,20 +12,19 @@ investigations are in `docs/history/`.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Co-op is the owner-authorized 3.7.0 production candidate; competitive and the
-  5,000-sheep player path remain absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
+- Co-op is live in 3.7.0. Competitive and the 5,000-sheep player path remain
+  absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.6.1 (`32e720a7`, tag `v3.6.1`; gate passage correction)
-  is live at `https://sheepdogsim.com` since 2026-10-20
-  20:39 UTC (`Deploy` run 39493160586; `docs/history/status-log.md`),
+- Version 3.7.0 (`a57b8406`, tag `v3.7.0`; co-op multiplayer)
+  is live at `https://sheepdogsim.com` since 2026-10-21
+  02:18 UTC (`Deploy` run 39531810610; live verification in `docs/history/status-log.md`),
   served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
   `sheepdogsim.com` is that Worker's Custom Domain since 00:49 UTC on
-  2026-10-17, declared in `app/cloudflare.config.ts`, and since 3.3.2 the only
-  thing that serves the hostname: the `sheepdogsim.com/*` route from the
+  2026-10-17, declared in `app/cloudflare.config.ts`, and serves the game/API. Since 3.7.0, `sds-realtime` serves `/r/*`; the `sheepdogsim.com/*` route from the
   2026-10-16 cutover is deleted. `release.json` is the authority for the
   exact deployed source commit and artifact digest. `www.sheepdogsim.com`
   redirects to the apex at the zone edge.
@@ -77,6 +76,11 @@ Startup still misses the two-second target; physical-device evidence remains
 open. Local multiplayer foundations are now open as described below.
 
 ### Owner-directed co-op release - 2026-10-20
+
+Shipped as 3.7.0 through PR #143, with the live PC/hub flow and identity
+continuity verified. The initial workflow check ran before the new route
+propagated; all skipped live checks subsequently passed. Receipt:
+[Release 3.7.0](docs/history/status-log.md#release-370---2026-10-21-co-op-live).
 
 3.7.0 promotes the tested co-op slice to the main site, with one room per region
 (NA/EU/APAC), up to four players, public/private invites and the existing solo

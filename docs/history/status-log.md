@@ -4165,3 +4165,43 @@ commit identity.
   redirect `www.sheepdogsim.com` and `sds-frontend.pages.dev` to the apex, and
   submit the sitemap in Google Search Console and Bing Webmaster Tools.
 
+
+
+## Release 3.7.0 - 2026-10-21 co-op live
+
+Owner explicitly requested production promotion after the successful staging
+PC/hub smoke, without further approval gates. PR #143 merged as
+`a57b84068cf11762715ef51acdbeae2a4a42fe95`; annotated tag `v3.7.0` triggered
+Deploy run 39531810610. Main Client CI 39531446626 passed: 912 Node tests in
+111 files, 65 workerd tests in seven files, lint, typechecks, production build,
+discovery, release identity and hosting configuration.
+
+Production published at 02:18 UTC on October 21 (October 20 EDT):
+
+- Game Worker version `24db5873-126d-4bfc-a0a2-0c6525a2d37e`.
+- Realtime Worker version `a732443d-a185-491d-a7d1-0a0a8042b5e1`.
+- Client artifact digest `b28006774a9442121fb5c0a2f8e40537a588deee310f0f673d799e66a0dda1a3`.
+- Main JS 2,448.36 kB / 679.53 kB gzip; lazy co-op chunk 38.01 kB / 12.05 kB gzip.
+- `/release.json` and `/r/health` both name the exact tagged SHA; protocol 2.
+
+The deployment itself succeeded. Its immediate realtime verification received
+the old SPA during initial route propagation and failed JSON parsing, leaving
+the workflow red and skipping its later verification steps. After propagation,
+all those exact live checks were run successfully: release identity, apex and
+workers.dev origin/API, discovery and exactly one analytics beacon. The saved
+pre-deploy identity retained its JWT, persistent ID and name; wrong proof still
+returned 401. A follow-up adds bounded retries to the realtime check, matching
+the existing live verifiers. No redeploy was needed to fix gameplay.
+
+Production functional receipt (ignored):
+`captures/multiplayer/production-coop/webgpu-desktop-2/receipt.json`.
+Two independent rendered clients on this PC and the hub passed invite shell,
+ready/start, movement, both barks, identical same-tick snapshots, reload/seat
+reclaim, and departure continuation. Zero uncaught browser errors; this PC
+used genuine WebGPU. This is functional evidence, not a timing or phone claim.
+Both clients left and the owned browser/SSH sessions were cleaned up.
+
+Initial capacity: one room per NA/EU/APAC region, four players per room.
+Production has no pilot passcode or hourly cutoff. Staging retains its isolated
+resources and existing cutoff; no paid load experiment was added. Competitive,
+geographic latency qualification and physical-device receipts remain open.
