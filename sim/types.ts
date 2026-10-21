@@ -27,6 +27,8 @@
  * bark range) are metres in both unit systems and are never scaled.
  */
 
+import type { CompetitiveLayout } from './competitiveLayout';
+import type { ArenaGeometry } from './ArenaGeometry';
 import type { Vector2D } from './Vector2D';
 import type { PenBarrier, DogPenMemory } from './PenBarrier';
 import type { SheepCollisionScratch } from './EntityCollision';
@@ -112,6 +114,7 @@ export interface SpawnCluster {
  * resolution").
  */
 export interface FieldDef {
+  readonly competition?: CompetitiveLayout;
   /** Perimeter fence rect. */
   readonly bounds: RectBounds;
   /** The one opening in the perimeter, centred on x = 0. */
@@ -136,6 +139,7 @@ export interface SimState {
   readonly sheep: Sheep[];
   readonly dogs: Dog[];
   readonly penBarrier: PenBarrier;
+  readonly arena: ArenaGeometry | null;
   /** Reused spatial-hash buffers; the collision pass allocates nothing. */
   readonly collisionScratch: SheepCollisionScratch;
   /** Sheep inside the pen (`retiring` + `penned`). */

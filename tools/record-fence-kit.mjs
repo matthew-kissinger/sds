@@ -19,7 +19,7 @@ const ledger = {
   modules: json.nodes.filter(n => n.extras?.fenceModule).map(n => n.extras.fenceModule),
   runtime: { consumer: 'app/src/scene/fence/fenceField.ts', drawBudget: 3, surfaces: 'Shared procedural timber TSL, oak palette, no texture images',
     note: 'GLB nodes are authoring assemblies. The client fits the complete field and pen into two instance batches and a merged shadow; exported mesh count is not runtime draw count.' },
-  sources: ['app/src/scene/fence/fenceKit.ts', 'app/src/scene/fence/fenceField.ts', 'app/src/scene/fence/fenceShadowMotion.ts',
+  sources: ['app/src/scene/fence/arenaFence.ts', 'sim/competitiveLayout.ts', 'app/src/scene/fence/fenceKit.ts', 'app/src/scene/fence/fenceField.ts', 'app/src/scene/fence/fenceShadowMotion.ts',
     'app/src/scene/FenceLine.tsx', 'app/src/scene/fence/fieldSections.ts', 'app/src/tsl/palette.ts',
     'app/src/scene/fence/buildMeshes.ts', 'app/src/scene/fence/timberMaterial.ts', 'app/src/scene/fence/timberStyle.ts']
     .map(path => ({ path, sha256: sha(readFileSync(new URL(path, root), 'utf8').replace(/\r\n/g, '\n')) })),

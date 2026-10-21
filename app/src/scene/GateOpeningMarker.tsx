@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { HOME_FIELD } from '@sim/field';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Mesh, MeshBasicNodeMaterial } from 'three/webgpu';
@@ -12,6 +13,8 @@ import { buildGateOpeningGeometry } from './gateOpeningGeometry';
  * or pulse. Camera/phase changes fade it; reduced motion changes it directly. */
 export function GateOpeningMarker() {
   const field = useHeightfield();
+  const sim = useGameStore(s => s.sim);
+  const pen = sim.state.field.competition?.pens.find(p => p.slot === sim.state.dogs[0]?.id);
   const mesh = useRef<Mesh>(null);
   const target = useRef(0);
   const reduced = useRef(false);
@@ -21,8 +24,13 @@ export function GateOpeningMarker() {
     material.colorNode = mix(color(PALETTE.gatePaint), color(PALETTE.sheepWoolLit), attribute('gateTone', 'float'));
     material.opacityNode = opacity;
     const geometry = buildGateOpeningGeometry((x, z) => field.groundY(x, z));
+    if (pen) {
+      geometry.translate(-HOME_FIELD.gate.position.x, 0, -HOME_FIELD.gate.position.z);
+      geometry.rotateY(Math.atan2(pen.normal.x, pen.normal.z));
+      geometry.translate(pen.position.x, 0, pen.position.z);
+    }
     return { opacity, material, geometry };
-  }, [field]);
+  }, [field, pen]);
   useEffect(() => {
     const update = () => {
       const state = useGameStore.getState();

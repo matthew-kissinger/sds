@@ -27,6 +27,7 @@ import {
 import { measureTreeline } from './treeline/diagnostics';
 import { kilnOak } from './treeline/kilnOak';
 import { loadKilnTree } from './treeline/kilnTree';
+import { arenaTreeline } from './treeline/arenaTreeline';
 import { useTreelineManifest } from './treeline/manifest';
 import type { OakBuilder, OakRoles, OakStands } from './treeline/oakRoles';
 import type { TreelinePlacement } from './treeline/placement';
@@ -163,7 +164,9 @@ function buildTreeline(placement: TreelinePlacement, field: Heightfield, builder
  */
 export function TreelineMeshes({ oak }: { readonly oak: OakBuilder | null }) {
   const field = useHeightfield();
-  const placement = useTreelineManifest();
+  const source = useTreelineManifest();
+  const sectors = useGameStore(s => s.sim.state.field.competition?.sides.length);
+  const placement = useMemo(() => sectors ? arenaTreeline(source, sectors) : source, [source, sectors]);
   const diagnostics = useMemo(
     () => (REPORT_TREELINE ? measureTreeline(placement, field) : null),
     [field, placement],

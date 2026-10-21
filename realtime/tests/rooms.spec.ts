@@ -37,12 +37,12 @@ describe('real local Worker admission and rooms', () => {
   });
   it('uses single-use tickets, validates origin and rejects protocol mismatch before consumption', async () => {
     const admission = await create(await register('one'));
-    const path = `/r/${admission.handle}/ws?ticket=${admission.ticket}&v=3`;
+    const path = `/r/${admission.handle}/ws?ticket=${admission.ticket}&v=4`;
     expect((await request(path, undefined, undefined, { Upgrade: 'websocket' })).status).toBe(400);
-    expect((await request(path.replace('v=3', 'v=2'), undefined, undefined,
+    expect((await request(path.replace('v=4', 'v=3'), undefined, undefined,
       { Upgrade: 'websocket', Origin: 'https://foreign.test' })).status).toBe(403);
     await connect(admission);
-    expect((await request(path.replace('v=3', 'v=2'), undefined, undefined, { Upgrade: 'websocket' })).status).toBe(401);
+    expect((await request(path.replace('v=4', 'v=3'), undefined, undefined, { Upgrade: 'websocket' })).status).toBe(401);
   });
   it('keeps private rooms out of every regional board', async () => {
     const token = await register('host');
@@ -105,7 +105,7 @@ describe('real local Worker admission and rooms', () => {
       await state.storage.put('room', room);
     });
     await evictDurableObject(roomStub(a.handle));
-    const response = await request(`/r/${a.handle}/ws?ticket=${a.ticket}&v=2`, undefined, undefined, { Upgrade: 'websocket' });
+    const response = await request(`/r/${a.handle}/ws?ticket=${a.ticket}&v=3`, undefined, undefined, { Upgrade: 'websocket' });
     expect(response.status).toBe(401);
   });
 });

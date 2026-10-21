@@ -2,15 +2,15 @@
 import { decode, encode } from '@msgpack/msgpack';
 import { useGameStore } from '@app/state/store';
 import { scoresController } from '@app/scores/controller';
-import { PROTOCOL, type MatchFrame, type Region, type RoomView } from '../../../net/messages';
+import { PROTOCOL, type MatchFrame, type Region, type RoomView, type Standing } from '../../../net/messages';
 import { RemoteView } from './RemoteView';
 
-export interface CoopStatus { room: RoomView | null; slot: number; message: string; connected: boolean; rtt: number | null }
-export const INITIAL: CoopStatus = { room: null, slot: -1, message: '', connected: false, rtt: null };
+export interface MultiplayerStatus { room: RoomView | null; slot: number; message: string; connected: boolean; rtt: number | null; standings: Standing[]; unclaimed: number }
+export const INITIAL: MultiplayerStatus = { room: null, slot: -1, message: '', connected: false, rtt: null, standings: [], unclaimed: 0 };
 type Admission = { handle: string; slot: number; ticket: string };
 /** Component-owned connection. Credentials stay in the identity controller. */
-export class CoopClient {
-  status: CoopStatus = INITIAL;
+export class MultiplayerClient {
+  status: MultiplayerStatus = INITIAL;
   private socket: WebSocket | null = null;
   private view: RemoteView | null = null;
   private seq = 0;
@@ -24,8 +24,8 @@ export class CoopClient {
   private handle = '';
   private reconnectUntil = 0;
   private createKey = '';
-  constructor(private update: (status: CoopStatus) => void) {}
-  private patch(patch: Partial<CoopStatus>) { this.status = { ...this.status, ...patch }; this.update(this.status); }
+  constructor(private update: (status: MultiplayerStatus) => void) {}
+  private patch(patch: Partial<MultiplayerStatus>) { this.status = { ...this.status, ...patch }; this.update(this.status); }
   private async admit(path: string, body: unknown, key?: string) {
     for (let attempt = 0; attempt < 2; attempt++) {
       const token = await scoresController.roomToken(attempt === 1);
@@ -39,13 +39,13 @@ export class CoopClient {
     }
     throw new Error('Identity unavailable');
   }
-  async enter(handle?: string, region: Region = 'na', count = 25, visibility = 'private') {
+  async enter(handle?: string, region: Region = 'na', count = 25, visibility = 'private', mode: 'coop' | 'competitive' = 'coop') {
     const generation = ++this.generation;
     this.patch({ message: 'Connecting…' });
     try {
       if (!this.createKey) this.createKey = crypto.randomUUID().replaceAll('-', '');
       const admission = await this.admit(handle ? `/r/${handle}/join` : '/r/rooms',
-        handle ? {} : { region, settings: { mode: 'coop', flockSize: count, visibility } }, handle ? undefined : this.createKey);
+        handle ? {} : { region, settings: { mode, flockSize: count, visibility } }, handle ? undefined : this.createKey);
       if (generation !== this.generation) return;
       this.createKey = ''; this.handle = admission.handle;
       history.replaceState(null, '', `/r/${admission.handle}${location.search}`);
@@ -84,6 +84,7 @@ export class CoopClient {
           this.patch({ room: frame, message: frame.interruption ? `Match interrupted: ${frame.interruption.replaceAll('_', ' ')}` : '' });
           if (frame.phase === 'waiting') {
             this.loaded = ''; this.view = null; this.pending = null;
+            if (this.status.standings.length) this.patch({ standings: [], unclaimed: 0 });
             if (!useGameStore.getState().sim.authoritative) useGameStore.getState().reset();
           }
           this.assetsReady();
@@ -131,14 +132,18 @@ export class CoopClient {
     const room = this.status.room;
     if (!room || room.phase !== 'playing') { this.pending = frame; return; }
     this.pending = null;
-    if (frame.round !== room.round || frame.rules !== 'coop-1' || frame.basis !== null
+    if (frame.round !== room.round || frame.rules !== (room.settings.mode === 'competitive' ? 'competitive-1' : 'coop-1') || frame.basis !== null
+      || !Array.isArray(frame.roster) || frame.roster.length < 2 || frame.roster.length > 4
+      || new Set(frame.roster).size !== frame.roster.length || frame.roster.some(s => !Number.isInteger(s) || s < 0 || s > 3)
       || frame.sheep.length !== room.settings.flockSize * 4 || frame.dogs.length < 1 || frame.dogs.length > 4
       || !frame.dogs.some(d => d.slot === this.status.slot) || frame.sheep.some(n => !Number.isFinite(n))) throw new Error('Invalid snapshot');
     this.send('seen', frame.round, frame.tick);
+    if (JSON.stringify(frame.standings) !== JSON.stringify(this.status.standings) || frame.unclaimed !== this.status.unclaimed)
+      this.patch({ standings: frame.standings, unclaimed: frame.unclaimed });
     const roster = frame.dogs.map(d => d.slot).sort().join();
     if (!this.view || this.view.state.dogs.map(d => d.id).sort().join() !== roster) {
       this.view = new RemoteView(frame, this.status.slot, (input, bark) => this.send('input', frame.round,
-        input.direction.x, input.direction.z, input.sprint, bark), b => useGameStore.getState().barkAccepted(b), this.view?.barkId ?? 0);
+        input.direction.x, input.direction.z, input.sprint, bark), b => useGameStore.getState().barkAccepted(b), this.view?.barkId ?? 0, new Map([...room.members, ...frame.standings].map(p => [p.slot, p.name])));
       const menu = !useGameStore.getState().sim.authoritative && useGameStore.getState().gamePhase === 'paused';
       useGameStore.setState({ sim: this.view, flockSize: room.settings.flockSize, gamePhase: menu ? 'paused' : 'playing', uiPanel: menu ? 'pause' : 'none',
         pennedCount: frame.count, acceptedBark: null, completionTick: 0, completionTimeMs: 0 });

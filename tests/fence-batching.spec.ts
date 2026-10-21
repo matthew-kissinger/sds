@@ -37,7 +37,8 @@ describe('field fence GPU batching', () => {
 
     const line = source('app/src/scene/FenceLine.tsx');
     const pen = source('app/src/scene/Pen.tsx');
-    expect(line.match(/<RectFence\b/g)).toHaveLength(1);
+    expect(line).toContain('<RectFence sections={FIELD_FENCE_SECTIONS}');
+    expect(line).toContain('arenaSections(side, layout)');
     expect(pen).not.toContain('<RectFence');
   });
 

@@ -68,11 +68,11 @@ describe('room lifecycle deadlines and authority', () => {
 });
 describe('versioned MessagePack command boundary', () => {
   it.each([
-    [3, 'start', 0], [2, 'ready', -1, true], [2, 'ready', 0, 'true'],
-    [2, 'remove', 0, 4], [2, 'settings', 0, 'coop', 5000, 'public'],
-    [2, 'settings', 0, 'unknown', 25, 'public'], [2, 'start', Number.MAX_SAFE_INTEGER + 1],
-    [2, 'input', 0, 100, 100], [2, 'ready', 0, true, 'extra'],
-    [2, 'loaded', 0, 'wrong-round'], [2, 'ack', 0, NaN],
+    [4, 'start', 0], [3, 'ready', -1, true], [3, 'ready', 0, 'true'],
+    [3, 'remove', 0, 4], [3, 'settings', 0, 'coop', 5000, 'public'],
+    [3, 'settings', 0, 'unknown', 25, 'public'], [3, 'start', Number.MAX_SAFE_INTEGER + 1],
+    [3, 'input', 0, 100, 100], [3, 'ready', 0, true, 'extra'],
+    [3, 'loaded', 0, 'wrong-round'], [3, 'ack', 0, NaN],
   ])('rejects invalid command %#', (...frame) => {
     expect(() => command(packet(frame))).toThrow();
   });
@@ -82,6 +82,6 @@ describe('versioned MessagePack command boundary', () => {
     expect(() => command(new Uint8Array([0xc1]).buffer)).toThrow();
   });
   it('preserves a valid command without trusting client position or time', () => {
-    expect(command(packet([2, 'ready', 17, true]))).toEqual({ seq: 17, type: 'ready', value: true });
+    expect(command(packet([3, 'ready', 17, true]))).toEqual({ seq: 17, type: 'ready', value: true });
   });
 });

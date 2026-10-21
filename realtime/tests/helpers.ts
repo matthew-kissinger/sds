@@ -61,7 +61,7 @@ export class Client {
     });
     socket.accept(); clients.push(this);
   }
-  send(type: string, ...args: unknown[]) { if (this.socket.readyState !== WebSocket.OPEN) return; this.socket.send(packet([2, type, this.seq++, ...args])); }
+  send(type: string, ...args: unknown[]) { if (this.socket.readyState !== WebSocket.OPEN) return; this.socket.send(packet([3, type, this.seq++, ...args])); }
   async snapshotUntil(predicate: (frame: MatchFrame) => boolean): Promise<MatchFrame> {
     const end = Date.now() + 4000;
     for (;;) {
@@ -80,7 +80,7 @@ export class Client {
   }
 }
 export async function connect(admission: Admission, autoAck = true): Promise<Client> {
-  const response = await request(`/r/${admission.handle}/ws?ticket=${admission.ticket}&v=2`, undefined, undefined, { Upgrade: 'websocket' });
+  const response = await request(`/r/${admission.handle}/ws?ticket=${admission.ticket}&v=3`, undefined, undefined, { Upgrade: 'websocket' });
   if (!response.webSocket) throw new Error(`upgrade ${response.status}: ${await response.text()}`);
   return new Client(response.webSocket, autoAck);
 }

@@ -34,7 +34,9 @@ import {
 const AudioGraphContext = createContext<HerdAudioGraph | null>(null);
 
 function snapshot(state: GameStore): AudioStoreSnapshot {
+  const pen = state.sim.state.field.competition?.pens.find(p => p.slot === state.sim.state.dogs[0]?.id);
   return {
+    competitive: !!pen, gate: pen?.position,
     gamePhase: state.gamePhase,
     uiPanel: state.uiPanel,
     acceptedBark: state.acceptedBark,

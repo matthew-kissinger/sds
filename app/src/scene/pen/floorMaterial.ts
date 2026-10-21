@@ -95,20 +95,20 @@ export interface PenFloorSpec {
  * L: the pen rect, plus the corridor tongue reaching back to the gate line
  * inside the gate width.
  */
-function edgeDistance(spec: PenFloorSpec): TSLNode {
+function edgeDistance(spec: PenFloorSpec, position: TSLNode): TSLNode {
   const half = spec.mouthWidth / 2;
-  const offCentre = abs(positionWorld.x.sub(float(spec.mouthX)));
+  const offCentre = abs(position.x.sub(float(spec.mouthX)));
   const inCorridor = float(1).sub(smoothstep(float(half - 0.4), float(half + 0.4), offCentre));
   const belowPen = float(1).sub(
-    smoothstep(float(spec.minZ - 0.4), float(spec.minZ + 0.4), positionWorld.z),
+    smoothstep(float(spec.minZ - 0.4), float(spec.minZ + 0.4), position.z),
   );
-  const south = positionWorld.z.sub(mix(float(spec.minZ), float(spec.mouthZ), inCorridor));
-  const sides = min(positionWorld.x.sub(float(spec.minX)), float(spec.maxX).sub(positionWorld.x));
+  const south = position.z.sub(mix(float(spec.minZ), float(spec.mouthZ), inCorridor));
+  const sides = min(position.x.sub(float(spec.minX)), float(spec.maxX).sub(position.x));
   const tongue = mix(float(99), float(half).sub(offCentre), belowPen);
-  return min(min(sides, tongue), min(float(spec.maxZ).sub(positionWorld.z), south));
+  return min(min(sides, tongue), min(float(spec.maxZ).sub(position.z), south));
 }
 
-export function makePenFloorMaterial(spec: PenFloorSpec) {
+export function makePenFloorMaterial(spec: PenFloorSpec, position: TSLNode = positionWorld) {
   const grass = color(PALETTE.surround);
 
   // A compact, directional painted field. The previous version called the
@@ -117,20 +117,20 @@ export function makePenFloorMaterial(spec: PenFloorSpec) {
   // Four interfering sine strokes retain the authored fan, scuffs, ruts and
   // broken edge without carrying a second procedural-noise library in this one
   // fragment shader. Boundary geometry still supplies the close silhouette.
-  const alongStroke = sin(positionWorld.z.mul(float(0.19)).add(positionWorld.x.mul(float(0.07))));
+  const alongStroke = sin(position.z.mul(float(0.19)).add(position.x.mul(float(0.07))));
   const acrossStroke = sin(
-    positionWorld.x.mul(float(0.47))
-      .sub(positionWorld.z.mul(float(0.11)))
+    position.x.mul(float(0.47))
+      .sub(position.z.mul(float(0.11)))
       .add(alongStroke.mul(float(0.8))),
   );
   const broadStroke = sin(
-    positionWorld.x.mul(float(0.13))
-      .add(positionWorld.z.mul(float(0.08)))
+    position.x.mul(float(0.13))
+      .add(position.z.mul(float(0.08)))
       .add(acrossStroke.mul(float(0.55))),
   );
   const fineStroke = sin(
-    positionWorld.x.mul(float(0.91))
-      .add(positionWorld.z.mul(float(0.31)))
+    position.x.mul(float(0.91))
+      .add(position.z.mul(float(0.31)))
       .add(broadStroke.mul(float(0.42))),
   );
   const broad01 = broadStroke.mul(float(0.5)).add(float(0.5));
@@ -139,8 +139,8 @@ export function makePenFloorMaterial(spec: PenFloorSpec) {
   // Everything that ever walked here came out of the gate mouth. A slow
   // lateral stroke bends the traffic without making a radial fingerprint.
   const warp = alongStroke.mul(float(FAN_ACROSS_WANDER * 0.24));
-  const dx = positionWorld.x.sub(float(spec.mouthX)).add(warp);
-  const dz = positionWorld.z.sub(float(spec.mouthZ));
+  const dx = position.x.sub(float(spec.mouthX)).add(warp);
+  const dz = position.z.sub(float(spec.mouthZ));
   const track = vec2(dx.mul(float(TRACK_ACROSS)), dz.mul(float(TRACK_ALONG)));
   const wear = sin(track.x.add(track.y).mul(float(3.1)).add(fineStroke.mul(float(0.7))))
     .mul(float(0.5))
@@ -233,7 +233,7 @@ export function makePenFloorMaterial(spec: PenFloorSpec) {
   // And at the rim it stops being a floor and starts being field again. The edge
   // is eroded before it is feathered, and grass fingers reach in over what is
   // left, so the boundary is a broken line at every camera including the phone's.
-  const eroded = edgeDistance(spec).sub(
+  const eroded = edgeDistance(spec, position).sub(
     broadStroke.mul(float(EROSION * 0.56)).add(fineStroke.mul(float(EROSION * 0.16))),
   );
   const rim = smoothstep(float(0), float(FEATHER), eroded);

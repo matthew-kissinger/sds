@@ -149,6 +149,7 @@ export const KIND_OFFSET = 64;
 const DOG_PRIORITY = 1000;
 
 export interface InteractionField {
+  readonly halfExtent: number;
   /** RGBA32F, MAX_INTERACTORS x 1: (x, z, heading + kind * KIND_OFFSET, age). */
   readonly interactors: THREE.DataTexture;
   /** RGBA32F, GRID_CELLS square: four interactor texel-u values, 0 = empty. */
@@ -180,14 +181,15 @@ function dataTexture(data: Float32Array, width: number, height: number): THREE.D
   return texture;
 }
 
-export function createInteractionField(): InteractionField {
+export function createInteractionField(halfExtent = GRID_HALF_EXTENT): InteractionField {
+  const gridCells = Math.round(halfExtent * 2 / GRID_CELL);
   const interactorData = new Float32Array(MAX_INTERACTORS * 4);
-  const cellData = new Float32Array(GRID_CELLS * GRID_CELLS * 4);
+  const cellData = new Float32Array(gridCells * gridCells * 4);
   const interactors = dataTexture(interactorData, MAX_INTERACTORS, 1);
-  const cells = dataTexture(cellData, GRID_CELLS, GRID_CELLS);
+  const cells = dataTexture(cellData, gridCells, gridCells);
   const pulse = createBarkPulseField();
   /** Sort key per occupied slot: how far the body is from the cell centre. */
-  const cellKeys = new Float32Array(GRID_CELLS * GRID_CELLS * SLOTS);
+  const cellKeys = new Float32Array(gridCells * gridCells * SLOTS);
 
   // Trails: (x, z, heading) per slot plus the time it was written.
   const dogTrail = new Float32Array(DOG_GHOSTS * 3);
@@ -230,17 +232,17 @@ export function createInteractionField(): InteractionField {
     const u = (index + 0.5) / MAX_INTERACTORS;
     const bias = isDog ? DOG_PRIORITY : 0;
 
-    const ix0 = Math.max(0, Math.floor((x - INFLUENCE + GRID_HALF_EXTENT) / GRID_CELL));
-    const ix1 = Math.min(GRID_CELLS - 1, Math.floor((x + INFLUENCE + GRID_HALF_EXTENT) / GRID_CELL));
-    const iz0 = Math.max(0, Math.floor((z - INFLUENCE + GRID_HALF_EXTENT) / GRID_CELL));
-    const iz1 = Math.min(GRID_CELLS - 1, Math.floor((z + INFLUENCE + GRID_HALF_EXTENT) / GRID_CELL));
+    const ix0 = Math.max(0, Math.floor((x - INFLUENCE + halfExtent) / GRID_CELL));
+    const ix1 = Math.min(gridCells - 1, Math.floor((x + INFLUENCE + halfExtent) / GRID_CELL));
+    const iz0 = Math.max(0, Math.floor((z - INFLUENCE + halfExtent) / GRID_CELL));
+    const iz1 = Math.min(gridCells - 1, Math.floor((z + INFLUENCE + halfExtent) / GRID_CELL));
 
     for (let iz = iz0; iz <= iz1; iz++) {
-      const cz = -GRID_HALF_EXTENT + (iz + 0.5) * GRID_CELL;
+      const cz = -halfExtent + (iz + 0.5) * GRID_CELL;
       for (let ix = ix0; ix <= ix1; ix++) {
-        const cx = -GRID_HALF_EXTENT + (ix + 0.5) * GRID_CELL;
+        const cx = -halfExtent + (ix + 0.5) * GRID_CELL;
         const key = Math.max(Math.abs(x - cx), Math.abs(z - cz)) - bias;
-        const slot = (iz * GRID_CELLS + ix) * SLOTS;
+        const slot = (iz * gridCells + ix) * SLOTS;
 
         let target = -1;
         let worstKey = key;
@@ -263,6 +265,7 @@ export function createInteractionField(): InteractionField {
   }
 
   return {
+    halfExtent,
     interactors,
     cells,
     barkPulse: pulse.texture,
@@ -426,6 +429,10 @@ export function createInteractionField(): InteractionField {
         }
       }
 
+      for (let i = 1; i < sim.state.dogs.length; i++) {
+        const other = sim.state.dogs[i]!;
+        add(other.position.x, other.position.z, Math.atan2(other.heading.z, other.heading.x), true, 0);
+      }
       for (let i = 0; i < sheepCount; i++) {
         // Penned sheep stand on the pen floor, where the bake grows no grass.
         if (stateFlags[i] === SHEEP_STATE_FLAG.penned) continue;

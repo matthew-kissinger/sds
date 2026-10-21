@@ -66,3 +66,13 @@ desktop/mobile motion evidence can close presentation acceptance.
 ## Atmosphere
 
 Golden hour, permanently. No day/night cycle in v1; the game IS the hour before sunset. One Atmosphere component owns sun direction, sky, and updates `scene.fog` per frame so fog always matches the sky horizon. No per-material fog uniforms anywhere (the sds rule that kept every pass coherent for years). A feature that ships must be reachable in the shipped configuration; no lamps wired to states that cannot occur (sds shipped a dusk lamp on a scene with no dusk for eight cycles).
+
+## Competitive layouts - implementation amendment, 2026-10-20
+
+The reviewed square/hexagon/square fields use level ground and the same grass,
+fence, floor and oak assets. One committed scatter wedge is repeated at equal
+angles, with each pen floor cleared equally. Distant oak stands use the same
+symmetric construction outside all pen and camera approaches. The solo homestead,
+farmer and near scatter are omitted in competitive fields to avoid a privileged
+north side. No new downloaded asset or random runtime scatter is introduced.
+Solo/co-op retain their baked terrain and original placements.

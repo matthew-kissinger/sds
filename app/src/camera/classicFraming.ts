@@ -45,20 +45,21 @@ const PITCH = (PITCH_DEGREES * Math.PI) / 180;
 const HEIGHT = RIG_DISTANCE * Math.sin(PITCH);
 const BACK = RIG_DISTANCE * Math.cos(PITCH);
 
-export function createClassicFraming(): CameraFraming {
+export function createClassicFraming(bearing = 0): CameraFraming {
   const position = new THREE.Vector3();
   const aim = new THREE.Vector3();
   const desiredPosition = new THREE.Vector3();
   const desiredAim = new THREE.Vector3();
   let seated = false;
+  const forwardX = Math.sin(bearing), forwardZ = Math.cos(bearing);
 
   return {
     position,
     aim,
     update(dt: number, dog: Dog): void {
-      const aimZ = dog.position.z + AIM_LEAD;
-      desiredPosition.set(dog.position.x, HEIGHT, dog.position.z - BACK);
-      desiredAim.set(dog.position.x, groundY(dog.position.x, aimZ) + AIM_HEIGHT, aimZ);
+      const aimX = dog.position.x + AIM_LEAD * forwardX, aimZ = dog.position.z + AIM_LEAD * forwardZ;
+      desiredPosition.set(dog.position.x - BACK * forwardX, HEIGHT, dog.position.z - BACK * forwardZ);
+      desiredAim.set(aimX, groundY(aimX, aimZ) + AIM_HEIGHT, aimZ);
 
       if (!seated) {
         // First frame of the page. Nothing to ease from.

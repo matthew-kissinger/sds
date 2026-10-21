@@ -18,9 +18,9 @@ async function post(path, body, token, key) {
 }
 const sockets = []; let timer; let progress;
 async function connect(a) {
-  const socket = new WebSocket(`${origin.replace('http', 'ws')}/r/${a.handle}/ws?ticket=${a.ticket}&v=2`, { origin });
+  const socket = new WebSocket(`${origin.replace('http', 'ws')}/r/${a.handle}/ws?ticket=${a.ticket}&v=3`, { origin });
   const client = { socket, room: null, snapshot: null, seq: 0, errors: [], send(type, ...args) {
-    if (socket.readyState === WebSocket.OPEN) socket.send(encode([2, type, this.seq++, ...args]));
+    if (socket.readyState === WebSocket.OPEN) socket.send(encode([3, type, this.seq++, ...args]));
   } };
   sockets.push(client);
   socket.on('message', bytes => {

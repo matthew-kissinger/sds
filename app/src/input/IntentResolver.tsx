@@ -76,6 +76,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { FIXED_DT, MIN_STAMINA_TO_SPRINT, STAMINA_DRAIN_RATE } from '@sim/tuning';
+import { competitiveBearing } from '@app/camera/competitiveBearing';
 import { cameraModeBlend } from '@app/camera/CameraRig';
 import { lerpAngle } from '@app/camera/feel';
 import { followBearing } from '@app/camera/followFraming';
@@ -218,7 +219,7 @@ export function IntentResolver() {
     // difference at the start and by half of it averaged over the blend, 45
     // degrees for a right-angle pair and 90 for an opposed one.
     const blend = cameraModeBlend();
-    const bearing = lerpAngle(CLASSIC_BEARING, followBearing(), blend);
+    const bearing = lerpAngle(competitiveBearing(useGameStore.getState().sim) ?? CLASSIC_BEARING, followBearing(), blend);
     // A blend strictly between the two framings is the basis moving for a
     // reason that is not the player's, so the sample is held across it. At
     // either end the only thing moving this bearing is the Follow rig chasing

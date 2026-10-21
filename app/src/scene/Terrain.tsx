@@ -22,7 +22,8 @@
  * than only as silhouette.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useGameStore } from '@app/state/store';
 import { HOME_FIELD } from '@sim/field';
 import {
   color,
@@ -49,6 +50,7 @@ const RELIEF_TINT = 0.07;
 
 export function Terrain() {
   const field = useHeightfield();
+  const layout = useGameStore(s => s.sim.state.field.competition);
 
   const geometry = useMemo(() => buildTerrainGeometry(field), [field]);
 
@@ -89,7 +91,14 @@ export function Terrain() {
       ),
     );
 
-    const ground = mix(surround, pasture, insideX.mul(insideZ));
+    let inside = insideX.mul(insideZ);
+    if (layout) {
+      inside = float(1);
+      for (const side of layout.sides) inside = inside.mul(float(1).sub(smoothstep(
+        float(side.distance - FIELD_EDGE), float(side.distance + FIELD_EDGE),
+        positionWorld.x.mul(side.normal.x).add(positionWorld.z.mul(side.normal.z)))));
+    }
+    const ground = mix(surround, pasture, inside);
 
     // Relief tint: crests take a little of the horizon's warmth, hollows a
     // little of the zenith's cool. Both come from the sky, which is where the
@@ -103,7 +112,8 @@ export function Terrain() {
     const crest = ground.mul(color(PALETTE.skyHorizon));
     const hollow = ground.mul(color(PALETTE.skyZenith));
     return makeToonMaterial(mix(ground, mix(hollow, crest, elevation), float(RELIEF_TINT)));
-  }, []);
+  }, [layout]);
 
+  useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
   return <mesh geometry={geometry} material={material} />;
 }

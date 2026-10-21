@@ -44,6 +44,8 @@ import { createInteractionField, type InteractionField } from './grass/interacti
 import { FIELD_TUFT, SURROUND_TUFT, buildTuftGeometry, type TuftShape } from './grass/tuftGeometry';
 import { decodeTufts, grassGroup, useTufts } from './grass/tuftData';
 import { useReducedMotion } from '@app/ui/useReducedMotion';
+import type { CompetitiveLayout } from '@sim/competitiveLayout';
+import { arenaGrass } from './grass/arenaGrass';
 import { BarkRing } from './juice/BarkRing';
 
 interface GrassTier {
@@ -59,9 +61,11 @@ function buildTier(
   spread: number,
   interaction: InteractionField | null,
   style: GrassMaterialStyle,
+  layout?: CompetitiveLayout,
 ): GrassTier {
   const group = grassGroup(groupId);
-  const buffers = decodeTufts(records, group, Math.round(group.count * fraction), spread);
+  const decoded = decodeTufts(records, group, Math.round(group.count * fraction), spread);
+  const buffers = layout ? arenaGrass(decoded, layout) : decoded;
   const geometry = buildTuftGeometry(shape);
   const material = makeGrassMaterial({
     tufts: new THREE.InstancedBufferAttribute(buffers.tufts, 4),
@@ -94,6 +98,7 @@ export interface GrassFieldProps {
 
 export function GrassField({ style = DEFAULT_GRASS_STYLE }: GrassFieldProps = {}) {
   const sim = useGameStore((state) => state.sim);
+  const layout = sim.state.field.competition;
   const quality = useGameStore((state) => state.quality);
   const autoTierReceipt = useGameStore((state) => state.autoTierReceipt);
   const reducedMotion = useReducedMotion();
@@ -104,15 +109,15 @@ export function GrassField({ style = DEFAULT_GRASS_STYLE }: GrassFieldProps = {}
   // One scoreable-capacity field for the life of the scene. Its update reads
   // the live sim length, so 25/75/200 and the zero-sheep GPU scale controller
   // all share the same textures and grass material pipelines.
-  const interaction = useMemo(() => createInteractionField(), []);
+  const interaction = useMemo(() => createInteractionField(layout ? 161.25 : undefined), [layout]);
   useEffect(() => () => interaction.dispose(), [interaction]);
 
   const tiers = useMemo(
     () => [
-      buildTier(records, 'field', FIELD_TUFT, density.field, density.spread, interaction, style),
-      buildTier(records, 'surround', SURROUND_TUFT, density.surround, density.spread, null, style),
+      buildTier(records, 'field', FIELD_TUFT, density.field, density.spread, interaction, style, layout),
+      buildTier(records, 'surround', SURROUND_TUFT, density.surround, density.spread, layout ? interaction : null, style, layout),
     ],
-    [records, density, interaction, style],
+    [records, density, interaction, style, layout],
   );
 
   useEffect(

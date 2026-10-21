@@ -10,6 +10,7 @@ import { useHeightfield } from '@app/world/heightfield';
 import { useGameStore } from '@app/state/store';
 import { useReducedMotion } from '@app/ui/useReducedMotion';
 import { RectFence } from './RectFence';
+import { arenaFencePlacements, arenaSections } from './fence/arenaFence';
 import { FIELD_FENCE_SECTIONS } from './fence/fieldSections';
 import { loadFenceKit, type FenceKit } from './fence/fenceKit';
 import { buildFenceField } from './fence/fenceField';
@@ -27,12 +28,16 @@ export function FenceLine() {
 /** The lab consumes this same builder, controlling only the gate's target pose. */
 export function KilnFence({ closed }: { readonly closed: boolean }) {
   const kit = use(loadFenceKit());
+  const layout = useGameStore(s => s.sim.state.field.competition);
+  if (kit === null && layout) return <>{layout.sides.map((side, i) => <group key={i}
+    position={[(side.a.x + side.b.x) / 2, 0, (side.a.z + side.b.z) / 2]} rotation={[0, Math.atan2(side.normal.x, side.normal.z), 0]}><RectFence sections={arenaSections(side, layout)} /></group>)}</>;
   return kit === null ? <RectFence sections={FIELD_FENCE_SECTIONS} /> : <FenceMeshes kit={kit} closed={closed} />;
 }
 
 function FenceMeshes({ kit, closed }: { readonly kit: FenceKit; readonly closed: boolean }) {
   const field = useHeightfield();
-  const built = useMemo(() => buildFenceField(kit, (x, z) => field.groundY(x, z)), [kit, field]);
+  const layout = useGameStore(s => s.sim.state.field.competition);
+  const built = useMemo(() => buildFenceField(kit, (x, z) => field.groundY(x, z), layout ? arenaFencePlacements(kit, layout) : undefined), [kit, field, layout]);
   const progress = useRef(0);
   const reducedMotion = useReducedMotion();
   useFrame((_, delta) => {

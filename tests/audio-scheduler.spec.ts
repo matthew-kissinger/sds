@@ -106,3 +106,10 @@ describe('flock audio scheduling', () => {
     expect(noRepeat.some((command) => command.kind === 'asset' && command.assetId === 'huff')).toBe(false);
   });
 });
+
+it('keeps competitive shared progress neutral and resolves at the local pen', () => {
+  const commands = scheduleStoreAudio(snapshot(), snapshot({ competitive: true, gate: { x: 100, z: 0 },
+    penSerial: 1, penDelta: 1, pennedCount: 1, gamePhase: 'complete', completionTick: 60 }));
+  expect(commands[0]).not.toHaveProperty('point');
+  expect(commands.find(c => c.kind === 'asset' && c.assetId === 'gate-creak')).toMatchObject({ point: { x: 100, z: 0 } });
+});

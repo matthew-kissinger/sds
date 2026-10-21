@@ -31,7 +31,6 @@ export function applyCommand(room: RoomState, id: string, session: string, cmd: 
     requireThat(room.removed.length < 64, 'removal_limit');
     room.removed.push(target.id); room.members = room.members.filter(m => m !== target); return;
   }
-  requireThat(room.settings.mode === 'coop', 'mode_unavailable');
   requireThat(room.members.length >= 2 && room.members.every(m => m.connected && m.ready), 'not_ready');
   room.phase = 'starting'; room.round = round; room.startDeadline = now + START_MS;
   room.interruption = null;

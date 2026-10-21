@@ -17,6 +17,21 @@ the measurements behind the `cf` move are in `docs/history/status-log.md`
 
 ## One production path
 
+**3.8.0 competitive release, owner-authorized 2026-10-20:** both services
+move together to protocol 3 / room schema 3. Existing routes, bindings, secrets
+and the one-room-per-region capacity remain unchanged. Refresh an older open
+tab before joining a new match. Completed schema-2 co-op results migrate;
+live rounds are not recoverable across a restart.
+
+For this bounded three-room service, the empty-room cutover may hold one
+private operator waiting room in each region instead of changing runtime caps.
+Allocation succeeds only when that region has no existing room lease. Keep
+those sockets connected through the rollout, never start matches, then leave
+and confirm all three rooms have expired before the live gameplay smoke.
+If a region is occupied, wait for it to empty; do not evict players. This
+uses the existing admission limit without a configuration deploy that itself
+could interrupt an active match. Do not use this technique after raising caps.
+
 **3.7.0 co-op promotion, owner-authorized 2026-10-20:** `Deploy` now ships
 `sds-realtime` from `realtime/wrangler.json` after the game Worker. It owns only
 `sheepdogsim.com/r/*`, two new SQLite Durable Object namespaces, and private

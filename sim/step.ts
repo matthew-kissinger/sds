@@ -194,6 +194,8 @@ export function step(state: SimState, inputs: readonly PlayerInputs[], rng: Rng)
       if (flee.magnitude() > 0) s.acceleration.add(flee);
     }
 
+    if (state.arena) { state.arena.steer(s, dogs); tickBarkSteering(s); }
+    else {
     // Gate attraction, restored from sds. Three conditions, all of which have
     // to hold: a dog near enough to be pressing, a gate near enough to be the
     // thing being worked toward, and the dog on the FAR side of the sheep from
@@ -237,6 +239,8 @@ export function step(state: SimState, inputs: readonly PlayerInputs[], rng: Rng)
       s.acceleration.add(calculateBoundaryAvoidanceWithGate(s, bounds, gate, SHEEP_BOUNDARY));
     }
 
+    }
+
     applyAmbientDrift(s, rng);
 
     updateMovement(s, dt, SHEEP_MOVEMENT);
@@ -255,10 +259,11 @@ export function step(state: SimState, inputs: readonly PlayerInputs[], rng: Rng)
   // `null` dog: the single-dog branch inside update() keeps one inside-flag,
   // which cannot serve co-op. Every dog goes through containDog with its own
   // memory instead, including the solo case, so there is one path.
-  const pennedCount = penBarrier.update(sheep, null, true, dt);
+  const pennedCount = state.arena ? state.arena.update(sheep) : penBarrier.update(sheep, null, true, dt);
   for (let i = 0; i < dogs.length; i++) {
     const dog = dogs[i]!;
-    penBarrier.containDog(dog.position, true, dog.penMemory);
+    if (state.arena) state.arena.containDog(dog);
+    else penBarrier.containDog(dog.position, true, dog.penMemory);
   }
 
   // --- 7. perimeter -------------------------------------------------------
@@ -268,12 +273,12 @@ export function step(state: SimState, inputs: readonly PlayerInputs[], rng: Rng)
     // A sheep the barrier retired this tick is inside the pen, which is
     // outside the perimeter rect: leave it alone.
     if (s.state !== 'active') continue;
-    s.position = applyHardBoundaryConstraints(s, bounds, gate, HARD_BOUNDARY);
+    if (!state.arena) s.position = applyHardBoundaryConstraints(s, bounds, gate, HARD_BOUNDARY);
     validateEntityState(s, _fallback);
   }
   for (let i = 0; i < dogs.length; i++) {
     const dog = dogs[i]!;
-    if (!dog.penMemory.inside) {
+    if (!state.arena && !dog.penMemory.inside) {
       dog.position = applyHardBoundaryConstraints(dog, bounds, gate, HARD_BOUNDARY);
     }
     validateEntityState(dog, _fallback);

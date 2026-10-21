@@ -183,6 +183,7 @@ export interface ComposedRig {
 }
 
 export interface ComposedRigOptions {
+  readonly classicBearing?: number;
   /** The framing the page loaded in, so the first frame is not a transition. */
   readonly follow: boolean;
   /** The sim the rig is built against: one it has not had replaced under it. */
@@ -192,7 +193,7 @@ export interface ComposedRigOptions {
 }
 
 export function createComposedRig(options: ComposedRigOptions): ComposedRig {
-  const classic = createClassicFraming();
+  const classic = createClassicFraming(options.classicBearing);
   const follow = createFollowFraming(options.view, options.turning);
   const customize = createCustomizeFraming();
   const transitionFloor = createRidgeClamp();
