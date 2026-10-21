@@ -64,6 +64,25 @@ settles are in `docs/history/status-log.md`.
 
 ## Master plan - agreed 2026-10-16, decisions settled the same day
 
+### Owner-directed multiplayer history and stats - 2026-10-21
+
+The owner authorized persistent match history, player stats and an owner
+dashboard, separate from solo scores. This candidate adds lifecycle records
+in RoomDO storage, retry-safe export to a new multiplayer-only D1, private
+player history and a read-only owner dashboard at `/r/owner`. No leaderboard,
+new asset, simulation change or solo migration is included.
+
+Local implementation, production-build browser flow and separate UI review
+passed; [candidate evidence](docs/history/status-log.md#multiplayer-history-and-owner-dashboard---2026-10-21-local-candidate)
+records the checks. CI is pending. Production remains 3.8.0;
+no resource was provisioned or deployed for this slice. Deployment needs the
+new `MATCH_DB` binding and an `OWNER_STATS_TOKEN` secret, described in
+[the setup note](docs/operations/multiplayer-history.md). Wrangler's login
+summary succeeds, but the actual D1 API read returns authentication error
+10000; refresh access before setup. Retention is initially indefinite, with
+no automatic deletion; records begin at enablement and cannot backfill old
+rooms. This reversible initial policy is flagged for owner review.
+
 ### Owner-directed gate fix - 2026-10-20
 
 Shipped as 3.6.1 through PR #142. The simulation pen threshold now aligns with

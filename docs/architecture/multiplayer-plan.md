@@ -1,5 +1,15 @@
 # Multiplayer plan
 
+**Current amendment, 2026-10-21:** co-op and competitive shipped in 3.8.0.
+The owner has now authorized persistent match history, separate player stats
+and a read-only owner dashboard. [Spec/03](../../spec/03-multiplayer.md#persistent-history-and-activity---owner-directed-2026-10-21)
+defines the dedicated D1, durable outbox and private query contract; the
+[setup note](../operations/multiplayer-history.md) records access and rollout
+requirements. This supersedes the earlier deferred-D1 result-storage boundary
+below. No ranked ladder, solo migration, new assets or gameplay change is part
+of this slice. Dated planning gates below retain their original context;
+[STATUS](../../STATUS.md) is authoritative for current delivery state.
+
 2026-10-20. Status: **co-op production release authorized after the hosted PC/hub smoke**.
 
 The owner requested this plan after score cards shipped, selected shared-flock

@@ -5,6 +5,7 @@ import { failure, requireThat, RoomError, rpc } from './http';
 import { command, packet } from './protocol';
 import { REGIONS, randomKey, type Region } from './regions';
 import { applyCommand } from './roomCommands';
+import { RoomHistory } from './RoomHistory';
 import { RoomMatch } from './RoomMatch';
 import { deploymentDeadline } from './deadline';
 import { PROTOCOL } from '../net/messages';
@@ -13,6 +14,7 @@ import { bind, disconnect, expire, interrupt, newRoom, publicRoom, reserve,
   type Identity, type RoomState, type Settings } from './roomState';
 
 export class RoomDO extends DurableObject<RealtimeEnv> {
+  private history: RoomHistory;
   private room: RoomState | null = null;
   private match: RoomMatch | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -20,9 +22,12 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
   private lastSnapshot = -1;
   constructor(ctx: DurableObjectState, env: RealtimeEnv) {
     super(ctx, env);
+    this.history = new RoomHistory(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
       this.room = await ctx.storage.get<RoomState>('room') ?? null;
+      await this.history.load();
       if (!this.room) return;
+      const before = structuredClone(this.room);
       this.room.expiresAt = Math.min(this.room.expiresAt, deploymentDeadline(env));
       if ((this.room.schema as number) === 2) {
         this.room.schema = 3;
@@ -38,6 +43,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
         if (member.connected && !live) disconnect(this.room, member.id, member.session, Date.now());
       }
       expire(this.room, Date.now()); this.room.revision++;
+      this.history.observe(before, this.room, Date.now());
       await this.persist();
       broadcast(this.ctx, this.room);
     });
@@ -45,11 +51,12 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
   private current(): RoomState { requireThat(this.room, 'room_not_found', 404); return this.room; }
   private async persist() {
     const room = this.current();
-    await this.ctx.storage.put('room', room);
+    await this.ctx.storage.put(this.history.values(room));
     if (room.phase === 'closed') {
       // Keep a tombstone until the allocation lease expires. A retried create
       // must never resurrect an old invite if directory withdrawal failed.
       await this.ctx.storage.setAlarm(Math.max(Date.now() + 5_000, room.expiresAt));
+      await this.history.schedule();
       return;
     }
     const deadlines = [room.expiresAt, ...room.members.flatMap(m => m.deadline === null ? [] : [m.deadline])];
@@ -58,6 +65,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
     // Public leases heal missed directory updates; private rooms can sleep.
     if (room.settings.visibility === 'public') deadlines.push(Date.now() + 30_000);
     await this.ctx.storage.setAlarm(Math.max(Date.now() + 1, Math.min(...deadlines)));
+    await this.history.schedule();
   }
   private async publish() {
     const room = this.current();
@@ -73,7 +81,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
     }
     // At this point the directory's allocation lease has expired too, even
     // when it is unavailable. No expired idempotency key can recreate us.
-    if (room.phase === 'closed' && Date.now() >= room.expiresAt) {
+    if (room.phase === 'closed' && Date.now() >= room.expiresAt && !this.history.hasPending) {
       await this.ctx.storage.deleteAll();
       await this.ctx.storage.deleteAlarm();
     }
@@ -83,7 +91,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
     // blockConcurrencyWhile resets the object and erases the structured 404.
     this.current();
     const result = await this.ctx.blockConcurrencyWhile(async () => {
-      const room = this.current(); const before = JSON.stringify(room); expire(room, Date.now());
+      const room = this.current(); const before = JSON.stringify(room); const prior = structuredClone(room); expire(room, Date.now());
       // Invalid commands must not partly change settings or consume a seat.
       const draft = structuredClone(room);
       let result: T | undefined; let error: unknown;
@@ -91,6 +99,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
       if (this.current().phase === 'closed' && this.match?.score && !this.current().result) {
         this.match.advance(Date.now(), this.current()); this.current().result = this.match.result();
       }
+      this.history.observe(prior, this.current(), Date.now());
       const changed = before !== JSON.stringify(this.current());
       if (changed) this.current().revision++;
       if (changed || refresh) await this.persist();
@@ -169,11 +178,14 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
       }
       ws.serializeAttachment(a);
       if (cmd.type === 'ping') { ws.send(packet({ protocol: PROTOCOL, type: 'pong', seq: cmd.seq })); return; }
+      if (cmd.type === 'start') this.history.canStart();
       await this.change((room, time) => applyCommand(room, a.id, a.session, cmd, time, randomKey()));
     } catch (error) {
       const code = error instanceof RoomError ? error.code : 'service_unavailable';
-      if (error instanceof RoomError && error.status === 409) ws.send(packet({ protocol: PROTOCOL, type: 'error', code }));
-      else ws.close(1008, code);
+      try {
+        if (error instanceof RoomError && error.status === 409) ws.send(packet({ protocol: PROTOCOL, type: 'error', code }));
+        else ws.close(1008, code);
+      } catch { /* A concurrent departure already closed this socket. */ }
     }
   }
   async webSocketClose(ws: WebSocket) {
@@ -183,7 +195,7 @@ export class RoomDO extends DurableObject<RealtimeEnv> {
     ws.close(1000, 'closed');
   }
   async webSocketError(ws: WebSocket) { await this.webSocketClose(ws); }
-  async alarm() { await this.change(() => {}, true); }
+  async alarm() { await this.change(() => {}, true); await this.history.flush(); }
   private syncMatch() {
     const room = this.current();
     if (room.phase !== 'playing') {

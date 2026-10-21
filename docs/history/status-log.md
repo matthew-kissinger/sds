@@ -4291,3 +4291,43 @@ closed. Receipt/screens/video (ignored):
 This is functional evidence, not hub timing, physical-phone performance or
 human competitive balance acceptance. The earlier three/four-player local
 receipts and remaining pilot limitations still apply.
+
+## Multiplayer history and owner dashboard - 2026-10-21 local candidate
+
+Owner-directed persistent history, player stats and owner activity; no public
+leaderboard, solo-score mutation, simulation change or new asset. A separate
+D1 schema and lifecycle outbox preserve results beyond room cleanup, including
+departed players and interruptions. Co-op completions, competitive outright
+wins, shared wins and forfeit wins remain distinct. Owner access uses a separate
+read-only secret, never a player JWT. Privacy copy and spec/03 describe the data.
+
+Local checks: focused client API tests 4/4; workerd suite 79/79 in nine files,
+followed by the expanded history suite 9/9 (80 workerd tests total expected in
+CI). Typechecks and focused lint passed. Tests cover failed transactional
+exports and recovery after actual DO eviction, revision deduplication,
+departed-player history, reconnect counts, co-op completion eligibility,
+pagination, aggregate queries, owner authorization, capacity counts, expiry
+without false forfeits, cleanup preserving pending data and backlog refusal.
+
+Normal production build passed: main JS 2,458.59 kB / 682.72 kB gzip;
+multiplayer chunk 42.31 / 13.39 kB; shared history 5.74 / 2.15 kB; lazy owner
+dashboard 3.43 / 1.48 kB. No renderer code changed. An old local preview held
+the Windows build directory open; stopping that stale process resolved the
+stall without source/toolchain changes. Temporary dependency diagnostics were
+restored byte-for-byte. The uncommitted asset-lab edit was preserved.
+
+`tools/multiplayer-history-probe.mjs` against those production assets and
+disposable local workerd services passed a real two-identity competitive
+start/forfeit, normal alarm-driven result export, empty/populated player
+history, owner rejection/acceptance, and owner lock/reload without key storage.
+The owner page creates no canvas. Desktop 1280x900 and mobile viewport 390x844
+had no horizontal overflow or uncaught page errors. Ignored captures/receipt:
+`captures/multiplayer/history/`. Separate critical review accepted both views
+after fixes for expired identity refresh and server-expiry false forfeits.
+Phone viewport evidence is composition only, not physical-device performance.
+
+No new resources, secrets, remote migrations or deploys occurred. Wrangler
+`whoami` succeeded, but actual D1 list access failed with code 10000, including
+operational/bootstrap credentials. The new database and owner key remain
+enablement prerequisites in `docs/operations/multiplayer-history.md`. Production
+is still 3.8.0. New history begins at enablement; old rooms cannot be backfilled.

@@ -36,6 +36,7 @@ import {
 } from './quality/autoTier';
 import { RuntimeQualityGovernor } from './quality/RuntimeQualityGovernor';
 
+const OwnerDashboard = lazy(() => import('./multiplayer/OwnerDashboard'));
 const MultiplayerRoot = ['production', 'coop', 'coop-staging'].includes(import.meta.env.MODE) ? lazy(() => import('./multiplayer/MultiplayerRoot')) : null;
 
 function trackedGlFactory(props: Parameters<typeof glFactory>[0]) {
@@ -203,5 +204,6 @@ function HerdApp() {
 }
 
 export function App() {
+  if (location.pathname === '/r/owner') return <><UiStyles /><Suspense fallback={<p>Loading dashboard.</p>}><OwnerDashboard /></Suspense></>;
   return <HerdApp />;
 }

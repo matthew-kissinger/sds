@@ -13,7 +13,8 @@ it('serves production invites through the private shell while status stays JSON'
   const status = await realtime.fetch(new Request(invite + '/status'), env);
   expect(status.status).toBe(404);
   expect(status.headers.get('Content-Type')).toContain('application/json');
-  expect(shells).toBe(1);
+  expect((await realtime.fetch(new Request('https://sheepdogsim.com/r/owner'),env)).headers.get('Content-Type')).toBe('text/html');
+  expect(shells).toBe(2);
   const health = await realtime.fetch(new Request('https://sheepdogsim.com/r/health'), env);
   expect(await health.json()).toEqual({ protocol: 3, gameplay: true, commit: 'a'.repeat(40) });
 });
