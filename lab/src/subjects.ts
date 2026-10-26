@@ -313,6 +313,15 @@ export const LAB_SUBJECTS = [
     distance: 36,
     height: 9,
   },
+  {
+    id: 'dog-field',
+    label: 'Dog in field',
+    note: 'The full field, following the dog close enough to review paw contact, gait transitions and turning beside the flock.',
+    parts: ['terrain', 'grass', 'fence', 'pen', 'farmhouse', 'farmer', 'treeline', 'scatter', 'flock', 'dog'],
+    target: { kind: 'dog' },
+    distance: 7,
+    height: 2.4,
+  },
 ] as const satisfies readonly LabSubject[];
 
 export type LabSubjectId = (typeof LAB_SUBJECTS)[number]['id'];
