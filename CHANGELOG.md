@@ -4,6 +4,16 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.9.3] - 2026-10-26
+
+### Changed
+
+- The multiplayer menu and match card are laid out for phones: a fixed header,
+  a scrolling body and pinned actions; seat cards and public-room cards; and a
+  match card that sits under the sheep counter instead of on the landscape
+  touch stick. Server error codes read as sentences. No gameplay, asset, score
+  or protocol change.
+
 ## [3.9.2] - 2026-10-26
 
 ### Fixed
