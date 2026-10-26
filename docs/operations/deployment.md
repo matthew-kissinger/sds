@@ -97,7 +97,12 @@ pushed, and keeps a `workflow_dispatch` escape hatch that takes a full
    that `sheepdogsim.com` serves `index.html` at `/` and JSON at
    `/api/healthz` (`scripts/verify-worker-origin.mjs`); that the `workers.dev`
    host still answers the same; and the discovery pages with exactly one
-   analytics beacon. If any check fails the deploy fails.
+   analytics beacon. If any check fails the deploy fails;
+7. for a tag push only, once every check above has passed, publishes a GitHub
+   Release named for the tag (`Sheepdog Sim <version>`) with that version's
+   `CHANGELOG.md` section as its notes, so the repository's Latest release is
+   the version live. A missing CHANGELOG section fails the job; a re-run edits
+   the existing release. A dispatch deploy publishes no release.
 
 Nothing else deploys production. `Client CI` verifies and never deploys.
 `Preview` uploads pull requests to the preview Worker, never to production.

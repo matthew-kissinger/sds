@@ -188,3 +188,40 @@ jobs:
 
       - name: Verify live discovery and analytics
         run: node scripts/verify-public-discovery.mjs --url https://sheepdogsim.com --require-analytics --retries 12
+
+  # A tag push that deployed and passed every live check gets a GitHub Release
+  # named for it, with that version's CHANGELOG section as its notes, so the
+  # repository's Latest release is what sheepdogsim.com serves. A dispatch
+  # deploy names a commit, not a version, so it publishes nothing.
+  release:
+    name: Publish the GitHub Release
+    needs: deploy
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Publish the release from the CHANGELOG
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          awk -v h="## [$version]" 'index($0,h)==1 {f=1; next} f && index($0,"## [")==1 {exit} f' CHANGELOG.md \
+            | sed '/./,$!d' > "$RUNNER_TEMP/notes.md"
+          if [[ ! -s "$RUNNER_TEMP/notes.md" ]]; then
+            echo "CHANGELOG.md has no section for $version." >&2
+            exit 1
+          fi
+          # A re-run of an already-published tag refreshes its notes.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create "$TAG" --verify-tag --title "Sheepdog Sim $version" \
+              --notes-file "$RUNNER_TEMP/notes.md" --latest
+          fi
