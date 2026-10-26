@@ -4,6 +4,14 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.9.2] - 2026-10-26
+
+### Fixed
+
+- `/favicon.ico` serves a real icon (16, 32 and 48 px) instead of the app page,
+  and every page links 48 and 96 px PNG and apple-touch icons rasterized from
+  the existing favicon SVG. No gameplay, asset, score or protocol change.
+
 ## [3.9.1] - 2026-10-26
 
 ### Fixed
