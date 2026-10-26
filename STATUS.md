@@ -12,14 +12,14 @@ investigations are in `docs/history/`.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Co-op, competitive and persistent multiplayer stats are live in 3.9.1. The 5,000-sheep player path remains
+- Co-op, competitive and persistent multiplayer stats are live in 3.9.2. The 5,000-sheep player path remains
   absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.9.1 (`57fcd9e4`, tag `v3.9.1`; SEO metadata and realtime Workers
-  Logs, no gameplay change) is live at `https://sheepdogsim.com` since 2026-10-26
-  14:50 UTC (`Deploy` run 40342520527; live verification in `docs/history/status-log.md`),
+- Version 3.9.2 (`6b2420f8`, tag `v3.9.2`; favicon fix, no gameplay change) is
+  live at `https://sheepdogsim.com` since 2026-10-26 19:22 UTC (`Deploy` run
+  40385417951; `release.json` is the authority for the exact deployed commit),
   served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
@@ -34,8 +34,7 @@ investigations are in `docs/history/`.
   deployment (`docs/operations/v2-rollback.md`).
 - The Web Analytics site `sheepdogsim.com` is in snippet mode and is fed by the
   beacon every HTML page carries; Web Analytics on the Pages project is off.
-- Player-facing branding is `Sheepdog Sim`. The `3.1.0` number is retained only
-  in package, migration and release records.
+- Player-facing branding is `Sheepdog Sim`.
 - One `Deploy` workflow, on an annotated `v*` tag, builds the client, deploys
   the `sds-worker` Worker with the game as its static assets, and verifies the
   live manifest, origin and analytics (`docs/operations/deployment.md`). The
