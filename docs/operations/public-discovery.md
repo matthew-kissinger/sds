@@ -77,7 +77,7 @@ Submission helps discovery but does not guarantee ranking or immediate updates.
 
 Use this repository description after the client cutover:
 
-> Open-source browser sheep herding game. Guide 25, 75 or 200 sheep through one field with keyboard, gamepad or touch controls. Three.js, React, WebGPU with WebGL2 fallback, and optional solo leaderboards. AGPL-3.0-or-later.
+> Open-source browser sheep herding game. Guide 25, 75 or 200 sheep solo, in co-op or shared-flock competitive for two to four players, with keyboard, gamepad or touch controls. Three.js, React, WebGPU with WebGL2 fallback, and optional solo leaderboards. AGPL-3.0-or-later.
 
 Use these topics:
 
@@ -97,6 +97,7 @@ simulation
 boids
 deterministic
 single-player
+multiplayer
 mobile-game
 gamepad
 cloudflare-workers
@@ -104,6 +105,7 @@ open-source-game
 agpl
 ```
 
-Remove multiplayer, WebSocket, Durable Object and deferred-mode topics from the
-public repository. Upload `docs/launch/media/sheepdog-sim-github.jpg` as the
-repository social preview after the owner accepts the card.
+Multiplayer shipped in 3.8, so keep the `multiplayer` topic. Leave WebSocket,
+Durable Object and deferred-mode topics off the public repository. Upload
+`docs/launch/media/sheepdog-sim-github.jpg` as the repository social preview
+after the owner accepts the card.
