@@ -63,6 +63,13 @@ and dispatch the 3.6.1 tag workflow with its exact SHA; retain its namespaces
 for recovery. Never restore the old v2 classes on `sds-worker`. Staging's
 hostname, Workers, D1, namespaces and temporary credentials remain separate.
 
+**Workers Logs, owner-approved 2026-10-26:** `realtime/wrangler.json` declares
+`observability: { enabled: true }`, the same setting `sds-worker` carries in
+`app/cloudflare.config.ts` and `wrangler.toml`. It takes effect on the next
+tagged `Deploy`, which runs `wrangler deploy --config realtime/wrangler.json`.
+Staging is unaffected: `tools/staging-config.mjs` writes its own configs with
+observability off.
+
 There is exactly one way the game reaches players.
 
 `Deploy` (`.github/workflows/deploy.yml`) runs when an annotated `v*` tag is
