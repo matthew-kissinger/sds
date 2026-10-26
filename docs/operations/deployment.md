@@ -65,8 +65,9 @@ hostname, Workers, D1, namespaces and temporary credentials remain separate.
 
 **Workers Logs, owner-approved 2026-10-26:** `realtime/wrangler.json` declares
 `observability: { enabled: true }`, the same setting `sds-worker` carries in
-`app/cloudflare.config.ts` and `wrangler.toml`. It takes effect on the next
-tagged `Deploy`, which runs `wrangler deploy --config realtime/wrangler.json`.
+`app/cloudflare.config.ts` and `wrangler.toml`. It took effect with the 3.9.1
+tagged `Deploy` on 2026-10-26 (`wrangler deploy --config realtime/wrangler.json`);
+the script settings API then reported Workers Logs enabled on `sds-realtime`.
 Staging is unaffected: `tools/staging-config.mjs` writes its own configs with
 observability off.
 

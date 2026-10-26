@@ -4381,3 +4381,47 @@ This is functional and composition proof, not hub timing or physical-phone
 performance. Existing multiplayer latency, device and human fairness gaps
 remain. History begins at enablement and cannot reconstruct earlier rounds;
 the owner view currently includes the single controlled release-check round.
+
+## Release 3.9.1 - 2026-10-26 SEO metadata and realtime Workers Logs live
+
+Owner-approved patch release; no gameplay, simulation, asset, protocol,
+`worker/` or `release-capabilities.json` change, so no check identity was
+minted. PR #150 (sitemap `/privacy` lastmod 2026-10-21; JSON-LD `playMode`
+SinglePlayer, CoOp and MultiPlayer, asserted by the discovery verifier;
+public-surface test allows "multiplayer") merged as `9dc74500` after Client
+CI 40335870502 and Preview 40335870779 passed. PR #151 (`observability.enabled:
+true` in `realtime/wrangler.json`) merged as `59adeaf6`. Release PR #153
+(`a18ca284`, version 3.9.1 and CHANGELOG entry, the 3.4.1 shape) merged as
+`57fcd9e4857b0debbb6245af4c29a6707b4f9193`; Client CI 40341573184 passed on
+that merge before tagging.
+
+Before the tag, no room drain was needed: all three public lobbies listed no
+rooms and `sds-multiplayer` held 12 rounds, none open (latest ended
+2026-10-23). Private waiting rooms are not visible without an identity, so
+the operator-room hold was not used. After the deploy, no round was opened or
+interrupted.
+
+Annotated tag `v3.9.1` triggered `Deploy` run 40342520527, successful from
+14:44:56 to 14:50:21 UTC. It reran lint, typechecks, build, discovery,
+942 Node/client tests in 113 files and 80 workerd tests in nine files,
+artifact verification, both deploys and every live check on its first
+attempt; no 429 from the edge rate limit. `cf` uploaded three changed assets
+(`index.html`, `sitemap.xml`, `release.json`).
+
+Live from 14:50 UTC: game Worker `79fdefd4-209e-4236-ae32-6c098fb699fb`
+(deployment `e3f1cba7`), realtime Worker `6d4129e5-ed2a-443d-beb1-663af6310a6a`
+(deployment `5fb5b455`). Rollback targets are the 3.9.0 versions
+`c4fdef31-c9a1-4a10-836a-6dd491a14d7e` and `92be06a5-f24e-408d-b153-3974c6cfe0ea`.
+The live manifest is 3.9.1, source ref `v3.9.1`, 45 files, 10,423,111 bytes,
+artifact SHA-256 `211c51b098f707d07827f69f4a1982a196c7407aac2880a3d1800ea3e31c6c6d`.
+Main JS 2,458.59 / 682.72 kB gzip, unchanged from 3.9.0.
+
+Independent checks after the run: `/sitemap.xml` dates `/privacy` 2026-10-21;
+the home page JSON-LD `playMode` carries all three values; `og:image`,
+`og:image:secure_url` and `twitter:image` remain the
+`raw.githubusercontent.com/.../og/sheepdog-sim-v2.png` URL; `/about`,
+`/support` and `/privacy` answer 200 `text/html`; `/api/healthz` answers 200
+JSON from `sds-worker`; `/r/health` answers protocol 3 with the tagged commit.
+The script settings API reported `sds-realtime` observability absent before
+the deploy and enabled after it (logs persisted, invocation logs on, head
+sampling 1, traces off), matching `sds-worker`. Staging was not touched.

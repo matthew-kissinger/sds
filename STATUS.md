@@ -12,14 +12,14 @@ investigations are in `docs/history/`.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Co-op, competitive and persistent multiplayer stats are live in 3.9.0. The 5,000-sheep player path remains
+- Co-op, competitive and persistent multiplayer stats are live in 3.9.1. The 5,000-sheep player path remains
   absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.9.0 (`af94d276`, tag `v3.9.0`; multiplayer history and stats)
-  is live at `https://sheepdogsim.com` since 2026-10-21
-  09:36 UTC (`Deploy` run 39577792798; live verification in `docs/history/status-log.md`),
+- Version 3.9.1 (`57fcd9e4`, tag `v3.9.1`; SEO metadata and realtime Workers
+  Logs, no gameplay change) is live at `https://sheepdogsim.com` since 2026-10-26
+  14:50 UTC (`Deploy` run 40342520527; live verification in `docs/history/status-log.md`),
   served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
