@@ -52,7 +52,9 @@ describe('public version 3 surface', () => {
       read('app/public/about.html'),
       read('app/public/support.html'),
     ].join('\n');
-    expect(publicCopy).not.toMatch(/5,000|multiplayer/i);
+    // Multiplayer shipped in 3.8 (release-capabilities.json), so it is no
+    // longer a deferred system and the public surface may describe it.
+    expect(publicCopy).not.toMatch(/5,000/);
     expect(publicCopy).not.toContain('Sheepdog Sim 3');
   });
 
