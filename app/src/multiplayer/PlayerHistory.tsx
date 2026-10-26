@@ -15,12 +15,13 @@ export function PlayerHistory({ close }: { close: () => void }) {
       .finally(()=>{if(!abort.signal.aborted)setBusy(false);});
     return ()=>abort.abort();
   },[cursor,refresh]);
-  return <section aria-label="Your multiplayer history"><HistoryStyles />
-    <button ref={back} onClick={close}>Back to multiplayer</button><h3>Your multiplayer stats</h3>
-    <p>Co-op and competitive only. Results may take a few seconds to appear.</p>
-    {message ? <p role="status">{message}</p> : null}
+  return <section className="mp-section" aria-label="Your multiplayer history"><HistoryStyles />
+    <div className="mp-row"><button className="mp-btn mp-btn--small" ref={back} onClick={close}>Back to multiplayer</button>
+      <button className="mp-btn mp-btn--small mp-btn--quiet" disabled={busy} onClick={()=>{setCursor(null);setRefresh(n=>n+1);}}>Refresh latest</button></div>
+    <h3>Your multiplayer stats</h3>
+    <p className="mp-copy">Co-op and competitive only. Results may take a few seconds to appear.</p>
+    {message ? <p className="mp-note" role="status">{message}</p> : null}
     {data ? <><PlayerSummary stats={data.stats} /><h3>Recent matches</h3><MatchList matches={data.matches} /></> : null}
-    <div className="history-actions"><button disabled={busy} onClick={()=>{setCursor(null);setRefresh(n=>n+1);}}>Refresh latest</button>
-      {data?.next ? <button disabled={busy} onClick={()=>setCursor(data.next)}>Older matches</button> : null}</div>
+    {data?.next ? <button className="mp-btn mp-btn--small" disabled={busy} onClick={()=>setCursor(data.next)}>Older matches</button> : null}
   </section>;
 }
