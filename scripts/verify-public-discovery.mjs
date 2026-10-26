@@ -62,7 +62,10 @@ function verifyPages(files) {
   assert(Array.isArray(jsonLd['@type']) && jsonLd['@type'].includes('WebApplication'), 'JSON-LD WebApplication type is missing.');
   assert(jsonLd.applicationCategory === 'GameApplication', 'JSON-LD game category is missing.');
   assert(jsonLd.offers?.price === '0', 'JSON-LD free offer is missing.');
-  assert(jsonLd.playMode === 'https://schema.org/SinglePlayer', 'JSON-LD must describe the shipped single-player game.');
+  const playModes = [jsonLd.playMode].flat();
+  for (const mode of ['SinglePlayer', 'CoOp', 'MultiPlayer']) {
+    assert(playModes.includes(`https://schema.org/${mode}`), `JSON-LD playMode must include shipped ${mode} play.`);
+  }
   assert(!jsonLd.aggregateRating && !jsonLd.review, 'Ratings need independently sourced public evidence.');
   assert(root.includes('A free sheep herding game in your browser.'), 'Initial HTML lacks a readable game description.');
   for (const path of ['/about', '/support']) {
