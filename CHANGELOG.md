@@ -4,6 +4,20 @@ All notable changes to Sheep Dog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.9.1] - 2026-10-26
+
+### Fixed
+
+- The home page's structured data lists co-op and competitive multiplayer
+  play beside single player, and the sitemap dates the privacy page from its
+  2026-10-21 multiplayer-history revision. The discovery check requires all
+  three play modes. No gameplay, asset, score or protocol change.
+
+### Changed
+
+- The realtime multiplayer service records Workers Logs, as the game Worker
+  already does. Rooms, capacity and protocol 3 are unchanged.
+
 ## [3.9.0] - 2026-10-21
 
 ### Added
