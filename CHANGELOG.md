@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.9.5] - 2026-10-27
+
 ### Added
 
 - `/llms.txt`: a plain-text summary of the game, how to play and its public
