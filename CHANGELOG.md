@@ -4,6 +4,14 @@ All notable changes to Sheepdog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `/llms.txt`: a plain-text summary of the game, how to play and its public
+  pages for language models, in the kilnstudio.tools format. The origin check
+  requires it as text/plain 200. No gameplay, asset, score or protocol change.
+
 ## [3.9.4] - 2026-10-26
 
 ### Fixed

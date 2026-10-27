@@ -1,0 +1,26 @@
+# Sheepdog Sim
+
+A free sheep herding game in your browser. Play as a sheepdog in a golden-hour pasture and guide every sheep through the gate into the pen. Choose 25, 75 or 200 sheep; play solo, or co-op and shared-flock competitive with two to four players through invite links and regional public lobbies. Keyboard, gamepad and touch. No download or account. Open source (AGPL-3.0-or-later).
+
+## Play
+
+- [Play Sheepdog Sim](https://sheepdogsim.com/): The game. Choose a flock size, press Play and bring the whole flock into the pen.
+- [25 sheep](https://sheepdogsim.com/play/25): Start a round with 25 sheep, the size to learn on.
+- [75 sheep](https://sheepdogsim.com/play/75): Start a round with 75 sheep.
+- [200 sheep](https://sheepdogsim.com/play/200): Start a round with 200 sheep.
+
+## How to play
+
+- [How to play and controls](https://sheepdogsim.com/support): Move with W A S D, the arrow keys, the left stick or the touch joystick; hold Shift, the right trigger, gamepad A or Sprint to sprint; press Space, gamepad B or X, or Bark to move nearby sheep; press C or gamepad Y to switch between the Classic and Follow cameras. Approach from behind the sheep relative to the gate and give them room to turn. Browser requirements and troubleshooting.
+- [About the game](https://sheepdogsim.com/about): One dog, one flock, one field. Personal bests are saved on your device, with optional online solo times. Needs JavaScript and WebGL2 or WebGPU.
+- [Privacy](https://sheepdogsim.com/privacy): What the game stores locally, what online times and multiplayer history send, and how aggregate site analytics work.
+
+## Source
+
+- [Repository](https://github.com/matthew-kissinger/sds): Simulation, renderer, input, audio, deterministic asset recipes and release tests, by Matthew Kissinger.
+- [Issues](https://github.com/matthew-kissinger/sds/issues): Report a problem with the browser, device, flock size and steps to reproduce.
+
+## Optional
+
+- [Instrukt Labs](https://instruktlabs.com/): The lab that makes Sheepdog Sim; its farm assets were made with Kiln.
+- [Sitemap](https://sheepdogsim.com/sitemap.xml)

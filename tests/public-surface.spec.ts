@@ -100,4 +100,14 @@ describe('public version 3 surface', () => {
     // No catch-all rewrite: that would bring the soft 404 back.
     expect(rules.filter((line) => line.includes('*') && line.trim().endsWith(' 200'))).toEqual([]);
   });
+
+  it('publishes an llms.txt that links only canonical public pages', () => {
+    const llms = read('app/public/llms.txt');
+    expect(llms).toMatch(/^# Sheepdog Sim\r?\n/);
+    const links = [...llms.matchAll(/\]\(([^)]+)\)/g)].map((match) => match[1]);
+    for (const path of ['/', '/play/25', '/play/75', '/play/200', '/support', '/about', '/privacy']) {
+      expect(links).toContain(`https://sheepdogsim.com${path}`);
+    }
+    for (const link of links) expect(link).toMatch(/^https:\/\/(sheepdogsim\.com\/|github\.com\/matthew-kissinger\/sds(\/|$)|instruktlabs\.com\/)/);
+  });
 });

@@ -104,6 +104,14 @@ async function verifyOnce() {
   }
   results.pages = 200;
 
+  // llms.txt is a file in app/public, served by the asset layer, not the 404 page.
+  if (!staticOnly) {
+    const llms = await get('/llms.txt');
+    assert(llms.response.status === 200 && llms.type.toLowerCase().startsWith('text/plain'), `/llms.txt must be text/plain 200, got ${llms.response.status} ${llms.type}.`);
+    assert(/^# Sheepdog Sim\r?\n/.test(llms.text),'/llms.txt is not the Sheepdog Sim llms.txt.');
+    results.llmsTxt = 200;
+  }
+
   const about = await get('/about.html');
   assert(about.response.status === 301, `/about.html must 301 (from _redirects), got ${about.response.status}.`);
   assert(new URL(about.response.headers.get('location') || '', origin).pathname === '/about', '/about.html must redirect to /about.');

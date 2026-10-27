@@ -217,6 +217,8 @@ game the Build Output supplies:
   `Sec-Fetch-Mode: navigate` from changing that, so a browser and `curl`
   see the same thing. Before 3.9.4 this was the single-page fallback: every
   unknown path answered 200 with `index.html`, a soft 404 to crawlers.
+- `/llms.txt` is a file in `app/public` (text/plain), so the asset layer serves it,
+  not the 404 page; `verify-worker-origin.mjs` requires it.
 - `/play/25`, `/play/75` and `/play/200` (spec/14), with or without a
   trailing slash, are 200 rewrites to `/` in `_redirects`. They are the only
   client-read paths outside `/r/*`, which `sds-realtime` answers by route.
