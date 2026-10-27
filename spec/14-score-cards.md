@@ -106,11 +106,12 @@ It goes to `/play/25`, `/play/75` or `/play/200`.
 That path is not a query parameter. `spec/01` caps the game's player query
 parameters at `seed` and `debug`. The 2026-10-20 multiplayer plan removes the
 unimplemented `room` query from the earlier text; invites will use `/r/*`.
-The single-page-application fallback already serves `index.html` for
-an unknown path, so `/play/25` needs no Worker route. The client reads the
+`app/public/_redirects` serves `index.html` for exactly these three paths
+(with or without a trailing slash), so `/play/25` needs no Worker route.
+Every other unknown path is a 404 page, so `/play/26` is a 404. The client reads the
 path once, at boot, and calls the existing `startGame` with that flock size.
-Any other `/play/` value is ignored and the title comes up at 25, which is
-the default today. `seed` and `debug` still work as query parameters beside
+Were another `/play/` value ever served the page, the client would ignore
+it and the title would come up at 25. `seed` and `debug` still work as query parameters beside
 the path.
 
 The same change amends the URL paragraph in `spec/01` to name these three

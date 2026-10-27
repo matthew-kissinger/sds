@@ -56,7 +56,7 @@ describe('sds-worker hosting configuration', () => {
     for (const config of [production, preview]) {
       expect(config.assets).toMatchObject({
         binding: 'ASSETS',
-        not_found_handling: 'single-page-application',
+        not_found_handling: '404-page',
         run_worker_first: ['/api/*', '/c/*'],
       });
     }

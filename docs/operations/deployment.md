@@ -202,7 +202,7 @@ verifiers, the probes and `vite.config.ts` import it. Four consequences:
 ## One origin
 
 `app/cloudflare.config.ts` declares `assets` with
-`notFoundHandling: 'single-page-application'` and
+`notFoundHandling: '404-page'` and
 `runWorkerFirst: ['/api/*', '/c/*']` (`wrangler.toml` says the same), over the built
 game the Build Output supplies:
 
@@ -212,19 +212,27 @@ game the Build Output supplies:
   (`spec/14-score-cards.md`). The asset layer would answer it with
   `index.html`, and the link would unfurl as the game.
 - Every other path is answered by the asset layer without invoking the
-  script: the file if it exists, otherwise `index.html` with a 200. The array
-  form of `run_worker_first` also stops `Sec-Fetch-Mode: navigate` from
-  changing that, so a browser and `curl` see the same thing.
+  script: the file if it exists, otherwise `404.html` (noindex, linking
+  home) with a 404. The array form of `run_worker_first` also stops
+  `Sec-Fetch-Mode: navigate` from changing that, so a browser and `curl`
+  see the same thing. Before 3.9.4 this was the single-page fallback: every
+  unknown path answered 200 with `index.html`, a soft 404 to crawlers.
+- `/play/25`, `/play/75` and `/play/200` (spec/14), with or without a
+  trailing slash, are 200 rewrites to `/` in `_redirects`. They are the only
+  client-read paths outside `/r/*`, which `sds-realtime` answers by route.
 - `_headers` and `_redirects` from `app/public` are honoured natively:
   `/release.json` and `/sw.js` carry `no-store`, `/about.html` 301s to
   `/about`, and `/about` serves `about.html`.
 - Health is `GET /api/healthz` -> `{"ok":true,"worker":"sds-worker"}`.
 
-**Assert content types, never status codes.** Every unmatched path answers 200
-`text/html`, including the retired `/healthz` and, before the route existed,
-`https://sheepdogsim.com/api/*` (the Pages fallback). A check on status alone
-passes with the API down. Likewise a missing `release.json` is served as
-`index.html`: build, then write the manifest, then deploy.
+**Assert content types, not status codes alone.** Until 3.9.4 every unmatched
+path answered 200 `text/html`, including the retired `/healthz` and, before
+the route existed, `https://sheepdogsim.com/api/*` (the Pages fallback), and
+the Pages project still does. A check on status alone passed with the API
+down. Since 3.9.4 an unmatched path is a 404, and
+`scripts/verify-worker-origin.mjs` requires that, the noindex 404 page, the
+three play paths as the game page and the three static pages as HTML 200
+(`--static-only`, for the Pages project, skips the 404 check).
 
 ## Routes and hostnames
 
@@ -356,7 +364,7 @@ commit and ref (`SDS_RELEASE_SHA` and `SDS_RELEASE_REF`, else the checkout's
 HEAD and branch), the UTC build time, the `release-capabilities.json`
 declaration, and the file count, byte count and SHA-256 digest over the whole
 artifact except the manifest itself. It is part of the build because a build
-without it is served as the single-page fallback: at the Release 1 cutover a plain rebuild shipped once without the
+without it was served as the single-page fallback (a 404 since 3.9.4): at the Release 1 cutover a plain rebuild shipped once without the
 manifest and the live `/release.json` answered with `index.html` for a few
 minutes. There is no separate command to write it.
 

@@ -49,11 +49,12 @@ const SHARED = {
   entrypoint: '../worker/src/game.ts',
   exports: { RoomAdmission: { type: 'worker' as const }, InviteShell: { type: 'worker' as const } },
   // /api/* and /c/* run the Worker first. Every other path is served by the
-  // asset layer, with index.html for anything unmatched. _headers and
-  // _redirects from app/public are honoured by the asset layer itself.
+  // asset layer: the file if it exists, otherwise 404.html with a 404.
+  // _redirects serves the three /play/<size> paths the game page.
+  // _headers and _redirects from app/public are honoured by the asset layer.
   // /c/* is a score card. Without it here, the card unfurls as the game.
   assets: {
-    notFoundHandling: 'single-page-application' as const,
+    notFoundHandling: '404-page' as const,
     runWorkerFirst: ['/api/*', '/c/*'],
   },
   observability: { enabled: true },
