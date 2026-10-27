@@ -79,10 +79,30 @@ async function verifyOnce() {
   assert(root.text.includes('<title>Sheepdog Sim'), '/ is HTML but not the game page.');
   results.root = root.type;
 
-  const fallback = await get('/release-check-unmatched-path');
-  assert(fallback.response.status === 200 && isHtml(fallback.type), `An unmatched path must serve index.html, got ${fallback.response.status} ${fallback.type}.`);
-  assert(fallback.text === root.text, 'The single-page fallback differs from index.html.');
-  results.spaFallback = 'index.html';
+  // An unknown path is a real 404 with the noindex 404 page, not the game
+  // (notFoundHandling '404-page'). The Pages project behind --static-only
+  // still answers with its single-page fallback, so it is not held to this.
+  if (!staticOnly) {
+    const missing = await get('/release-check-unmatched-path');
+    assert(missing.response.status === 404 && isHtml(missing.type), `An unmatched path must be the 404 page with HTTP 404, got ${missing.response.status} ${missing.type}.`);
+    assert(/<meta name="robots" content="noindex"/.test(missing.text) && missing.text.includes('href="/"'), 'The 404 page must be noindex and link home.');
+    assert(missing.text !== root.text, 'An unmatched path is still served the game page.');
+    results.notFound = 404;
+  }
+
+  // The score-card play paths (spec/14-score-cards.md) are the game page.
+  for (const size of [25, 75, 200]) {
+    const play = await get(`/play/${size}`);
+    assert(play.response.status === 200 && isHtml(play.type), `/play/${size} must serve index.html, got ${play.response.status} ${play.type}.`);
+    assert(play.text === root.text, `/play/${size} is not the game page.`);
+  }
+  results.playPaths = 'index.html';
+
+  for (const path of ['/about', '/support', '/privacy']) {
+    const page = await get(path);
+    assert(page.response.status === 200 && isHtml(page.type), `${path} must be HTML 200, got ${page.response.status} ${page.type}.`);
+  }
+  results.pages = 200;
 
   const about = await get('/about.html');
   assert(about.response.status === 301, `/about.html must 301 (from _redirects), got ${about.response.status}.`);

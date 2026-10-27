@@ -86,4 +86,18 @@ describe('public version 3 surface', () => {
       expect(sitemap).toContain(`https://sheepdogsim.com${route}`);
     }
   });
+
+  it('answers unknown paths with a noindex 404 page and keeps the play paths', () => {
+    const notFound = read('app/public/404.html');
+    expect(notFound).toContain('<meta name="robots" content="noindex" />');
+    expect(notFound).toContain('href="/"');
+    expect(notFound).not.toContain('rel="canonical"');
+    const rules = read('app/public/_redirects').split(/\r?\n/).filter((line) => line && !line.startsWith('#'));
+    for (const size of [25, 75, 200]) {
+      expect(rules).toContain(`/play/${size} / 200`);
+      expect(rules).toContain(`/play/${size}/ / 200`);
+    }
+    // No catch-all rewrite: that would bring the soft 404 back.
+    expect(rules.filter((line) => line.includes('*') && line.trim().endsWith(' 200'))).toEqual([]);
+  });
 });

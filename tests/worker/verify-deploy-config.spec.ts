@@ -33,7 +33,7 @@ const production = () => ({
   ],
   assets: {
     binding: 'ASSETS',
-    not_found_handling: 'single-page-application',
+    not_found_handling: '404-page',
     run_worker_first: ['/api/*', '/c/*'],
     directory: '../../../dist',
   },
@@ -148,7 +148,7 @@ const cfWorker = (preview = false) => ({
   name: preview ? 'sds-worker-preview' : 'sds-worker',
   compatibilityDate: '2026-04-01',
   compatibilityFlags: ['nodejs_compat'],
-  assets: { notFoundHandling: 'single-page-application', runWorkerFirst: ['/api/*', '/c/*'] },
+  assets: { notFoundHandling: '404-page', runWorkerFirst: ['/api/*', '/c/*'] },
   observability: { enabled: true },
   workersDev: true,
   previewUrls: preview,
@@ -161,7 +161,7 @@ const cfWorker = (preview = false) => ({
   manifest: { type: 'partial', mainModule: 'index.js', modules: {} },
 });
 
-function writeBuildOutput(worker: Record<string, unknown>, mode: string, { withRelease = true } = {}) {
+function writeBuildOutput(worker: Record<string, unknown>, mode: string, { withRelease = true, withNotFound = true } = {}) {
   const output = mkdtempSync(join(tmpdir(), 'sds-build-output-'));
   writeFileSync(join(output, 'config.json'), JSON.stringify({ buildContext: { isPreview: false, mode } }));
   const workerDir = join(output, 'workers', 'default');
@@ -170,13 +170,14 @@ function writeBuildOutput(worker: Record<string, unknown>, mode: string, { withR
   writeFileSync(join(workerDir, 'bundle', 'index.js'), '');
   writeFileSync(join(workerDir, 'assets', 'index.html'), '<html></html>');
   if (withRelease) writeFileSync(join(workerDir, 'assets', 'release.json'), '{}');
+  if (withNotFound) writeFileSync(join(workerDir, 'assets', '404.html'), '<html></html>');
   writeFileSync(join(workerDir, 'worker.config.json'), JSON.stringify(worker));
   return output;
 }
 
 describe('verify-deploy-config --cf', () => {
   const outputs: string[] = [];
-  const check = (worker: Record<string, unknown>, mode: string, options: { preview?: boolean; withRelease?: boolean } = {}) => {
+  const check = (worker: Record<string, unknown>, mode: string, options: { preview?: boolean; withRelease?: boolean; withNotFound?: boolean } = {}) => {
     const output = writeBuildOutput(worker, mode, options);
     outputs.push(output);
     return checkBuildOutput(output, options) as string[];

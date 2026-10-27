@@ -95,7 +95,7 @@ export function checkBuildOutput(outputDir, { preview = false } = {}) {
     DB: { type: 'd1', name: expected.database.name, id: expected.database.id },
     JWT_SECRET: { type: 'secret' },
   })
-  expect('assets', worker.assets, { notFoundHandling: 'single-page-application', runWorkerFirst: ['/api/*', '/c/*'] })
+  expect('assets', worker.assets, { notFoundHandling: '404-page', runWorkerFirst: ['/api/*', '/c/*'] })
 
   const main = worker.manifest?.mainModule
   if (!main || !existsSync(resolve(workerDir, 'bundle', main))) {
@@ -108,6 +108,9 @@ export function checkBuildOutput(outputDir, { preview = false } = {}) {
     const present = new Set(readdirSync(assetsDir))
     if (!present.has('release.json')) failures.push(`assets ${assetsDir} has no release.json`)
     if (!present.has('index.html')) failures.push(`assets ${assetsDir} has no index.html`)
+    // notFoundHandling '404-page' answers an unknown path with this file and a
+    // 404. Without it the asset layer sends a bare 404 with no way home.
+    if (!present.has('404.html')) failures.push(`assets ${assetsDir} has no 404.html`)
     for (const name of ['wrangler.json', 'worker.config.json', '.dev.vars']) {
       if (present.has(name)) failures.push(`assets ${assetsDir} contains ${name}`)
     }
@@ -150,7 +153,7 @@ export function checkDeployConfig(config, configPath, { preview = false, distDir
 
   const assets = config.assets ?? {}
   expect('assets.binding', assets.binding, 'ASSETS')
-  expect('assets.not_found_handling', assets.not_found_handling, 'single-page-application')
+  expect('assets.not_found_handling', assets.not_found_handling, '404-page')
   expect('assets.run_worker_first', assets.run_worker_first, ['/api/*', '/c/*'])
   if (!assets.directory) {
     failures.push('assets.directory is missing: wrangler would refuse to deploy')

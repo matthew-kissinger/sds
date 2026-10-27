@@ -531,8 +531,8 @@ export default {
       }
 
       // Under /api so that it can only ever be answered by this script. The
-      // asset layer answers every other unmatched path with index.html and a
-      // 200, so a health check anywhere else would pass with the API down.
+      // asset layer answers every other unmatched path with its own 404 page,
+      // so a health check anywhere else could not reach this script.
       if (path === '/api/healthz' && method === 'GET') {
         return json({ ok: true, worker: 'sds-worker' }, 200, cors);
       }

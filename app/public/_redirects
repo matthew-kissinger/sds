@@ -4,3 +4,12 @@
 /assets/images/seo/sheepdogsim2.png /og/sheepdog-sim-v2.png 301
 /assets/scenes/social/field.webp /og/sheepdog-sim-v2.png 301
 /scenes/* / 301
+# The three score-card play paths (spec/14-score-cards.md) are served the game
+# page. The client reads the path once, at boot. Every other unknown path is
+# the 404 page (notFoundHandling '404-page' in app/cloudflare.config.ts).
+/play/25 / 200
+/play/75 / 200
+/play/200 / 200
+/play/25/ / 200
+/play/75/ / 200
+/play/200/ / 200

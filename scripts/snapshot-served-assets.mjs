@@ -15,7 +15,7 @@
 // length, encoding, the custom headers from app/public/_headers), and the
 // SHA-256 of the body. Headers that vary per request or per edge (date, cf-ray,
 // server-timing, report-to, nel, alt-svc, set-cookie) are left out on purpose.
-// It also records the root (/), one unmatched path (the single-page fallback)
+// It also records the root (/), one unmatched path (the 404 page since 3.9.4)
 // and /index.html (the redirect to the root), because those are the asset
 // layer's behaviour rather than any one file.
 //

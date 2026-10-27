@@ -146,7 +146,7 @@ must expose all consumers' required state without pretending to own `step`.
   aspirational and is removed from the contract. Planned invites use
   `/r/<room-handle>`, not a query or hash alias. Online seed comes from the
   room. `/play/25`, `/play/75` and `/play/200` remain spec/14 paths, consumed
-  once at boot to select flock size; other `/play/` values are ignored.
+  once at boot to select flock size; other `/play/` values are a 404 page.
   Probes live in tools/ and drive normal UI, without new player URL switches.
 
 ## Planned multiplayer ownership

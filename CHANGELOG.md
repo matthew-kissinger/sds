@@ -4,6 +4,17 @@ All notable changes to Sheepdog Sim are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/).
 
+## [3.9.4] - 2026-10-26
+
+### Fixed
+
+- An unknown address answers HTTP 404 with a short noindex page that links
+  back to the game, instead of the game page with a 200. Search engines no
+  longer see every mistyped path as a copy of the home page. `/play/25`,
+  `/play/75` and `/play/200`, the score cards, `/r/*` invites, the API and
+  the static pages are unchanged; the origin check now requires all of them.
+  No gameplay, asset, score or protocol change.
+
 ## [3.9.3] - 2026-10-26
 
 ### Changed
