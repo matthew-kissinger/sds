@@ -1,16 +1,16 @@
 # 01 - Architecture
 
-## Stack (verified against npm 2026-10-16)
+## Stack (verified against npm 2026-10-16; three and its types rechecked 2026-10-31)
 
 | Package | Version | Notes |
 |---|---|---|
 | react / react-dom | 19.3.x | fiber 9.8 accepts it. |
-| three | 0.186.x | WebGPURenderer is the three-recommended renderer since r182. |
+| three | 0.187.x | WebGPURenderer is the three-recommended renderer since r182. |
 | @react-three/fiber | 9.8.x | v10 (WebGPU/TSL first-class hooks) is alpha; upgrade later, do not build on canary. 9.8 gates an async `gl` factory behind its own Suspense boundary; see the renderer section. |
 | @react-three/drei | 10.7.x | Audit every drei import under WebGPURenderer before adopting it; some components assume WebGLRenderer. |
 | zustand | 5.0.x | All game/UI/session state. Transient `subscribe` reads in useFrame; never setState per frame. |
 | typescript, vite, vitest | latest | |
-| @types/three | 0.186.x | dev |
+| @types/three | 0.187.x | dev |
 
 Explicitly omitted, with reasons (do not add without a recorded decision):
 

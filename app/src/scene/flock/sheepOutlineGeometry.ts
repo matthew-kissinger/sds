@@ -12,11 +12,12 @@
  * all.
  *
  * This remains one indexed geometry and one instanced outline draw. It carries
- * the same five attributes as the body, so the packed CPU flock stays at the
- * WebGPU eight-vertex-buffer floor.
+ * the same attributes as the body, including the shared mask buffer, so the
+ * packed CPU flock stays within WebGPU's eight-vertex-buffer limit.
  */
 
 import * as THREE from 'three/webgpu';
+import { setSheepMaskAttributes } from './sheepGeometry';
 
 const FLEECE_RINGS = 11;
 const FLEECE_SIDES = 14;
@@ -171,9 +172,7 @@ export function buildSheepOutlineGeometry(body: THREE.BufferGeometry): THREE.Buf
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(buffers.positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(buffers.normals, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(buffers.maskA, 2));
-  geometry.setAttribute('uv1', new THREE.Float32BufferAttribute(buffers.maskB, 2));
-  geometry.setAttribute('uv2', new THREE.Float32BufferAttribute(buffers.maskC, 2));
+  setSheepMaskAttributes(geometry, buffers.maskA, buffers.maskB, buffers.maskC);
   geometry.setIndex(buffers.indices);
   geometry.computeBoundingSphere();
   return geometry;

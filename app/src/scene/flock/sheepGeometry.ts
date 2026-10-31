@@ -34,6 +34,10 @@
  *   uv1.y  legWeight 0 at the shoulder, 1 at the hoof; the hoof's colour reads it
  *   uv2.x  exposure  1 in open air, 0 buried inside a neighbouring mass
  *
+ * The three sets share one interleaved buffer. r187 binds the instance matrix
+ * as its own vertex buffer, and a separate buffer per mask set puts the shaded
+ * sheep past WebGPU's limit of eight.
+ *
  * `abs(legSign)` doubles as the leg/face selector: it is the only channel that
  * separates a limb from a skull. `legWeight` is also what plants the hooves: the
  * breathing bob is scaled by (1 - legWeight) so the body rises and the feet do
@@ -354,6 +358,31 @@ function appendLeg(
  * means one draw call for the flock however large it grows, which is the
  * constraint everything else here was designed around.
  */
+/** One GPU buffer for uv, uv1 and uv2. Three separate buffers would cross the limit. */
+export function setSheepMaskAttributes(
+  geometry: THREE.BufferGeometry,
+  maskA: readonly number[],
+  maskB: readonly number[],
+  maskC: readonly number[],
+): void {
+  const count = maskA.length / 2;
+  const packed = new Float32Array(count * 6);
+  for (let i = 0; i < count; i++) {
+    const src = i * 2;
+    const dst = i * 6;
+    packed[dst] = maskA[src]!;
+    packed[dst + 1] = maskA[src + 1]!;
+    packed[dst + 2] = maskB[src]!;
+    packed[dst + 3] = maskB[src + 1]!;
+    packed[dst + 4] = maskC[src]!;
+    packed[dst + 5] = maskC[src + 1]!;
+  }
+  const buffer = new THREE.InterleavedBuffer(packed, 6);
+  geometry.setAttribute('uv', new THREE.InterleavedBufferAttribute(buffer, 2, 0));
+  geometry.setAttribute('uv1', new THREE.InterleavedBufferAttribute(buffer, 2, 2));
+  geometry.setAttribute('uv2', new THREE.InterleavedBufferAttribute(buffer, 2, 4));
+}
+
 export function buildSheepGeometry(): THREE.BufferGeometry {
   const buffers: Buffers = { positions: [], normals: [], maskA: [], maskB: [], maskC: [], indices: [] };
 
@@ -380,9 +409,7 @@ export function buildSheepGeometry(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(buffers.positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(buffers.normals, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(buffers.maskA, 2));
-  geometry.setAttribute('uv1', new THREE.Float32BufferAttribute(buffers.maskB, 2));
-  geometry.setAttribute('uv2', new THREE.Float32BufferAttribute(buffers.maskC, 2));
+  setSheepMaskAttributes(geometry, buffers.maskA, buffers.maskB, buffers.maskC);
   geometry.setIndex(buffers.indices);
   geometry.computeBoundingSphere();
   return geometry;

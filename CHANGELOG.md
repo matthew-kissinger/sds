@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.9.6] - 2026-10-31
+
+### Changed
+
+- Three.js 0.187.0 and `@types/three` 0.187.0. r187 restores renderer state
+  around `compileAsync`; the frame loop still stays paused until the scene
+  has compiled. r187 also binds an instanced mesh's matrix as a vertex
+  buffer, so the sheep's three mask sets share one buffer and the flock
+  stays within WebGPU's limit of eight. No gameplay, score or protocol
+  change.
+
 ## [3.9.5] - 2026-10-27
 
 ### Added

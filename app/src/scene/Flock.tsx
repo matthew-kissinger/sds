@@ -135,8 +135,9 @@ export function Flock() {
   /**
    * One packed style buffer serves body and outline: tint, seed, then the X and
    * Z ratios needed to cancel nonuniform instance scale. Replacing the original
-   * vec2 style binding rather than adding an attribute holds the complete sheep
-   * at WebGPU's eight-vertex-buffer floor.
+   * vec2 style binding rather than adding an attribute, and sharing the three
+   * mask sets in one buffer, keeps the shaded sheep within WebGPU's limit of
+   * eight vertex buffers once r187 also binds the instance matrix.
    */
   const packedStyle = useMemo(() => new THREE.InstancedBufferAttribute(
     new Float32Array(CPU_FLOCK_CAPACITY * 4),
