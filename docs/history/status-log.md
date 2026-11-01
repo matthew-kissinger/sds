@@ -4425,3 +4425,55 @@ JSON from `sds-worker`; `/r/health` answers protocol 3 with the tagged commit.
 The script settings API reported `sds-realtime` observability absent before
 the deploy and enabled after it (logs persisted, invocation logs on, head
 sampling 1, traces off), matching `sds-worker`. Staging was not touched.
+
+## Release 3.9.7 - 2026-11-01 grouped title actions and Solo times isolation
+
+Owner approved implementation after reviewing portrait/landscape browser mockups,
+then explicitly approved merge and production deployment. PR #169 merged as
+`a1868013b43d53fc1d7188550fb8a1cb0bdb54e6`. Play solo and Play multiplayer now
+share the title layout, with secondary controls below. Narrow phones stack the
+play choices; short landscape screens reduce spacing and title size. Opening
+Solo times disables multiplayer and makes the complete title menu inert.
+Closing the board restores the controls. No simulation, score, protocol,
+server implementation or infrastructure configuration changed.
+
+Client CI 41357064467 and Preview 41357064469 passed on the PR; Client CI
+41357524473 passed on the exact merge commit before annotated tag `v3.9.7`
+was pushed. Deploy 41357926862 succeeded and published the GitHub Release at
+22:42 UTC. The PR, merge and deploy each passed 944 client/Node tests in
+113 files and 80 realtime/workerd tests in nine files. Earlier focused
+verification passed 31 tests in five files, changed-file lint and the build.
+The main JS is 1,724.99 kB raw / 477.16 kB gzip; the multiplayer chunk is
+56.14 / 16.42 kB. These are artifact sizes, not performance measurements.
+
+The exact downloaded merge-CI artifact passed the title probe at 390x844,
+375x667, 844x390, 667x375 and 1440x900. All title controls fit without overlap
+or scrolling, and all button targets are at least 44 px. A ten-row stubbed
+board tested pointer and keyboard isolation, disabled/inert/unfocusable
+multiplayer, Tab confinement, Escape close, multiplayer reopening and solo
+start. The same five-size interaction check passed against the live site with
+its real identity/board/lobby endpoints and no uncaught page errors. This
+covers layout and functionality; it is not a physical-phone or hub-timing
+receipt. Physical-phone acceptance remains with the owner.
+
+Before tagging, three private operator waiting rooms successfully acquired the
+NA/EU/APAC capacity slots, confirming no existing room lease. They remained
+waiting with one operator each and no matches started through the paired
+Worker update. After release verification, all three operators left and their
+browser contexts closed. No player was evicted or active round interrupted.
+
+Both `/release.json` and `/r/health` identify `a1868013`; the live manifest
+reports version 3.9.7 and ref `v3.9.7`. It contains 53 files / 10,485,139 bytes,
+artifact SHA-256
+`db000816b9317bd607e67c69a127863eb8207446cd8d43048c56b730dce4e595`,
+identical to the downloaded merge-CI artifact. Independent byte-hash checks
+matched live `index.html`, `assets/index-DAuI8XA6.js` and
+`assets/MultiplayerRoot-f2O47u-b.js` against that artifact. The workflow's live
+origin, workers.dev, discovery and analytics checks all passed. Worker versions:
+`sds-worker` `d6b584e0-5858-4a36-b85e-4616a935f17e`;
+`sds-realtime` `852693e8-9737-45fe-bd64-80cb197b9840`.
+
+Ignored live captures and JSON receipts: `captures/releases/3.9.7/`. No captures,
+profiles, generated assets or credentials are committed. This documentation
+receipt is a follow-up to the immutable tagged runtime commit, not another
+production deployment.
