@@ -250,7 +250,7 @@ try {
   await page.getByRole('button', { name: 'Close settings' }).click();
 
   await page.getByRole('button', { name: 'End run' }).click();
-  await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).waitFor();
   await page.waitForFunction(() => globalThis.__herdAudioProbe.snapshot().contexts[0]?.state === 'running');
   stages.titleAfterEnd = await snapshot(page);
   await pressPlay(page);

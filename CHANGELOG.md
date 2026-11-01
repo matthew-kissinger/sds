@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.9.7] - 2026-11-01
+
+### Fixed
+
+- Play solo and Play multiplayer share the title menu, stacked on narrow phones
+  and side by side in landscape. Secondary controls sit below them. Short
+  screens use tighter spacing without shrinking touch targets.
+- Opening Solo times disables multiplayer and makes the title menu inactive,
+  preventing the multiplayer button from overlapping or opening above the board.
+  Closing the board restores the play choices. No gameplay, score or protocol
+  change.
+
 ## [3.9.6] - 2026-10-31
 
 ### Changed

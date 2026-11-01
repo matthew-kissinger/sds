@@ -18,7 +18,7 @@ try {
   await page.locator('.herd-app[data-ready="true"]').waitFor({ timeout: 90000 });
   await page.evaluate(() => { document.title = 'SDS Film Capture'; });
   await page.locator('.herd-size').filter({ hasText: '200' }).click();
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).click();
   await page.waitForTimeout(1800);
   report.scene = await page.evaluate(() => __trailer.find());
   const take = async (name, action, tab = false) => {

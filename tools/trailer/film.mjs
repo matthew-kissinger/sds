@@ -22,7 +22,7 @@ try {
   await page.locator('.herd-app[data-ready="true"]').waitFor({ timeout: 90000 });
   if (mode !== 'herding' && mode !== 'smooth' && mode !== 'action') await page.locator('.herd-size').filter({ hasText: '200' }).click();
   await page.screenshot({ path: join(out, `${mode}-title.png`) });
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).click();
   await page.waitForTimeout(5000);
   report.scene = await page.evaluate(() => __trailer.find());
   console.log(JSON.stringify(report.scene));

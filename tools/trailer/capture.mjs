@@ -16,7 +16,7 @@ try {
   page.on('pageerror', error => report.errors.push(String(error)));
   await page.goto('https://sheepdogsim.com/?seed=20260821');
   await page.locator('.herd-app[data-ready="true"]').waitFor({ timeout: 90000 });
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).click();
   await page.waitForTimeout(4000);
   report.scene = await page.evaluate(() => __trailer.find());
   console.log(JSON.stringify(report.scene));

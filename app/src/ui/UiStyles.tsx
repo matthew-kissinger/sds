@@ -21,12 +21,6 @@ canvas { display: block; touch-action: none; }
    shade; --herd-ink holds 5.61:1 at its worst. */
 .herd-title-links a { color: var(--herd-ink); text-underline-offset: 3px; }
 .herd-title-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
-@media (max-height: 500px) {
-  .herd-boot .herd-title-card { gap: var(--herd-s2); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 4px; }
-  .herd-title-card > * { flex-shrink: 0; }
-  .herd-title-card .herd-title { font-size: 44px; }
-  .herd-title-card .herd-title-links { margin-top: 0; }
-}
 /* No transform transition. The cue is now written every frame, and a 150ms
    interpolation retargeted each frame never lands - it trails the camera and
    rubber-bands. Opacity still eases, because that changes only on state. */
@@ -83,6 +77,7 @@ canvas { display: block; touch-action: none; }
 .herd-size { min-width: 68px; padding: 8px 15px; border-radius: var(--herd-round); cursor: pointer; font-variant-numeric: tabular-nums lining-nums; }
 .herd-size[aria-pressed=true] { background: rgba(116,90,58,.2); border-color: var(--herd-line-strong); }
 .herd-title-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--herd-s3); }
+.herd-title-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--herd-s3); }
 /* An 18px halo is too diffuse to lift small text off moving grass. These two
    rows are the only text on the title that sits on the field with no paper
    under it, so they carry a tight halo of their own. */
@@ -420,7 +415,11 @@ canvas { display: block; touch-action: none; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
 @media (max-width: 560px) {
   .herd-nameplate-badge { font-size: 14px; padding: 5px 14px 6px; }
-  .herd-title-card { gap: var(--herd-s5); }
+  .herd-title-card { gap: var(--herd-s5); width: 100%; }
+  .herd-title-actions { flex-direction: column; width: 100%; }
+  .herd-title-actions .herd-button { width: min(100%, 260px); }
+  .herd-title-tools { width: 100%; gap: var(--herd-s2); }
+  .herd-title-tools .herd-button { padding-inline: 14px; }
   .herd-title { font-size: clamp(36px, 11vw, 46px); white-space: nowrap; }
   .herd-title-lockup { gap: var(--herd-s2); }
   .herd-panel { padding: var(--herd-s5); border-radius: 24px; }
@@ -433,6 +432,15 @@ canvas { display: block; touch-action: none; }
   .herd-progress { width: 66px; height: 66px; }
   .herd-progress[data-flock-size="200"] .herd-progress__count { font-size: 10px; }
   .herd-timer { top: max(91px, calc(env(safe-area-inset-top) + 89px)); }
+}
+/* Short screens keep both play choices and the information links in one view.
+   The scroll fallback remains for browser chrome, large text and smaller sizes. */
+@media (max-height: 500px) {
+  .herd-boot .herd-title-card { gap: var(--herd-s1); max-height: calc(100dvh - 48px); overflow-y: auto; padding: var(--herd-s1); }
+  .herd-title-card > * { flex-shrink: 0; }
+  .herd-title-card .herd-title { font-size: 36px; }
+  .herd-title-card .herd-title-lockup { gap: var(--herd-s1); }
+  .herd-title-card .herd-title-links { margin-top: 0; }
 }
 `;
 

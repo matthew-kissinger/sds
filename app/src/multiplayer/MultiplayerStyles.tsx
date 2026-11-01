@@ -9,7 +9,6 @@
  * 320px viewport.
  */
 const CSS = `
-.mp-entry { position: fixed; z-index: 30; left: 50%; bottom: max(var(--herd-s5), env(safe-area-inset-bottom)); transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); min-width: 0; padding: 12px 24px; white-space: nowrap; }
 .mp-dialog { box-sizing: border-box; width: min(480px, calc(100vw - 24px)); max-height: min(calc(100dvh - 24px), 720px); margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--herd-line); border-radius: var(--herd-panel); background: var(--herd-paper); color: var(--herd-ink); box-shadow: 0 18px 70px var(--herd-shadow); font: inherit; }
 .mp-dialog[open] { display: flex; flex-direction: column; }
 .mp-dialog::backdrop { background: rgba(64,48,31,.34); backdrop-filter: blur(5px); }

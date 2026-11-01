@@ -44,7 +44,7 @@ try {
   });
   await page.goto('http://localhost:5365/?seed=20260821&debug=webgl');
   await page.locator('.herd-app[data-ready="true"]').waitFor({ timeout: 60000 });
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).click();
   const cdp = await page.context().newCDPSession(page);
   const dog = () => page.evaluate(() => globalThis.__touchDog());
   report.samples.push(await dog());
