@@ -7,24 +7,22 @@ investigations are in `docs/history/`.
 
 ## Production state
 
-- Release 3.9.7 title-menu candidate: owner approved merge and production deploy
-  on 2026-11-01. Grouped play actions and Solo times modal isolation passed
-  production-build browser checks at four phone sizes and desktop; 31 focused
-  tests and changed-file lint passed. Physical-phone review follows deployment.
-  Release evidence will be recorded in `docs/history/status-log.md`.
+- Release 3.9.7 grouped title actions and Solo times modal isolation are live.
+  Exact CI/artifact identity, five live layout/interaction receipts and remaining
+  physical-phone review are in `docs/history/status-log.md`, "Release 3.9.7".
 - Version 3 client source, deterministic simulation, procedural assets, tests
   and public documentation have been curated into the SDS release branch.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Co-op, competitive and persistent multiplayer stats are live in 3.9.2. The 5,000-sheep player path remains
+- Co-op, competitive and persistent multiplayer stats are live in 3.9.7. The 5,000-sheep player path remains
   absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.9.2 (`6b2420f8`, tag `v3.9.2`; favicon fix, no gameplay change) is
-  live at `https://sheepdogsim.com` since 2026-10-26 19:22 UTC (`Deploy` run
-  40385417951; `release.json` is the authority for the exact deployed commit),
+- Version 3.9.7 (`a1868013`, tag `v3.9.7`; title layout and modal isolation,
+  no gameplay change) is live at `https://sheepdogsim.com` since 2026-11-01
+  22:42 UTC (`Deploy` run 41357926862; `release.json` is the authority for the exact deployed commit),
   served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
