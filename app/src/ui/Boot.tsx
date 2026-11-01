@@ -12,7 +12,13 @@ import { LeaderboardPanel } from '@app/scores/LeaderboardPanel';
 import { bootPercent, bootStatus } from '@app/boot/progress';
 import { flockSizeFromPath } from '@app/boot/playPath';
 
-export function Boot() {
+export function Boot({
+  onMultiplayer,
+  multiplayerLabel = 'Play multiplayer',
+}: {
+  readonly onMultiplayer?: () => void;
+  readonly multiplayerLabel?: string;
+}) {
   const startGame = useGameStore((state) => state.startGame);
   const openSettings = useGameStore((state) => state.openSettings);
   const openCustomize = useGameStore((state) => state.openCustomize);
@@ -119,8 +125,21 @@ export function Boot() {
             disabled={!sceneReady || leaving}
             onClick={play}
           >
-            Play
+            Play solo
           </button>
+          {onMultiplayer ? (
+            <button
+              type="button"
+              className="herd-button"
+              aria-haspopup="dialog"
+              disabled={!sceneReady || leaving || showTimes}
+              onClick={onMultiplayer}
+            >
+              {multiplayerLabel}
+            </button>
+          ) : null}
+        </div>
+        <div className="herd-title-tools">
           <button
             type="button"
             className="herd-button herd-button--quiet"

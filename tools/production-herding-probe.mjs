@@ -94,7 +94,7 @@ try {
   await page.goto(`http://localhost:${port}/?seed=20260821&debug=webgl`);
   await page.locator('.herd-app[data-ready="true"]').waitFor({ timeout: 60000 });
   await page.locator('.herd-size').filter({ hasText: String(flock) }).click();
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).click();
   await page.addScriptTag({ content: driver });
   await page.evaluate(() => {
     globalThis.__herdingSim = globalThis.__findHerdingSim();

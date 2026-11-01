@@ -142,7 +142,7 @@ try {
         timeout: 60_000,
       });
       await waitForReady(page);
-      await page.getByRole('button', { name: 'Play', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Play solo', exact: true }).waitFor();
       await page.screenshot({ path: join(outDir, `${spec.name}-title.png`) });
       const title = await auditLayout(page);
 

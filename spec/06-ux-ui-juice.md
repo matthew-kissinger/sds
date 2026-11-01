@@ -47,6 +47,13 @@ near a server. This planning update creates no production UI.
 
 ### Shared interface rules
 
+- **Title actions**: Play solo and Play multiplayer share the title menu, above
+  the quieter Customize, Settings and Times controls. On narrow phones the play
+  choices stack; in landscape they sit side by side. Short screens tighten the
+  spacing and title size while retaining at least 44 px button targets and a
+  scroll fallback. Opening Solo times makes the whole title menu inert and
+  disables its multiplayer action until the board closes. No play action floats
+  independently above a panel.
 - React TSX only, in `app/src/ui/`. Subscribes to the same zustand store as the scene. Zero window globals, zero event-bridge glue, zero polling (the entire sds GameBridge pattern is forbidden).
 - A design-token module (color, spacing, type scale, z-index, motion durations) is the ONLY styling authority, written before the first component. `useReducedMotion` respected from day one. Both were the only parts of sds's UI that converged correctly; start there.
 - In-game HUD is nearly nothing: sheep-penned count (fills as a soft pictogram row or radial), optional timer (off by default; the zen default is no clock on screen), stamina as a subtle ring around or under the dog, not a bar in a corner. Every HUD element must justify existing against the Calm pillar.

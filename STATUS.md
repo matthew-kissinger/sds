@@ -7,6 +7,11 @@ investigations are in `docs/history/`.
 
 ## Production state
 
+- Release 3.9.7 title-menu candidate: owner approved merge and production deploy
+  on 2026-11-01. Grouped play actions and Solo times modal isolation passed
+  production-build browser checks at four phone sizes and desktop; 31 focused
+  tests and changed-file lint passed. Physical-phone review follows deployment.
+  Release evidence will be recorded in `docs/history/status-log.md`.
 - Version 3 client source, deterministic simulation, procedural assets, tests
   and public documentation have been curated into the SDS release branch.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed

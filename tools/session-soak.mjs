@@ -66,7 +66,7 @@ export async function runSessionSoak(page, seconds, path, checkpoint) {
         await page.keyboard.press('Escape');
         await page.getByRole('button', { name: 'End run', exact: true }).click();
         await page.locator('.herd-size').filter({ hasText: '200' }).click();
-        await page.getByRole('button', { name: 'Play', exact: true }).click();
+        await page.getByRole('button', { name: 'Play solo', exact: true }).click();
         await page.waitForTimeout(1500);
         await sample(`restart-${cycle}`);
       }

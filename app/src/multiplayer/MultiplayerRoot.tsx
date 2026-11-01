@@ -106,8 +106,10 @@ export default function MultiplayerRoot() {
   const sub = historyOpen ? null : !room ? 'Herd together or compete with up to four players.' : null;
   return <>
     <MultiplayerStyles />
-    {!open && panel === 'none' ? <Boot /> : null}
-    {!open && phase === 'title' ? <button className="herd-button mp-entry" onClick={() => setOpen(true)}>{import.meta.env.MODE === 'coop' ? 'Play multiplayer locally' : 'Play multiplayer'}</button> : null}
+    {!open && panel === 'none' ? <Boot
+      onMultiplayer={() => setOpen(true)}
+      multiplayerLabel={import.meta.env.MODE === 'coop' ? 'Play multiplayer locally' : 'Play multiplayer'}
+    /> : null}
     {room?.phase === 'playing' ? <aside className="mp-hud" data-connected={status.connected} aria-live="polite">
       <div className="mp-hud__bar"><span className="mp-hud__dot" aria-hidden="true" /><span className="mp-hud__label">{room.settings.mode === 'competitive' ? 'Competitive' : `Co-op · Player ${status.slot + 1}`}</span><span className="mp-hud__ping">{status.connected ? `${status.rtt ?? '…'} ms` : 'Reconnecting'}</span></div>
       {room.settings.mode === 'competitive' ? <Scoreboard standings={status.standings} unclaimed={status.unclaimed} you={status.slot} /> : null}

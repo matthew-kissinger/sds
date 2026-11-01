@@ -72,7 +72,7 @@ try {
   await quality.focus(); await quality.press('KeyC');
   assert.deepEqual(await camera(), titleCamera);
   await quality.press('Escape');
-  await page.getByRole('button', { name: 'Play', exact: true }).focus();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).focus();
   await page.keyboard.press('Space');
   await page.locator('.herd-app[data-phase="playing"]').waitFor();
   await page.waitForTimeout(400);

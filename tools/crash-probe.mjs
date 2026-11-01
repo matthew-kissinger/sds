@@ -78,7 +78,7 @@ try {
       };
     })(),
   }));
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).click();
   await page.locator('.herd-app[data-phase=playing]').waitFor({ timeout: 10_000 });
   await page.waitForTimeout(8_000);
   await page.screenshot({ path: screenshotPath });

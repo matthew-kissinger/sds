@@ -108,7 +108,7 @@ try {
 
   await page.goto(`${url}?seed=20260918&debug=webgl`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.locator('.herd-app[data-ready="true"]').waitFor({ timeout: 60_000 });
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play solo', exact: true }).click();
   await page.waitForTimeout(1200);
 
   // Enter Follow. The turning row only governs the Follow rig, and the basis

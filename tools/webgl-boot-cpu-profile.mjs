@@ -110,7 +110,7 @@ try {
     waitUntil: 'domcontentloaded',
     timeout: 60_000,
   });
-  const play = page.getByRole('button', { name: 'Play', exact: true });
+  const play = page.getByRole('button', { name: 'Play solo', exact: true });
   await play.waitFor({ state: 'visible', timeout: 60_000 });
   await page.waitForFunction(() => {
     const button = [...document.querySelectorAll('button')]
