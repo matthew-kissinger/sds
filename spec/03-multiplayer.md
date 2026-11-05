@@ -17,9 +17,9 @@ per-pen scores, forfeits, eligible shared ties and explicit no-winner closure. F
 snapshots and a fixed 100 ms presentation buffer are reversible pilot choices;
 delta transport, adaptive delay and numerical acceptance budgets remain open.
 [The local contract](../realtime/README.md) records implementation limits.
-The [staging setup](../docs/operations/multiplayer-staging.md) uses one room,
-a private passcode gate and a server-enforced one-hour cutoff. Broader release
-qualification follows the first hosted PC/hub playtest, not before it.
+The October 2026 staging pilot used one room, a private passcode gate and a
+server-enforced one-hour cutoff; it was removed on 2026-11-05 and there is no
+staging environment. Testing is local; production is the tagged release.
 The remainder of this specification is the target contract, not a claim that
 all described behaviour is implemented.
 

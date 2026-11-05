@@ -33,7 +33,6 @@
     "dev": "vite",
     "lab": "vite --config vite.lab.config.ts",
     "build": "tsc -b && vite build",
-    "build:preview": "tsc -b && vite build --mode preview",
     "preview": "vite preview",
     "test": "vitest run && npm run test:realtime",
     "test:watch": "vitest",

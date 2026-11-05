@@ -15,8 +15,8 @@
 //        - BOOTSTRAP_MODE=diff (default, production): apply only files newly
 //          ADDED in the BEFORE..AFTER push range. The deploy that ships 0010
 //          applies it through this path, which creates + seeds the table.
-//        - BOOTSTRAP_MODE=full (preview): apply the FULL migration set in
-//          sequence order (a fresh preview D1 has no schema at all).
+//        - BOOTSTRAP_MODE=full: apply the FULL migration set in sequence order
+//          (a fresh D1 has no schema at all).
 //      After the bootstrap applies, any file applied in this run is recorded
 //      as 'applied' (INSERT OR IGNORE; the 0010 seeds already cover history).
 //   2. Otherwise read the state table:
@@ -31,9 +31,6 @@
 //          insert and update leaves the 'failed' marker for step 2 above.
 //
 // Environment:
-//   D1_TARGET        'production' (default) or 'preview'. Preview targets the
-//                    sds-db-preview binding via `--env preview` and hard-asserts
-//                    it can never touch the production database id.
 //   BOOTSTRAP_MODE   'diff' (default) or 'full'. See bootstrap flow above.
 //   BEFORE / AFTER   commit range for diff bootstrap (deploy.yml passes
 //                    github.event.before / github.sha).
@@ -54,47 +51,21 @@ const migrationsDir = join(repoRoot, 'worker', 'migrations');
 
 const STATE_TABLE = 'sds_migration_state';
 const PROD_DB_NAME = 'sds-db';
-const PROD_DB_ID = '513aa937-e60a-4fb6-b499-9f3814149e88';
-const PREVIEW_DB_NAME = 'sds-db-preview';
 
-const target = process.env.D1_TARGET || 'production';
-const bootstrapMode = process.env.BOOTSTRAP_MODE || (target === 'preview' ? 'full' : 'diff');
+const bootstrapMode = process.env.BOOTSTRAP_MODE || 'diff';
 const isLocal = process.env.D1_LOCAL === '1';
 const locationFlag = isLocal ? '--local' : '--remote';
 
-if (target !== 'production' && target !== 'preview') {
-  fail(`Unknown D1_TARGET '${target}' (expected 'production' or 'preview').`);
-}
 if (bootstrapMode !== 'diff' && bootstrapMode !== 'full') {
   fail(`Unknown BOOTSTRAP_MODE '${bootstrapMode}' (expected 'diff' or 'full').`);
 }
 
-const dbName = target === 'preview' ? PREVIEW_DB_NAME : PROD_DB_NAME;
-const envArgs = ` --config wrangler.toml${target === 'preview' ? ' --env preview' : ''}${isLocal ? ' --persist-to .wrangler/state' : ''}`;
+const dbName = PROD_DB_NAME;
+const envArgs = ` --config wrangler.toml${isLocal ? ' --persist-to .wrangler/state' : ''}`;
 
 function fail(msg) {
   console.error(`d1-migrate-remote: ${msg}`);
   process.exit(1);
-}
-
-// Guard rail: a preview run must be provably pointed away from production.
-function assertPreviewSafety() {
-  if (dbName === PROD_DB_NAME) {
-    fail('Preview target resolved to the production database name. Refusing.');
-  }
-  const toml = readFileSync(join(repoRoot, 'wrangler.toml'), 'utf8');
-  const previewSection = toml.split(/\[env\.preview\]/)[1];
-  if (!previewSection) {
-    fail('wrangler.toml has no [env.preview] section. Refusing preview migration.');
-  }
-  const idMatch = previewSection.match(/database_id\s*=\s*"([^"]+)"/);
-  const previewId = idMatch && idMatch[1];
-  if (!previewId) {
-    fail('No database_id found under [env.preview] in wrangler.toml. Refusing.');
-  }
-  if (previewId === PROD_DB_ID) {
-    fail('The [env.preview] database_id equals the PRODUCTION database id. Refusing.');
-  }
 }
 
 function wrangler(args) {
@@ -169,11 +140,9 @@ function diffAddedFiles() {
 }
 
 function main() {
-  if (target === 'preview') assertPreviewSafety();
-
   const files = listMigrationFiles();
   let diffAdded = null;
-  if (target === 'production' && bootstrapMode === 'diff') {
+  if (bootstrapMode === 'diff') {
     diffAdded = diffAddedFiles().filter((f) => files.includes(f));
     if (diffAdded.length === 0) {
       console.log('Production diff mode: no newly added migrations in this push. Skipping remote D1 check.');
@@ -183,7 +152,7 @@ function main() {
 
   if (!stateTableExists()) {
     // Bootstrap: the deploy that ships the state-table migration itself, or a
-    // fresh preview database. Fall back to the legacy behavior for this run.
+    // fresh database. Fall back to the legacy behavior for this run.
     const toApply =
       bootstrapMode === 'full' ? files : diffAdded;
     if (toApply.length === 0) {

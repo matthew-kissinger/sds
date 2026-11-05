@@ -31,7 +31,7 @@ shared results and host-controlled rematch. The production candidate exposes Pla
 The local pilot uses full snapshots and fixed 100 ms interpolation; delta
 compression/adaptive buffering, competitive and the full acceptance matrix are
 still outstanding. These reversible choices do not close Stage 2 or Q8.
-The [staging setup and estimate](../operations/multiplayer-staging.md) assumes
+The staging setup and estimate (removed 2026-11-05; in git history) assumed
 the owner-confirmed Workers Paid account. The owner approved $20; allowance
 balance remains unverified. Staging was deployed and the hosted PC/hub smoke
 passed; the owner then requested production promotion.

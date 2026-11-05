@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Removed
+
+- The per-pull-request preview Worker (`sds-worker-preview`, its D1 and the
+  `Preview` workflow) and the multiplayer staging pilot (`sds-game-staging`,
+  `sds-realtime-staging`, their D1 and `staging.sheepdogsim.com`). Changes are
+  tested locally and reach production by a `v*` tag. No runtime change.
+
 ## [3.9.7] - 2026-11-01
 
 ### Fixed

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 /**
- * app/cloudflare.config.ts against wrangler.toml, mode for environment.
+ * app/cloudflare.config.ts against wrangler.toml, 
  *
- * While Release 2 Stage B runs on the preview Worker only, both files describe
- * the same two Workers: `cf` reads one, wrangler the other, and neither reads
- * both. This holds every hosting fact the wrangler spec pins equal in the cf
+ * Both files describe the same Worker: `cf` reads one, wrangler the other, and
+ * neither reads both. This holds every hosting fact the wrangler spec pins equal in the cf
  * declaration, so the two cannot drift while both exist. The shapes come from
  * `cf/config`'s builders (`bindings.d1` -> `{ type: 'd1', name, id }`,
  * `triggers.fetch` -> `{ type: 'fetch', pattern, zone }`), which is what the
@@ -17,23 +16,19 @@ import { describe, expect, it } from 'vitest';
 import define from '../../app/cloudflare.config.ts';
 
 const wranglerPath = fileURLToPath(new URL('../../wrangler.toml', import.meta.url));
-const wrangler = (env?: string) => readConfig({ config: wranglerPath, env }, { hideWarnings: true }) as any;
+const wrangler = () => readConfig({ config: wranglerPath }, { hideWarnings: true }) as any;
 
 // `defineConfig` returns the function it was given; the plugin and `cf` call
 // it with the mode. `undefined` is what a plain `vite build` passes through as
 // 'production', and what `cf deploy` without --mode means.
 const cf = (mode?: string) => (define as unknown as (ctx: { mode?: string; isPreview: boolean }) => any)({ mode, isPreview: false }).worker;
 
-const PAIRS: readonly [label: string, cfWorker: any, wranglerConfig: any][] = [
-  ['production', cf('production'), wrangler()],
-  ['preview', cf('preview'), wrangler('preview')],
-];
+const PAIRS: readonly [label: string, cfWorker: any, wranglerConfig: any][] = [['production', cf('production'), wrangler()]];
 
 describe('cloudflare.config.ts says what wrangler.toml says', () => {
-  it('names the same two Workers and gives the production one to the default mode too', () => {
+  it('names the same Worker, and gives it to the default mode too', () => {
     expect(cf('production').name).toBe('sds-worker');
     expect(cf(undefined).name).toBe('sds-worker');
-    expect(cf('preview').name).toBe('sds-worker-preview');
     for (const [, worker, config] of PAIRS) expect(worker.name).toBe(config.name);
   });
 
@@ -56,16 +51,15 @@ describe('cloudflare.config.ts says what wrangler.toml says', () => {
     }
   });
 
-  it('keeps workers.dev on for both, version preview URLs for preview only', () => {
+  it('keeps workers.dev on and version preview URLs off', () => {
     for (const [, worker, config] of PAIRS) {
       expect(worker.workersDev).toBe(config.workers_dev);
       expect(worker.previewUrls).toBe(config.preview_urls);
     }
     expect(cf('production').previewUrls).toBe(false);
-    expect(cf('preview').previewUrls).toBe(true);
   });
 
-  it('serves sheepdogsim.com from production only, by its Custom Domain, and declares no route anywhere', () => {
+  it('serves sheepdogsim.com by its Custom Domain and declares no route', () => {
     // 3.3.1 made the apex a Custom Domain owned by the deploy; 3.3.2 deleted
     // the Release 1 route (docs/operations/declarative-hosting.md). A route
     // declared in either file would be published again by a deploy of it,
@@ -74,13 +68,9 @@ describe('cloudflare.config.ts says what wrangler.toml says', () => {
     expect(cf('production').domains).toEqual(['sheepdogsim.com']);
     expect(cf('production').triggers).toBeUndefined();
     expect(wrangler().routes ?? []).toEqual([]);
-    // A preview must never claim a production hostname, by route or domain.
-    expect(cf('preview').domains).toBeUndefined();
-    expect(cf('preview').triggers).toBeUndefined();
-    expect(wrangler('preview').routes ?? []).toEqual([]);
   });
 
-  it('binds each Worker to its own D1, the assets and the JWT secret, and to nothing else', () => {
+  it('binds the D1, the assets and the JWT secret, and nothing else', () => {
     for (const [, worker, config] of PAIRS) {
       const [d1] = config.d1_databases;
       expect(worker.env).toEqual({
@@ -90,7 +80,6 @@ describe('cloudflare.config.ts says what wrangler.toml says', () => {
       });
       expect(config.assets.binding).toBe('ASSETS');
     }
-    expect(cf('production').env.DB.id).not.toBe(cf('preview').env.DB.id);
   });
 
   it('declares no Durable Object class, because the applied history deleted them', () => {

@@ -15,19 +15,13 @@
  * recorded in docs/history/status-log.md.
  *
  * This is the same Worker `wrangler.toml` describes, typed: one `sds-worker`
- * serving the game as static assets and the score API under /api, with a
- * `preview` mode that is the per-pull-request Worker `sds-worker-preview` on
- * its own D1. `cf` reads this file and ignores `wrangler.toml`; wrangler reads
- * `wrangler.toml` and ignores this file. This file deploys; `wrangler.toml`
+ * serving the game as static assets and the score API under /api. `cf` reads
+ * this file and ignores `wrangler.toml`; wrangler reads `wrangler.toml` and
+ * ignores this file. This file deploys; `wrangler.toml`
  * stays for the D1 scripts and for the tags built before the `cf` move
  * (3.2.1 to 3.3.0, docs/operations/deployment.md). Every fact here is pinned
  * by tests/worker/cloudflare-config.spec.ts against wrangler.toml, so the two
  * cannot drift while both exist.
- *
- * MODES, NOT ENVIRONMENTS. `cf` has no `--env`: a function-form config returns
- * one complete configuration per `mode`, and a mode deploys a separate Worker
- * only because it returns a different `name`. Nothing is inherited, so the
- * preview branch repeats what it shares rather than merging it.
  *
  * NO MIGRATIONS BLOCK. wrangler's `[[migrations]]` history (v1 created the
  * version 2 multiplayer classes, v2 deleted them) is already applied to both
@@ -36,7 +30,7 @@
  * the docs say not to copy deletions that have been applied, so there is
  * nothing to declare. Whether a deploy from this file leaves the tag where it
  * is, and whether a wrangler deploy of an older commit and a rollback across
- * it do too, is Stage B's third check, measured on the preview Worker.
+ * it do too, was Stage B's third check (docs/history/status-log.md).
  */
 
 import { bindings, defineConfig } from 'cf/config';
@@ -60,26 +54,7 @@ const SHARED = {
   observability: { enabled: true },
 } as const;
 
-export default defineConfig(({ mode }) => {
-  if (mode === 'preview') {
-    return {
-      worker: {
-        ...SHARED,
-        name: 'sds-worker-preview',
-        // Each pull request uploads a version here with a preview alias, so
-        // its build answers on pr-<number>-sds-worker-preview.<subdomain>
-        // against this Worker's own D1 and JWT_SECRET. No route: the
-        // production hostname is never claimed by a preview.
-        workersDev: true,
-        previewUrls: true,
-        env: {
-          ASSETS: bindings.assets(),
-          DB: bindings.d1({ name: 'sds-db-preview', id: '6d5b0fce-952f-4d94-8936-b51fc559496c' }),
-          JWT_SECRET: bindings.secret(),
-        },
-      },
-    };
-  }
+export default defineConfig(() => {
   return {
     worker: {
       ...SHARED,
@@ -87,8 +62,7 @@ export default defineConfig(({ mode }) => {
       // Explicit, never inferred: sds-worker.<subdomain>.workers.dev must keep
       // answering, because every client built before Release 1 has it baked
       // in as the score API. Version preview URLs of production would serve
-      // production's D1 and secrets from a throwaway hostname, so they are off;
-      // pull-request previews use the preview mode instead.
+      // production's D1 and secrets from a throwaway hostname, so they are off.
       workersDev: true,
       previewUrls: false,
       // sheepdogsim.com is a Custom Domain of this Worker since 3.3.1

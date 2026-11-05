@@ -20,7 +20,7 @@ different Windows account; use the owner's password manager for another device.
 ## What deployment needs
 
 - One D1 database named `sds-multiplayer`, bound as `MATCH_DB` to `sds-realtime`.
-  Never reuse `sds-db`, `sds-db-preview` or the staging identity database.
+  Never reuse `sds-db`.
 - One random `OWNER_STATS_TOKEN` secret on `sds-realtime` (32 random bytes,
   encoded as 64 hex characters). It authorizes read-only dashboard queries.
   Keep it encrypted on the owner's PC or in their password manager, never in

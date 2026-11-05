@@ -16,7 +16,7 @@ compatibility_flags = ["nodejs_compat"]
 # API (the old PROD_SCORE_API_BASE), and an open tab keeps calling it.
 workers_dev = true
 # Version preview URLs of production would serve production's D1 and secrets
-# from a throwaway hostname. Pull-request previews use env.preview instead.
+# from a throwaway hostname.
 preview_urls = false
 
 # Source-mapped stack traces in Workers observability; the maps are uploaded to
@@ -72,30 +72,3 @@ database_id = "513aa937-e60a-4fb6-b499-9f3814149e88"
 # www.sheepdogsim.com is a proxied DNS record and a Single Redirect rule to the
 # apex at the zone edge (docs/operations/deployment.md). /r/* stays free for a
 # realtime Worker (spec/03-multiplayer.md).
-
-# ---------------------------------------------------------------------------
-# Per-pull-request preview environment. Built with CLOUDFLARE_ENV=preview and
-# uploaded by .github/workflows/preview.yml as sds-worker-preview, with its OWN
-# D1 so a preview can never touch the production leaderboard. A database id is
-# an identifier, not a secret, so it is committed;
-# scripts/d1-migrate-remote.mjs refuses to run a preview migration against the
-# production id. Its JWT_SECRET is a Worker secret set once with
-#   npx wrangler secret put JWT_SECRET --env preview
-# Environments do not inherit bindings, so D1 is redeclared here. The Durable
-# Object [[migrations]] history above is top-level and shared.
-# ---------------------------------------------------------------------------
-[env.preview]
-name = "sds-worker-preview"
-# Each pull request uploads a version here with --preview-alias pr-<number>, so
-# its build answers on pr-<number>-sds-worker-preview.matt-m-kissinger.workers.dev
-# against this environment's own D1 and JWT_SECRET. Assets are inherited.
-workers_dev = true
-preview_urls = true
-# routes is inheritable in Wrangler 4; there is none to inherit, and the
-# tests pin that neither environment declares one.
-routes = []
-
-[[env.preview.d1_databases]]
-binding = "DB"
-database_name = "sds-db-preview"
-database_id = "6d5b0fce-952f-4d94-8936-b51fc559496c"

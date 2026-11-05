@@ -66,6 +66,17 @@ settles are in `docs/history/status-log.md`.
 
 ## Master plan - agreed 2026-10-16, decisions settled the same day
 
+### Owner-directed removal of preview and staging - 2026-11-05
+
+The owner removed the per-pull-request preview Worker and the multiplayer
+staging pilot. There is no non-production environment: changes are tested
+locally and ship by `v*` tag. Repository changes: `preview.yml`, the `preview`
+mode and `[env.preview]`, `staging/` and its tools, and the preview paths in
+`verify-deploy-config.mjs` and `d1-migrate-remote.mjs`. The Cloudflare Workers,
+D1 databases and `staging.sheepdogsim.com` domain are deleted after this merges.
+`tools/staging-wrangler.mjs` stays: `multiplayer-history.md` uses it as an OAuth
+login wrapper for production setup.
+
 ### Owner-directed multiplayer history and stats - 2026-10-21
 
 The owner authorized persistent match history, player stats and an owner
@@ -166,7 +177,7 @@ ready/start, prediction/interpolation, reconnect, continue-on-leave, shared
 completion and rematch are implemented locally. Run `npm run coop`; see
 [scope, instructions and evidence](realtime/README.md). The production build
 exposes both co-op and competitive as of release 3.8.0 above.
-The owner approved the simplified [staging setup](docs/operations/multiplayer-staging.md)
+The owner approved the simplified staging setup (removed 2026-11-05; in git history)
 and its $20 one-room pilot. Workers Paid is owner-confirmed. The October 20 read-only review
 verified working Wrangler OAuth, the account, staging hostname vacancy and hub
 reachability; billing allowances and Access enrollment remain unverified.
@@ -174,8 +185,8 @@ Hosted wrappers, passcode-cookie access and the server-enforced cutoff passed
 local typechecks, bundle dry runs and 64 workerd checks. Staging source `cf15f61a`
 is deployed at `staging.sheepdogsim.com`; the real PC/hub smoke passed invite,
 start, movement/barks, snapshot agreement, reload and leave/continue. The window
-closes October 20 at 10:42 p.m. EDT; [live receipt](docs/operations/multiplayer-staging.md#live-pilot-receipt-october-20)
-records versions, access instructions, cleanup and limitations. No production change.
+closes October 20 at 10:42 p.m. EDT; the live receipt
+recorded versions, access instructions, cleanup and limitations. No production change.
 Full snapshots and fixed 100 ms buffering are local
 pilot choices; delta/adaptive transport and all hosted/device/performance and
 separate presentation-review gates remain open. No multiplayer release gate
