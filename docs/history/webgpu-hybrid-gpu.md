@@ -2,6 +2,10 @@
 
 The test scripts were throwaway and are not in the repository.
 
+Later on 2026-11-06, per-user launchers outside this repository got real WebGPU on
+the NVIDIA GPU by moving the whole graphics stack there; `STATUS.md` has the current
+state. Below is the diagnosis as written. Its finding that plain flags fail still holds.
+
 Date: 2026-11-05. Machine: the functional lane, so no timing here is a
 performance claim. Millisecond figures only order events within a run.
 
