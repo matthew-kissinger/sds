@@ -165,6 +165,10 @@ export function removeDir(path) {
  * that root at `profileRoot` is therefore how concurrent probes stay out of each
  * other's profile AND how a probe can guarantee it removes the one it made:
  * the shared system temp dir is exactly the collision this avoids.
+ *
+ * PROBE_HEADED=1 launches headed. On a hybrid laptop with the whole stack on the
+ * discrete GPU, headless Chrome gets SwiftShader or no adapter, and only a headed
+ * browser reaches the real one. Run under Xvfb to keep the windows off the desktop.
  */
 export function launchBrowser(profileRoot, extraArgs = []) {
   // Scope Chromium's scratch-root override to its child process. Mutating the
@@ -173,7 +177,12 @@ export function launchBrowser(profileRoot, extraArgs = []) {
   const env = profileRoot
     ? { ...process.env, TMPDIR: profileRoot, TEMP: profileRoot, TMP: profileRoot }
     : undefined;
-  return chromium.launch({ channel: 'chromium', args: [...GPU_ARGS, ...extraArgs], env });
+  return chromium.launch({
+    channel: 'chromium',
+    args: [...GPU_ARGS, ...extraArgs],
+    env,
+    headless: process.env.PROBE_HEADED !== '1',
+  });
 }
 
 // --- reading the app --------------------------------------------------------
