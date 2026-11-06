@@ -4477,3 +4477,41 @@ Ignored live captures and JSON receipts: `captures/releases/3.9.7/`. No captures
 profiles, generated assets or credentials are committed. This documentation
 receipt is a follow-up to the immutable tagged runtime commit, not another
 production deployment.
+
+## Release 3.9.8 - 2026-11-05 preview and staging removal, tool updates
+
+Owner explicitly approved the tag in conversation. No gameplay, simulation, score,
+protocol or server code changed: `worker/` and `sim/` are untouched, and `realtime/`
+changed only its README and a removed test. PR #175 merged as
+`871d72f9257527faf4e46a5ef0312c33e1a32d5e`. This is the first deploy on `cf`
+1.0.0-beta.27 and `@cloudflare/vite-plugin` 2.0.0-beta.v.10, and it ships `zustand`
+5.0.16.
+
+Client CI 42150605456 passed on the exact merge commit before annotated tag `v3.9.8`
+was pushed. Deploy 42151276491 succeeded from 02:35 to 02:40 UTC on 2026-11-06 and
+published the GitHub Release. Its suite passed 942 client/Node tests in 113 files and
+77 realtime/workerd tests in eight files. The main JS is 1,724.98 kB raw / 477.15 kB gzip; the
+multiplayer chunk is 56.14 / 16.42 kB. These are artifact sizes, not performance
+measurements.
+
+Before tagging, all three public lobbies listed no rooms, and three private operator
+waiting rooms acquired the NA/EU/APAC slots, confirming no existing room lease. They
+stayed waiting with one operator each and no match started through the paired update,
+then left. No player was evicted or active round interrupted.
+
+Both `/release.json` and `/r/health` identify `871d72f9`; the live manifest reports
+version 3.9.8 and ref `v3.9.8`, with 53 files / 10,485,103 bytes, artifact SHA-256
+`a2162182791053d6eea842bb1acd0b6d13f7377dff5931f79382ea1dbbdc7124`. `/`,
+`/api/healthz`, `/play/25` and the `workers.dev` `/api/healthz` returned 200.
+
+A functional check on this PC under forced WebGL2, against the live build, created and
+left a private room on the new realtime revision and started a solo run at 1280x800
+and 390x844 with no uncaught page errors. It is not a physical-phone, hub-timing or
+genuine WebGPU receipt: this PC cannot produce the last, see
+`docs/history/webgpu-hybrid-gpu.md`. A first room attempt returned 429 inside the
+two-minute empty-room lease left by the operator hold, and passed after it expired.
+
+The hold and the checks created up to 13 random-name production identities with no
+submitted scores, the same kind earlier operator holds left. No production data was
+otherwise written. This documentation receipt is a follow-up to the immutable tagged
+runtime commit, not another production deployment.
