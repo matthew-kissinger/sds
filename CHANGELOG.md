@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.10.0] - 2026-11-06
+
 ### Added
 
 - Language support, as one game at one address. `/` opens in English unless a player
