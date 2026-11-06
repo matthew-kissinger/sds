@@ -32,8 +32,8 @@ different Windows account; use the owner's password manager for another device.
 The actual D1 list request returned authentication error 10000 on October 21,
 despite `whoami` succeeding and reporting D1 scope. Operational/bootstrap
 credentials also failed that read. Refresh OAuth with
-`node tools/staging-wrangler.mjs login`, then repeat
-`node tools/staging-wrangler.mjs d1 list`. The wrapper omits a stale inherited
+`node tools/wrangler-oauth.mjs login`, then repeat
+`node tools/wrangler-oauth.mjs d1 list`. The wrapper omits a stale inherited
 API token for its child process; it does not change machine credentials.
 The subsequent OAuth login and D1 list request succeeded. Do not infer usable
 D1 access from the login summary alone.
@@ -41,17 +41,17 @@ D1 access from the login summary alone.
 ## One-time setup, after access and deployment authorization
 
 1. Create `sds-multiplayer` in the existing account with
-   `node tools/staging-wrangler.mjs d1 create sds-multiplayer`. Record its returned
+   `node tools/wrangler-oauth.mjs d1 create sds-multiplayer`. Record its returned
    UUID. Add this object to `d1_databases` in `realtime/wrangler.json`:
    `binding: MATCH_DB`, `database_name: sds-multiplayer`, `database_id: <returned UUID>`,
    `migrations_dir: migrations`. Commit the real binding; no placeholder ID is
    checked in. The migration path is relative to that config.
 2. Verify the binding points to that new database, then run
-   `node tools/staging-wrangler.mjs d1 migrations apply MATCH_DB --remote --config realtime/wrangler.json`.
+   `node tools/wrangler-oauth.mjs d1 migrations apply MATCH_DB --remote --config realtime/wrangler.json`.
    Only `realtime/migrations/0001_match_history.sql` applies. It creates
    `matches`, `participants` and `capacity_days`; no existing tables are altered.
 3. Generate the owner token securely and supply it through Wrangler's secret
-   prompt: `node tools/staging-wrangler.mjs secret put OWNER_STATS_TOKEN --config realtime/wrangler.json`.
+   prompt: `node tools/wrangler-oauth.mjs secret put OWNER_STATS_TOKEN --config realtime/wrangler.json`.
    Never pass its value as a shell argument. Secret changes may deploy a Worker
    revision: perform this during the same authorized empty-room cutover.
 4. Follow [the production release procedure](deployment.md) for the exact

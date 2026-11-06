@@ -72,10 +72,13 @@ The owner removed the per-pull-request preview Worker and the multiplayer
 staging pilot. There is no non-production environment: changes are tested
 locally and ship by `v*` tag. Repository changes: `preview.yml`, the `preview`
 mode and `[env.preview]`, `staging/` and its tools, and the preview paths in
-`verify-deploy-config.mjs` and `d1-migrate-remote.mjs`. The Cloudflare Workers,
-D1 databases and `staging.sheepdogsim.com` domain are deleted after this merges.
-`tools/staging-wrangler.mjs` stays: `multiplayer-history.md` uses it as an OAuth
-login wrapper for production setup.
+`verify-deploy-config.mjs` and `d1-migrate-remote.mjs`. The Workers
+`sds-worker-preview`, `sds-game-staging` and `sds-realtime-staging`, the D1s
+`sds-db-preview` and `sds-identity-staging`, and the `staging.sheepdogsim.com`
+hostname were deleted on 2026-11-05. `sds-db` and `sds-multiplayer` are untouched.
+The follow-up cleanup removed the 30 `shared/` files the score service does not
+reach, the 2025 `CNAME`, and renamed the OAuth login wrapper to
+`tools/wrangler-oauth.mjs`.
 
 ### Owner-directed multiplayer history and stats - 2026-10-21
 

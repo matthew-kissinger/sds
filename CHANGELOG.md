@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   `Preview` workflow) and the multiplayer staging pilot (`sds-game-staging`,
   `sds-realtime-staging`, their D1 and `staging.sheepdogsim.com`). Changes are
   tested locally and reach production by a `v*` tag. No runtime change.
+- The 30 `shared/` files left from version 2 that the score service does not
+  reach, and the 2025 GitHub Pages `CNAME`. `sim/` keeps its "lifted from"
+  provenance comments; those sources are in git history.
 
 ## [3.9.7] - 2026-11-01
 
