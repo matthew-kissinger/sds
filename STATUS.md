@@ -649,6 +649,21 @@ the record those files carry.
 
 ## Open questions
 
+- Forced WebGPU fails on the owner's PC, recorded 2026-11-06; cause unproven.
+  With the probes' `GPU_ARGS`, the game loses its device with
+  `VK_ERROR_OUT_OF_DEVICE_MEMORY` and shows "Graphics stopped", after about 17 MB
+  of allocations on a GTX 1660 Ti with about 5 GB of budget free. Playwright
+  Chromium 156 fails intermittently; Chromium 149 and stable Chrome 150 failed
+  4 of 4, on production 3.9.7 too, so no change in this repository caused it. A
+  real display, a pinned adapter and `--disable-gpu-sandbox` did not fix it. Stable Chrome
+  without flags offers no WebGPU adapter here, falls back to WebGL2 and worked 3
+  of 3. WebGPU last worked here on 2026-10-20; on 2026-10-26 the NVIDIA driver
+  went from 615.71.09 to 615.78.08 and the kernel from 7.2.8 to 7.3.0, which is
+  the lead, not a finding. Next: boot `linux-cachyos-lts`, then try the older
+  driver. Until then local browser probes use `--webgl`, and this PC cannot
+  produce WebGPU renderer receipts. Whether other Linux NVIDIA players with
+  WebGPU enabled hit this is unknown; they would get the reload screen rather
+  than a WebGL2 fallback, because the device is lost after WebGPU is chosen.
 - Multiplayer phase 7 has an approved design and local foundations in progress;
   staging and production are authorized (see the amendment above).
   Competitive forfeit-and-continue and finish-the-flock/highest-eligible/shared-
