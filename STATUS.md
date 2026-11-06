@@ -7,22 +7,22 @@ investigations are in `docs/history/`.
 
 ## Production state
 
-- Release 3.9.7 grouped title actions and Solo times modal isolation are live.
-  Exact CI/artifact identity, five live layout/interaction receipts and remaining
-  physical-phone review are in `docs/history/status-log.md`, "Release 3.9.7".
+- Release 3.9.8 is live: preview and staging removed, build tools updated, no
+  gameplay change. Evidence is in `docs/history/status-log.md`, "Release 3.9.8".
+  Physical-phone review of 3.9.7's title layout remains with the owner.
 - Version 3 client source, deterministic simulation, procedural assets, tests
   and public documentation have been curated into the SDS release branch.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
   `release/2.x` branch at `d5c38469`, and immutable Pages deployment
   `https://7cea2cd2.sds-frontend.pages.dev`.
-- Co-op, competitive and persistent multiplayer stats are live in 3.9.7. The 5,000-sheep player path remains
+- Co-op, competitive and persistent multiplayer stats are live in 3.9.8. The 5,000-sheep player path remains
   absent from the shipped version 3 client. Solo-time boards use only the isolated `field-v3` partition.
 - Solo times are reachable from the title screen and after a completed run.
   No name entry is required: the service assigns a random running name unless
   the player chooses Edit, and the board read path does not require identity.
-- Version 3.9.7 (`a1868013`, tag `v3.9.7`; title layout and modal isolation,
-  no gameplay change) is live at `https://sheepdogsim.com` since 2026-11-01
-  22:42 UTC (`Deploy` run 41357926862; `release.json` is the authority for the exact deployed commit),
+- Version 3.9.8 (`871d72f9`, tag `v3.9.8`; infrastructure removal and tool updates,
+  no gameplay change) is live at `https://sheepdogsim.com` since 2026-11-06
+  02:40 UTC (`Deploy` run 42151276491; `release.json` is the authority for the exact deployed commit),
   served by the `sds-worker`
   Worker. Every finished change is merged and deployed for the owner to test
   in production (owner's rule, 2026-10-17).
@@ -649,28 +649,23 @@ the record those files carry.
 
 ## Open questions
 
-- Forced WebGPU fails on the owner's PC, recorded 2026-11-06; cause unproven.
-  With the probes' `GPU_ARGS`, the game loses its device with
-  `VK_ERROR_OUT_OF_DEVICE_MEMORY` and shows "Graphics stopped", after about 17 MB
-  of allocations on a GTX 1660 Ti with about 5 GB of budget free. Playwright
-  Chromium 156 fails intermittently; Chromium 149 and stable Chrome 150 failed
-  4 of 4, on production 3.9.7 too, so no change in this repository caused it. A
-  real display, a pinned adapter and `--disable-gpu-sandbox` did not fix it. Stable Chrome
-  without flags offers no WebGPU adapter here, falls back to WebGL2 and worked 3
-  of 3. WebGPU last worked here on 2026-10-20; on 2026-10-26 the NVIDIA driver
-  went from 615.71.09 to 615.78.08 and the kernel from 7.2.8 to 7.3.0, which is
-  the lead, not a finding. Next: boot `linux-cachyos-lts`, then try the older
-  driver. Until then local browser probes use `--webgl`, and this PC cannot
-  produce WebGPU renderer receipts. Whether other Linux NVIDIA players with
-  WebGPU enabled hit this is unknown; they would get the reload screen rather
-  than a WebGL2 fallback, because the device is lost after WebGPU is chosen.
+- Forced WebGPU fails on the owner's PC, recorded 2026-11-06. Root cause found: a
+  Chromium hybrid-GPU defect, in `docs/history/webgpu-hybrid-gpu.md`. Chromium
+  imports an `OPAQUE_FD` canvas buffer from the AMD compositor device onto the NVIDIA
+  WebGPU device, which Vulkan forbids; NVIDIA reports it as
+  `VK_ERROR_OUT_OF_DEVICE_MEMORY`. No memory ran out and the game is not at fault. Stable
+  Chrome without flags offers no adapter here and runs on WebGL2. Open: filing the
+  drafted Chromium report; whether to fall back to WebGL2 on device loss, an owner
+  decision; why it worked on 2026-10-20, which needs a driver downgrade to test. Local
+  probes use `--webgl`; `--use-webgpu-power-preference=force-low-power` runs WebGPU on
+  the Vega, opt-in only, and is not yet exercised by a probe.
 - Multiplayer phase 7 has an approved design and local foundations in progress;
-  staging and production are authorized (see the amendment above).
+  production is authorized (see the amendment above); staging was removed.
   Competitive forfeit-and-continue and finish-the-flock/highest-eligible/shared-
   ties scoring and Q1-Q12 policies are settled in the plan. Remaining gates:
   validation of accepted competitive layouts under neutral guidance, measured region coverage, numerical
-  network/server budgets, staging estimate and any new asset proposal.
-  Reversible local defaults awaiting staging evidence: 10-second admission and
+  network/server budgets and any new asset proposal.
+  Reversible local defaults awaiting production evidence: 10-second admission and
   start deadlines, two-minute empty-room cleanup, six-hour room lifetime,
   30/60-second directory refresh/lease, and lobby traffic/ACK limits documented
   in `realtime/README.md`. These are not the final gameplay transport budgets.

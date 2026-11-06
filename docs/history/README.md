@@ -11,6 +11,7 @@ rules that outlived the work below.
 | File | What it was |
 |---|---|
 | `status-log.md` | Candidate reports and release evidence from `STATUS.md`, newest first. |
+| `webgpu-hybrid-gpu.md` | 2026-11-05 diagnosis of forced WebGPU device loss on the owner's hybrid-GPU PC, with a draft Chromium report. |
 | `camera-and-movement-comfort.md` | Issue 90: reduced motion did not prevent motion sickness in the Follow camera. The camera laws it produced are asserted in `tests/camera-follow-jitter.spec.ts` and `tests/camera-turning-law.spec.ts`. |
 | `camera-comfort-local-test.md` | The test procedure for that investigation. |
 | `performance-stabilization.md` | The 2026-09-07 stabilization measurements. Source of the hub timing-lane rule now in `AGENTS.md`. |
