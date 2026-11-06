@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.9.8] - 2026-11-05
+
+### Changed
+
+- Build and deploy tools: `cf` 1.0.0-beta.27 and `@cloudflare/vite-plugin`
+  2.0.0-beta.v.10. This is the first deploy on these versions.
+- Dependencies: `zustand` 5.0.16, the development dependency group, and
+  `miniflare` `5.20261023.1-beta`, which moves every `undici` copy to 7.30.1.
+
 ### Removed
 
 - The per-pull-request preview Worker (`sds-worker-preview`, its D1 and the
