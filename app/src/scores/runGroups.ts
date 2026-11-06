@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
+import { translate } from '@app/i18n/store';
 import { FLOCK_SIZES, type FlockSize } from '@app/state/store';
 import type { PlayerRun } from './types';
 
@@ -86,4 +87,9 @@ export function formatOrdinal(value: number): string {
   if (tens >= 11 && tens <= 13) return `${value}th`;
   const suffix = ['th', 'st', 'nd', 'rd'][value % 10] ?? 'th';
   return `${value}${suffix}`;
+}
+
+/** A rank in the interface language: "12th", "ke-12", "12위". */
+export function localizedOrdinal(value: number): string {
+  return translate('format.ordinal', { n: value, ordinal: formatOrdinal(value) });
 }

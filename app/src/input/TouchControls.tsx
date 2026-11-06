@@ -15,6 +15,7 @@ import {
 import { markMoveHintLearned, moveHintLearned } from './moveHint';
 import { useTouchPresent } from './touchPresent';
 import { useGameStore } from '@app/state/store';
+import { useT } from '@app/i18n/store';
 
 /**
  * Stick travel that counts as having found the control, as a fraction of
@@ -27,6 +28,7 @@ import { useGameStore } from '@app/state/store';
 const LEARNED_TRAVEL = 0.3;
 
 export function TouchControls() {
+  const t = useT();
   const present = useTouchPresent();
   const gamePhase = useGameStore((state) => state.gamePhase);
   const ringRef = useRef<HTMLDivElement>(null);
@@ -238,7 +240,7 @@ export function TouchControls() {
         className="herd-sprint-button"
         data-active="false"
         data-testid="sprint-button"
-        aria-label="Hold to sprint"
+        aria-label={t('touch.sprintLabel')}
         aria-pressed="false"
         onPointerDown={onSprintDown}
         onPointerUp={releaseSprintPointer}
@@ -261,29 +263,30 @@ export function TouchControls() {
           syncSprint();
         }}
       >
-        Sprint
+        {t('touch.sprint')}
       </button>
       <button
         type="button"
         className="herd-bark-button"
         data-testid="bark-button"
-        aria-label="Bark"
+        data-long={t('touch.bark').length > 6}
+        aria-label={t('touch.bark')}
         onPointerDown={barkPressed}
         // Pointer input fires immediately above; keyboard/assistive clicks
         // have no pointer-down event and must activate the same action once.
         onClick={(event) => { if (event.detail === 0) barkPressed(); }}
       >
-        Bark
+        {t('touch.bark')}
       </button>
       <button
         type="button"
         className="herd-camera-button"
         data-testid="camera-button"
-        aria-label="Change camera"
+        aria-label={t('touch.cameraLabel')}
         onPointerDown={toggleCameraMode}
         onClick={(event) => { if (event.detail === 0) toggleCameraMode(); }}
       >
-        Camera
+        {t('touch.camera')}
       </button>
     </>
   );

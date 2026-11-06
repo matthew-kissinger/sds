@@ -150,9 +150,9 @@ are measured choices (D3/D4), not hard-coded assumptions here.
 
 The planned player URL is `/r/<room-handle>`. Room API and upgrade paths also
 live below `/r/*`, with distinct reserved path segments. No `?room=`, no new
-player-page query parameters and no v2 hash compatibility alias. `seed` and
-`debug` remain the only player-page query parameters; `seed` cannot override an
-online room. `/play/25`, `/play/75`, `/play/200` and `/c/*` retain their purpose.
+player-page query parameters and no v2 hash compatibility alias. `seed`, `debug`
+and `lang` (spec/15) are the only player-page query parameters; `seed` cannot
+override an online room. `/play/25`, `/play/75`, `/play/200` and `/c/*` retain their purpose.
 
 The realtime `/r/*` route takes precedence over the game's apex Custom Domain
 (R4). Therefore it must explicitly serve the invite shell through a narrow

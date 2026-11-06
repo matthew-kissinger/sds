@@ -7,9 +7,10 @@ investigations are in `docs/history/`.
 
 ## Production state
 
-- Release 3.9.8 is live: preview and staging removed, build tools updated, no
-  gameplay change. Evidence is in `docs/history/status-log.md`, "Release 3.9.8".
-  Physical-phone review of 3.9.7's title layout remains with the owner.
+- Release 3.10.0 adds language support, a small anonymous funnel and static pages, with
+  no gameplay change. `https://sheepdogsim.com/release.json` names what is live. Evidence
+  for 3.9.8 is in `docs/history/status-log.md`, "Release 3.9.8". Physical-phone review of
+  3.9.7's title layout and of this release remains with the owner.
 - Version 3 client source, deterministic simulation, procedural assets, tests
   and public documentation have been curated into the SDS release branch.
 - Version 2 remains recoverable from the annotated `v2.6.4` tag, the pushed
@@ -649,6 +650,28 @@ the record those files carry.
 
 ## Open questions
 
+- Language support, recorded 2026-11-06. Contract: `spec/15-languages.md`, which amends
+  the "English only" line in `spec/00`. An independent review of all ten languages is
+  done and its fixes are applied (AI readers, so `reviewed` stays false and the note in
+  Settings stays). A second read covered the finish, room and history screens from
+  `tools/i18n-probe.mjs screens`, though no shot reaches the middle of the history list, and
+  its fixes are applied too. Left for after this release: `0 ovelha` in Brazilian Portuguese,
+  which needs a plural code change; and, both in English too and the same on `main`, the
+  finish panel running off a landscape phone at 844x390 and the `Previous week` button over
+  the fifth row. Open, the owner's: the
+  physical low-cost Android check, which no copy may claim in advance, and whether to clear
+  the old `events` rows, which may carry version 2 user agents and player ids
+  (`docs/operations/funnel.md`). Decided reversibly and flagged: `/about`, `/support` and
+  `/privacy` stay English and the title links are marked `(EN)`, sheep names are not
+  translated, no CJK font ships.
+- `gamePlatform` in the head of `/` says Mobile, unchanged by this release. `spec/15` says
+  no copy may claim the game works on a phone until a real device shows it. Decide after
+  the real-phone test.
+- Static pages, recorded 2026-11-06. `/id/` is a standalone Indonesian page with no
+  `hreflang` to `/`, and its links go to `/?lang=id`. Withdrawing it from search is in
+  `docs/operations/public-discovery.md`. `/multiplayer` says each region hosts one room,
+  which is true while `ROOM_CAPS` stays at 1; promoting multiplayer and raising capacity go
+  together.
 - Forced WebGPU on the owner's hybrid PC, updated 2026-11-06. Plain flags still lose
   the device: a Chromium defect imports an `OPAQUE_FD` canvas buffer from the AMD
   compositor device onto the NVIDIA WebGPU device, which Vulkan forbids and NVIDIA

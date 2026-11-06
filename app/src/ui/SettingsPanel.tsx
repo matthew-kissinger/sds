@@ -12,23 +12,19 @@ import {
   slowerTurning,
   type FollowTurning,
 } from '@app/camera/followFraming';
+import { localeInfo } from '@app/i18n/resolve';
+import { useLocale, useT } from '@app/i18n/store';
+import { LanguageSetting } from './LanguagePicker';
 
-const AUDIO_LABELS: Readonly<Record<AudioBusPreference, string>> = {
-  ambient: 'Meadow', flock: 'Sheep', dog: 'Dog', world: 'Field', ui: 'Interface',
-};
+const AUDIO_BUSES: readonly AudioBusPreference[] = ['ambient', 'flock', 'dog', 'world', 'ui'];
 
-const BINDING_LABELS: Readonly<Record<InputAction, string>> = {
-  forward: 'Move forward', backward: 'Move back', left: 'Move left',
-  right: 'Move right', sprint: 'Sprint', walk: 'Hold to walk', bark: 'Bark', camera: 'Camera',
-  timer: 'Run timer',
-};
-
-const TURNING_LABELS: Readonly<Record<FollowTurning, string>> = {
-  off: 'Off', gentle: 'Gentle', quick: 'Quick',
-};
+const BINDING_ACTIONS: readonly InputAction[] = [
+  'forward', 'backward', 'left', 'right', 'sprint', 'walk', 'bark', 'camera', 'timer',
+];
 
 /**
- * One line for the selected value, so the row costs one line and not three.
+ * One line for the selected value (`turningNote.*` in the dictionary), so the
+ * row costs one line and not three.
  *
  * A RATE RATHER THAN A DURATION, and the durations these replace are why. "A
  * quarter turn takes about two seconds" was 90 degrees divided by the profile's
@@ -53,20 +49,9 @@ const TURNING_LABELS: Readonly<Record<FollowTurning, string>> = {
  * numbers are restated here as prose because that table is private to the rig;
  * a profile whose rate moves moves this line with it.
  */
-const TURNING_NOTES: Readonly<Record<FollowTurning, string>> = {
-  off: 'The camera follows the dog without turning.',
-  gentle: 'The camera follows the dog, turning at up to 25 degrees a second.',
-  quick: 'The camera follows the dog, turning at up to 40 degrees a second.',
-};
+const TURNING_OPTIONS: readonly FollowTurning[] = ['off', 'gentle', 'quick'];
 
-const KEY_OPTIONS: readonly { readonly code: string; readonly label: string }[] = [
-  { code: 'KeyW', label: 'W' }, { code: 'KeyA', label: 'A' },
-  { code: 'KeyS', label: 'S' }, { code: 'KeyD', label: 'D' },
-  { code: 'KeyQ', label: 'Q' }, { code: 'KeyE', label: 'E' },
-  { code: 'KeyC', label: 'C' }, { code: 'KeyF', label: 'F' },
-  { code: 'KeyV', label: 'V' }, { code: 'KeyT', label: 'T' },
-  { code: 'Space', label: 'Space' }, { code: 'ShiftLeft', label: 'Left Shift' },
-];
+const LETTER_KEYS: readonly string[] = ['W', 'A', 'S', 'D', 'Q', 'E', 'C', 'F', 'V', 'T'];
 
 function Toggle({
   label,
@@ -93,8 +78,9 @@ function Toggle({
 }
 
 export function SettingsPanel() {
+  const t = useT();
+  const credit = localeInfo(useLocale()).credit;
   const state = useGameStore();
-  const actions = Object.keys(BINDING_LABELS) as InputAction[];
   // What the camera is actually doing, which is the clamp and not the store.
   const turning: FollowTurning = state.reduceMotion
     ? slowerTurning(state.followTurning, REDUCED_MOTION_TURNING)
@@ -104,38 +90,39 @@ export function SettingsPanel() {
     <div className="herd-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <section className="herd-panel">
         <header className="herd-panel__header">
-          <h2 id="settings-title" className="herd-panel__title">Settings</h2>
+          <h2 id="settings-title" className="herd-panel__title">{t('common.settings')}</h2>
           <button
             type="button"
             className="herd-icon-button"
-            aria-label="Close settings"
+            aria-label={t('settings.close')}
             onClick={state.closeSettings}
           >
-            Close
+            {t('common.close')}
           </button>
         </header>
         <div className="herd-settings-list">
+          <LanguageSetting />
           <label className="herd-setting">
-            <span className="herd-setting__label">Render quality</span>
+            <span className="herd-setting__label">{t('settings.quality')}</span>
             <select
               className="herd-select"
               value={state.quality}
               onChange={(event) => state.setQuality(event.target.value as QualityPreference)}
             >
-              <option value="auto">Auto</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="auto">{t('quality.auto')}</option>
+              <option value="high">{t('quality.high')}</option>
+              <option value="medium">{t('quality.medium')}</option>
+              <option value="low">{t('quality.low')}</option>
             </select>
           </label>
           <div className="herd-setting">
-            <Toggle label="Reduce motion" checked={state.reduceMotion} onChange={state.setReduceMotion} />
+            <Toggle label={t('settings.reduceMotion')} checked={state.reduceMotion} onChange={state.setReduceMotion} />
             {/* Until the player sets it, the value is the system's, and the row
                 says so rather than presenting an inherited state as a choice. */}
             <span className="herd-setting__label">
               {state.reduceMotionChosen
-                ? 'Steadier camera, softer effects.'
-                : 'Steadier camera, softer effects. Following your system setting.'}
+                ? t('settings.reduceMotionNote')
+                : t('settings.reduceMotionSystem')}
             </span>
           </div>
           {/* One .herd-setting for the row, as the Sound and Keyboard rows
@@ -145,15 +132,15 @@ export function SettingsPanel() {
               which is how the Studio's selects are labelled, and which keeps
               the status line underneath out of its accessible name. */}
           <div className="herd-setting">
-            <span className="herd-setting__label">Follow camera turning</span>
+            <span className="herd-setting__label">{t('settings.followTurning')}</span>
             <select
               className="herd-select"
-              aria-label="Follow camera turning"
+              aria-label={t('settings.followTurning')}
               value={state.followTurning}
               onChange={(event) => state.setFollowTurning(event.target.value as FollowTurning)}
             >
-              {(Object.keys(TURNING_LABELS) as FollowTurning[]).map((value) => (
-                <option key={value} value={value}>{TURNING_LABELS[value]}</option>
+              {TURNING_OPTIONS.map((value) => (
+                <option key={value} value={value}>{t(`turning.${value}`)}</option>
               ))}
             </select>
             {/* The camera is clamped, not rewritten, so the select keeps
@@ -164,26 +151,26 @@ export function SettingsPanel() {
                 accessibility option away would cost the most. */}
             <span className="herd-setting__label">
               {state.reduceMotion && turning !== state.followTurning
-                ? `Reduce motion is limiting this to ${TURNING_LABELS[turning]}.`
-                : TURNING_NOTES[turning]}
+                ? t('settings.turningLimited', { value: t(`turning.${turning}`) })
+                : t(`turningNote.${turning}`)}
             </span>
           </div>
-          <Toggle label="Blue dog marker" checked={state.colorblindMarker} onChange={state.setColorblindMarker} />
-          <Toggle label="Show run timer" checked={state.showTimer} onChange={state.setShowTimer} />
+          <Toggle label={t('settings.marker')} checked={state.colorblindMarker} onChange={state.setColorblindMarker} />
+          <Toggle label={t('settings.showTimer')} checked={state.showTimer} onChange={state.setShowTimer} />
           <div className="herd-setting">
-            <span className="herd-setting__label">Sound</span>
-            <Toggle label="Mute all sound" checked={state.muted} onChange={state.setMuted} />
+            <span className="herd-setting__label">{t('settings.sound')}</span>
+            <Toggle label={t('settings.mute')} checked={state.muted} onChange={state.setMuted} />
             <div className="herd-audio-levels">
-              {(Object.keys(AUDIO_LABELS) as AudioBusPreference[]).map((bus) => (
+              {AUDIO_BUSES.map((bus) => (
                 <label key={bus} className="herd-audio-level">
-                  <span>{AUDIO_LABELS[bus]}</span>
+                  <span>{t(`audio.${bus}`)}</span>
                   <input
                     type="range"
                     min="0"
                     max="1"
                     step="0.05"
                     value={state.audioLevels[bus]}
-                    aria-label={`${AUDIO_LABELS[bus]} volume`}
+                    aria-label={t('settings.volume', { name: t(`audio.${bus}`) })}
                     onChange={(event) => state.setAudioLevel(bus, Number(event.target.value))}
                   />
                 </label>
@@ -191,33 +178,36 @@ export function SettingsPanel() {
             </div>
           </div>
           <div className="herd-setting">
-            <span className="herd-setting__label">Keyboard</span>
+            <span className="herd-setting__label">{t('settings.keyboard')}</span>
             <div className="herd-bindings">
-              {actions.map((action) => (
+              {BINDING_ACTIONS.map((action) => (
                 <label key={action} className="herd-binding">
-                  <span className="herd-setting__label">{BINDING_LABELS[action]}</span>
+                  <span className="herd-setting__label">{t(`binding.${action}`)}</span>
                   <select
                     className="herd-select"
                     value={state.inputBindings[action]}
                     onChange={(event) => state.setInputBinding(action, event.target.value)}
                   >
-                    {KEY_OPTIONS.map((key) => (
-                      <option key={key.code} value={key.code}>{key.label}</option>
+                    {LETTER_KEYS.map((key) => (
+                      <option key={key} value={`Key${key}`}>{key}</option>
                     ))}
+                    <option value="Space">{t('key.space')}</option>
+                    <option value="ShiftLeft">{t('key.shiftLeft')}</option>
                   </select>
                 </label>
               ))}
             </div>
           </div>
           <footer className="herd-legal">
-            <span>Sheepdog Sim is free software under AGPL-3.0-or-later.</span>
+            <span>{t('settings.legal', { licence: 'AGPL-3.0-or-later' })}</span>
             <span>
               <a href="https://github.com/matthew-kissinger/sds" target="_blank" rel="noreferrer">
-                Source code
+                {t('settings.source')}
               </a>
               {' · '}
-              <a href="/privacy">Privacy</a>
+              <a href="/privacy">{t('settings.privacy')}</a>
             </span>
+            {credit ? <span><a href={credit.url} target="_blank" rel="noreferrer">{credit.text}</a></span> : null}
           </footer>
         </div>
       </section>

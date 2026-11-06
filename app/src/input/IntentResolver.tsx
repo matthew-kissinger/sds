@@ -119,6 +119,13 @@ const RESOLVE_PRIORITY = -2;
 const SIM_MOVING_SPEED = 0.1;
 
 /**
+ * How far any device has to push before it counts as the player moving the dog
+ * rather than a resting thumb or a drifting stick. The touch hint retires at the
+ * same fraction of the stick's travel.
+ */
+const REAL_TRAVEL = 0.3;
+
+/**
  * Classic's fixed basis as a bearing, radians, so the blend has two angles to
  * move between. Derived from the vector `axis.ts` owns rather than written as a
  * zero, so the two cannot disagree about where up the field is.
@@ -185,6 +192,9 @@ export function IntentResolver() {
     // One store read, taken after the device presses that can change it, so a
     // camera toggle this frame is acted on this frame rather than the next.
     const store = useGameStore.getState();
+    if (!store.dogMoved && store.gamePhase === 'playing' && axisMagnitude(scratch.axis) >= REAL_TRAVEL) {
+      store.markDogMoved();
+    }
     if (sim.current !== store.sim) {
       // A replacement sim is a new run: the dog is somewhere else and standing
       // still, so every commanded value from the old one is a lie.

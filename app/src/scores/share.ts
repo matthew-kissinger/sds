@@ -5,7 +5,8 @@
 // This is what a text shows before the preview arrives. "This week" is only
 // for a run that just finished. An older run names its Monday.
 
-import { formatOrdinal } from './runGroups';
+import { translate } from '@app/i18n/store';
+import { localizedOrdinal } from './runGroups';
 
 /** `m:ss.s`. `182.85` seconds is `3:02.9`. */
 export function formatCardClock(seconds: number): string {
@@ -17,8 +18,13 @@ export function formatCardClock(seconds: number): string {
   return `${minutes}:${String(secs).padStart(2, '0')}.${frac}`;
 }
 
+/** Japanese and Chinese close a sentence with their own wide stop and no space after it. */
+function sentences(...parts: readonly string[]): string {
+  return parts.reduce((text, part) => `${text}${/[。！？]$/.test(text) ? '' : ' '}${part}`);
+}
+
 export function cardShareTitle(clock: string, flockSize: number): string {
-  return `${clock} · ${flockSize} sheep`;
+  return translate('share.title', { clock, count: flockSize });
 }
 
 export function completionShareText(input: {
@@ -28,10 +34,10 @@ export function completionShareText(input: {
   readonly weekPlayers?: number;
   readonly newBest: boolean;
 }): string {
-  const lead = input.newBest ? 'New best. ' : '';
-  const time = `${input.clock} with ${input.flockSize} sheep.`;
-  if (input.weekRank === undefined || input.weekPlayers === undefined) return `${lead}${time}`;
-  return `${lead}${time} ${formatOrdinal(input.weekRank)} of ${input.weekPlayers} this week.`;
+  const lead = input.newBest ? [translate('share.newBest')] : [];
+  const time = translate('share.time', { clock: input.clock, count: input.flockSize });
+  if (input.weekRank === undefined || input.weekPlayers === undefined) return sentences(...lead, time);
+  return sentences(...lead, time, translate('share.weekRank', { rank: localizedOrdinal(input.weekRank), players: input.weekPlayers }));
 }
 
 export function historyShareText(input: {
@@ -41,13 +47,13 @@ export function historyShareText(input: {
   readonly weekPlayers?: number;
   readonly weekLabel?: string;
 }): string {
-  const time = `${input.clock} with ${input.flockSize} sheep.`;
+  const time = translate('share.time', { clock: input.clock, count: input.flockSize });
   if (
     input.weekRank === undefined
     || input.weekPlayers === undefined
     || input.weekLabel === undefined
   ) return time;
-  return `${time} ${formatOrdinal(input.weekRank)} of ${input.weekPlayers} in the ${input.weekLabel}.`;
+  return sentences(time, translate('share.historyRank', { rank: localizedOrdinal(input.weekRank), players: input.weekPlayers, week: input.weekLabel }));
 }
 
 export type ShareOutcome = 'shared' | 'copied' | 'idle';

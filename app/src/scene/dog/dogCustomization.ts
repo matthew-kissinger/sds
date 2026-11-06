@@ -11,8 +11,6 @@ export type DogCoatId = 'classic' | 'red' | 'merle' | 'chocolate' | 'golden';
 
 export interface DogCoatPreset {
   readonly id: DogCoatId;
-  readonly name: string;
-  readonly description: string;
   readonly swatch: string;
   readonly shadow: string;
   readonly mid: string;
@@ -23,8 +21,6 @@ export interface DogCoatPreset {
 export const DOG_COAT_PRESETS: Readonly<Record<DogCoatId, DogCoatPreset>> = {
   classic: {
     id: 'classic',
-    name: 'Classic Black & White',
-    description: 'Traditional working Border Collie with charcoal-black coat and white trim.',
     swatch: '#36302a',
     shadow: COAT_SHADOW,
     mid: '#5c5246',
@@ -33,8 +29,6 @@ export const DOG_COAT_PRESETS: Readonly<Record<DogCoatId, DogCoatPreset>> = {
   },
   red: {
     id: 'red',
-    name: 'Red & White (Sable)',
-    description: 'Warm russet-amber working collie with bright chestnut tones.',
     swatch: '#8c4826',
     shadow: '#422415',
     mid: '#7d4323',
@@ -43,8 +37,6 @@ export const DOG_COAT_PRESETS: Readonly<Record<DogCoatId, DogCoatPreset>> = {
   },
   merle: {
     id: 'merle',
-    name: 'Blue Merle',
-    description: 'Slate grey and cool charcoal mottle with crisp white markings.',
     swatch: '#636c7a',
     shadow: '#353940',
     mid: '#626975',
@@ -53,8 +45,6 @@ export const DOG_COAT_PRESETS: Readonly<Record<DogCoatId, DogCoatPreset>> = {
   },
   chocolate: {
     id: 'chocolate',
-    name: 'Chocolate / Liver',
-    description: 'Deep cocoa and dark chocolate coat with warm undertones.',
     swatch: '#5a3b2c',
     shadow: '#2b1c15',
     mid: '#58392a',
@@ -63,8 +53,6 @@ export const DOG_COAT_PRESETS: Readonly<Record<DogCoatId, DogCoatPreset>> = {
   },
   golden: {
     id: 'golden',
-    name: 'Golden Wheaten',
-    description: 'Honeyed pasture-gold coat with soft cream markings.',
     swatch: '#b3864c',
     shadow: '#5e4222',
     mid: '#997341',

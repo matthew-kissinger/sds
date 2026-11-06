@@ -44,10 +44,16 @@
         "@context": "https://schema.org",
         "@type": ["VideoGame", "WebApplication"],
         "name": "Sheepdog Sim",
+        "alternateName": "Sheep Dog Sim",
         "@id": "https://sheepdogsim.com/#game",
         "url": "https://sheepdogsim.com/",
         "image": "https://sheepdogsim.com/og/sheepdog-sim-v2.png",
-        "description": "Play a free browser herding game and guide 25, 75 or 200 sheep through one field.",
+        "screenshot": [
+          "https://sheepdogsim.com/shots/field-25.webp",
+          "https://sheepdogsim.com/shots/flock-200.webp",
+          "https://sheepdogsim.com/shots/coop-round.webp"
+        ],
+        "description": "A free browser sheep herding game. Play as a sheepdog and guide 25, 75 or 200 sheep into the pen, alone or with up to three other players in co-op or competitive rooms.",
         "applicationCategory": "GameApplication",
         "operatingSystem": "Web browser",
         "browserRequirements": "Requires JavaScript and WebGL2 or WebGPU",
@@ -56,6 +62,16 @@
           "https://schema.org/CoOp",
           "https://schema.org/MultiPlayer"
         ],
+        "numberOfPlayers": {
+          "@type": "QuantitativeValue",
+          "minValue": 1,
+          "maxValue": 4
+        },
+        "gameTip": {
+          "@type": "CreativeWork",
+          "name": "Sheepdog Sim herding guide",
+          "url": "https://sheepdogsim.com/herding-guide"
+        },
         "inLanguage": "en",
         "genre": ["Simulation", "Herding"],
         "gamePlatform": ["Web browser", "Desktop", "Mobile"],
@@ -148,7 +164,9 @@
       }
       .static-shell p { margin: 0; color: #596052; letter-spacing: .12em; text-transform: uppercase; }
       .static-shell .static-shell__description { margin: 16px 0; letter-spacing: normal; text-transform: none; }
-      .static-shell nav { display: flex; justify-content: center; gap: 20px; }
+      .static-shell nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; }
+      .static-shell .static-shell__more { margin-top: 16px; font-size: 12px; }
+      .static-shell__more span { flex-basis: 100%; }
       .static-shell a { color: #365f44; text-underline-offset: 3px; }
     </style>
   </head>
@@ -161,6 +179,7 @@
           <p class="static-shell__description">A free sheep herding game in your browser. Move, sprint and bark as a sheepdog to guide 25, 75 or 200 sheep into the pen.</p>
           <noscript><p class="static-shell__description">Enable JavaScript to play. The game information and controls below are available without it.</p></noscript>
           <nav aria-label="Game information"><a href="/about">About the game</a><a href="/support">How to play</a></nav>
+          <nav class="static-shell__more" aria-label="More from Instrukt Labs"><span>More from Instrukt Labs</span><a href="https://instruktlabs.com/">instruktlabs.com</a><a href="https://skisim.app/">ski sim</a><a href="https://objekt62.com/">OBJEKT 62</a><a href="https://vietnamwarsim.com/">Terror in the Jungle (pre-alpha)</a></nav>
         </section>
       </main>
     </div>

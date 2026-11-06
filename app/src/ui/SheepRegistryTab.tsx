@@ -14,6 +14,7 @@ import {
   SHEEP_NAMES_LEDGER,
 } from '@app/game/sheepNames';
 import { SheepInspectorCard } from './SheepInspectorCard';
+import { translatePlural, useT } from '@app/i18n/store';
 
 const FLOCK_SIZES: readonly FlockSize[] = [25, 75, 200];
 const BREED_IDS: readonly SheepBreedId[] = [
@@ -29,6 +30,7 @@ const BREED_IDS: readonly SheepBreedId[] = [
 ];
 
 export function SheepRegistryTab() {
+  const t = useT();
   const flockSize = useGameStore((state) => state.flockSize);
   const setFlockSize = useGameStore((state) => state.setFlockSize);
   const flockVarietyMode = useGameStore((state) => state.flockVarietyMode);
@@ -75,7 +77,7 @@ export function SheepRegistryTab() {
       if (query) {
         const numStr = (i + 1).toString();
         const name = getSheepName(i, customSheepNames).toLowerCase();
-        const breedName = SHEEP_BREEDS[breed].name.toLowerCase();
+        const breedName = t(`breed.${breed}.name`).toLowerCase();
         if (!numStr.includes(query) && !name.includes(query) && !breedName.includes(query)) {
           continue;
         }
@@ -84,7 +86,7 @@ export function SheepRegistryTab() {
       result.push(i);
     }
     return result;
-  }, [flockSize, flockVarietyMode, filterBreed, searchQuery, customSheepNames]);
+  }, [flockSize, flockVarietyMode, filterBreed, searchQuery, customSheepNames, t]);
 
   // Scroll only the chip grid, never the outer editor: opening the registry
   // must leave the naming form visible rather than jump past it to the list.
@@ -170,10 +172,10 @@ export function SheepRegistryTab() {
           onNextSheep={handleNextSheep}
         />
 
-        <div className="herd-flock-scope" role="group" aria-label="Flock size selection">
-          <span className="herd-scope-label">Flock size:</span>
+        <div className="herd-flock-scope" role="group" aria-label={t('registry.scope')}>
+          <span className="herd-scope-label">{t('registry.scopeLabel')}</span>
           {FLOCK_SIZES.map((size) => (
-            <button key={size} type="button" aria-label={`${size} sheep`}
+            <button key={size} type="button" aria-label={translatePlural('common.sheepCount', size)}
               className={`herd-scope-btn ${flockSize === size ? 'herd-scope-btn--active' : ''}`}
               onClick={() => setFlockSize(size)}>{size}</button>
           ))}
@@ -184,10 +186,10 @@ export function SheepRegistryTab() {
           <input
             type="search"
             className="herd-search-field"
-            placeholder="Search name, breed, or #..."
+            placeholder={t('registry.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Filter sheep by text"
+            aria-label={t('registry.searchLabel')}
           />
           <select
             className="herd-breed-dropdown"
@@ -195,16 +197,16 @@ export function SheepRegistryTab() {
             onChange={(e) =>
               setFilterBreed(e.target.value as 'all' | SheepBreedId | 'custom')
             }
-            aria-label="Filter by breed"
+            aria-label={t('registry.breedFilter')}
           >
-            <option value="all">All breeds ({flockSize})</option>
+            <option value="all">{t('registry.allBreeds', { count: flockSize })}</option>
             {customCount > 0 ? (
-              <option value="custom">Named only ({customCount})</option>
+              <option value="custom">{t('registry.namedOnly', { count: customCount })}</option>
             ) : null}
             {BREED_IDS.map((id) =>
               breedCounts[id] > 0 ? (
                 <option key={id} value={id}>
-                  {SHEEP_BREEDS[id].name} ({breedCounts[id]})
+                  {t(`breed.${id}.name`)} ({breedCounts[id]})
                 </option>
               ) : null,
             )}
@@ -213,7 +215,7 @@ export function SheepRegistryTab() {
 
         {/* Batch Pages for 75/200 sizes */}
         {batchPages.length > 0 && filterBreed === 'all' && !searchQuery ? (
-          <div className="herd-batch-pages" role="navigation" aria-label="Sheep batches">
+          <div className="herd-batch-pages" role="navigation" aria-label={t('registry.batches')}>
             {batchPages.map((page) => {
               const isActive =
                 selectedSheep >= page.startIndex &&
@@ -236,8 +238,8 @@ export function SheepRegistryTab() {
         <div className="herd-registry-status">
           <span className="herd-status-count">
             {filteredIndices.length === flockSize
-              ? `${flockSize} sheep`
-              : `${filteredIndices.length} of ${flockSize} sheep`}
+              ? translatePlural('common.sheepCount', flockSize)
+              : t('registry.countSome', { count: filteredIndices.length, total: flockSize })}
           </span>
           <div className="herd-status-actions">
             {customCount < flockSize ? (
@@ -245,9 +247,9 @@ export function SheepRegistryTab() {
                 type="button"
                 className="herd-link-btn"
                 onClick={handleBatchRandomizeRemaining}
-                title="Fill all remaining unnamed sheep with names from the ledger"
+                title={t('registry.nameRemainingTitle')}
               >
-                Name remaining
+                {t('registry.nameRemaining')}
               </button>
             ) : null}
             {customCount > 0 ? (
@@ -255,21 +257,22 @@ export function SheepRegistryTab() {
                 type="button"
                 className="herd-link-btn herd-link-btn--reset"
                 onClick={resetSheepNames}
-                title="Reset all custom names"
+                title={t('registry.resetNamesTitle')}
               >
-                Reset names
+                {t('registry.resetNames')}
               </button>
             ) : null}
           </div>
         </div>
 
         {/* Sized Sheep Grid */}
-        <div className="herd-sheep-grid" role="listbox" aria-label="Filtered flock sheep list">
+        <div className="herd-sheep-grid" role="listbox" aria-label={t('registry.list')}>
           {filteredIndices.length === 0 ? (
-            <p className="herd-empty-hint">No sheep match current filter</p>
+            <p className="herd-empty-hint">{t('registry.empty')}</p>
           ) : (
             filteredIndices.map((i) => {
-              const breed = SHEEP_BREEDS[getSheepBreed(i, flockVarietyMode)];
+              const breedId = getSheepBreed(i, flockVarietyMode);
+              const breed = SHEEP_BREEDS[breedId];
               const hasCustom = Boolean(customSheepNames[i]?.trim());
               const isCur = selectedSheep === i;
               const sheepName = getSheepName(i, customSheepNames);
@@ -280,7 +283,7 @@ export function SheepRegistryTab() {
                   type="button"
                   role="option"
                   aria-selected={isCur}
-                  title={`#${i + 1}: ${sheepName} (${breed.name})`}
+                  title={`#${i + 1}: ${sheepName} (${t(`breed.${breedId}.name`)})`}
                   className={`herd-sheep-chip ${isCur ? 'herd-sheep-chip--active' : ''} ${
                     hasCustom ? 'herd-sheep-chip--custom' : ''
                   }`}

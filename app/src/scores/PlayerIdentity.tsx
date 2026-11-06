@@ -2,10 +2,12 @@
 // Copyright (c) 2026 Matthew Kissinger
 
 import { useEffect, useState } from 'react';
+import { useT } from '@app/i18n/store';
 import { scoresController } from './controller';
 import { useScoreStore } from './store';
 
 export function PlayerIdentity() {
+  const t = useT();
   const identity = useScoreStore((state) => state.identity);
   const status = useScoreStore((state) => state.identityStatus);
   const renaming = useScoreStore((state) => state.renaming);
@@ -25,7 +27,7 @@ export function PlayerIdentity() {
     return (
       <form className="herd-identity-editor" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <label>
-          <span className="herd-visually-hidden">Leaderboard name</span>
+          <span className="herd-visually-hidden">{t('identity.nameLabel')}</span>
           <input
             className="herd-name-input"
             value={name}
@@ -34,22 +36,23 @@ export function PlayerIdentity() {
             onChange={(event) => setName(event.target.value)}
           />
         </label>
-        <button type="submit" className="herd-text-button" disabled={renaming}>Save</button>
-        <button type="button" className="herd-text-button" onClick={() => setEditing(false)}>Cancel</button>
+        <button type="submit" className="herd-text-button" disabled={renaming}>{t('common.save')}</button>
+        <button type="button" className="herd-text-button" onClick={() => setEditing(false)}>{t('common.cancel')}</button>
         {message ? <span className="herd-identity-message" role="status">{message}</span> : null}
       </form>
     );
   }
 
+  const [nameBefore, nameAfter] = t('identity.runningAs').split('{name}');
   return (
     <div className="herd-identity" aria-live="polite">
       {identity ? (
         <>
-          <span>Running as <strong>{identity.displayName}</strong></span>
-          <button type="button" className="herd-text-button" onClick={() => setEditing(true)}>Edit</button>
+          <span>{nameBefore}<strong>{identity.displayName}</strong>{nameAfter}</span>
+          <button type="button" className="herd-text-button" onClick={() => setEditing(true)}>{t('identity.edit')}</button>
         </>
       ) : (
-        <span>{status === 'connecting' ? 'Choosing a running name' : 'Online times unavailable'}</span>
+        <span>{t(status === 'connecting' ? 'identity.connecting' : 'identity.unavailable')}</span>
       )}
     </div>
   );

@@ -1,0 +1,14 @@
+[
+  { "code": "en", "nativeName": "English", "reviewed": true },
+  { "code": "id", "nativeName": "Bahasa Indonesia", "reviewed": false },
+  { "code": "ms", "nativeName": "Bahasa Melayu", "reviewed": false },
+  { "code": "ko", "nativeName": "한국어", "reviewed": false,
+    "credit": { "text": "한국어 번역은 sigco3111/sds 포크(AGPL-3.0)를 바탕으로 수정했습니다.", "url": "https://github.com/sigco3111/sds" } },
+  { "code": "ja", "nativeName": "日本語", "reviewed": false },
+  { "code": "zh-CN", "nativeName": "简体中文", "reviewed": false },
+  { "code": "es", "nativeName": "Español", "reviewed": false },
+  { "code": "pt-BR", "nativeName": "Português (Brasil)", "reviewed": false },
+  { "code": "fr", "nativeName": "Français", "reviewed": false },
+  { "code": "de", "nativeName": "Deutsch", "reviewed": false },
+  { "code": "ru", "nativeName": "Русский", "reviewed": false }
+]

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { flockSizeFromPath } from '@app/boot/playPath';
 import {
   absoluteShareUrl, completionShareText, formatCardClock, historyShareText, sendShare,
@@ -9,6 +9,14 @@ import {
 import { previousIsoWeek } from '@app/scores/week';
 
 describe('play paths and share text', () => {
+  it('starts a flock path once per page load', async () => {
+    vi.resetModules();
+    const { takePlayPathStart } = await import('@app/boot/playPath');
+    expect(takePlayPathStart('/')).toBeNull();
+    expect(takePlayPathStart('/play/75')).toBe(75);
+    expect(takePlayPathStart('/play/75')).toBeNull();
+  });
+
   it('starts only the three flock paths', () => {
     expect(flockSizeFromPath('/play/25')).toBe(25);
     expect(flockSizeFromPath('/play/75/')).toBe(75);

@@ -14,6 +14,9 @@ well-timed bark to bring stragglers home.
 
 - Choose a flock of **25, 75 or 200 sheep** and guide every sheep into the pen.
 - Move, sprint and bark with keyboard, gamepad or touch controls.
+- Play in English, or choose Indonesian, Malay, Korean, Japanese, Simplified
+  Chinese, Spanish, Brazilian Portuguese, French, German or Russian from the title
+  screen. The translations have not yet been reviewed by native speakers.
 - Switch between the overhead **Classic** camera and the closer **Follow** view.
 - Find the entrance through an in-world highlight and an offscreen direction cue.
 - Personalize your dog’s coat and name, choose flock breeds and name individual
@@ -92,6 +95,7 @@ npm run typecheck:worker
 npm run build
 npm run preview
 npm run probe:boot
+npm run probe:play-path
 npm run probe:release
 npm run check:discovery
 ```
@@ -184,3 +188,8 @@ Runtime and authoring assets are covered by the asset ledger and
 `LICENSE-ASSETS`. Do not assume a code license applies to third-party or
 generated media. Hosted modified versions must provide corresponding source and
 retain the applicable notices.
+
+The Korean translation is adapted from
+[sigco3111/sds](https://github.com/sigco3111/sds), a public AGPL-3.0 fork by
+sigco3111. See [docs/translations](docs/translations/README.md), which also records
+that no translation has yet been reviewed by a native speaker.

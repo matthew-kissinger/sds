@@ -77,7 +77,7 @@
     },
     {
       "path": "app/src/scene/dog/dogCustomization.ts",
-      "sha256": "c34400fd5e2a534313b378ecc126c36d60ee519d97b7554aaa292af27ba84a03"
+      "sha256": "c2c0093783f84e6d01921e58589a53a2f4e81668974a8133d3880ffdaec5c176"
     },
     {
       "path": "app/src/scene/dog/outlineWidth.ts",

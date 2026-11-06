@@ -6,6 +6,7 @@ import {
   getSheepBreed,
   type FlockVarietyId,
 } from '@app/scene/flock/sheepVariety';
+import { useT } from '@app/i18n/store';
 import {
   getSheepName,
   getRandomSheepName,
@@ -28,8 +29,10 @@ export function SheepInspectorCard({
   onPrevSheep,
   onNextSheep,
 }: SheepInspectorCardProps) {
+  const t = useT();
   const currentBreedId = getSheepBreed(selectedSheep, flockVarietyMode);
   const currentBreed = SHEEP_BREEDS[currentBreedId];
+  const breedName = t(`breed.${currentBreedId}.name`);
   const currentName = getSheepName(selectedSheep, customSheepNames);
   const isCustomized = Boolean(customSheepNames[selectedSheep]?.trim());
 
@@ -48,29 +51,29 @@ export function SheepInspectorCard({
             type="button"
             className="herd-stepper-btn"
             onClick={onPrevSheep}
-            title="Inspect previous sheep"
-            aria-label="Previous sheep"
+            title={t('sheep.prevTitle')}
+            aria-label={t('sheep.prev')}
           >
             ‹
           </button>
-          <span className="herd-sheep-num">Sheep #{selectedSheep + 1}</span>
+          <span className="herd-sheep-num">{t('sheep.number', { number: selectedSheep + 1 })}</span>
           <button
             type="button"
             className="herd-stepper-btn"
             onClick={onNextSheep}
-            title="Inspect next sheep"
-            aria-label="Next sheep"
+            title={t('sheep.nextTitle')}
+            aria-label={t('sheep.next')}
           >
             ›
           </button>
         </div>
 
-        <div className="herd-breed-badge" title={`${currentBreed.name} — ${currentBreed.fleeceDescription}`}>
+        <div className="herd-breed-badge" title={`${breedName} — ${t(`breed.${currentBreedId}.fleece`)}`}>
           <span
             className="herd-mini-swatch"
             style={{ backgroundColor: currentBreed.swatchFace }}
           />
-          <span className="herd-breed-badge-text">{currentBreed.name}</span>
+          <span className="herd-breed-badge-text">{breedName}</span>
         </div>
       </div>
 
@@ -80,35 +83,35 @@ export function SheepInspectorCard({
           className="herd-rename-input"
           maxLength={24}
           value={currentName}
-          placeholder="Name this sheep..."
-          aria-label={`Name for sheep #${selectedSheep + 1}`}
+          placeholder={t('sheep.namePlaceholder')}
+          aria-label={t('sheep.nameLabel', { number: selectedSheep + 1 })}
           onChange={(e) => setSheepName(selectedSheep, e.target.value)}
           onKeyDown={handleKeyDown}
         />
         <button
           type="button"
           className="herd-action-btn"
-          title="Pick a random pastoral name"
+          title={t('sheep.rollTitle')}
           onClick={() => setSheepName(selectedSheep, getRandomSheepName())}
         >
-          Roll
+          {t('studio.roll')}
         </button>
         {isCustomized ? (
           <button
             type="button"
             className="herd-action-btn herd-action-btn--reset"
-            title="Reset to default name"
+            title={t('sheep.resetTitle')}
             onClick={() => setSheepName(selectedSheep, '')}
           >
-            Reset
+            {t('sheep.reset')}
           </button>
         ) : null}
       </div>
 
       <div className="herd-breed-subtext">
-        <span className="herd-breed-origin-text">{currentBreed.origin}</span>
+        <span className="herd-breed-origin-text">{t(`breed.${currentBreedId}.origin`)}</span>
         <span className="herd-dot-sep">·</span>
-        <span className="herd-breed-desc-text">{currentBreed.description}</span>
+        <span className="herd-breed-desc-text">{t(`breed.${currentBreedId}.description`)}</span>
       </div>
     </div>
   );

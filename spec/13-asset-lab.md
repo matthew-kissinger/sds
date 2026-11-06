@@ -55,8 +55,8 @@ gameplay decision for the owner, recorded under `STATUS.md` open questions.
 - `lab/` is a consumer of the game's modules. Imports point from `lab/` into
   `app/src/` and `sim/`, never the other way.
 - The lab adds no URL parameter to the player page. Production still reads
-  exactly `seed` and `debug`, which `tools/release-hardening-probe.mjs` enforces
-  by scanning `app/src`.
+  exactly `seed`, `debug` and `lang`, which `tools/release-hardening-probe.mjs`
+  enforces by scanning `app/src`.
 
 ## What the lab provides
 

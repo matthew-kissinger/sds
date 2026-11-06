@@ -24,7 +24,7 @@ and unmodified in outline, so both conditions hold.
 
 ```
 npm run bake:font          rebake
-npm run check:font-bake    verify the committed file is byte-identical
+npm run check:font-bake    verify the committed files are byte-identical
 ```
 
 The bake is deterministic: `head.modified` is frozen rather than stamped, so a
@@ -45,6 +45,18 @@ axis spans the range the client actually draws, from the 10px flock counter to
 the title above 48px, so `font-optical-sizing: auto` selects a cut made for the
 size instead of stretching one cut across the whole span. Pinning the optical
 axis would save roughly 9 KB and give that up.
+
+Two more files hold letters other languages need. Each sits behind a `unicode-range`
+in `app/src/ui/UiStyles.tsx`, so a page that draws none of those characters, which
+includes every English page, never fetches it (`spec/15-languages.md`).
+
+| | Accented Latin | Cyrillic |
+| --- | --- | --- |
+| Output | `piazzolla-ui-latin1.woff2`, 16,624 bytes | `piazzolla-ui-cyrillic.woff2`, 16,928 bytes |
+| SHA-256 | `89d3bf3cf7d833ceefa297afce8cdcd0f3eb6bee97dab885227ed6af53226b20` | `c74c5331b2d2fdadcfd16430c33018efaf7826cc676cd15b2c768a7d0cc4ca4d` |
+| Axes | as above | as above |
+| Characters | U+00A1 to U+00FF without U+00B7, U+0152 U+0153 U+0178 U+201A U+201E | U+0401 U+0410 to U+044F U+0451 U+2116 |
+| Used by | Spanish, Portuguese, French, German | Russian |
 
 The settings panel's two rotation arrows, U+27F2 and U+27F3, are absent from
 Piazzolla and continue to fall back to a system face, as they did before.

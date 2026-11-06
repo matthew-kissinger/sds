@@ -226,7 +226,7 @@ the route existed, `https://sheepdogsim.com/api/*` (the Pages fallback), and
 the Pages project still does. A check on status alone passed with the API
 down. Since 3.9.4 an unmatched path is a 404, and
 `scripts/verify-worker-origin.mjs` requires that, the noindex 404 page, the
-three play paths as the game page and the three static pages as HTML 200
+three play paths as the game page and the static pages as HTML 200
 (`--static-only`, for the Pages project, skips the 404 check).
 
 ## Routes and hostnames
@@ -287,19 +287,22 @@ state. Two platform facts follow, the first measured during Release 2 Stage B:
 2. Confirm `Client CI` is green on the merge commit. A push to `main` cancels an
    in-flight run for the same ref, so check the run for the commit you intend to
    deploy, not an earlier one.
-3. Bump `package.json` and add the `CHANGELOG.md` entry in the commit you intend
+3. Run `npm run build && npm run probe:play-path` on that commit. CI has no browser
+   and Vitest cannot remount `Boot`, so this is the only check that fails if a score
+   card link starts restarting runs or trapping players in a new round.
+4. Bump `package.json` and add the `CHANGELOG.md` entry in the commit you intend
    to tag. `release.json` takes its `version` from `package.json`, so the tag,
    the package version and the live manifest will then agree.
-4. If the change touches `worker/`, mint a check identity on production first
+5. If the change touches `worker/`, mint a check identity on production first
    (see "What a player keeps").
-5. Tag that commit and push the tag. The owner's approval in conversation is
+6. Tag that commit and push the tag. The owner's approval in conversation is
    the authorization; see `AGENTS.md`.
    `git tag -a vX.Y.Z <sha> -m "Sheepdog Sim X.Y.Z" && git push origin vX.Y.Z`
    The tag push triggers `Deploy`.
-6. Confirm the workflow's live checks pass: release identity, one origin,
+7. Confirm the workflow's live checks pass: release identity, one origin,
    the `workers.dev` host, discovery and analytics.
-7. Confirm `https://sheepdogsim.com/release.json` reports that commit and
-   version, and, if step 4 applied, that the check identity still resolves.
+8. Confirm `https://sheepdogsim.com/release.json` reports that commit and
+   version, and, if step 5 applied, that the check identity still resolves.
 
 The tag is what makes a release nameable later: it names the commit, so a
 rollback is dispatching the workflow with an older one.
@@ -435,10 +438,11 @@ the CAA and mail-hardening records.
 ## Analytics
 
 Cloudflare Web Analytics loads from Cloudflare's own snippet in
-`app/index.html` and in the three static pages under `app/public` (`about`,
-`support`, `privacy`), with the token of the Web Analytics site named
-`sheepdogsim.com` (site tag `7bf1aecd39d6485184c6a80f8f33639b`). Those four
-files are the only copies of the token. `npm run check:discovery` and the
+`app/index.html` and in the static pages under `app/public` (`about`, `support`,
+`privacy`, `herding-guide`, `multiplayer`, `id/index`), with the token of the
+Web Analytics site named `sheepdogsim.com` (site tag
+`7bf1aecd39d6485184c6a80f8f33639b`). Those seven files are the only copies of
+the token. `npm run check:discovery` and the
 deploy require exactly one beacon on every HTML page, carrying that token, so a
 second injector or the old token fails the check.
 
@@ -451,8 +455,8 @@ second injector or the old token fails the check.
   at the Release 1 cutover no page carried an injected beacon, which is why
   every page carries the snippet itself. The `sheepdogsim.com` site therefore
   runs in "JS Snippet installation" mode; automatic injection would do nothing.
-- The token is spelled out in four HTML files. The verifier makes drift fail a
-  deploy, but one source would be better: in Release 2 the three static pages
+- The token is spelled out in seven HTML files. The verifier makes drift fail a
+  deploy, but one source would be better: in Release 2 the static pages
   become Vite entries and a single `transformIndexHtml` hook injects the
   snippet from one constant, alongside the cf CLI build change.
 - `sheepdogsim.com` is a proxied zone, so the zone's own analytics count
@@ -501,6 +505,7 @@ build at any other API origin.
 
 ## Backend boundary
 
-The client uses only the documented identity and score REST routes. Production
+The client uses only the documented identity and score REST routes, and the
+anonymous counts in `docs/operations/funnel.md`. Production
 D1 migrations are not applied by `Deploy`; `scripts/d1-migrate-remote.mjs`
 applies them deliberately. Score-service specifics are in `docs/operations/solo-times.md`.

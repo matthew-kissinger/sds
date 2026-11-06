@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 
 import { describe, expect, it } from 'vitest';
+import en from '../app/src/i18n/locales/en.json';
 import {
   DOG_COAT_PRESETS,
   DEFAULT_DOG_COAT,
@@ -35,8 +36,8 @@ describe('dog coat customization', () => {
     for (const id of presetIds) {
       const preset = DOG_COAT_PRESETS[id];
       expect(preset.id).toBe(id);
-      expect(preset.name.length).toBeGreaterThan(0);
-      expect(preset.description.length).toBeGreaterThan(0);
+      expect(en[`coat.${id}.name`].length).toBeGreaterThan(0);
+      expect(en[`coat.${id}.description`].length).toBeGreaterThan(0);
       expect(preset.swatch).toMatch(/^#[0-9a-f]{6}$/i);
       expect(preset.shadow).toMatch(/^#[0-9a-f]{6}$/i);
       expect(preset.mid).toMatch(/^#[0-9a-f]{6}$/i);
@@ -103,8 +104,8 @@ describe('sheep breed variety', () => {
     for (const id of breedIds) {
       const breed = SHEEP_BREEDS[id];
       expect(breed.id).toBe(id);
-      expect(breed.name.length).toBeGreaterThan(0);
-      expect(breed.origin.length).toBeGreaterThan(0);
+      expect(en[`breed.${id}.name`].length).toBeGreaterThan(0);
+      expect(en[`breed.${id}.origin`].length).toBeGreaterThan(0);
       expect(breed.swatchFleece).toMatch(/^#[0-9a-f]{6}$/i);
       expect(breed.swatchFace).toMatch(/^#[0-9a-f]{6}$/i);
     }
@@ -120,7 +121,7 @@ describe('sheep breed variety', () => {
     // Woolma (index 3) is a Jacob with authentic heritage traits
     expect(getDefaultSheepName(3)).toBe('Woolma');
     expect(getSheepBreed(3, 'heritage')).toBe('jacob');
-    expect(SHEEP_BREEDS.jacob.name).toBe('Jacob');
+    expect(en['breed.jacob.name']).toBe('Jacob');
     expect(SHEEP_BREEDS.jacob.swatchFleece).toBe('#d8c29d');
 
     // Classic mode is always Suffolk

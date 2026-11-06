@@ -28,6 +28,19 @@ describe('public version 3 surface', () => {
     expect(html).toContain('Loading game code');
   });
 
+  it('links the sibling sites from both title screens, never this one', () => {
+    const wanted = ['https://instruktlabs.com/', 'https://skisim.app/', 'https://objekt62.com/', 'https://vietnamwarsim.com/'];
+    const rows = [
+      read('app/index.html').match(/<nav class="[^"]*" aria-label="More from Instrukt Labs">([\s\S]*?)<\/nav>/)?.[1] ?? '',
+      read('app/src/ui/Boot.tsx').match(/<nav className="[^"]*" aria-label=\{t\('title\.moreFrom'\)\}>([\s\S]*?)<\/nav>/)?.[1] ?? '',
+    ];
+    for (const row of rows) {
+      expect([...row.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1])).toEqual(wanted);
+      expect(row).toContain('Terror in the Jungle (pre-alpha)');
+    }
+    expect(JSON.parse(read('app/src/i18n/locales/en.json'))['title.moreFrom']).toBe('More from Instrukt Labs');
+  });
+
   it('keeps source and license notices reachable from the game settings', () => {
     const settings = read('app/src/ui/SettingsPanel.tsx');
     expect(settings).toContain('AGPL-3.0-or-later');
@@ -73,7 +86,7 @@ describe('public version 3 surface', () => {
     const board = read('app/src/scores/LeaderboardPanel.tsx');
     expect(boot).toContain('setShowTimes(true)');
     expect(boot).toContain('Times');
-    expect(board).toContain('Solo times');
+    expect(read('app/src/i18n/locales/en.json')).toContain('Solo times');
     expect(board).toContain('FLOCK_SIZES.map');
     expect(board).toContain('scoresController.loadBoard');
   });

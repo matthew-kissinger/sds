@@ -3,6 +3,8 @@
 /**
  * Pastoral sheep breed definitions and flock variety modes.
  * Provides authentic English, Scottish, and Welsh sheep breed classifications.
+ * Their names and descriptions are interface text: `breed.*` and `variety.*`
+ * in app/src/i18n/locales.
  */
 
 import { mulberry32 } from '@sim/rng';
@@ -23,11 +25,6 @@ export type SheepBreedId =
 
 export interface SheepBreedInfo {
   readonly id: SheepBreedId;
-  readonly name: string;
-  readonly origin: string;
-  readonly description: string;
-  readonly fleeceDescription: string;
-  readonly faceDescription: string;
   readonly swatchFleece: string;
   readonly swatchFace: string;
 }
@@ -35,91 +32,46 @@ export interface SheepBreedInfo {
 export const SHEEP_BREEDS: Readonly<Record<SheepBreedId, SheepBreedInfo>> = {
   suffolk: {
     id: 'suffolk',
-    name: 'Suffolk Down',
-    origin: 'East Anglia, England',
-    description: 'The traditional countryside icon: dense warm cream fleece with jet charcoal head and shanks.',
-    fleeceDescription: 'Dense warm cream',
-    faceDescription: 'Charcoal black',
     swatchFleece: '#ebd9ba',
     swatchFace: '#3b3234',
   },
   cheviot: {
     id: 'cheviot',
-    name: 'Cheviot White-faced',
-    origin: 'Cheviot Hills, Scottish Borders',
-    description: 'Hardy hill sheep with a bright white fleece and distinctive pale white-faced head without black markings.',
-    fleeceDescription: 'Crisp pale cream',
-    faceDescription: 'Clean white / pale cream',
     swatchFleece: '#f7f2ea',
     swatchFace: '#f0e7da',
   },
   herdwick: {
     id: 'herdwick',
-    name: 'Herdwick',
-    origin: 'Lake District, Cumbria',
-    description: 'Legendary fell breed famous for its rugged steel blue-grey fleece and hoar-frosted white head and legs.',
-    fleeceDescription: 'Steel blue-grey',
-    faceDescription: 'Hoar-frosted white',
     swatchFleece: '#7b838a',
     swatchFace: '#f4f1ea',
   },
   kerry_hill: {
     id: 'kerry_hill',
-    name: 'Kerry Hill',
-    origin: 'Powys, Welsh Borders',
-    description: 'Famous British border breed with dense white wool and striking panda-like black patches on the eyes, nose, and knees.',
-    fleeceDescription: 'Dense pure white',
-    faceDescription: 'White with black panda patches',
     swatchFleece: '#faf8f2',
     swatchFace: '#282222',
   },
   badger_face: {
     id: 'badger_face',
-    name: 'Badger Face Welsh Mountain',
-    origin: 'Cambrian Mountains, Wales',
-    description: 'Ancient Celtic breed (Torddu) featuring warm oatmeal fleece, distinctive black badger eye stripes, and dark throat.',
-    fleeceDescription: 'Oatmeal biscuit',
-    faceDescription: 'Oatmeal with badger stripes',
     swatchFleece: '#e2d6c1',
     swatchFace: '#322828',
   },
   moorit: {
     id: 'moorit',
-    name: 'Moorit Shetland',
-    origin: 'Shetland Isles, Scotland',
-    description: 'Heritage moorland breed naturally colored in rich cinnamon and chocolate-brown fleece and matching brown face.',
-    fleeceDescription: 'Warm cinnamon chocolate',
-    faceDescription: 'Dark chocolate brown',
     swatchFleece: '#916b49',
     swatchFace: '#4a3628',
   },
   balwen: {
     id: 'balwen',
-    name: 'Balwen Welsh Mountain',
-    origin: 'Tywi Valley, Wales',
-    description: 'Distinctive Welsh hill sheep with deep peat-charcoal fleece, a crisp white facial blaze, and white socks.',
-    fleeceDescription: 'Deep peat charcoal',
-    faceDescription: 'Dark with white facial blaze',
     swatchFleece: '#332c2b',
     swatchFace: '#ede7dc',
   },
   jacob: {
     id: 'jacob',
-    name: 'Jacob',
-    origin: 'British Heritage Breed',
-    description: 'Ancient British heritage breed featuring warm toasted wheat wool with deep charcoal-brown points.',
-    fleeceDescription: 'Warm toasted wheat',
-    faceDescription: 'Charcoal-brown',
     swatchFleece: '#d8c29d',
     swatchFace: '#382f30',
   },
   black: {
     id: 'black',
-    name: 'Black Welsh Mountain',
-    origin: 'Cambrian Mountains, Wales',
-    description: 'Ancient British heritage breed featuring completely dark, lustrous espresso-charcoal fleece and deep dark points.',
-    fleeceDescription: 'Espresso charcoal',
-    faceDescription: 'Deep charcoal',
     swatchFleece: '#423c38',
     swatchFace: '#2a2424',
   },
@@ -127,36 +79,14 @@ export const SHEEP_BREEDS: Readonly<Record<SheepBreedId, SheepBreedInfo>> = {
 
 export interface FlockVarietyOption {
   readonly id: FlockVarietyId;
-  readonly name: string;
-  readonly description: string;
 }
 
 export const FLOCK_VARIETY_OPTIONS: readonly FlockVarietyOption[] = [
-  {
-    id: 'heritage',
-    name: 'Natural Heritage Mix',
-    description: 'A realistic pastoral flock with Suffolk, Cheviot, Herdwick, Kerry Hill, Badger Face, Moorit, Balwen, Jacob, and Black Welsh.',
-  },
-  {
-    id: 'classic',
-    name: 'Classic Country',
-    description: 'The traditional uniform look: all cream sheep with charcoal-black heads.',
-  },
-  {
-    id: 'highland',
-    name: 'Upland Fells',
-    description: 'Hardy hill and moorland breeds: steel Herdwick, cinnamon Moorit, and Black Welsh.',
-  },
-  {
-    id: 'marked',
-    name: 'Marked & Badger Breeds',
-    description: 'Striking patterns: Kerry Hill panda markings, Badger Face stripes, Balwen blazes, and Jacob piebalds.',
-  },
-  {
-    id: 'black',
-    name: 'Black Welsh Mountain',
-    description: 'A striking flock of all-dark sheep with deep espresso wool.',
-  },
+  { id: 'heritage' },
+  { id: 'classic' },
+  { id: 'highland' },
+  { id: 'marked' },
+  { id: 'black' },
 ];
 
 export const DEFAULT_FLOCK_VARIETY: FlockVarietyId = 'heritage';

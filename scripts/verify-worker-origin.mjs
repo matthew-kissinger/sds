@@ -98,7 +98,7 @@ async function verifyOnce() {
   }
   results.playPaths = 'index.html';
 
-  for (const path of ['/about', '/support', '/privacy']) {
+  for (const path of ['/about', '/support', '/privacy', '/herding-guide', '/multiplayer', '/id/']) {
     const page = await get(path);
     assert(page.response.status === 200 && isHtml(page.type), `${path} must be HTML 200, got ${page.response.status} ${page.type}.`);
   }

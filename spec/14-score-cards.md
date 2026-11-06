@@ -104,7 +104,7 @@ The card's action is `Play 25 sheep`, `Play 75 sheep` or `Play 200 sheep`.
 It goes to `/play/25`, `/play/75` or `/play/200`.
 
 That path is not a query parameter. `spec/01` caps the game's player query
-parameters at `seed` and `debug`. The 2026-10-20 multiplayer plan removes the
+parameters at `seed`, `debug` and `lang`. The 2026-10-20 multiplayer plan removes the
 unimplemented `room` query from the earlier text; invites will use `/r/*`.
 `app/public/_redirects` serves `index.html` for exactly these three paths
 (with or without a trailing slash), so `/play/25` needs no Worker route.

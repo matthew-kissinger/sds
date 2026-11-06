@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
+import { translate } from '@app/i18n/store';
 import { useGameStore, type FlockSize } from '@app/state/store';
 import { createScoreApi, ScoreApiError, type ScoreApi } from './api';
 import { scoreApiBase } from './config';
@@ -8,6 +9,7 @@ import { browserIdentityStorage, type IdentityStorage } from './storage';
 import { useScoreStore } from './store';
 import { cardShareTitle, completionShareText, formatCardClock } from './share';
 import type { CompletedRun, ScoreIdentity } from './types';
+import { isoWeekStart, localizedWeekLabel } from './week';
 
 export interface ScoresController {
   start(): () => void;
@@ -71,7 +73,7 @@ export function createScoresController(
       useScoreStore.getState().patch({
         identityStatus: 'offline',
         identity: storage.load(),
-        identityMessage: 'Online times are unavailable. Play still works.',
+        identityMessage: translate('scores.unavailable'),
       });
       return null;
     }).finally(() => {
@@ -103,7 +105,7 @@ export function createScoresController(
     useScoreStore.getState().patch({
       submissionStatus: 'submitting',
       submittedFlockSize: run.flockSize,
-      entries: [], rank: null, submissionMessage: 'Checking the online times.',
+      entries: [], rank: null, submissionMessage: translate('scores.checking'),
       sharePath: null, shareTitle: '', shareText: '',
       resultBoardRank: null, resultBoardPlayers: null,
       resultWeekRank: null, resultWeekPlayers: null,
@@ -144,13 +146,13 @@ export function createScoresController(
       useScoreStore.getState().patch({
         submissionStatus: 'ready', entries: page.entries, rank: ownEntry?.rank ?? null,
         submissionMessage: ownEntry === undefined
-          ? 'Your time is recorded outside the first 100 places.'
-          : `Online rank ${ownEntry.rank}.`,
+          ? translate('scores.outsideTop')
+          : translate('scores.rank', { rank: ownEntry.rank }),
       });
     } catch {
       useScoreStore.getState().patch({
         submissionStatus: 'offline', entries: [], rank: null,
-        submissionMessage: 'Your local time is safe. The online board is unavailable.',
+        submissionMessage: translate('scores.localSafe'),
       });
     }
   };
@@ -183,7 +185,7 @@ export function createScoresController(
     async rename(displayName) {
       const requested = displayName.trim();
       if (requested.length === 0) {
-        useScoreStore.getState().patch({ renameMessage: 'Enter a name.' });
+        useScoreStore.getState().patch({ renameMessage: translate('scores.enterName') });
         return false;
       }
       useScoreStore.getState().patch({ renaming: true, renameMessage: '' });
@@ -199,8 +201,8 @@ export function createScoresController(
         return true;
       } catch (error) {
         const message = error instanceof ScoreApiError && error.status === 400
-          ? 'Use a name from 1 to 20 characters.'
-          : 'Name change is unavailable. Play still works.';
+          ? translate('scores.nameRule')
+          : translate('scores.renameUnavailable');
         useScoreStore.getState().patch({ renaming: false, renameMessage: message });
         return false;
       }
@@ -214,17 +216,19 @@ export function createScoresController(
         boardEntries: [],
         boardWeek: null,
         boardWeekLabel: '',
-        boardMessage: week ? `Loading this week's ${flockSize}-sheep times.` : `Loading ${flockSize}-sheep times.`,
+        boardMessage: translate(week ? 'scores.loadingWeek' : 'scores.loadingAll', { count: flockSize }),
       });
       try {
         const page = await api.leaderboard(flockSize, week);
         if (request !== boardRequest) return;
         const empty = page.entries.length === 0
           ? (week === undefined
-            ? 'No times yet. Yours could be first.'
+            ? translate('scores.emptyAll')
             : week === 'current'
-              ? 'No times yet this week.'
-              : `No times in the ${page.weekLabel ?? 'week'}.`)
+              ? translate('scores.emptyWeek')
+              : translate('scores.emptyOtherWeek', {
+                week: localizedWeekLabel(page.weekLabel ?? 'week', isoWeekStart(page.week ?? week)),
+              }))
           : '';
         useScoreStore.getState().patch({
           boardStatus: 'ready',
@@ -242,7 +246,7 @@ export function createScoresController(
           boardEntries: [],
           boardWeek: null,
           boardWeekLabel: '',
-          boardMessage: 'Online times are unavailable. Play still works.',
+          boardMessage: translate('scores.unavailable'),
         });
       }
     },
@@ -250,7 +254,7 @@ export function createScoresController(
     async loadMyRuns() {
       const request = ++runsRequest;
       useScoreStore.getState().patch({
-        runsStatus: 'loading', runs: [], runsMessage: 'Loading your times.',
+        runsStatus: 'loading', runs: [], runsMessage: translate('scores.loadingMine'),
       });
       try {
         // Needs an identity before it can ask for one player's own history,
@@ -263,14 +267,14 @@ export function createScoresController(
         useScoreStore.getState().patch({
           runsStatus: 'ready',
           runs,
-          runsMessage: runs.length === 0 ? 'No finished runs yet.' : '',
+          runsMessage: runs.length === 0 ? translate('scores.noRuns') : '',
         });
       } catch {
         if (request !== runsRequest) return;
         useScoreStore.getState().patch({
           runsStatus: 'offline',
           runs: [],
-          runsMessage: 'Your times are unavailable. Play still works.',
+          runsMessage: translate('scores.mineUnavailable'),
         });
       }
     },
