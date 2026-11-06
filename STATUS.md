@@ -649,16 +649,22 @@ the record those files carry.
 
 ## Open questions
 
-- Forced WebGPU fails on the owner's PC, recorded 2026-11-06. Root cause found: a
-  Chromium hybrid-GPU defect, in `docs/history/webgpu-hybrid-gpu.md`. Chromium
-  imports an `OPAQUE_FD` canvas buffer from the AMD compositor device onto the NVIDIA
-  WebGPU device, which Vulkan forbids; NVIDIA reports it as
-  `VK_ERROR_OUT_OF_DEVICE_MEMORY`. No memory ran out and the game is not at fault. Stable
-  Chrome without flags offers no adapter here and runs on WebGL2. Open: filing the
-  drafted Chromium report; whether to fall back to WebGL2 on device loss, an owner
-  decision; why it worked on 2026-10-20, which needs a driver downgrade to test. Local
-  probes use `--webgl`; `--use-webgpu-power-preference=force-low-power` runs WebGPU on
-  the Vega, opt-in only, and is not yet exercised by a probe.
+- Forced WebGPU on the owner's hybrid PC, updated 2026-11-06. Plain flags still lose
+  the device: a Chromium defect imports an `OPAQUE_FD` canvas buffer from the AMD
+  compositor device onto the NVIDIA WebGPU device, which Vulkan forbids and NVIDIA
+  reports as `VK_ERROR_OUT_OF_DEVICE_MEMORY`
+  (`docs/history/webgpu-hybrid-gpu.md`). The game is not at fault. Stable Chrome without
+  flags offers no adapter here and runs on WebGL2. Real NVIDIA WebGPU now works through
+  per-user launchers outside this repository, which move the whole graphics stack to
+  the NVIDIA GPU: `PROBE_HEADED=1 webgpu-run node tools/<probe>.mjs` runs a probe on a
+  hidden display. Through it, on 2026-11-06, `tools/coop-browser-probe.mjs` booted on
+  WebGPU, created a room and had two clients playing. It then failed at its reload
+  seat-reclaim step, 3 of 3 on WebGPU and 1 of 1 with `--webgl` in the same conditions,
+  at load average about 20. The likely cause, not proven, is reload time against the 15 s
+  `GRACE_MS` in `realtime/roomState.ts`; `--webgl` passed that step at lower load on
+  2026-11-05. Open: rerun on an idle machine; whether a 15 s grace is enough for slow
+  devices; filing the drafted Chromium report; whether to fall back to WebGL2 on device
+  loss, an owner decision.
 - Multiplayer phase 7 has an approved design and local foundations in progress;
   production is authorized (see the amendment above); staging was removed.
   Competitive forfeit-and-continue and finish-the-flock/highest-eligible/shared-
