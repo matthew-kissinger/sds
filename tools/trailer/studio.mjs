@@ -41,7 +41,7 @@ try {
    await page.screenshot({path:join(out,'deliverables/stills/07-flock-customization.png')});
   }
   await page.getByRole('button',{name:'Close customization studio',exact:true}).click();
-  await page.getByRole('button',{name:'Play',exact:true}).click();await page.waitForTimeout(500);
+  await page.getByRole('button',{name:'Play solo',exact:true}).click();await page.waitForTimeout(500);
   await page.evaluate(()=>__trailer.find());
   await page.keyboard.down('KeyW');await page.waitForTimeout(900);
   const run=await page.evaluate(()=>__trailer.sim.state.dogs[0].velocity.magnitude());

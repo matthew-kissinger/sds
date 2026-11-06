@@ -10,7 +10,6 @@ import { stubHarnessNetwork } from './harness-stubs.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  READOUT,
   SEED,
   launchBrowser,
   percentile,
@@ -35,6 +34,12 @@ import {
 } from './playtest-profile-receipt.mjs';
 import { analyzeScreenshot } from './screenshot-analysis.mjs';
 import { installArtRenderCounters } from './art-render-counters.mjs';
+
+// Tick, draw-call and sheep diagnostics came from a debug readout that the v3 app
+// no longer renders and the production build must not ship, so this profile cannot
+// run until it is redesigned. Timing receipts come from tools/hub-presentation-probe.mjs.
+const READOUT = '[data-testid="debug-readout"]';
+throw new Error('tools/playtest-profile.mjs needs the retired debug readout. See the note above this error.');
 
 const argv = process.argv.slice(2);
 

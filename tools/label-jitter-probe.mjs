@@ -143,9 +143,7 @@ try {
         await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_RATE });
       }
 
-      // probe-lib's pressPlay first waits on a debug readout element the app
-      // no longer renders, so this waits on the contract that is actually
-      // observable: the title card is revealed only once the field has
+      // The title card is revealed only once the field has
       // compiled and presented a frame, which is the same gate Play is on.
       await page.goto(`http://localhost:5331/?seed=${SEED}`);
       await page.waitForSelector('canvas', { timeout: 60_000 });

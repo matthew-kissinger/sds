@@ -106,7 +106,7 @@ try {
   await cdp.send('Profiler.setSamplingInterval', { interval: 500 });
   await cdp.send('Profiler.start');
   const started = Date.now();
-  await page.goto(`http://localhost:${port}/?seed=${SEED}&debug=webgl,readout`, {
+  await page.goto(`http://localhost:${port}/?seed=${SEED}&debug=webgl`, {
     waitUntil: 'domcontentloaded',
     timeout: 60_000,
   });
@@ -114,7 +114,7 @@ try {
   await play.waitFor({ state: 'visible', timeout: 60_000 });
   await page.waitForFunction(() => {
     const button = [...document.querySelectorAll('button')]
-      .find((candidate) => candidate.textContent?.trim() === 'Play');
+      .find((candidate) => candidate.textContent?.trim() === 'Play solo');
     return button instanceof HTMLButtonElement && !button.disabled;
   }, undefined, { timeout: 60_000, polling: 25 });
   const interactiveMs = Date.now() - started;

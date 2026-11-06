@@ -10,7 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  READOUT,
+  APP,
   SEED,
   launchBrowser,
   removeDir,
@@ -39,6 +39,7 @@ if (!/^[a-zA-Z0-9._-]+$/.test(label)) throw new Error(`bad label ${label}`);
 
 const outputDir = join(repo, 'captures', 'profiling', label);
 const targetTick = 300;
+const playWindowMs = 5_000; // 300 ticks at the sim's 60 Hz
 const scenarios = [
   {
     name: 'desktop-webgpu',
@@ -131,10 +132,9 @@ async function runScenario(base, spec) {
       Object.defineProperty(globalThis, '__herdBootStartupEvents', { value: events });
       const rounded = (value) => Math.round(value * 1000) / 1000;
       const state = () => {
-        const data = document.querySelector('[data-testid="debug-readout"]')?.dataset;
+        const data = document.querySelector('.herd-app')?.dataset;
         return {
-          phase: data?.gamePhase ?? 'boot',
-          tick: Number(data?.tick ?? -1),
+          phase: data?.phase ?? 'boot',
           ready: document.querySelector('.herd-boot')?.getAttribute('data-ready') ?? 'missing',
         };
       };
@@ -245,8 +245,8 @@ async function runScenario(base, spec) {
     page.on('console', (message) => {
       if (message.type() === 'error') errors.push(`console:${message.text()}`);
     });
-    const debug = ['driver', 'readout', ...(spec.forceWebGL ? ['webgl'] : [])].join(',');
-    await page.goto(`${base}/?seed=${SEED}&debug=${debug}`, {
+    const debug = spec.forceWebGL ? '&debug=webgl' : '';
+    await page.goto(`${base}/?seed=${SEED}${debug}`, {
       waitUntil: 'domcontentloaded',
       timeout: 60_000,
     });
@@ -258,11 +258,10 @@ async function runScenario(base, spec) {
     await page.getByRole('button', { name: '200', exact: true }).click();
     const clickMs = await page.evaluate(() => performance.now());
     await page.locator('.herd-title-actions > .herd-button--primary').click();
-    await page.waitForFunction(({ selector, target }) => {
-      const data = document.querySelector(selector)?.dataset;
-      return data?.gamePhase === 'playing' && Number(data.tick) >= target;
-    }, { selector: READOUT, target: targetTick }, { timeout: 90_000, polling: 20 });
-    await page.waitForTimeout(200);
+    await page.locator(`${APP}[data-phase=playing]`).waitFor({ timeout: 90_000 });
+    // The production build publishes no tick, so the window is the play time
+    // those ticks take at full rate rather than a named world state.
+    await page.waitForTimeout(playWindowMs);
 
     const data = await page.evaluate(() => ({
       events: globalThis.__herdBootStartupEvents ?? [],
@@ -275,16 +274,15 @@ async function runScenario(base, spec) {
         decodedBytes: entry.decodedBodySize || 0,
       })),
     }));
-    const readout = await page.locator(READOUT).evaluate((node) => ({ ...node.dataset }));
+    const app = await page.locator(APP).evaluate((node) => ({ ...node.dataset }));
     const result = {
       name: spec.name,
       viewport: spec.viewport,
       deviceScaleFactor: spec.deviceScaleFactor,
       emulation: spec.mobile ? MID_MOBILE_PROFILE : null,
-      backend: readout.backend,
-      renderTier: readout.renderTier,
-      fillMs: Number(readout.fillMs),
-      finalTick: Number(readout.tick),
+      backend: app.backend,
+      renderTier: app.renderTier,
+      fillMs: Number(app.fillMs),
       errors,
       resources: data.resources,
       summary: summarize(data.events, readyMs, clickMs),
@@ -331,7 +329,6 @@ console.log(JSON.stringify({
     backend: result.backend,
     renderTier: result.renderTier,
     fillMs: result.fillMs,
-    finalTick: result.finalTick,
     errors: result.errors,
     summary: result.summary,
   })),

@@ -23,7 +23,7 @@ async function setup(studio=false) {
  if(studio)await page.getByRole('button',{name:'Customize',exact:true}).click();
  await page.waitForTimeout(1000);
  if(!studio) {
-  await page.getByRole('button',{name:'Play',exact:true}).click();
+  await page.getByRole('button',{name:'Play solo',exact:true}).click();
   await page.waitForTimeout(1500);
   await page.addStyleTag({content:'.herd-app>*{visibility:hidden} canvas{visibility:visible!important}'});
  }
