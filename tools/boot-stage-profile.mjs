@@ -8,7 +8,7 @@
 
 import { stubHarnessNetwork } from './harness-stubs.mjs';
 import {
-  READOUT,
+  APP,
   SEED,
   launchBrowser,
   removeDir,
@@ -199,10 +199,10 @@ async function measure(spec) {
       const inspectDom = () => {
         const canvas = document.querySelector('canvas');
         if (canvas) recordOnce('dom-canvas', { width: canvas.width, height: canvas.height });
-        const readout = document.querySelector('[data-testid="debug-readout"]');
-        const backend = readout?.getAttribute('data-backend');
+        const app = document.querySelector('.herd-app');
+        const backend = app?.getAttribute('data-backend');
         if (backend && backend !== 'pending') recordOnce('dom-backend', { backend });
-        const fillMs = readout?.getAttribute('data-fill-ms');
+        const fillMs = app?.getAttribute('data-fill-ms');
         if (fillMs) recordOnce('dom-fill-receipt', { fillMs: Number(fillMs) });
         if (document.querySelector('.herd-boot[data-ready="true"]')) recordOnce('dom-ready');
         originalRaf(inspectDom);
@@ -299,30 +299,30 @@ async function measure(spec) {
       });
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: MID_MOBILE_PROFILE.cpuSlowdown });
     }
-    await page.goto(`http://localhost:${port}/?seed=${SEED}&debug=readout`, {
+    await page.goto(`http://localhost:${port}/?seed=${SEED}`, {
       waitUntil: 'domcontentloaded',
       timeout: 60_000,
     });
     await page.waitForFunction(() => {
       const play = [...document.querySelectorAll('button')]
-        .find((candidate) => candidate.textContent?.trim() === 'Play');
+        .find((candidate) => candidate.textContent?.trim() === 'Play solo');
       return play instanceof HTMLButtonElement && !play.disabled;
     }, undefined, { timeout: 60_000, polling: 10 });
     const readyObservedMs = await page.evaluate(() => performance.now());
     await page.waitForTimeout(100);
     const events = await page.evaluate(() => globalThis.__herdBootStageEvents ?? []);
     events.push({ kind: 'external-ready', atMs: readyObservedMs });
-    const readout = await page.locator(READOUT).evaluate((node) => ({ ...node.dataset }));
+    const app = await page.locator(APP).evaluate((node) => ({ ...node.dataset }));
+    const canvas = await page.locator('canvas').first().evaluate((node) => ({ width: node.width, height: node.height }));
     const result = {
       profile: spec.name,
       errors,
       readout: {
-        backend: readout.backend,
-        renderTier: readout.renderTier,
-        fillMs: readout.fillMs,
-        canvasWidth: readout.canvasWidth,
-        canvasHeight: readout.canvasHeight,
-        drawCalls: readout.drawCalls,
+        backend: app.backend,
+        renderTier: app.renderTier,
+        fillMs: app.fillMs,
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
       },
       ...summarize(events),
     };

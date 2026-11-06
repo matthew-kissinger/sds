@@ -15,6 +15,7 @@ import {
   shot,
   startServer,
   stopServer,
+  stubHarnessNetwork,
   waitForTick,
 } from './probe-lib.mjs';
 
@@ -40,6 +41,7 @@ try {
   profile = scratchDir(`herd-juice-${label}`);
   browser = await launchBrowser(profile);
   context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+  await stubHarnessNetwork(context);
   const page = await context.newPage();
   page.on('pageerror', (error) => errors.push(String(error)));
   page.on('console', (message) => {
@@ -47,7 +49,7 @@ try {
   });
   // Keep this on the real input path. The scripted herding driver deliberately
   // owns every tick's intent and would overwrite the keyboard bark.
-  const debug = ['readout', 'follow', ...(webgl ? ['webgl'] : [])].join(',');
+  const debug = ['follow', ...(webgl ? ['webgl'] : [])].join(',');
   await page.goto(`http://localhost:${port}/?seed=${SEED}&debug=${debug}`, { waitUntil: 'load', timeout: 60_000 });
   await pressPlay(page, { flockSize: 200 });
   await waitForTick(page, 300, 60_000);

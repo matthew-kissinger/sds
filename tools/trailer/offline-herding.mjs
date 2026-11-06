@@ -18,7 +18,7 @@ async function setup() {
  await page.locator('.herd-app[data-ready="true"]').waitFor({timeout:90000});
  await page.waitForTimeout(800);
  await freeze(page);
- await page.getByRole('button',{name:'Play',exact:true}).click();
+ await page.getByRole('button',{name:'Play solo',exact:true}).click();
  await page.evaluate(()=>__trailer.find());
  await page.addScriptTag({content:player});
  await page.evaluate(()=>{

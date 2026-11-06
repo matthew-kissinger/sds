@@ -20,10 +20,10 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
 import {
-  GPU_ARGS,
-  READOUT,
+  devState,
+  launchBrowser,
+  readout,
   SEED,
   startServer,
   stopServer,
@@ -518,20 +518,20 @@ async function captureScenario(browser, baseUrl, backend, flockSize) {
   await stubHarnessNetwork(context);
 
   try {
-    const debugParts = backend === 'webgl2' ? ['webgl', 'readout'] : ['readout'];
+    const debugParts = backend === 'webgl2' ? ['webgl'] : [];
     if (debugExtra) debugParts.push(...debugExtra.split(',').filter(Boolean));
     const debug = debugParts.join(',');
     const url = `${baseUrl}?seed=${SEED}&debug=${debug}`;
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await waitForLive(page);
-    const reportedBackend = await page.$eval(READOUT, (node) => node.dataset.backend);
+    const reportedBackend = (await readout(page)).backend;
     if (reportedBackend !== backend) {
       throw new Error(`requested ${backend}, app reported ${reportedBackend}`);
     }
 
-    const titleTick0 = Number(await page.$eval(READOUT, (node) => node.dataset.tick));
+    const titleTick0 = (await devState(page)).tick;
     await page.waitForTimeout(750);
-    const titleTick1 = Number(await page.$eval(READOUT, (node) => node.dataset.tick));
+    const titleTick1 = (await devState(page)).tick;
     const choice = page.locator('.herd-size').filter({ hasText: String(flockSize) });
     await choice.waitFor({ state: 'visible', timeout: 10_000 });
     await choice.click();
@@ -727,7 +727,7 @@ const scenarios = [];
 try {
   const baseUrl = externalUrl ?? `http://localhost:${port}/`;
   if (!externalUrl) server = await startServer(port);
-  browser = await chromium.launch({ channel: 'chrome', args: GPU_ARGS });
+  browser = await launchBrowser();
   const backends = backendFilter ? [backendFilter] : ['webgpu', 'webgl2'];
   const flockSizes = flockFilter ? [Number(flockFilter)] : [25, 75, 200];
   for (const backend of backends) {

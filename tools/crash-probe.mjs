@@ -85,10 +85,10 @@ try {
   screenshot = relative(repo, screenshotPath).replaceAll('\\', '/');
   after = await page.evaluate(() => {
     const canvas = document.querySelector('canvas');
-    const readout = document.querySelector('[data-testid="debug-readout"]');
+    const app = document.querySelector('.herd-app');
     const style = canvas instanceof HTMLCanvasElement ? getComputedStyle(canvas) : null;
     return {
-      readout: readout instanceof HTMLElement ? { ...readout.dataset } : null,
+      app: app instanceof HTMLElement ? { ...app.dataset } : null,
       canvas: canvas instanceof HTMLCanvasElement ? {
         width: canvas.width,
         height: canvas.height,

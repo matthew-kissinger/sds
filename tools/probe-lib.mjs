@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Matthew Kissinger
 //
 // Shared plumbing for the browser probes in tools/ (spec/09 layer 4). Both
-// tools/herding-probe.mjs and tools/beauty-shots.mjs drive the REAL app through
-// its normal path - open the page, press the real Play button, read the numbers
-// off the debug readout node - so the boot handshake, the GPU flags and the
-// dev-server lifecycle belong in one place rather than in each probe.
+// the browser probes drive the REAL app through its normal path - open the page,
+// press the real Play button, read the public attributes on the app root - so the
+// boot handshake, the GPU flags and the dev-server lifecycle belong in one place
+// rather than in each probe.
 //
 // Everything here takes a port. Several agents run probes at once during the
 // phase 3 fan-out, so nothing may assume a single well-known port, a single
@@ -36,8 +36,11 @@ export const GPU_ARGS = [
   '--ignore-gpu-blocklist',
 ];
 
-/** The debug-only DOM node the app publishes probe numbers on. No globals. */
-export const READOUT = '[data-testid="debug-readout"]';
+/**
+ * The app root and its public DOM contract: data-phase, data-ready, data-backend,
+ * data-render-tier and the other auto-tier attributes. No globals.
+ */
+export const APP = '.herd-app';
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
@@ -187,8 +190,31 @@ export function launchBrowser(profileRoot, extraArgs = []) {
 
 // --- reading the app --------------------------------------------------------
 
+/** What the app publishes for anyone: the app root's attributes. */
 export async function readout(page) {
-  return page.$eval(READOUT, (node) => ({ ...node.dataset }));
+  return page.$eval(APP, (node) => ({ ...node.dataset }));
+}
+
+/**
+ * Live sim numbers, for probes on the Vite dev server only. The production build
+ * publishes no tick and must not (tools/release-hardening-probe.mjs), so this
+ * imports the same module instances the running app holds.
+ */
+export async function devState(page) {
+  return page.evaluate(devStateInPage);
+}
+
+async function devStateInPage() {
+  const { useGameStore } = await import('/src/state/store.ts');
+  const { rendererDiagnostics } = await import('/src/scene/glFactory.ts');
+  const state = useGameStore.getState();
+  return {
+    phase: state.gamePhase,
+    tick: state.sim.tick,
+    penned: state.sim.pennedCount,
+    flockSize: state.flockSize,
+    drawCalls: rendererDiagnostics().drawCalls,
+  };
 }
 
 /**
@@ -201,16 +227,12 @@ export async function readout(page) {
  * positive tick before it touches anything.
  */
 export async function waitForLive(page) {
-  // Attached, not visible: the readout is a zero-size node on purpose.
-  await page.waitForSelector(READOUT, { state: 'attached', timeout: 60_000 });
   await page.waitForFunction(
     (selector) => {
       const data = document.querySelector(selector)?.dataset;
-      const app = document.querySelector('.herd-app');
-      return data !== undefined && data.backend !== 'pending' &&
-        app instanceof HTMLElement && app.dataset.ready === 'true';
+      return data !== undefined && data.backend !== 'pending' && data.ready === 'true';
     },
-    READOUT,
+    APP,
     { timeout: 60_000, polling: 100 },
   );
 }
@@ -238,15 +260,16 @@ export async function pressPlay(page, { flockSize } = {}) {
   await play.waitFor({ state: 'visible', timeout: 60_000 });
   await play.click();
   await page.waitForFunction(
-    (selector) => document.querySelector(selector)?.dataset.gamePhase === 'playing',
-    READOUT,
+    (selector) => document.querySelector(selector)?.dataset.phase === 'playing',
+    APP,
     { timeout: 30_000 },
   );
 }
 
 /**
  * Wait for the run to reach `tick`. This is the probe's deterministic moment:
- * the sim is fixed-step and fixed-seed, so a tick names a world state.
+ * the sim is fixed-step and fixed-seed, so a tick names a world state. Dev server
+ * only, like devState.
  *
  * The phase is part of the predicate on purpose. The dev server reloads the page
  * whenever a module it cannot hot-swap changes, which during a parallel build
@@ -257,11 +280,12 @@ export async function pressPlay(page, { flockSize } = {}) {
  */
 export async function waitForTick(page, tick, timeout) {
   await page.waitForFunction(
-    ({ selector, target }) => {
-      const data = document.querySelector(selector)?.dataset;
-      return data?.gamePhase === 'playing' && Number(data.tick) >= target;
+    async (target) => {
+      const { useGameStore } = await import('/src/state/store.ts');
+      const state = useGameStore.getState();
+      return state.gamePhase === 'playing' && state.sim.tick >= target;
     },
-    { selector: READOUT, target: tick },
+    tick,
     { timeout, polling: 100 },
   );
 }

@@ -28,6 +28,7 @@
 
 import {
   SEED,
+  devState,
   launchBrowser,
   pressPlay,
   readout,
@@ -138,14 +139,15 @@ try {
     await page.goto(`${base}/?seed=${SEED}&debug=${debug}`, { waitUntil: 'load', timeout: 60_000 });
     await pressPlay(page, { flockSize });
     await waitForTick(page, ticks, TICK_TIMEOUT_MS);
-    const before = await readout(page);
+    const before = await devState(page);
     const frames = await sampleFrameTimes(page, seconds * 1000);
-    const after = await readout(page);
+    const after = await devState(page);
+    const { backend } = await readout(page);
     if (errors.length > 0) throw new Error(`page errors: ${errors.join(' | ')}`);
 
     console.log(
       JSON.stringify({
-        backend: after.backend,
+        backend,
         present: uncapped ? 'uncapped' : 'vsync',
         flockSize: Number(after.flockSize),
         viewport: `${width}x${height}`,

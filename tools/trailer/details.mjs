@@ -14,7 +14,7 @@ try {
  await page.goto('http://127.0.0.1:5489/?seed=20260821');
  await page.locator('.herd-app[data-ready="true"]').waitFor({timeout:90000});
  await page.locator('.herd-size').filter({hasText:'200'}).click();
- await page.getByRole('button',{name:'Play',exact:true}).click();await page.waitForTimeout(700);
+ await page.getByRole('button',{name:'Play solo',exact:true}).click();await page.waitForTimeout(700);
  report.scene=await page.evaluate(()=>__trailer.find());
  await page.evaluate(()=>{
   document.title='SDS Film Capture';

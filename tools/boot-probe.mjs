@@ -92,7 +92,7 @@ async function measure(browser, spec) {
     await page.waitForFunction(
       () => {
         const button = [...document.querySelectorAll('button')]
-          .find((node) => node.textContent?.trim() === 'Play');
+          .find((node) => node.textContent?.trim() === 'Play solo');
         return button instanceof HTMLButtonElement && !button.disabled;
       },
       undefined,
