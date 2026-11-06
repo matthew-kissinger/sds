@@ -116,7 +116,7 @@ multiplayer release has been replayed and qualified today.
 | `worker/src/GameSim.js`, `applyPlayerInput` | Reject non-finite input and stale sequences | The client stop-position correction lets client coordinates affect authority. New protocol sends intent only |
 | `RoomDO.ts`, `tests/worker/delta-*.spec.ts`, `tests/delta-client-reconstruction.spec.ts` | Broadcast-basis correctness, keyframe recovery, bounded parsing and slow-client handling | One protocol version; no permanent legacy cohorts; measure current wire sizes and runtime backpressure support |
 | `docs/hardening/delta-protocol-design.md` | Concrete bandwidth arithmetic and explicit recovery cases | It describes the pre-implementation baseline. Historical savings and 200-sheep record sizes are not v3 measurements |
-| `shared/CompetitiveLayout.js`, `CompetitiveMode.js` | Shared flock with player-owned destinations; deterministic layout | One agreed finish rule for all party sizes; no player-ID tie winner; no assumption that three cardinal pens are fair |
+| `shared/CompetitiveLayout.js`, `CompetitiveMode.js` (removed 2026-11-05; in git history) | Shared flock with player-owned destinations; deterministic layout | One agreed finish rule for all party sizes; no player-ID tie winner; no assumption that three cardinal pens are fair |
 | `docs/multiplayer-ux.md`, `js/multiplayer/MultiplayerCoordinator.js` | Invitation, readiness and host-handoff scenarios | No automatic public-room mode rotation; no parallel UI generations or bridge globals |
 | `tests/e2e/mp/_helpers.ts` and invite/reconnect/soak specs | Independent browser identities and lifecycle scenarios | Helpers used `mpProbe`/`testNoCanvas`; those are not rendered-play evidence and must not return as production switches |
 

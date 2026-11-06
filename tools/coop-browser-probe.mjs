@@ -3,7 +3,7 @@
 import { launchBrowser } from './probe-lib.mjs';
 import { chromium } from 'playwright';
 import { decode } from '@msgpack/msgpack';
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const mobile = process.argv.includes('--mobile'), webgl = process.argv.includes('--webgl');
 const players = process.argv.includes('--four') ? 4 : process.argv.includes('--three') ? 3 : 2;
@@ -12,23 +12,14 @@ const start = competitive ? 'Start competitive' : 'Start co-op';
 const suffix = webgl ? '?debug=webgl' : '';
 const origin = process.argv.find(a => a.startsWith('--url='))?.slice(6) ?? 'http://localhost:5198';
 const hub = process.argv.find(a => a.startsWith('--hub-cdp='))?.slice(10);
-const staging = origin === 'https://staging.sheepdogsim.com';
-const hosted = staging || origin === 'https://sheepdogsim.com';
+const hosted = origin === 'https://sheepdogsim.com';
 if (hub && players !== 2) throw new Error('The PC/hub smoke uses two rendered clients.');
-const passcode = staging ? JSON.parse(await readFile('.wrangler/staging/realtime-secrets.json', 'utf8')).STAGING_PASSCODE : null;
-const output = `captures/multiplayer/${staging ? 'staging-coop' : hosted ? 'production-coop' : competitive ? 'local-competitive' : 'local-coop'}/${webgl ? 'webgl2' : 'webgpu'}-${mobile ? 'mobile' : 'desktop'}-${players}`; await mkdir(output, { recursive: true });
+const output = `captures/multiplayer/${hosted ? 'production-coop' : competitive ? 'local-competitive' : 'local-coop'}/${webgl ? 'webgl2' : 'webgpu'}-${mobile ? 'mobile' : 'desktop'}-${players}`; await mkdir(output, { recursive: true });
 const browser = await launchBrowser(undefined, ['--disable-background-timer-throttling', '--disable-renderer-backgrounding']);
 const hubBrowser = hub ? await chromium.connectOverCDP(hub) : null;
 const errors = [], snapshots = Array.from({ length: players }, () => []);
 const contexts = await Promise.all(Array.from({ length: players }, (_, i) => (i === 1 && hubBrowser ? hubBrowser : browser).newContext({ ...(competitive && i === 0 ? { recordVideo: { dir: `${output}/motion`, size: { width: 960, height: 600 } } } : {}), viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 800 } })));
 const pages = await Promise.all(contexts.map(c => c.newPage()));
-async function navigate(page, url) {
-  await page.goto(url);
-  if (passcode && await page.getByLabel('Staging passcode').isVisible()) {
-    await page.getByLabel('Staging passcode').fill(passcode);
-    await page.getByRole('button', { name: 'Enter staging' }).click();
-  }
-}
 try {
   for (const [i, p] of pages.entries()) {
     await p.route('**/cloudflareinsights.com/**', route => route.abort());
@@ -40,7 +31,7 @@ try {
   }
   const [host, guest] = pages;
   console.log('Opening built client');
-  await navigate(host, origin + '/' + suffix);
+  await host.goto(origin + '/' + suffix);
   await host.waitForFunction(() => document.querySelector('.herd-app')?.dataset.ready === 'true', {}, { timeout: 90000 });
   await host.getByRole('button', { name: hosted ? 'Play multiplayer' : 'Play multiplayer locally', exact: true }).click();
   if (competitive) await host.getByLabel(/^Mode/).selectOption('competitive');
@@ -53,12 +44,12 @@ try {
   await host.getByRole('button', { name: start, exact: true }).waitFor({ timeout: 20000 });
   const link = await host.getByLabel('Invite link', { exact: true }).inputValue();
   console.log('Host waiting room created');
-  await navigate(guest, link + suffix);
+  await guest.goto(link + suffix);
   await guest.waitForFunction(() => document.querySelector('.herd-app')?.dataset.ready === 'true', {}, { timeout: 90000 });
   await guest.getByRole('button', { name: 'Join room', exact: true }).click();
   await guest.getByRole('button', { name: 'Ready', exact: true }).waitFor({ timeout: 20000 });
   for (const extra of pages.slice(2)) {
-    await navigate(extra, link + suffix);
+    await extra.goto(link + suffix);
     await extra.waitForFunction(() => document.querySelector('.herd-app')?.dataset.ready === 'true', {}, { timeout: 90000 });
     await extra.getByRole('button', { name: 'Join room', exact: true }).click();
     await extra.getByRole('button', { name: 'Ready', exact: true }).click();
