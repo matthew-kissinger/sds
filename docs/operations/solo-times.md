@@ -27,9 +27,7 @@ it can break returning players silently.
 
 1. Merge the reviewed commit to `main` and confirm `Client CI` is green. It
    runs the Worker typecheck and the full suite, including `tests/worker`.
-2. Optionally confirm it on the pull request's preview alias,
-   `https://pr-<n>-sds-worker-preview.matt-m-kissinger.workers.dev`, which
-   runs that build against the preview D1.
+2. Confirm it locally against the local D1 (`npm run dev`).
 3. Mint a check identity on production and keep the file outside the
    repository:
    `node scripts/verify-identity.mjs --url https://sheepdogsim.com --save <file>`

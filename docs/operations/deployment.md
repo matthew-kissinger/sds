@@ -1,9 +1,11 @@
 # Deploying Sheepdog Sim
 
-The owner-approved isolated multiplayer pilot has a separate, bounded staging
-procedure in [multiplayer-staging.md](multiplayer-staging.md). Its two Workers,
-database and hostname do not use production tags or change this production
-workflow. Staging-only Wrangler configs live under ignored `.wrangler/staging/`.
+There is no staging or preview environment. A change is tested locally and
+reaches production by a tag. The pull-request preview Worker and the October
+2026 multiplayer pilot (`sds-game-staging`, `sds-realtime-staging`, their D1 and
+`staging.sheepdogsim.com`) were removed on the owner's direction; the pilot's
+receipt is in git history, and `docs/history/status-log.md` holds the
+measurements taken on the preview Worker.
 
 This is the single answer to "how does a change reach production". It describes
 the shape the repository deploys, from Release 1 (3.2.0) on: one Worker serves
@@ -46,9 +48,9 @@ service bindings to `sds-worker`'s `RoomAdmission` and `InviteShell` entrypoints
 No production D1 migration or secret replacement occurs. An exact invite GET
 serves the game through the asset service; `/status` remains JSON. Both services
 carry the tagged SHA (`release.json` and `/r/health`), protocol 2 / room schema 2.
-The first release caps occupied rooms at one per NA/EU/APAC region; it has no
-staging gate or cutoff. This is a capacity bound, not an account billing cap.
-No paid load test or increased staging allowance is part of this release.
+The first release caps occupied rooms at one per NA/EU/APAC region. This is a
+capacity bound, not an account billing cap. No paid load test is part of this
+release.
 
 The first deploy has no existing production rooms to drain. Before later
 realtime releases, stop new room creation (set all regional caps to zero),
@@ -60,16 +62,13 @@ workflow pairs both services; client-only independent releases are future work.
 Rollback both services to a compatible tagged SHA using that tag's workflow.
 To return to pre-multiplayer 3.6.1, delete only the `sds-realtime` `/r/*` route
 and dispatch the 3.6.1 tag workflow with its exact SHA; retain its namespaces
-for recovery. Never restore the old v2 classes on `sds-worker`. Staging's
-hostname, Workers, D1, namespaces and temporary credentials remain separate.
+for recovery. Never restore the old v2 classes on `sds-worker`.
 
 **Workers Logs, owner-approved 2026-10-26:** `realtime/wrangler.json` declares
 `observability: { enabled: true }`, the same setting `sds-worker` carries in
 `app/cloudflare.config.ts` and `wrangler.toml`. It took effect with the 3.9.1
 tagged `Deploy` on 2026-10-26 (`wrangler deploy --config realtime/wrangler.json`);
 the script settings API then reported Workers Logs enabled on `sds-realtime`.
-Staging is unaffected: `tools/staging-config.mjs` writes its own configs with
-observability off.
 
 There is exactly one way the game reaches players.
 
@@ -105,7 +104,6 @@ pushed, and keeps a `workflow_dispatch` escape hatch that takes a full
    the existing release. A dispatch deploy publishes no release.
 
 Nothing else deploys production. `Client CI` verifies and never deploys.
-`Preview` uploads pull requests to the preview Worker, never to production.
 
 The `CF_API_TOKEN` repository secret is the Account API Token
 `sds-github-deploy` (created 2026-10-16, expires 2027-10-16), and its policy
@@ -113,7 +111,7 @@ is exactly what the two workflows call, nothing more:
 
 | Scope | Permission | Why |
 | --- | --- | --- |
-| Account | Workers Scripts, Edit | upload the Worker and its assets, create preview versions |
+| Account | Workers Scripts, Edit | upload the Worker and its assets |
 | Account | D1, Read | the `DB` binding is validated at deploy |
 | Account | Account Settings, Read | account resolution |
 | Zone `sheepdogsim.com` only | Workers Routes, Edit | published the route from `app/cloudflare.config.ts` until 3.3.2. Not needed since: the 3.3.2 deploy, declaring no route, published the Custom Domain with this policy unchanged. The row goes at the next token rotation |
@@ -139,8 +137,6 @@ same day.
 | `www.sheepdogsim.com` | A proxied DNS record and a zone redirect rule to the apex, 301 with path and query kept. Never served; see Zone configuration. |
 | `sds-worker` | The production Worker. Serves the built game as static assets and the identity and score API under `/api/*`. Holds `JWT_SECRET` and the `DB` binding to D1 `sds-db`. |
 | `sds-worker.matt-m-kissinger.workers.dev` | The same Worker on its own hostname. Kept on (`workers_dev = true`) because every client built before Release 1 calls the API here; it serves the game too, under its own origin and therefore its own `localStorage`. Not a URL to publish. |
-| `sds-worker-preview` | The preview Worker (the `preview` mode of `app/cloudflare.config.ts`; `[env.preview]` in `wrangler.toml`), with its own D1 `sds-db-preview` and its own `JWT_SECRET`. Pull requests upload versions here and deploy to it. |
-| `pr-<n>-sds-worker-preview.matt-m-kissinger.workers.dev` | Pull request `<n>`'s preview: a version alias of `sds-worker-preview`, game and API on one origin. |
 | `sds-frontend` | The Cloudflare Pages project that served the game until Release 1. **Dormant**: nothing deploys to it, and it is not deleted, because it holds the immutable v2 deployment. Since 3.3.1 it has no custom domain; `sheepdogsim.com` is the Worker's, and a v2 rollback gives the hostname back to Pages first (`docs/operations/v2-rollback.md`). |
 | `sds-frontend.pages.dev` | The Pages project's own hostname. It cannot be disabled and keeps serving the last Pages deployment (3.1.0), which carries `<link rel="canonical">` to `sheepdogsim.com`. |
 | `7cea2cd2.sds-frontend.pages.dev` | The immutable v2 deployment kept for rollback. See `docs/operations/v2-rollback.md`. |
@@ -149,11 +145,8 @@ The only GitHub environment is `production`, used by `Deploy`.
 
 ## Where the configuration lives
 
-There is one package. The project is `app/cloudflare.config.ts`: a function of
-the build mode that returns the production Worker (`sds-worker`, the route, D1
-`sds-db`) for the default and the preview Worker (`sds-worker-preview`, no
-route, D1 `sds-db-preview`) for `--mode preview`. Modes replace wrangler's
-environments: each mode returns its whole Worker, nothing is inherited.
+There is one package. The project is `app/cloudflare.config.ts`, which returns the production
+Worker (`sds-worker`, the Custom Domain, D1 `sds-db`).
 `worker/` is a plain directory of source (`worker/src`) and D1 migrations
 (`worker/migrations`); it has no `package.json`. `vite build` runs the two
 build environments through `@cloudflare/vite-plugin` 2.0 and writes the Build
@@ -171,8 +164,8 @@ verifiers, the probes and `vite.config.ts` import it. Four consequences:
 
 - **The deploy ships exactly the Build Output the build produced.**
   `cf deploy --prebuilt` reads it as it stands and builds nothing; the
-  workflows build with this repository's own `npm run build` (or
-  `build:preview`), verify the output, then hand it to `cf`. There is no
+  workflow builds with this repository's own `npm run build`, verifies the
+  output, then hands it to `cf`. There is no
   generated `wrangler.json` and no `--config`.
 - **The paths are the plugin's, not ours.** The plugin reads
   `cloudflare.config.ts` from the Vite root and nowhere else, which is why the
@@ -188,8 +181,8 @@ verifiers, the probes and `vite.config.ts` import it. Four consequences:
   declares only the two private WorkerEntrypoint exports; the verifier rejects
   any Durable Object export, and the account keeps the
   `migration_tag` (`v2`) across `cf`'s uploads: measured by a wrangler deploy
-  of an older commit and a rollback across a `cf` deploy on the preview
-  Worker.
+  of an older commit and a rollback across a `cf` deploy (status log,
+  Release 2 Stage B).
 - **`wrangler.toml` stays while a rollback to the wrangler path is wanted.**
   It is the configuration the 3.2.1 to 3.3.0 tags deploy with, and local
   wrangler commands (`versions view`, `rollback`, `deployments list`) still read
@@ -271,11 +264,6 @@ that govern the hosting declaration (`workersDev`, `domains` and
   an undeclared domain in place too). That is why the route was deleted in
   the dashboard and not by a deploy, and why a route declared again in
   either file would come back with the next deploy of that file.
-- **`routes` is inheritable in wrangler.** `[env.preview]` keeps
-  `routes = []` so that no future top-level route could be inherited by the
-  preview Worker. The cf modes inherit nothing, and the preview mode declares
-  no trigger and no domain. `tests/worker/wrangler-config.spec.ts` and
-  `tests/worker/cloudflare-config.spec.ts` pin this and the rest.
 
 `sds-realtime` now claims only `sheepdogsim.com/r/*`. That route takes
 precedence over the game Custom Domain, without changing its declaration.
@@ -284,7 +272,7 @@ precedence over the game Custom Domain, without changing its declaration.
 
 `sds-worker` has none. The v2 `RoomDO` and `LobbyDO` classes were retired by
 the `v2` migration (`deleted_classes`), which also deleted their stored room
-state. Three platform facts follow, the first measured on the preview Worker:
+state. Two platform facts follow, the first measured during Release 2 Stage B:
 
 - `wrangler versions upload` refuses a config with a pending class lifecycle
   change and uploads nothing ("This Worker has a pending Durable Object
@@ -292,9 +280,6 @@ state. Three platform facts follow, the first measured on the preview Worker:
   has been applied by a deploy, the same config uploads normally.
 - No `wrangler rollback` can cross a lifecycle change, so no rollback returns
   `sds-worker` to a version from before Release 1.
-- Version preview URLs are not generated for a Worker with Durable Objects,
-  which is why the preview Worker had to drop them before pull-request
-  aliases could work.
 
 ## Shipping a change
 
@@ -340,7 +325,7 @@ wrangler from the generated `wrangler.json`; the current `Deploy` refuses
 them for lack of `app/cloudflare.config.ts`) and 3.2.0, whose configuration
 was in `worker/wrangler.toml`. The platform does not care which tool uploaded
 a version: a wrangler deploy over a `cf` deployment and a rollback across it
-were measured on the preview Worker to leave the bindings and the migration
+were measured during Release 2 Stage B to leave the bindings and the migration
 tag as they were.
 
 **The hosting itself.** Since 3.3.2 there is no hosting rollback separate
@@ -372,8 +357,7 @@ minutes. There is no separate command to write it.
 
 `scripts/verify-release-manifest.mjs` checks the local artifact before the
 deploy and the live manifest after it. `scripts/verify-deploy-config.mjs --cf`
-checks the Build Output (production, or `--preview` for a build made with
-`--mode preview`): the mode in `config.json`, and in `worker.config.json` the
+checks the Build Output: the mode in `config.json`, and in `worker.config.json` the
 name, triggers, `workersDev`, `previewUrls`, compatibility date and flags,
 observability, the bindings with the D1 id, no Durable Object export, the
 assets settings, a bundle entry that exists, and an assets directory that holds
@@ -482,34 +466,13 @@ claims current clients, unregisters itself, and registers no fetch handler, so
 requests always use the network and the normal browser cache. Do not reintroduce
 a caching service worker or a Vite plugin that writes one.
 
-## Previews
+## Pull requests
 
-`Preview` (`.github/workflows/preview.yml`) runs for pull requests from this
-repository, skipping Dependabot, which receives no secrets. It builds with
-`npm run build:preview` (`vite build --mode preview`) and no
-`VITE_SCORE_API_BASE`, so the preview calls its own origin. The order matters:
-it verifies the Build Output with `verify-deploy-config.mjs --cf --preview`,
-migrates the preview D1 only (the script names `wrangler.toml` and `--env
-preview` itself), dry-runs `cf`, uploads the aliased version with `cf workers
-versions create --prebuilt --mode preview --preview-alias pr-<n>`, and then
-deploys the same output to the preview Worker with `cf deploy --prebuilt
---mode preview`, so every pull request also exercises the deploy path
-production uses. One pull request therefore creates two versions. The preview
-D1 id (`6d5b0fce-952f-4d94-8936-b51fc559496c`) is committed in both
-configuration files: a database id is an identifier, not a secret, and
-`d1-migrate-remote.mjs` refuses to run a preview migration against the
-production id. The upload leaves every other pull request's alias alone. It
-then verifies the alias and the deployed root by content type and a register
-round trip.
-
-Previews never upload a version of `sds-worker`: a version preview of
-production would answer on a throwaway hostname with production's D1 and
-secrets. `preview_urls = false` on production makes that impossible.
-
-A pull request that adds a Durable Object class declares it in the config's
-`exports` map; `cf` has no migrations array, the map is the live set of
-classes, and the docs call it one-way once deployed. Measure such a change on
-the preview Worker first, as Release 2 Stage B measured the tag.
+Pull requests get `Client CI` and nothing else. Test a change locally (see
+below) and merge to `main`; the tag deploys it. A pull request that adds a
+Durable Object class declares it in the config's `exports` map; `cf` has no
+migrations array, the map is the live set of classes, and the docs call it
+one-way once deployed.
 
 ## Local development
 
@@ -540,5 +503,4 @@ build at any other API origin.
 
 The client uses only the documented identity and score REST routes. Production
 D1 migrations are not applied by `Deploy`; `scripts/d1-migrate-remote.mjs`
-applies them deliberately, and the preview workflow applies them to the preview
-database only. Score-service specifics are in `docs/operations/solo-times.md`.
+applies them deliberately. Score-service specifics are in `docs/operations/solo-times.md`.

@@ -5,9 +5,7 @@
 // deploy ships: `wrangler deploy --config .wrangler/build/sds_worker/wrangler.json`
 // (docs/operations/deployment.md). Run it after `npm run build`.
 //
-//   node scripts/verify-deploy-config.mjs             # the production build
-//   CLOUDFLARE_ENV=preview npm run build
-//   node scripts/verify-deploy-config.mjs --preview   # the preview build
+//   node scripts/verify-deploy-config.mjs
 //
 // The source of truth is wrangler.toml, pinned by tests/worker/wrangler-config.spec.ts;
 // this proves the Vite plugin carried every fact through to the generated file
@@ -22,21 +20,13 @@ export { BUILD_OUTPUT, BUILT_CLIENT }
 
 const PRODUCTION = {
   name: 'sds-worker',
-  // No route on either Worker since 3.3.2: sheepdogsim.com is production's
+  // No route since 3.3.2: sheepdogsim.com is production's
   // Custom Domain (cf only, docs/operations/declarative-hosting.md), and a
-  // route declared again would be re-published by every deploy. The preview
-  // Worker has neither: a preview must never claim a production hostname.
+  // route declared again would be re-published by every deploy.
   routes: [],
   domains: ['sheepdogsim.com'],
   previewUrls: false,
   database: { name: 'sds-db', id: '513aa937-e60a-4fb6-b499-9f3814149e88' },
-}
-const PREVIEW = {
-  name: 'sds-worker-preview',
-  routes: [],
-  domains: [],
-  previewUrls: true,
-  database: { name: 'sds-db-preview', id: '6d5b0fce-952f-4d94-8936-b51fc559496c' },
 }
 const MIGRATIONS = [
   { tag: 'v1', new_sqlite_classes: ['RoomDO', 'LobbyDO'] },
@@ -45,11 +35,10 @@ const MIGRATIONS = [
 
 
 function parseArgs(args) {
-  const options = { preview: false, cf: false, config: '.wrangler/build/sds_worker/wrangler.json' }
+  const options = { cf: false, config: '.wrangler/build/sds_worker/wrangler.json' }
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
-    if (arg === '--preview') options.preview = true
-    else if (arg === '--cf') options.cf = true
+    if (arg === '--cf') options.cf = true
     else if (arg === '--config') options.config = args[++index]
     else throw new Error(`Unknown argument: ${arg}`)
   }
@@ -64,8 +53,8 @@ function parseArgs(args) {
  * app/cloudflare.config.ts resolved for that mode, `bundle/` holds the script
  * and `assets/` the game. Returns the list of failed assertions.
  */
-export function checkBuildOutput(outputDir, { preview = false } = {}) {
-  const expected = preview ? PREVIEW : PRODUCTION
+export function checkBuildOutput(outputDir) {
+  const expected = PRODUCTION
   const failures = []
   const expect = (label, actual, wanted) => {
     if (!isDeepStrictEqual(actual, wanted)) {
@@ -74,7 +63,7 @@ export function checkBuildOutput(outputDir, { preview = false } = {}) {
   }
   const read = (file) => JSON.parse(readFileSync(resolve(outputDir, file), 'utf8'))
   const rootConfig = read('config.json')
-  expect('buildContext.mode', rootConfig.buildContext?.mode, preview ? 'preview' : 'production')
+  expect('buildContext.mode', rootConfig.buildContext?.mode, 'production')
   expect('buildContext.isPreview', rootConfig.buildContext?.isPreview, false)
 
   const workerDir = resolve(outputDir, 'workers', 'default')
@@ -123,8 +112,8 @@ export function checkBuildOutput(outputDir, { preview = false } = {}) {
  * names the field it checked. `distDir` is where the assets must resolve to,
  * the repository's dist/ unless a test supplies its own.
  */
-export function checkDeployConfig(config, configPath, { preview = false, distDir = resolve(root, 'dist') } = {}) {
-  const expected = preview ? PREVIEW : PRODUCTION
+export function checkDeployConfig(config, configPath, { distDir = resolve(root, 'dist') } = {}) {
+  const expected = PRODUCTION
   const failures = []
   const expect = (label, actual, wanted) => {
     if (!isDeepStrictEqual(actual, wanted)) {
@@ -180,17 +169,17 @@ function main() {
   const options = parseArgs(process.argv.slice(2))
   const configPath = resolve(root, options.config)
   if (!existsSync(configPath)) {
-    throw new Error(`${configPath} does not exist. Run npm run build${options.preview ? (options.cf ? ':preview' : ' with CLOUDFLARE_ENV=preview') : ''} first.`)
+    throw new Error(`${configPath} does not exist. Run npm run build first.`)
   }
   if (options.cf) {
-    const failures = checkBuildOutput(configPath, options)
+    const failures = checkBuildOutput(configPath)
     if (failures.length > 0) {
       for (const failure of failures) console.error(`verify-deploy-config: ${failure}`)
       throw new Error(`${failures.length} Build Output check(s) failed.`)
     }
     const worker = JSON.parse(readFileSync(resolve(configPath, 'workers/default/worker.config.json'), 'utf8'))
     console.log(
-      `Verified Build Output ${options.config} (${options.preview ? 'preview' : 'production'}): ` +
+      `Verified Build Output ${options.config} (production): ` +
         `${worker.name}, triggers ${JSON.stringify(worker.triggers ?? [])}, domains ${JSON.stringify(worker.domains ?? [])}, D1 ${worker.env.DB.id}, private service exports`,
     )
     return
@@ -202,7 +191,7 @@ function main() {
     throw new Error(`${failures.length} deploy configuration check(s) failed.`)
   }
   console.log(
-    `Verified deploy config ${options.config} (${options.preview ? 'preview' : 'production'}): ` +
+    `Verified deploy config ${options.config} (production): ` +
       `${config.name}, routes ${JSON.stringify(config.routes ?? [])}, D1 ${config.d1_databases[0].database_id}, ` +
       `assets ${config.assets.directory}, migrations ${config.migrations.map((m) => m.tag).join(',')}`,
   )

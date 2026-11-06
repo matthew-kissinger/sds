@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { checkBuildOutput, checkDeployConfig } from '../../scripts/verify-deploy-config.mjs';
 
 const PRODUCTION_D1 = '513aa937-e60a-4fb6-b499-9f3814149e88';
-const PREVIEW_D1 = '6d5b0fce-952f-4d94-8936-b51fc559496c';
+const OTHER_D1 = '6d5b0fce-952f-4d94-8936-b51fc559496c';
 
 const production = () => ({
   name: 'sds-worker',
@@ -39,14 +39,6 @@ const production = () => ({
   },
 });
 
-const preview = () => ({
-  ...production(),
-  name: 'sds-worker-preview',
-  preview_urls: true,
-  routes: [],
-  d1_databases: [{ binding: 'DB', database_name: 'sds-db-preview', database_id: PREVIEW_D1 }],
-});
-
 let scratch: string;
 let configPath: string;
 let distDir: string;
@@ -65,18 +57,17 @@ beforeAll(() => {
 
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
-const check = (config: unknown, options: { preview?: boolean; distDir?: string } = {}) =>
+const check = (config: unknown, options: { distDir?: string } = {}) =>
   checkDeployConfig(config, configPath, { distDir, ...options }) as string[];
 
 describe('verify-deploy-config', () => {
-  it('passes the production and preview shapes it expects', () => {
+  it('passes the production shape it expects', () => {
     expect(check(production())).toEqual([]);
-    expect(check(preview(), { preview: true })).toEqual([]);
   });
 
   it('fails a wrong D1 id', () => {
     const config = production();
-    config.d1_databases[0].database_id = PREVIEW_D1;
+    config.d1_databases[0].database_id = OTHER_D1;
     expect(check(config).join('\n')).toMatch(/d1_databases:/);
   });
 
@@ -90,14 +81,6 @@ describe('verify-deploy-config', () => {
     const config = production();
     config.migrations[1] = { tag: 'v2', deleted_classes: ['RoomDO'] } as any;
     expect(check(config).join('\n')).toMatch(/migrations:/);
-  });
-
-  it('fails the preview configuration in production mode, and the reverse', () => {
-    const failures = check(preview()).join('\n');
-    expect(failures).toMatch(/name:/);
-    expect(failures).toMatch(/preview_urls:/);
-    expect(failures).toMatch(/d1_databases:/);
-    expect(check(production(), { preview: true }).join('\n')).toMatch(/name:/);
   });
 
   it('fails changed compatibility, observability and source-map settings', () => {
@@ -143,19 +126,19 @@ describe('verify-deploy-config', () => {
  * Stage B): app/.cloudflare/output/v0 with config.json, the Worker's
  * worker.config.json, its bundle and the assets.
  */
-const cfWorker = (preview = false) => ({
+const cfWorker = () => ({
   exports: { RoomAdmission: { type: 'worker' }, InviteShell: { type: 'worker' } },
-  name: preview ? 'sds-worker-preview' : 'sds-worker',
+  name: 'sds-worker',
   compatibilityDate: '2026-04-01',
   compatibilityFlags: ['nodejs_compat'],
   assets: { notFoundHandling: '404-page', runWorkerFirst: ['/api/*', '/c/*'] },
   observability: { enabled: true },
   workersDev: true,
-  previewUrls: preview,
-  ...(preview ? {} : { domains: ['sheepdogsim.com'] }),
+  previewUrls: false,
+  domains: ['sheepdogsim.com'],
   env: {
     ASSETS: { type: 'assets' },
-    DB: { type: 'd1', name: preview ? 'sds-db-preview' : 'sds-db', id: preview ? PREVIEW_D1 : PRODUCTION_D1 },
+    DB: { type: 'd1', name: 'sds-db', id: PRODUCTION_D1 },
     JWT_SECRET: { type: 'secret' },
   },
   manifest: { type: 'partial', mainModule: 'index.js', modules: {} },
@@ -177,41 +160,34 @@ function writeBuildOutput(worker: Record<string, unknown>, mode: string, { withR
 
 describe('verify-deploy-config --cf', () => {
   const outputs: string[] = [];
-  const check = (worker: Record<string, unknown>, mode: string, options: { preview?: boolean; withRelease?: boolean; withNotFound?: boolean } = {}) => {
+  const check = (worker: Record<string, unknown>, mode: string, options: { withRelease?: boolean; withNotFound?: boolean } = {}) => {
     const output = writeBuildOutput(worker, mode, options);
     outputs.push(output);
-    return checkBuildOutput(output, options) as string[];
+    return checkBuildOutput(output) as string[];
   };
   afterAll(() => { for (const output of outputs) rmSync(output, { recursive: true, force: true }); });
 
-  it('passes the production and preview Build Outputs it expects', () => {
+  it('passes the production Build Output it expects', () => {
     expect(check(cfWorker(), 'production')).toEqual([]);
-    expect(check(cfWorker(true), 'preview', { preview: true })).toEqual([]);
   });
 
-  it('fails a build made in the other mode', () => {
-    expect(check(cfWorker(true), 'preview').join('\n')).toMatch(/buildContext\.mode:|^name:/m);
-    expect(check(cfWorker(), 'production', { preview: true }).join('\n')).toMatch(/buildContext\.mode:/);
+  it('fails a build made in another mode', () => {
+    expect(check(cfWorker(), 'preview').join('\n')).toMatch(/buildContext\.mode:/);
   });
 
-  it('fails a wrong D1, a route on either Worker and a Durable Object export', () => {
+  it('fails a wrong D1, a route and a Durable Object export', () => {
     const wrongDb = cfWorker();
-    wrongDb.env.DB.id = PREVIEW_D1;
+    wrongDb.env.DB.id = OTHER_D1;
     expect(check(wrongDb, 'production').join('\n')).toMatch(/^env:/m);
     // Since 3.3.2 no route is declared: one that comes back would be
     // re-published by every deploy (docs/operations/declarative-hosting.md).
     const productionRoute = { ...cfWorker(), triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] };
     expect(check(productionRoute, 'production').join('\n')).toMatch(/^triggers:/m);
-    const previewRoute = { ...cfWorker(true), triggers: [{ type: 'fetch', pattern: 'sheepdogsim.com/*', zone: 'sheepdogsim.com' }] };
-    expect(check(previewRoute, 'preview', { preview: true }).join('\n')).toMatch(/^triggers:/m);
     const withExports = { ...cfWorker(), exports: { RoomDO: { type: 'durable-object', storage: 'sqlite' } } };
     expect(check(withExports, 'production').join('\n')).toMatch(/^exports:/m);
-    // The apex Custom Domain is production's alone; a preview that declares
-    // one, or a production build without it, fails.
+    // A production build without the apex Custom Domain fails.
     const noDomain = { ...cfWorker(), domains: [] };
     expect(check(noDomain, 'production').join('\n')).toMatch(/^domains:/m);
-    const previewDomain = { ...cfWorker(true), domains: ['sheepdogsim.com'] };
-    expect(check(previewDomain, 'preview', { preview: true }).join('\n')).toMatch(/^domains:/m);
   });
 
   it('fails a missing bundle entry and a missing release.json', () => {

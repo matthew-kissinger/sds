@@ -4,8 +4,7 @@ name: Deploy
 # static assets and the score API on sheepdogsim.com, so a single
 # `cf deploy --prebuilt` of the Build Output the build wrote ships both halves
 # from the same checkout (Release 2 Stage B; docs/operations/deployment.md is
-# the procedure). Production stayed on wrangler until the four Stage B checks
-# passed on the preview Worker (docs/history/status-log.md, Release 2 Stage B).
+# the procedure).
 
 on:
   # Normal path: push an annotated release tag. The tag names the commit, so

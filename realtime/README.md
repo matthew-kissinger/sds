@@ -1,7 +1,7 @@
 # Multiplayer service
 
-Multiplayer work under spec/03. The owner-approved isolated staging pilot is
-deployed; see [access and live receipt](../docs/operations/multiplayer-staging.md#live-pilot-receipt-october-20).
+Multiplayer work under spec/03. The October 2026 staging pilot was removed
+on 2026-11-05; its receipt is in git history.
 The owner authorized promotion to the public game as 3.7.0 after that smoke. No new asset was created. Local commands below
 remain entirely local; the dated validation notes retain their original scope.
 
@@ -153,9 +153,7 @@ shell navigation to the game assets before provisioning is approved.
   ordinary input packets, checks agreed completion and starts a fresh rematch.
   It has a five-minute bound and cannot mutate authoritative state.
 
-The [staging proposal](../docs/operations/multiplayer-staging.md) records the
-approved $20 pilot budget and the required final setup review. No provisioning,
-push or deployment is authorized by these local commands.
+No provisioning, push or deployment is authorized by these local commands.
 
 ## Playable local candidate validation, 2026-10-20
 

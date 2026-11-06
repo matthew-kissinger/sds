@@ -37,7 +37,7 @@ import {
 import { RuntimeQualityGovernor } from './quality/RuntimeQualityGovernor';
 
 const OwnerDashboard = lazy(() => import('./multiplayer/OwnerDashboard'));
-const MultiplayerRoot = ['production', 'coop', 'coop-staging'].includes(import.meta.env.MODE) ? lazy(() => import('./multiplayer/MultiplayerRoot')) : null;
+const MultiplayerRoot = ['production', 'coop'].includes(import.meta.env.MODE) ? lazy(() => import('./multiplayer/MultiplayerRoot')) : null;
 
 function trackedGlFactory(props: Parameters<typeof glFactory>[0]) {
   const report = useGameStore.getState().reportBootStep;
