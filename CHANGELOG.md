@@ -6,6 +6,59 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.10.0] - 2026-11-06
+
+### Added
+
+- Language support, as one game at one address. `/` opens in English unless a player
+  has saved a choice or the address carries `?lang=<code>`. A language picker is on the
+  title screen and in Settings, and a browser in a supported language gets a small
+  one-time offer under Play. Indonesian, Malay, Korean, Japanese, Simplified Chinese,
+  Spanish, Brazilian Portuguese, French, German and Russian. Each has had an independent
+  review by an AI model that did not write it. None has been read by a native speaker,
+  and Settings says so. Contract:
+  `spec/15-languages.md`. The Korean strings are adapted from the AGPL-3.0 fork
+  `sigco3111/sds`; see `docs/translations/README.md`.
+- Anonymous counts of how far a page load gets and whether a language was offered,
+  chosen or kept, through the existing `/api/event` route, which no client had called
+  since version 3: a coarse load time, renderer and tier at ready, the first real
+  movement, and where a player was, in coarse ranges, when the page was hidden or
+  closed. No identifier, name or token. `docs/operations/funnel.md`.
+- Links to the studio's other sites on the title screen.
+- `/herding-guide`, the rules the flock follows with the simulation's numbers,
+  `/multiplayer`, how co-op and competitive rooms work, and `/id/`, a standalone
+  Indonesian page beside the game. No `hreflang` joins `/id/` to `/`.
+- Screenshots on the static pages, from `tools/capture-site-shots.mjs`.
+- `tests/public-pages.spec.ts`: the guide's exact numbers are read from the code, so
+  changing one fails until the page says the new number. The "about" speed ratios
+  fail only when their rounding to the nearest half changes.
+
+### Changed
+
+- `/about` no longer calls the game single-player. It now covers multiplayer, the
+  flock's behaviour and what the game is not. Its title leads with the name.
+- `/support` adds the walk and timer keys, the bark cooldown and a multiplayer note.
+- The game page's JSON-LD rewrites its description and adds an alternate name, the
+  player count, screenshots and the guide. The page's title, meta description and
+  canonical are unchanged.
+
+- `/api/event` accepts only the names the client sends, gives a stack no wider cap than
+  any other value now that no client sends one, and has its own rate-limit bucket, so
+  counts cannot spend what a sign-in or a score card needs.
+
+### Fixed
+
+- The Sheep Registry's search box and breed filter each take a row, so neither cuts off
+  its text. The sheep card no longer leaves a separator hanging after the origin.
+- On phones, the room form's selects, a result's scoreboard and the in-round label no
+  longer cut off their text.
+- The title card scrolls at any size when it is too tall for the screen. Before, only
+  short narrow and landscape screens did, and on the sizes between them the links at
+  the bottom were cut off with no way to reach them.
+- `/play/25`, `/play/75` and `/play/200` start their flock once per page load, as
+  `spec/14-score-cards.md` says. Resuming from pause restarted the run, and End run
+  dropped the player into a new round instead of the title.
+
 ## [3.9.8] - 2026-11-05
 
 ### Changed

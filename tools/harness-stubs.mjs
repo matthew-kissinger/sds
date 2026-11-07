@@ -39,6 +39,7 @@ export async function stubHarnessNetwork(target, { displayName = PLAYER.displayN
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204 });
     switch (path) {
       case '/api/healthz': return json({ ok: true, worker: 'harness-stub' });
+      case '/api/event': return json({ ok: true });
       case '/api/register': return json({ token: 'harness-token', authSecret: 'harness-secret', playerProfile: profile });
       case '/api/rename': return json({ success: true, playerProfile: profile });
       case '/api/score': return json({ success: true, updated: false, isNewRecord: false, playerProfile: profile });

@@ -5,7 +5,12 @@
 # actually draws and ships it as one variable woff2.
 #
 #   npm run bake:font          rebake into app/public/fonts/
-#   npm run check:font-bake    verify the committed file is byte-identical
+#   npm run check:font-bake    verify the committed files are byte-identical
+#
+# Three files. piazzolla-ui.woff2 is what every page loads. piazzolla-ui-latin1.woff2
+# holds the accented Latin that Spanish, Portuguese, French and German need, and
+# piazzolla-ui-cyrillic.woff2 the Russian alphabet, each behind a unicode-range in
+# UiStyles, so a page that draws none of those characters never fetches them.
 #
 # Two axes survive the bake. `wght` spans 400-700 because UiStyles uses all
 # four of those weights, and synthesising the missing ones smears the stems.
@@ -26,6 +31,8 @@ from fontTools.varLib.instancer import instantiateVariableFont
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / 'assets' / 'fonts' / 'Piazzolla[opsz,wght].ttf'
 OUTPUT = ROOT / 'app' / 'public' / 'fonts' / 'piazzolla-ui.woff2'
+LATIN1_OUTPUT = ROOT / 'app' / 'public' / 'fonts' / 'piazzolla-ui-latin1.woff2'
+CYRILLIC_OUTPUT = ROOT / 'app' / 'public' / 'fonts' / 'piazzolla-ui-cyrillic.woff2'
 
 # Printable ASCII, plus every non-ASCII character the client draws. The two
 # rotation arrows the settings panel uses (U+27F2, U+27F3) are absent from
@@ -45,11 +52,17 @@ CODEPOINTS = (
     ]
 )
 
+# The Latin-1 Supplement without the two the base file has, plus French oe and
+# German low quotes. These ranges must match the unicode-range in UiStyles.
+LATIN1_CODEPOINTS = [c for c in range(0xA1, 0x100) if c != 0xB7] + [0x152, 0x153, 0x178, 0x201A, 0x201E]
+# The Russian alphabet and the numero sign.
+CYRILLIC_CODEPOINTS = [0x401, *range(0x410, 0x450), 0x451, 0x2116]
+
 WEIGHT_RANGE = (400, 700)
 OPTICAL_RANGE = (8, 30)
 
 
-def bake() -> bytes:
+def bake(codepoints: list[int]) -> bytes:
     # Without this fontTools stamps head.modified with the current time on
     # save, and two bakes of the same source stop matching byte for byte.
     font = TTFont(SOURCE, recalcTimestamp=False)
@@ -62,7 +75,7 @@ def bake() -> bytes:
     options.drop_tables += ['DSIG']
 
     subsetter = Subsetter(options=options)
-    subsetter.populate(unicodes=CODEPOINTS)
+    subsetter.populate(unicodes=codepoints)
     subsetter.subset(font)
 
     # Narrow the axes only after subsetting. Instancing first leaves gvar
@@ -85,30 +98,35 @@ def main() -> int:
         print(f'Source font missing at: {SOURCE}', file=sys.stderr)
         return 1
 
-    baked = bake()
-    digest = hashlib.sha256(baked).hexdigest()
+    for output, codepoints in (
+        (OUTPUT, CODEPOINTS),
+        (LATIN1_OUTPUT, LATIN1_CODEPOINTS),
+        (CYRILLIC_OUTPUT, CYRILLIC_CODEPOINTS),
+    ):
+        baked = bake(codepoints)
+        digest = hashlib.sha256(baked).hexdigest()
 
-    if '--check' in sys.argv:
-        if not OUTPUT.exists():
-            print(f'Committed font does not exist: {OUTPUT}', file=sys.stderr)
-            return 1
-        current = OUTPUT.read_bytes()
-        if current != baked:
-            print(
-                'Committed font differs from a fresh bake.\n'
-                f'  committed: {len(current)} bytes, sha256 '
-                f'{hashlib.sha256(current).hexdigest()}\n'
-                f'  rebaked:   {len(baked)} bytes, sha256 {digest}\n'
-                'Run: npm run bake:font',
-                file=sys.stderr,
-            )
-            return 1
-        print(f'Font is current: {len(current)} bytes, sha256 {digest}')
-        return 0
+        if '--check' in sys.argv:
+            if not output.exists():
+                print(f'Committed font does not exist: {output}', file=sys.stderr)
+                return 1
+            current = output.read_bytes()
+            if current != baked:
+                print(
+                    f'Committed font {output.name} differs from a fresh bake.\n'
+                    f'  committed: {len(current)} bytes, sha256 '
+                    f'{hashlib.sha256(current).hexdigest()}\n'
+                    f'  rebaked:   {len(baked)} bytes, sha256 {digest}\n'
+                    'Run: npm run bake:font',
+                    file=sys.stderr,
+                )
+                return 1
+            print(f'Font {output.name} is current: {len(current)} bytes, sha256 {digest}')
+            continue
 
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_bytes(baked)
-    print(f'Wrote {OUTPUT.relative_to(ROOT)}: {len(baked)} bytes, sha256 {digest}')
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_bytes(baked)
+        print(f'Wrote {output.relative_to(ROOT)}: {len(baked)} bytes, sha256 {digest}')
     return 0
 
 

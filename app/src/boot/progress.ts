@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
 
+import { translate } from '@app/i18n/store';
+
 export type BootStep =
   | 'renderer'
   | 'terrain'
@@ -43,18 +45,6 @@ const BOOT_WEIGHTS: Readonly<Record<BootStep, number>> = Object.freeze({
   presented: 0.03,
 });
 
-const LABELS: Readonly<Record<BootStep, string>> = Object.freeze({
-  renderer: 'Starting graphics',
-  terrain: 'Shaping the field',
-  grass: 'Loading grass',
-  treeline: 'Planting the treeline',
-  scatter: 'Dressing the meadow',
-  capability: 'Checking graphics',
-  scene: 'Building the field',
-  shaders: 'Preparing cel shading',
-  presented: 'Drawing the first frame',
-});
-
 const ASSET_STEPS: readonly BootStep[] = ['terrain', 'grass', 'treeline', 'scatter'];
 
 export function clampBootProgress(value: number): number {
@@ -70,16 +60,16 @@ export function bootPercent(progress: BootProgress): number {
 }
 
 export function bootStatus(progress: BootProgress): string {
-  if (progress.renderer < 1) return LABELS.renderer;
+  if (progress.renderer < 1) return translate('boot.step.renderer');
 
   const asset = ASSET_STEPS
     .filter((step) => progress[step] < 1)
     .sort((a, b) => (
       BOOT_WEIGHTS[b] * (1 - progress[b]) - BOOT_WEIGHTS[a] * (1 - progress[a])
     ))[0];
-  if (asset !== undefined) return LABELS[asset];
-  if (progress.capability < 1) return LABELS.capability;
-  if (progress.scene < 1) return LABELS.scene;
-  if (progress.shaders < 1) return LABELS.shaders;
-  return LABELS.presented;
+  if (asset !== undefined) return translate(`boot.step.${asset}`);
+  if (progress.capability < 1) return translate('boot.step.capability');
+  if (progress.scene < 1) return translate('boot.step.scene');
+  if (progress.shaders < 1) return translate('boot.step.shaders');
+  return translate('boot.step.presented');
 }

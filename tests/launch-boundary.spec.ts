@@ -36,7 +36,7 @@ describe('client ownership boundary', () => {
     const hud = source('app/src/ui/Hud.tsx');
     const controller = source('app/src/scores/controller.ts');
     const api = source('app/src/scores/api.ts');
-    expect(hud).toContain('New personal best');
+    expect(hud).toContain("t('done.newBest')");
     expect(controller).toContain('useGameStore.subscribe');
     expect(api).toContain("sceneId: SCORE_SCENE_ID");
     expect(api).toContain("gameMode: 'soloClassic'");

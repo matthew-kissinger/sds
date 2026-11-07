@@ -48,6 +48,8 @@ mkdirSync(out, { recursive: true });
 const driver = buildSync({ entryPoints: [join(repo, 'tests/helpers/herding-driver.ts')], bundle: true, write: false, format: 'iife', globalName: 'herdingDriver' }).outputFiles[0].text;
 const cap = Number(process.argv.find(x => x.startsWith('--seconds='))?.slice(10) ?? 600);
 const port = Number(process.argv.find(x => x.startsWith('--port='))?.slice(7) ?? 5364);
+const language = process.argv.find(x => x.startsWith('--lang='))?.slice(7);
+if (language !== undefined && !/^[\w-]+$/.test(language)) throw new Error('Invalid language');
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid port');
 if (!Number.isFinite(cap) || cap <= 0) throw new Error('Invalid duration');
 const deflection = Number(process.argv.find(x => x.startsWith('--deflection='))?.slice(13) ?? 1);
@@ -66,7 +68,7 @@ try {
     const path = new URL(route.request().url()).pathname;
     const unavailable = scoreUnavailable || (submissionUnavailable && path === '/api/score');
     report.apiRequests.push({ path, method: route.request().method(), status: unavailable ? 503 : 200,
-      ...(path === '/api/score' ? { payload: route.request().postDataJSON() } : {}) });
+      ...(path === '/api/score' || path === '/api/event' ? { payload: route.request().postDataJSON() } : {}) });
     return route.fulfill({ status: unavailable ? 503 : 200, contentType: 'application/json',
       body: JSON.stringify(unavailable ? { error: 'Probe service unavailable' } : { entries: [], token: 'probe', authSecret: 'probe', playerProfile: { persistentId: 'probe', displayName: 'Probe', fullName: 'Probe' } }) });
   });
@@ -91,10 +93,11 @@ try {
       throw new Error('Live sim not found in committed React hooks');
     };
   });
-  await page.goto(`http://localhost:${port}/?seed=20260821&debug=webgl`);
+  await page.goto(`http://localhost:${port}/?seed=20260821&debug=webgl${language ? `&lang=${language}` : ''}`);
   await page.locator('.herd-app[data-ready="true"]').waitFor({ timeout: 60000 });
   await page.locator('.herd-size').filter({ hasText: String(flock) }).click();
-  await page.getByRole('button', { name: 'Play solo', exact: true }).click();
+  // By place rather than by word, so the same run works in any language.
+  await page.locator('.herd-title-actions .herd-button--primary').click();
   await page.addScriptTag({ content: driver });
   await page.evaluate(() => {
     globalThis.__herdingSim = globalThis.__findHerdingSim();
@@ -175,7 +178,7 @@ try {
     report.storedBests = await page.evaluate(() => JSON.parse(localStorage.getItem('herd.personal-bests.v1')));
     if (!Number.isFinite(report.storedBests?.[flock]) || report.storedBests[flock] <= 0) throw new Error('Completed best was not persisted');
     report.resultText = await page.locator('.herd-modal').innerText();
-    await page.getByRole('button', { name: 'Play again', exact: true }).click();
+    await page.locator('.herd-panel--completion .herd-button--primary').click();
     await page.locator('.herd-app[data-phase="playing"]').waitFor();
     await page.waitForTimeout(1000);
     report.replayCount = await page.locator('.herd-progress__count').innerText();

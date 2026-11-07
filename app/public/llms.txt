@@ -12,7 +12,10 @@ A free sheep herding game in your browser. Play as a sheepdog in a golden-hour p
 ## How to play
 
 - [How to play and controls](https://sheepdogsim.com/support): Move with W A S D, the arrow keys, the left stick or the touch joystick; hold Shift, the right trigger, gamepad A or Sprint to sprint; press Space, gamepad B or X, or Bark to move nearby sheep; press C or gamepad Y to switch between the Classic and Follow cameras. Approach from behind the sheep relative to the gate and give them room to turn. Browser requirements and troubleshooting.
-- [About the game](https://sheepdogsim.com/about): One dog, one flock, one field. Personal bests are saved on your device, with optional online solo times. Needs JavaScript and WebGL2 or WebGPU.
+- [Herding guide](https://sheepdogsim.com/herding-guide): The rules the flock follows, with the game's own numbers: sheep run from a dog inside 8 meters, a bark reaches 40 meters in a cone with a 1.5 second cooldown, and sheep pressed from the far side are pulled toward the gate within 30 meters. Tips for 25, 75 and 200 sheep.
+- [Multiplayer](https://sheepdogsim.com/multiplayer): Co-op and shared-flock competitive for 2 to 4 players. How to create a room, send an invite link and find public rooms by region. Each region hosts one room at a time for now.
+- [About the game](https://sheepdogsim.com/about): One dog, one flock, one field. No time limit, no way to lose a sheep, no ads and nothing to buy. Personal bests are saved on your device, with optional online solo times. Needs JavaScript and WebGL2 or WebGPU.
+- [Tentang game dalam bahasa Indonesia](https://sheepdogsim.com/id/): What the game is and how to play, in Indonesian.
 - [Privacy](https://sheepdogsim.com/privacy): What the game stores locally, what online times and multiplayer history send, and how aggregate site analytics work.
 
 ## Source

@@ -135,6 +135,8 @@ export interface GameStore {
   readonly uiPanel: UiPanel;
   readonly sceneReady: boolean;
   readonly graphicsLost: boolean;
+  /** True once any device has really pushed the dog during this page load. It does not reset. */
+  readonly dogMoved: boolean;
   readonly bootProgress: BootProgress;
   readonly flockSize: FlockSize;
   readonly pennedCount: number;
@@ -172,6 +174,7 @@ export interface GameStore {
   readonly customizeOrbitAngle: number;
 
   markSceneReady(): void;
+  markDogMoved(): void;
   reportGraphicsLost(): void;
   reportBootStep(step: BootStep, fraction: number): void;
   startGame(flockSize: FlockSize): void;
@@ -327,6 +330,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
     uiPanel: 'none',
     sceneReady: false,
     graphicsLost: false,
+    dogMoved: false,
     gateIndicator: null,
     bootProgress: { ...EMPTY_BOOT_PROGRESS },
     flockSize,
@@ -371,6 +375,10 @@ export const useGameStore = create<GameStore>()((set, get) => {
       if (get().graphicsLost) return;
       get().reportBootStep('presented', 1);
       if (!get().sceneReady) set({ sceneReady: true });
+    },
+
+    markDogMoved() {
+      set({ dogMoved: true });
     },
 
     reportGraphicsLost() {

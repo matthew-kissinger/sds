@@ -3,9 +3,10 @@
 
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '@app/state/store';
+import { translate, useT } from '@app/i18n/store';
 import { DOG_MAX_STAMINA, TICK_HZ } from '@sim/tuning';
 import { OnlineTimes } from '@app/scores/OnlineTimes';
-import { formatOrdinal } from '@app/scores/runGroups';
+import { localizedOrdinal } from '@app/scores/runGroups';
 import { ShareControl } from '@app/scores/ShareControl';
 import { useScoreStore } from '@app/scores/store';
 import { formatRunTime } from './time';
@@ -42,6 +43,7 @@ function SheepMark() {
 
 /** Direct transient read: the timer never subscribes React to per-frame data. */
 function RunTimer() {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const gamePhase = useGameStore((state) => state.gamePhase);
   useEffect(() => {
@@ -56,11 +58,12 @@ function RunTimer() {
     update();
     return () => cancelAnimationFrame(frame);
   }, [gamePhase]);
-  return <div ref={ref} className="herd-timer" aria-label="Run time">0:00.0</div>;
+  return <div ref={ref} className="herd-timer" aria-label={t('hud.runTime')}>0:00.0</div>;
 }
 
 /** Small, always-legible stamina receipt without a React render per frame. */
 function DogStamina() {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLSpanElement>(null);
   const gamePhase = useGameStore((state) => state.gamePhase);
@@ -76,7 +79,7 @@ function DogStamina() {
         ref.current.dataset.low = String(fraction <= 0.25);
         ref.current.dataset.sprinting = String(dog?.sprinting === true);
         ref.current.setAttribute('aria-valuenow', String(percent));
-        ref.current.setAttribute('aria-valuetext', `${percent} percent stamina`);
+        ref.current.setAttribute('aria-valuetext', translate('hud.staminaValue', { percent }));
       }
       if (phase === 'playing') frame = requestAnimationFrame(update);
     };
@@ -89,12 +92,12 @@ function DogStamina() {
       ref={ref}
       className="herd-stamina"
       role="progressbar"
-      aria-label="Dog stamina"
+      aria-label={t('hud.stamina')}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={100}
     >
-      <span className="herd-stamina__label">Sprint</span>
+      <span className="herd-stamina__label">{t('hud.sprint')}</span>
       <span className="herd-stamina__track" aria-hidden="true">
         <span ref={fillRef} className="herd-stamina__fill" />
       </span>
@@ -103,18 +106,19 @@ function DogStamina() {
 }
 
 function PausePanel() {
+  const t = useT();
   const resume = useGameStore((state) => state.resume);
   const openSettings = useGameStore((state) => state.openSettings);
   const reset = useGameStore((state) => state.reset);
   return (
     <div className="herd-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title">
       <section className="herd-panel">
-        <p className="herd-panel__kicker">the field is still</p>
-        <h2 id="pause-title" className="herd-panel__title">Paused</h2>
+        <p className="herd-panel__kicker">{t('pause.kicker')}</p>
+        <h2 id="pause-title" className="herd-panel__title">{t('pause.title')}</h2>
         <div className="herd-panel-actions">
-          <button type="button" className="herd-button herd-button--primary" onClick={resume}>Resume</button>
-          <button type="button" className="herd-button" onClick={openSettings}>Settings</button>
-          <button type="button" className="herd-button herd-button--quiet" onClick={reset}>End run</button>
+          <button type="button" className="herd-button herd-button--primary" onClick={resume}>{t('common.resume')}</button>
+          <button type="button" className="herd-button" onClick={openSettings}>{t('common.settings')}</button>
+          <button type="button" className="herd-button herd-button--quiet" onClick={reset}>{t('pause.endRun')}</button>
         </div>
       </section>
     </div>
@@ -122,6 +126,7 @@ function PausePanel() {
 }
 
 function CompletionPanel() {
+  const t = useT();
   const completionTimeMs = useGameStore((state) => state.completionTimeMs);
   const flockSize = useGameStore((state) => state.flockSize);
   const best = useGameStore((state) => state.personalBests[state.flockSize]);
@@ -141,21 +146,21 @@ function CompletionPanel() {
   return (
     <div className="herd-modal" data-testid="completion">
       <section className="herd-panel herd-panel--completion">
-        <p className="herd-panel__kicker">every sheep is in</p>
+        <p className="herd-panel__kicker">{t('done.kicker')}</p>
         <p className="herd-completion-time">{formatRunTime(completionTimeMs)}</p>
         <p className="herd-best">
-          {isBest ? 'New personal best' : best === null ? '' : `Best ${formatRunTime(best)}`}
+          {isBest ? t('done.newBest') : best === null ? '' : t('done.best', { time: formatRunTime(best) })}
         </p>
         {shared ? (
           <div className="herd-completion-ranks">
-            <p>{formatOrdinal(weekRank)} of {weekPlayers} this week</p>
-            <p>{formatOrdinal(boardRank)} of {boardPlayers} all-time</p>
+            <p>{t('done.weekRank', { rank: localizedOrdinal(weekRank), players: weekPlayers })}</p>
+            <p>{t('done.allTimeRank', { rank: localizedOrdinal(boardRank), players: boardPlayers })}</p>
           </div>
         ) : <OnlineTimes />}
         <div className="herd-panel-actions">
-          <button type="button" className="herd-button herd-button--primary" onClick={() => startGame(flockSize)}>Play again</button>
+          <button type="button" className="herd-button herd-button--primary" onClick={() => startGame(flockSize)}>{t('done.playAgain')}</button>
           {sharePath ? <ShareControl title={shareTitle} text={shareText} path={sharePath} /> : null}
-          <button type="button" className="herd-button herd-button--quiet" onClick={reset}>Title</button>
+          <button type="button" className="herd-button herd-button--quiet" onClick={reset}>{t('done.title')}</button>
         </div>
       </section>
     </div>
@@ -163,6 +168,7 @@ function CompletionPanel() {
 }
 
 export function Hud() {
+  const t = useT();
   const gamePhase = useGameStore((state) => state.gamePhase);
   const uiPanel = useGameStore((state) => state.uiPanel);
   const pennedCount = useGameStore((state) => state.pennedCount);
@@ -183,9 +189,7 @@ export function Hud() {
         data-testid="penned-count"
         data-penned={pennedCount}
         data-flock-size={flockSize}
-        aria-label={
-          `${pennedCount} of ${flockSize} sheep penned`
-        }
+        aria-label={t('hud.penned', { count: pennedCount, total: flockSize })}
       >
         <div className="herd-progress__content">
           <SheepMark />
@@ -200,10 +204,10 @@ export function Hud() {
         <button
           type="button"
           className="herd-icon-button herd-timer-button"
-          aria-label="Run timer"
+          aria-label={t('common.runTimer')}
           aria-pressed={showTimer}
           data-testid="timer-toggle"
-          title={`Run timer (${timerKey.replace(/^Key/, '')})`}
+          title={t('hud.timerTitle', { key: timerKey.replace(/^Key/, '') })}
           onClick={() => setShowTimer(!showTimer)}
         >
           {/* A clock face at the pause button's weight. The same reasoning as
@@ -222,7 +226,7 @@ export function Hud() {
         </button>
       ) : null}
       {gamePhase === 'playing' ? (
-        <button type="button" className="herd-icon-button herd-pause-button" aria-label="Pause" onClick={pause}>
+        <button type="button" className="herd-icon-button herd-pause-button" aria-label={t('hud.pause')} onClick={pause}>
           {/* Drawn rather than typed. "II" is two glyphs of the UI serif, so it
               came out with the face's own stroke contrast and serifs and read as
               a Roman two. Drawn as two strokes rather than two filled bars: the

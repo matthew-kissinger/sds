@@ -77,7 +77,13 @@ function verifyPages(files) {
     '/about': 'https://sheepdogsim.com/about',
     '/support': 'https://sheepdogsim.com/support',
     '/privacy': 'https://sheepdogsim.com/privacy',
+    '/herding-guide': 'https://sheepdogsim.com/herding-guide',
+    '/multiplayer': 'https://sheepdogsim.com/multiplayer',
+    '/id/': 'https://sheepdogsim.com/id/',
   };
+  // /id/ alone can be withdrawn from search without editing this file, by being both
+  // noindexed and out of the sitemap (docs/operations/public-discovery.md).
+  const idWithdrawn = !files['/sitemap.xml'].includes(`<loc>${canonical['/id/']}</loc>`);
   const titles = new Set();
   const descriptions = new Set();
   for (const [route, expected] of Object.entries(canonical)) {
@@ -85,7 +91,11 @@ function verifyPages(files) {
     assert(!files[route].includes('Sheepdog Sim 3'), `${route} contains the retired numbered brand.`);
     assert((files[route].match(/rel="canonical"/g) || []).length === 1, `${route} has conflicting canonicals.`);
     assert((files[route].match(/<h1[ >]/g) || []).length === 1, `${route} needs one visible main heading.`);
-    assert(!/content="[^"]*noindex/i.test(files[route]), `${route} unexpectedly prevents indexing.`);
+    if (route === '/id/' && idWithdrawn) {
+      assert(/name="robots" content="[^"]*noindex/i.test(files[route]), '/id/ is out of the sitemap but can still be indexed.');
+    } else {
+      assert(!/content="[^"]*noindex/i.test(files[route]), `${route} unexpectedly prevents indexing.`);
+    }
     const title = files[route].match(/<title>([^<]+)<\/title>/)?.[1];
     const description = files[route].match(/name="description" content="([^"]+)"/)?.[1];
     assert(title && description, `${route} needs a title and description.`);
@@ -99,11 +109,22 @@ function verifyPages(files) {
   assert(titles.size === Object.keys(canonical).length, 'Page titles must be distinct.');
   assert(descriptions.size === Object.keys(canonical).length, 'Page descriptions must be distinct.');
   assert(files['/about'].includes('href="/support"'), 'Game explanation must link to controls.');
+  for (const route of ['/herding-guide', '/multiplayer', '/id/']) {
+    assert(files['/about'].includes(`href="${route}"`), `/about lacks a crawlable ${route} link.`);
+  }
+  // /id/ is a standalone page beside the game. No hreflang joins them, by the owner's
+  // decision.
+  assert(files['/id/'].includes('<html lang="id">'), '/id/ must declare its language.');
+  assert(files['/id/'].includes('href="/?lang=id"'), '/id/ must link into the game.');
+  for (const [route, html] of Object.entries(files)) {
+    if (typeof html === 'string') assert(!html.includes('hreflang'), `${route} must not carry hreflang.`);
+  }
   assert(files['/support'].includes('gamepad B or X') && files['/support'].includes('right trigger'), 'Published gamepad help has stale bindings.');
 
   assert(files['/robots.txt'].includes('Allow: /'), 'robots.txt does not allow crawling.');
   assert(files['/robots.txt'].includes('Sitemap: https://sheepdogsim.com/sitemap.xml'), 'robots.txt does not advertise the sitemap.');
-  for (const expected of Object.values(canonical)) {
+  for (const [route, expected] of Object.entries(canonical)) {
+    if (route === '/id/' && idWithdrawn) continue;
     assert(files['/sitemap.xml'].includes(`<loc>${expected}</loc>`), `Sitemap is missing ${expected}.`);
   }
   assert(files['/sitemap.xml'].includes('https://sheepdogsim.com/og/sheepdog-sim-v2.png'), 'Sitemap is missing the launch image.');
@@ -117,7 +138,7 @@ function verifyPages(files) {
     // Every HTML page carries its own snippet. Nothing injects one for us: the
     // zone's automatic injection does not run on responses a Worker serves,
     // measured at the Release 1 cutover (docs/history/status-log.md).
-    for (const route of ['/', '/about', '/support', '/privacy']) {
+    for (const route of Object.keys(canonical)) {
       const tokens = beaconTokens(files[route]);
       assert(tokens.length > 0, `Cloudflare Web Analytics beacon is missing from ${route}.`);
       // Two beacons count every view twice. A second one means something is
@@ -144,6 +165,9 @@ function readLocal() {
     '/about': 'about.html',
     '/support': 'support.html',
     '/privacy': 'privacy.html',
+    '/herding-guide': 'herding-guide.html',
+    '/multiplayer': 'multiplayer.html',
+    '/id/': 'id/index.html',
     '/robots.txt': 'robots.txt',
     '/sitemap.xml': 'sitemap.xml',
     '/og/sheepdog-sim-v2.png': 'og/sheepdog-sim-v2.png',
@@ -162,7 +186,7 @@ function readLocal() {
 
 async function readRemote() {
   const origin = new URL(baseUrl);
-  const routes = ['/', '/about', '/support', '/privacy', '/robots.txt', '/sitemap.xml', '/og/sheepdog-sim-v2.png'];
+  const routes = ['/', '/about', '/support', '/privacy', '/herding-guide', '/multiplayer', '/id/', '/robots.txt', '/sitemap.xml', '/og/sheepdog-sim-v2.png'];
   const files = {};
   for (const route of routes) {
     const response = await fetch(new URL(route, origin), {

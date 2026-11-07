@@ -4,10 +4,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { FLOCK_SIZES, type FlockSize } from '@app/state/store';
 import { formatRunTime } from '@app/ui/time';
+import { useT } from '@app/i18n/store';
 import { MyTimes } from './MyTimes';
 import { scoresController } from './controller';
 import { useScoreStore } from './store';
-import { previousIsoWeek } from './week';
+import { isoWeekStart, localizedWeekLabel, previousIsoWeek } from './week';
 
 /**
  * The board tab: a flock size, or the player's own history across all three.
@@ -27,6 +28,7 @@ export function LeaderboardPanel({
   readonly initialFlockSize: FlockSize;
   readonly onClose: () => void;
 }) {
+  const t = useT();
   const [tab, setTab] = useState<BoardTab>(initialFlockSize);
   // null is all-time. 'current' is this week. Any other value is an ISO week.
   const [weekToken, setWeekToken] = useState<string | null>(null);
@@ -74,20 +76,20 @@ export function LeaderboardPanel({
       <section ref={panel} className="herd-panel herd-board-panel">
         <header className="herd-panel__header">
           <div>
-            <p className="herd-panel__kicker">Fastest complete runs</p>
-            <h2 id="times-title" className="herd-panel__title">Solo times</h2>
+            <p className="herd-panel__kicker">{t('times.kicker')}</p>
+            <h2 id="times-title" className="herd-panel__title">{t('times.title')}</h2>
           </div>
           <button
             type="button"
             className="herd-icon-button"
-            aria-label="Close solo times"
+            aria-label={t('times.close')}
             autoFocus
             onClick={onClose}
           >
-            Close
+            {t('common.close')}
           </button>
         </header>
-        <div className="herd-board-tabs" aria-label="Flock size">
+        <div className="herd-board-tabs" aria-label={t('common.flockSize')}>
           {FLOCK_SIZES.map((size) => (
             <button
               key={size}
@@ -105,12 +107,12 @@ export function LeaderboardPanel({
             aria-pressed={tab === 'mine'}
             onClick={() => setTab('mine')}
           >
-            My times
+            {t('times.mine')}
           </button>
         </div>
         {tab === 'mine' ? (
           <>
-            <p className="herd-board-caption">Every run you have finished, by flock size.</p>
+            <p className="herd-board-caption">{t('times.mineCaption')}</p>
             {runsStatus !== 'ready' || runs.length === 0 ? (
               <p className="herd-board-message" role="status">{runsMessage}</p>
             ) : (
@@ -119,14 +121,14 @@ export function LeaderboardPanel({
           </>
         ) : (
           <>
-            <div className="herd-board-tabs" aria-label="Board">
+            <div className="herd-board-tabs" aria-label={t('times.board')}>
               <button
                 type="button"
                 className="herd-size"
                 aria-pressed={weekToken === null}
                 onClick={() => setWeekToken(null)}
               >
-                All-time
+                {t('times.allTime')}
               </button>
               <button
                 type="button"
@@ -134,20 +136,25 @@ export function LeaderboardPanel({
                 aria-pressed={weekToken !== null}
                 onClick={() => setWeekToken('current')}
               >
-                This week
+                {t('times.thisWeek')}
               </button>
             </div>
             <p className="herd-board-caption">
               {weekToken === null
-                ? `Fastest runs with ${flockSize} sheep.`
+                ? t('times.captionAll', { count: flockSize })
                 : weekToken === 'current'
-                  ? `This week, with ${flockSize} sheep.`
-                  : `${boardWeekLabel || 'That week'}, with ${flockSize} sheep.`}
+                  ? t('times.captionWeek', { count: flockSize })
+                  : t('times.captionOtherWeek', {
+                    week: boardWeekLabel
+                      ? localizedWeekLabel(boardWeekLabel, boardWeek === null ? null : isoWeekStart(boardWeek))
+                      : t('times.thatWeek'),
+                    count: flockSize,
+                  })}
             </p>
             {status === 'loading' || status === 'offline' || entries.length === 0 ? (
               <p className="herd-board-message" role="status">{message}</p>
             ) : (
-              <ol className="herd-board-list" aria-label={`${flockSize}-sheep solo times`}>
+              <ol className="herd-board-list" aria-label={t('times.listLabel', { count: flockSize })}>
                 {entries.slice(0, 10).map((entry) => (
                   <li key={entry.persistentId}>
                     <span><span className="herd-board-rank">{entry.rank}.</span> {entry.displayName}</span>
@@ -165,7 +172,7 @@ export function LeaderboardPanel({
                   if (previous) setWeekToken(previous);
                 }}
               >
-                Previous week
+                {t('times.previousWeek')}
               </button>
             ) : null}
           </>

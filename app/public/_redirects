@@ -1,6 +1,8 @@
 /about.html /about 301
 /support.html /support 301
 /privacy.html /privacy 301
+/herding-guide.html /herding-guide 301
+/multiplayer.html /multiplayer 301
 /assets/images/seo/sheepdogsim2.png /og/sheepdog-sim-v2.png 301
 /assets/scenes/social/field.webp /og/sheepdog-sim-v2.png 301
 /scenes/* / 301

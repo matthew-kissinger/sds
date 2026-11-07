@@ -2,6 +2,8 @@
 import { decode, encode } from '@msgpack/msgpack';
 import { useGameStore } from '@app/state/store';
 import { scoresController } from '@app/scores/controller';
+import { translate } from '@app/i18n/store';
+import { noticeText, reasonText } from './notices';
 import { PROTOCOL, type MatchFrame, type Region, type RoomView, type Standing } from '../../../net/messages';
 import { RemoteView } from './RemoteView';
 
@@ -29,19 +31,19 @@ export class MultiplayerClient {
   private async admit(path: string, body: unknown, key?: string) {
     for (let attempt = 0; attempt < 2; attempt++) {
       const token = await scoresController.roomToken(attempt === 1);
-      if (!token) throw new Error('Identity unavailable. Try again.');
+      if (!token) throw new Error(translate('mp.identityRetry'));
       const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`, ...(key ? { 'Idempotency-Key': key } : {}) }, body: JSON.stringify(body) });
       const value = await response.json();
       if (response.status === 401 && value.error === 'identity_expired' && attempt === 0) continue;
-      if (!response.ok) throw new Error(value.error ?? 'Service unavailable');
+      if (!response.ok) throw new Error(value.error ?? 'service_unavailable');
       return value as Admission;
     }
-    throw new Error('Identity unavailable');
+    throw new Error(translate('mp.identityRetry'));
   }
   async enter(handle?: string, region: Region = 'na', count = 25, visibility = 'private', mode: 'coop' | 'competitive' = 'coop') {
     const generation = ++this.generation;
-    this.patch({ message: 'Connecting…' });
+    this.patch({ message: translate('mp.connecting') });
     try {
       if (!this.createKey) this.createKey = crypto.randomUUID().replaceAll('-', '');
       const admission = await this.admit(handle ? `/r/${handle}/join` : '/r/rooms',
@@ -79,9 +81,9 @@ export class MultiplayerClient {
           this.send('ack', frame.revision);
           if (this.status.room?.handle === frame.handle && frame.revision < this.status.room.revision) return;
           if (!frame.members.some(m => m.slot === this.status.slot) || frame.phase === 'closed') {
-            this.leave('You have left this room.'); return;
+            this.leave(translate('mp.left')); return;
           }
-          this.patch({ room: frame, message: frame.interruption ? `Match interrupted: ${frame.interruption.replaceAll('_', ' ')}` : '' });
+          this.patch({ room: frame, message: frame.interruption ? translate('mp.interrupted', { reason: reasonText(frame.interruption) }) : '' });
           if (frame.phase === 'waiting') {
             this.loaded = ''; this.view = null; this.pending = null;
             if (this.status.standings.length) this.patch({ standings: [], unclaimed: 0 });
@@ -96,16 +98,16 @@ export class MultiplayerClient {
           }
         } else if (frame.type === 'snapshot') this.snapshot(frame);
         else if (frame.type === 'pong') this.patch({ rtt: Math.round(performance.now() - this.pingAt) });
-        else this.patch({ message: frame.code?.replaceAll('_', ' ') ?? 'Request unavailable' });
-      } catch { this.leave('Incompatible server data. Reload the local client before joining again.'); }
+        else this.patch({ message: frame.code ?? translate('mp.requestUnavailable') });
+      } catch { this.leave(translate('mp.incompatible')); }
     };
     socket.onclose = event => {
       if (generation !== this.generation || this.socket !== socket) return;
       if (this.heartbeat) clearInterval(this.heartbeat); this.heartbeat = null;
       this.socket = null; if (this.view) this.view.enabled = false;
-      this.patch({ connected: false, message: 'Reconnecting… Your seat is reserved for 15 seconds.' });
-      if (event.reason === 'session_ended') { this.leave('Your seat is no longer available.'); return; }
-      if (event.reason === 'session_replaced') { this.leave('This identity joined in another tab. Use a separate browser profile for another player.'); return; }
+      this.patch({ connected: false, message: translate('mp.reconnectingSeat') });
+      if (event.reason === 'session_ended') { this.leave(translate('mp.seatGone')); return; }
+      if (event.reason === 'session_replaced') { this.leave(translate('mp.otherTab')); return; }
       this.reconnectUntil = Date.now() + 15_000;
       this.reconnect(generation);
     };
@@ -118,7 +120,7 @@ export class MultiplayerClient {
       }).catch(error => {
         if (generation !== this.generation) return;
         if (Date.now() < this.reconnectUntil) this.reconnect(generation);
-        else this.leave(`Could not reconnect: ${error instanceof Error ? error.message : 'seat expired'}`);
+        else this.leave(translate('mp.couldNotReconnect', { reason: error instanceof Error ? noticeText(error.message) : translate('mp.seatExpired') }));
       });
     }, 750);
   }

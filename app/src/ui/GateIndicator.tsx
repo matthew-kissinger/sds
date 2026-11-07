@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '@app/state/store';
+import { useT } from '@app/i18n/store';
 
 /**
  * The cue is an instrument, not a label: a sheer paper dial with one needle on
@@ -33,6 +34,7 @@ const MARKS = Array.from({ length: 8 }, (_, i) => {
 }).join('');
 
 export function GateIndicator() {
+  const t = useT();
   const anchor = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let shown: boolean | null = null;
@@ -47,7 +49,7 @@ export function GateIndicator() {
     update();
     return useGameStore.subscribe(update);
   }, []);
-  return <div ref={anchor} className="herd-gate-cue" hidden aria-label="Direction to gate">
+  return <div ref={anchor} className="herd-gate-cue" hidden aria-label={t('hud.gate')}>
     <svg viewBox="0 0 44 44" aria-hidden="true" focusable="false">
       <circle className="herd-gate-cue__dial" cx="22" cy="22" r={DIAL} />
       <path className="herd-gate-cue__marks" d={MARKS} />

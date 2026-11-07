@@ -4,12 +4,14 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import type { FlockSize } from '@app/state/store';
 import { formatRunTime } from '@app/ui/time';
+import { pluralKey, translatePlural, useT } from '@app/i18n/store';
 import {
-  COLLAPSED_RUNS, formatDelta, formatOrdinal, groupRunsByFlockSize, type SizeGroup,
+  COLLAPSED_RUNS, formatDelta, groupRunsByFlockSize, localizedOrdinal, type SizeGroup,
 } from './runGroups';
 import { historyShareText, cardShareTitle, formatCardClock } from './share';
 import { ShareControl } from './ShareControl';
 import type { PlayerRun } from './types';
+import { localizedWeekLabel } from './week';
 
 /**
  * The player's own history, one section per flock size.
@@ -21,15 +23,19 @@ import type { PlayerRun } from './types';
  * one the layout actually offers.
  */
 export function MyTimes({ runs }: { readonly runs: readonly PlayerRun[] }) {
+  const t = useT();
   const groups = useMemo(() => groupRunsByFlockSize(runs), [runs]);
   const [expanded, setExpanded] = useState<readonly FlockSize[]>([]);
   const sizesRun = groups.filter((group) => group.runs.length > 0).length;
+  // The counts are drawn bold, so each sentence is cut where its number goes.
+  const [finishedBefore, finishedAfter] = t(pluralKey('mine.finished', runs.length)).split('{count}');
+  const [sizesBefore, sizesAfter] = t('mine.sizesRun', { total: groups.length }).split('{count}');
 
   return (
     <div className="herd-mine">
       <p className="herd-mine__summary">
-        <span><b>{runs.length}</b> finished {runs.length === 1 ? 'run' : 'runs'}</span>
-        <span><b>{sizesRun}</b> of {groups.length} flock sizes</span>
+        <span>{finishedBefore}<b>{runs.length}</b>{finishedAfter}</span>
+        <span>{sizesBefore}<b>{sizesRun}</b>{sizesAfter}</span>
       </p>
       {groups.map((group) => (
         <Group
@@ -52,6 +58,7 @@ function Group({ group, expanded, onToggle }: {
   readonly expanded: boolean;
   readonly onToggle: () => void;
 }) {
+  const t = useT();
   const { flockSize, runs, boardPlayers } = group;
   const best = runs[0];
   const collapsible = runs.length > COLLAPSED_RUNS;
@@ -66,23 +73,23 @@ function Group({ group, expanded, onToggle }: {
   return (
     <section className="herd-mine-group">
       <header className="herd-mine-group__head">
-        <h3 className="herd-mine-group__size">{flockSize} sheep</h3>
+        <h3 className="herd-mine-group__size">{translatePlural('common.sheepCount', flockSize)}</h3>
         <p className="herd-mine-group__count">
-          {runs.length === 0 ? 'No runs yet' : `${runs.length} ${runs.length === 1 ? 'run' : 'runs'}`}
-          {boardPlayers === null ? '' : ` · ${boardPlayers} on the board`}
+          {runs.length === 0 ? t('mine.noRuns') : translatePlural('mine.runs', runs.length)}
+          {boardPlayers === null ? '' : ` · ${t('mine.onBoard', { count: boardPlayers })}`}
         </p>
       </header>
       {best === undefined ? (
-        <p className="herd-mine-empty">Finish a run at this size and it lands here.</p>
+        <p className="herd-mine-empty">{t('mine.emptyHint')}</p>
       ) : (
         <>
           <p className="herd-mine-best">
-            <span className="herd-mine-best__label">Your best</span>
+            <span className="herd-mine-best__label">{t('mine.best')}</span>
             <span className="herd-mine-best__time">
               {formatRunTime(best.run.scoreSeconds * 1000)}
               {best.run.boardRank === undefined || best.run.boardPlayers === undefined ? null : (
                 <span className="herd-mine-best__standing">
-                  {formatOrdinal(best.run.boardRank)} of {best.run.boardPlayers} players
+                  {t('mine.standing', { rank: localizedOrdinal(best.run.boardRank), players: best.run.boardPlayers })}
                 </span>
               )}
             </span>
@@ -90,7 +97,7 @@ function Group({ group, expanded, onToggle }: {
           <ol
             id={listId}
             className={`herd-mine-runs${bars ? '' : ' herd-mine-runs--single'}`}
-            aria-label={`Your ${flockSize}-sheep runs, fastest first`}
+            aria-label={t('mine.listLabel', { count: flockSize })}
           >
             {shown.map(({ run, position, deltaSeconds, fill }) => (
               <li key={`${run.submittedAt}-${run.scoreSeconds}`} data-best={position === 1}>
@@ -100,8 +107,8 @@ function Group({ group, expanded, onToggle }: {
                 </span>
                 <span className="herd-run__time">{formatRunTime(run.scoreSeconds * 1000)}</span>
                 <span className="herd-run__meta" data-best={position === 1}>
-                  <b>{position === 1 ? 'Best' : formatDelta(deltaSeconds)}</b>
-                  {run.boardRank === undefined ? null : <em>{formatOrdinal(run.boardRank)}</em>}
+                  <b>{position === 1 ? t('mine.bestBadge') : formatDelta(deltaSeconds)}</b>
+                  {run.boardRank === undefined ? null : <em>{localizedOrdinal(run.boardRank)}</em>}
                 </span>
                 <span className="herd-run__share-slot">
                   {run.sharePath ? (
@@ -114,7 +121,7 @@ function Group({ group, expanded, onToggle }: {
                         flockSize,
                         weekRank: run.weekRank,
                         weekPlayers: run.weekPlayers,
-                        weekLabel: run.weekLabel,
+                        weekLabel: run.weekLabel === undefined ? undefined : localizedWeekLabel(run.weekLabel, run.submittedAt),
                       })}
                     />
                   ) : null}
@@ -131,8 +138,8 @@ function Group({ group, expanded, onToggle }: {
               onClick={onToggle}
             >
               {expanded
-                ? 'Show fewer'
-                : `Show all ${runs.length} runs`}
+                ? t('mine.showFewer')
+                : t('mine.showAll', { count: runs.length })}
             </button>
           ) : null}
         </>

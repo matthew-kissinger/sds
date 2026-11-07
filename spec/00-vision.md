@@ -19,7 +19,7 @@ Sheepdog Sim 3 is defined as much by its cut list as its feature list. These are
 - No dog roster. One authored dog design; planned multiplayer can instantiate
   it for up to four players with accessible identification.
 - No sandbox, fence editor, shape editor, achievements, capture mode, replay system, attract mode, or tutorial state machine.
-- No i18n in v1. English only.
+- No i18n in v1. English only. Amended 2026-11-06 at the owner's direction; see below.
 - No dual render paths. One renderer (WebGPURenderer), one material authoring language (TSL). A parallel material implementation for any backend is a spec violation.
 - No streaming, impostors, or LOD apparatus. The field loads all-cold before first interaction.
 - No scene picker or entrance flow. The game boots into the field.
@@ -44,6 +44,13 @@ research, proposed defaults and staged acceptance. Spec/03 is its contract.
 Implementation, asset creation, provisioning and deployment have not started
 and require subsequent authorization. The single-goal description above remains
 the shipped solo baseline; it does not prohibit the planned multiplayer slice.
+
+## Language amendment, 2026-11-06
+
+The owner directed bringing language support back to
+version 3, as one game at one address that opens in English and lets a player
+choose. [The languages contract](15-languages.md) replaces the "English only" line
+above. It changes no gameplay, simulation, protocol, save or score.
 
 ## Why a clean room
 

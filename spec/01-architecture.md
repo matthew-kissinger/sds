@@ -141,8 +141,8 @@ must expose all consumers' required state without pretending to own `step`.
   remote-entity interpolation through the same presentation buffer contract.
   The client never advances an authoritative online flock or locally pauses
   everyone else's game. Rules are selected at session construction (spec/03).
-- Player-page query parameters are exactly `seed` (local repro) and `debug`,
-  matching shipped readers and AGENTS.md. The old third `room` parameter was
+- Player-page query parameters are exactly `seed` (local repro), `debug` and
+  `lang` (spec/15), matching shipped readers and AGENTS.md. The old third `room` parameter was
   aspirational and is removed from the contract. Planned invites use
   `/r/<room-handle>`, not a query or hash alias. Online seed comes from the
   room. `/play/25`, `/play/75` and `/play/200` remain spec/14 paths, consumed

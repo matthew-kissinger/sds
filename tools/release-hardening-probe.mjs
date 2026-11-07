@@ -13,7 +13,7 @@ const dist = builtClientDir;
 const MIB = 1024 * 1024;
 const INITIAL_JS_GZIP_LIMIT = 1.5 * MIB;
 const FIRST_LOAD_LIMIT = 8 * MIB;
-const PAGE_PARAMS = new Set(['seed', 'debug']);
+const PAGE_PARAMS = new Set(['seed', 'debug', 'lang']);
 const COMPRESSIBLE = new Set(['.css', '.html', '.js', '.json', '.svg', '.txt']);
 
 function filesUnder(root) {
@@ -51,7 +51,7 @@ const appFiles = filesUnder(join(repo, 'app', 'src'))
 const playerParamReads = [];
 for (const path of appFiles) {
   const source = readFileSync(path, 'utf8');
-  if (!source.includes('window.location.search') && !source.includes('window.location.href')) continue;
+  if (!source.includes('window.location.search') && !source.includes('window.location.href') && !source.includes('URLSearchParams(search)')) continue;
   for (const match of source.matchAll(/(?:searchParams|URLSearchParams\([^)]*\))\.(?:get|set)\(['"]([^'"]+)['"]/g)) {
     playerParamReads.push({ file: relative(repo, path), name: match[1] });
   }

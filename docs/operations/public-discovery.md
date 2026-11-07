@@ -9,13 +9,47 @@ and aggregate site analytics. It does not authorize a production deployment.
 - About: `https://sheepdogsim.com/about`
 - Support: `https://sheepdogsim.com/support`
 - Privacy: `https://sheepdogsim.com/privacy`
+- Herding guide: `https://sheepdogsim.com/herding-guide`
+- Multiplayer: `https://sheepdogsim.com/multiplayer`
+- Indonesian page: `https://sheepdogsim.com/id/`
 - Sitemap: `https://sheepdogsim.com/sitemap.xml`
 - Social image: `https://sheepdogsim.com/og/sheepdog-sim-v2.png`
 
 The secondary pages are flat HTML files so the Worker's static assets keep the
 same extensionless, no-trailing-slash URLs already used in production, as Pages
 did. Redirects, canonical elements, Open Graph URLs and sitemap entries must all
-agree.
+agree. `/id/` is the one exception, a directory with its own `index.html`.
+
+`/id/` is a standalone page beside the game, not a translation of it. `/` keeps its
+English head, and there is no `hreflang` between them, by the owner's decision.
+The check and `tests/public-pages.spec.ts` fail on any `hreflang`.
+
+`?lang=` addresses answer with `/`'s own HTML, whose canonical is `/`. That canonical is
+the control, and it is a hint a search engine may overrule, since the page renders in
+another language. `/id/`'s links into the game carry `rel="nofollow"` so the page passes
+nothing to them, which does not keep them out of search: a known address can be crawled
+without a link. If one shows up in results, add `Disallow: /*?lang=` to
+`app/public/robots.txt`. That passes the checks here and has not been tried against a
+search engine.
+
+## Withdrawing `/id/` from search
+
+To take `/id/` out of search and leave everything else alone, make these three changes in
+one commit:
+
+1. In `app/public/id/index.html`, set the robots meta to `noindex, follow`.
+2. Remove its `<url>` entry from `app/public/sitemap.xml`.
+3. Remove its line from `app/public/llms.txt`.
+
+Leave the page and the links to it in place, because a crawler has to reach the page to
+read the `noindex`. `scripts/verify-public-discovery.mjs` and `tests/public-pages.spec.ts`
+accept this state and fail on half of it: `noindex` while still in the sitemap, or out of
+the sitemap while still indexable. It ships by the ordinary release steps in
+`deployment.md`, and undoing it is the same three changes in reverse.
+
+To undo the whole release instead, use "A bad release on the Worker" in `deployment.md`:
+`npx wrangler rollback <version-id> --name sds-worker`, or dispatch `Deploy` with the
+previous good SHA.
 
 Run this after every production build:
 
@@ -29,18 +63,19 @@ repeats the check against the live domain.
 ## Analytics boundary
 
 The Cloudflare Web Analytics beacon is Cloudflare's snippet for the
-`sheepdogsim.com` site, committed once in `app/index.html`. Do not add a second
-beacon, and never use the token the retired Pages injection carried; the check
+`sheepdogsim.com` site, committed once in each HTML page. Do not add a second
+beacon to a page, and never use the token the retired Pages injection carried; the check
 requires exactly one beacon with the committed token. Which site and token is
 which is recorded in `docs/operations/deployment.md`. The analytics surface
 measures aggregate page visits and load performance. It does not send
-movement, controls, flock state, completion events or player names.
+movement, controls, flock state, completion events or player names. The game's own
+anonymous counts are separate, go to the Worker and carry no player name; see
+`docs/operations/funnel.md`.
 
 After a production deployment, confirm:
 
-1. The game page contains one `beacon.min.js` script, with the token from
-   `app/index.html`. The about, support and privacy pages carry no snippet of
-   their own; they are counted only if the zone's automatic injection adds one.
+1. Every HTML page contains one `beacon.min.js` script, with the token from
+   `app/index.html`. Nothing injects one for us; see `docs/operations/deployment.md`.
 2. Browser network tools show a successful request to a `cdn-cgi/rum`
    endpoint.
 3. Cloudflare Web Analytics begins showing the new release after its normal
@@ -65,7 +100,7 @@ These Cloudflare changes are production mutations and require owner approval:
 After the exact release SHA is live:
 
 1. Submit `https://sheepdogsim.com/sitemap.xml` in Google Search Console.
-2. Inspect and request indexing for the four canonical URLs.
+2. Inspect and request indexing for the canonical URLs.
 3. Import the verified property into Bing Webmaster Tools and submit the same
    sitemap.
 4. Validate the home page in Google's Rich Results Test.

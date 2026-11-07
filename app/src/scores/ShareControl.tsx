@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Matthew Kissinger
 
 import { useState } from 'react';
+import { useT } from '@app/i18n/store';
 import { absoluteShareUrl, sendShare } from './share';
 
 /**
@@ -22,9 +23,10 @@ export function ShareControl({
   readonly path: string;
   readonly compact?: boolean;
 }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   if (copied) {
-    return <span className={compact ? 'herd-run__share' : 'herd-share-copied'} data-copied="true">Link copied</span>;
+    return <span className={compact ? 'herd-run__share' : 'herd-share-copied'} data-copied="true">{t('share.copied')}</span>;
   }
   return (
     <button
@@ -48,7 +50,7 @@ export function ShareControl({
         });
       }}
     >
-      Share
+      {t('share.share')}
     </button>
   );
 }

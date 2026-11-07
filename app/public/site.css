@@ -32,3 +32,8 @@ nav { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 42px; font-fam
 .lede { max-width: 620px; font-size: 20px; }
 .button { display: inline-block; margin-top: 20px; padding: 12px 18px; border: 1px solid #46563d; border-radius: 4px; background: #405b3e; color: #fffdf5; font-family: system-ui, sans-serif; text-decoration: none; }
 code { padding: 2px 5px; border-radius: 3px; background: rgb(255 255 255 / 45%); }
+h3 { margin: 26px 0 8px; font-size: 22px; font-weight: 500; line-height: 1.2; }
+ol { padding-left: 24px; }
+figure { margin: 28px 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 6px; }
+figcaption { margin-top: 8px; color: #4a5640; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; }

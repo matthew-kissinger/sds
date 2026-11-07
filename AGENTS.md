@@ -44,7 +44,7 @@ rollback. Keep that service isolated from the client.
   paths refuse a commit that is not already contained in `origin/main`.
 - `docs/operations/deployment.md` is the one description of how a change reaches
   production: the single workflow, what each Cloudflare and GitHub name means,
-  which deployment targets are stale, and the seven steps from merge to tag.
+  which deployment targets are stale, and the eight steps from merge to tag.
   Read it before deploying rather than inferring the procedure from workflows.
 
 ## Architecture tripwires
@@ -61,7 +61,8 @@ These rules name failure modes observed in the version 2 client.
 5. `sim/` imports no Three.js, React, DOM, app, Worker, network or third-party
    math code. It uses required seeded random sources and no clocks or
    implementation-dependent math in tick paths.
-6. Production accepts only the documented `seed` and `debug` query parameters.
+6. Production accepts only the documented `seed`, `debug` and `lang` query
+   parameters.
    Probes live in `tools/` and drive the normal application.
 7. Name files for what they own, not a migration phase or campaign.
 8. Do not add compatibility aliases or re-export shims. Migrate consumers in

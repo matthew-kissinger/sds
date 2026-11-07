@@ -10,15 +10,20 @@ import { useReducedMotion } from './useReducedMotion';
 import { PlayerIdentity } from '@app/scores/PlayerIdentity';
 import { LeaderboardPanel } from '@app/scores/LeaderboardPanel';
 import { bootPercent, bootStatus } from '@app/boot/progress';
-import { flockSizeFromPath } from '@app/boot/playPath';
+import { takePlayPathStart } from '@app/boot/playPath';
+import { useLocale, useT } from '@app/i18n/store';
+import { LanguageOfferLine, TitleLanguagePicker } from './LanguagePicker';
 
 export function Boot({
   onMultiplayer,
-  multiplayerLabel = 'Play multiplayer',
+  multiplayerLabel,
 }: {
   readonly onMultiplayer?: () => void;
   readonly multiplayerLabel?: string;
 }) {
+  const t = useT();
+  // The about and help pages exist in English only, and the links say so.
+  const englishPage = useLocale() === 'en' ? '' : ' (EN)';
   const startGame = useGameStore((state) => state.startGame);
   const openSettings = useGameStore((state) => state.openSettings);
   const openCustomize = useGameStore((state) => state.openCustomize);
@@ -32,10 +37,8 @@ export function Boot({
   const timeout = useRef<number | null>(null);
   const timesButton = useRef<HTMLButtonElement | null>(null);
   const reducedMotion = useReducedMotion();
-  const playPath = flockSizeFromPath(window.location.pathname);
-  const startedFromPath = useRef(false);
   const percent = sceneReady ? 100 : bootPercent(bootProgress);
-  const status = sceneReady ? 'Field ready' : bootStatus(bootProgress);
+  const status = sceneReady ? t('boot.fieldReady') : bootStatus(bootProgress);
 
   const closeTimes = () => {
     setShowTimes(false);
@@ -47,11 +50,12 @@ export function Boot({
   }, []);
 
   useEffect(() => {
-    if (playPath === null || !sceneReady || startedFromPath.current) return;
-    startedFromPath.current = true;
-    setFlockSize(playPath);
-    startGame(playPath);
-  }, [playPath, sceneReady, setFlockSize, startGame]);
+    if (!sceneReady) return;
+    const size = takePlayPathStart(window.location.pathname);
+    if (size === null) return;
+    setFlockSize(size);
+    startGame(size);
+  }, [sceneReady, setFlockSize, startGame]);
 
   const play = () => {
     if (!sceneReady || leaving) return;
@@ -81,12 +85,12 @@ export function Boot({
         <section className="herd-loading-card" role="status" aria-live="polite">
           <div className="herd-loading-card__lockup">
             <h1>Sheepdog Sim</h1>
-            <p>Preparing one field</p>
+            <p>{t('boot.preparing')}</p>
           </div>
           <div
             className="herd-loading-track"
             role="progressbar"
-            aria-label="Loading the game"
+            aria-label={t('boot.loadingLabel')}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={percent}
@@ -102,10 +106,10 @@ export function Boot({
       <main className="herd-title-card" inert={!sceneReady || showTimes ? true : undefined}>
         <div className="herd-title-lockup">
           <h1 className="herd-title">Sheepdog Sim</h1>
-          <p className="herd-kicker">every sheep through the gate</p>
+          <p className="herd-kicker">{t('title.kicker')}</p>
         </div>
         <PlayerIdentity />
-        <div className="herd-size-row" aria-label="Flock size">
+        <div className="herd-size-row" aria-label={t('common.flockSize')}>
           {FLOCK_SIZES.map((size) => (
             <button
               key={size}
@@ -125,7 +129,7 @@ export function Boot({
             disabled={!sceneReady || leaving}
             onClick={play}
           >
-            Play solo
+            {t('title.playSolo')}
           </button>
           {onMultiplayer ? (
             <button
@@ -135,10 +139,11 @@ export function Boot({
               disabled={!sceneReady || leaving || showTimes}
               onClick={onMultiplayer}
             >
-              {multiplayerLabel}
+              {multiplayerLabel ?? t('title.multiplayer')}
             </button>
           ) : null}
         </div>
+        <LanguageOfferLine />
         <div className="herd-title-tools">
           <button
             type="button"
@@ -148,14 +153,14 @@ export function Boot({
             aria-controls="customization-studio"
             onClick={openCustomize}
           >
-            Customize
+            {t('title.customize')}
           </button>
           <button
             type="button"
             className="herd-button herd-button--quiet"
             onClick={openSettings}
           >
-            Settings
+            {t('common.settings')}
           </button>
           <button
             ref={timesButton}
@@ -163,12 +168,20 @@ export function Boot({
             className="herd-button herd-button--quiet"
             onClick={() => setShowTimes(true)}
           >
-            Times
+            {t('title.times')}
           </button>
+          <TitleLanguagePicker />
         </div>
-        <nav className="herd-title-links" aria-label="Game information">
-          <a href="/about">About the game</a>
-          <a href="/support">Controls and help</a>
+        <nav className="herd-title-links" aria-label={t('common.gameInfo')}>
+          <a href="/about">{t('title.about')}{englishPage}</a>
+          <a href="/support">{t('title.help')}{englishPage}</a>
+        </nav>
+        <nav className="herd-title-links herd-title-links--more" aria-label={t('title.moreFrom')}>
+          <span>{t('title.moreFrom')}</span>
+          <a href="https://instruktlabs.com/">instruktlabs.com</a>
+          <a href="https://skisim.app/">ski sim</a>
+          <a href="https://objekt62.com/">OBJEKT 62</a>
+          <a href="https://vietnamwarsim.com/">Terror in the Jungle (pre-alpha)</a>
         </nav>
       </main>
       {showTimes ? (

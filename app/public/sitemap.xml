@@ -2,13 +2,63 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://sheepdogsim.com/</loc>
-    <lastmod>2026-09-05</lastmod>
+    <lastmod>2026-11-06</lastmod>
     <image:image>
       <image:loc>https://sheepdogsim.com/og/sheepdog-sim-v2.png</image:loc>
       <image:caption>Sheepdog Sim browser herding game</image:caption>
     </image:image>
   </url>
-  <url><loc>https://sheepdogsim.com/about</loc><lastmod>2026-09-05</lastmod></url>
-  <url><loc>https://sheepdogsim.com/support</loc><lastmod>2026-09-05</lastmod></url>
-  <url><loc>https://sheepdogsim.com/privacy</loc><lastmod>2026-10-21</lastmod></url>
+  <url>
+    <loc>https://sheepdogsim.com/about</loc>
+    <lastmod>2026-11-06</lastmod>
+    <image:image>
+      <image:loc>https://sheepdogsim.com/shots/field-25.webp</image:loc>
+      <image:caption>A round with 25 sheep in the Classic camera</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://sheepdogsim.com/shots/studio.webp</image:loc>
+      <image:caption>The Studio, where you choose a dog coat and name your dog and sheep</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://sheepdogsim.com/support</loc>
+    <lastmod>2026-11-06</lastmod>
+    <image:image>
+      <image:loc>https://sheepdogsim.com/shots/touch-controls.webp</image:loc>
+      <image:caption>The joystick and the Sprint, Bark and Camera buttons on a touch screen</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://sheepdogsim.com/herding-guide</loc>
+    <lastmod>2026-11-06</lastmod>
+    <image:image>
+      <image:loc>https://sheepdogsim.com/shots/flock-200.webp</image:loc>
+      <image:caption>A flock of 200 sheep in the Follow camera</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://sheepdogsim.com/multiplayer</loc>
+    <lastmod>2026-11-06</lastmod>
+    <image:image>
+      <image:loc>https://sheepdogsim.com/shots/coop-round.webp</image:loc>
+      <image:caption>Two dogs herding one flock in a co-op round</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://sheepdogsim.com/shots/multiplayer-room.webp</image:loc>
+      <image:caption>A multiplayer waiting room with two players ready</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://sheepdogsim.com/id/</loc>
+    <lastmod>2026-11-06</lastmod>
+    <image:image>
+      <image:loc>https://sheepdogsim.com/shots/flock-200-field.webp</image:loc>
+      <image:caption>Kawanan 200 domba di padang rumput</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://sheepdogsim.com/shots/studio-id.webp</image:loc>
+      <image:caption>Studio, tempat mengganti warna bulu anjing dan memberi nama</image:caption>
+    </image:image>
+  </url>
+  <url><loc>https://sheepdogsim.com/privacy</loc><lastmod>2026-11-06</lastmod></url>
 </urlset>

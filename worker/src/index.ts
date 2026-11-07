@@ -38,8 +38,8 @@ import { resolveWeek } from './cardWeek';
 import {
   truncateRawString,
   encodePropsJson,
+  EVENT_NAMES,
   EVENT_STRING_PROP_CAP,
-  EVENT_STACK_PROP_CAP,
   EVENT_PROPS_JSON_CAP,
 } from './eventProps';
 
@@ -63,12 +63,16 @@ interface Env {
 // counter: a determined distributed flood needs Cloudflare's edge WAF, not app
 // code. Buckets refill continuously at REFILL_PER_SEC up to BUCKET_CAPACITY.
 // The cap is generous: a real client makes a handful of these calls per session
-// (register once, poll leaderboards), nowhere near 60/min.
+// (register once, poll leaderboards), nowhere near 60/min. A page load also sends up
+// to about ten /api/event counts, and many players can share one address, so those
+// have a bucket of their own: dropping a count costs nothing, and they must not be
+// able to spend the budget a sign-in or a score card needs.
 const RATE_BUCKET_CAPACITY = 60;       // burst allowance per IP
 const RATE_REFILL_PER_SEC = 1;         // sustained 60/min steady-state
 const RATE_BUCKET_MAX_ENTRIES = 10_000; // cap the map so it can't grow unbounded
 interface TokenBucket { tokens: number; last: number; }
 const rateBuckets = new Map<string, TokenBucket>();
+const eventBuckets = new Map<string, TokenBucket>();
 
 // P-SEC-5: per-persistent_id score-submission limiter. The front-door limiter
 // above is IP-keyed and the /api/score route is intentionally NOT in its list
@@ -123,14 +127,14 @@ function evictIdleBuckets(
 // Returns true if the request is allowed, false if the IP is over budget. A
 // missing IP (local dev, internal call) is always allowed — we never want to
 // hard-fail a request we can't attribute. Consumes one token on success.
-function frontDoorAllowed(ip: string | null): boolean {
+function frontDoorAllowed(ip: string | null, buckets: Map<string, TokenBucket> = rateBuckets): boolean {
   if (!ip) return true;
   const now = Date.now();
-  evictIdleBuckets(rateBuckets, now, RATE_BUCKET_CAPACITY, RATE_REFILL_PER_SEC, RATE_BUCKET_MAX_ENTRIES);
-  let b = rateBuckets.get(ip);
+  evictIdleBuckets(buckets, now, RATE_BUCKET_CAPACITY, RATE_REFILL_PER_SEC, RATE_BUCKET_MAX_ENTRIES);
+  let b = buckets.get(ip);
   if (!b) {
     b = { tokens: RATE_BUCKET_CAPACITY, last: now };
-    rateBuckets.set(ip, b);
+    buckets.set(ip, b);
   }
   return consumeToken(b, now, RATE_BUCKET_CAPACITY, RATE_REFILL_PER_SEC);
 }
@@ -235,18 +239,19 @@ export default {
     // endpoints. Applied after the OPTIONS preflight but before any route work
     // or D1 hit, so a flood is rejected at the cheapest point. Scoped to the
     // abuse-prone routes: register (account creation), rename, event (telemetry
-    // firehose), and the leaderboard and my-scores reads. Healthz + the admin readout are
-    // intentionally exempt. Returns 429 with a Retry-After hint.
+    // firehose, in its own bucket), and the leaderboard and my-scores reads. Healthz + the
+    // admin readout are intentionally exempt. Returns 429 with a Retry-After hint.
+    const isEvent = path === '/api/event';
     const rateLimited =
+      isEvent ||
       path === '/api/register' ||
       path === '/api/rename' ||
-      path === '/api/event' ||
       path === '/api/leaderboard' ||
       path === '/api/leaderboards' ||
       path === '/api/my-scores';
     if (rateLimited) {
       const clientIp = request.headers.get('cf-connecting-ip');
-      if (!frontDoorAllowed(clientIp)) {
+      if (!frontDoorAllowed(clientIp, isEvent ? eventBuckets : rateBuckets)) {
         log.warn('rate_limit_429', { scope: 'front_door', path, ip: clientIp ?? undefined });
         return err('rate limit exceeded', 429, { ...cors, 'retry-after': '1' });
       }
@@ -491,21 +496,24 @@ export default {
       // swallowed client-side so analytics never affects gameplay UX.
       if (path === '/api/event' && method === 'POST') {
         const body = await readJsonObject(request);
-        const name = String(body?.name ?? '').slice(0, 64);
-        if (!name) return err('event name required', 400, cors);
+        const name = String(body?.name ?? '');
+        if (!EVENT_NAMES.has(name)) return err('unknown event name', 400, cors);
         const propsRaw = body?.props && typeof body.props === 'object' ? body.props : {};
         // Strip props to JSON-able primitives only; cap each value on the
-        // RAW string (never the encoded JSON), with a wider cap for crash
-        // stacks (P0-CRASH sends ~4 KB) than for ordinary string props.
+        // RAW string (never the encoded JSON).
         const safeProps: Record<string, string | number | boolean> = {};
         for (const k of Object.keys(propsRaw).slice(0, 16)) {
           const v = propsRaw[k];
           if (typeof v === 'string') {
-            safeProps[k] = truncateRawString(v, k === 'stack' ? EVENT_STACK_PROP_CAP : EVENT_STRING_PROP_CAP);
+            safeProps[k] = truncateRawString(v, EVENT_STRING_PROP_CAP);
           }
           else if (typeof v === 'number' && Number.isFinite(v)) safeProps[k] = v;
           else if (typeof v === 'boolean') safeProps[k] = v;
         }
+        // Cloudflare's own reading of the connection, never the client's say-so.
+        delete safeProps.country;
+        const country = (request as Request & { cf?: { country?: unknown } }).cf?.country;
+        if (typeof country === 'string') safeProps.country = country;
         const propsJson = encodePropsJson(safeProps, EVENT_PROPS_JSON_CAP);
         // Optional auth — present token => recognized player.
         let pid: string | null = null;

@@ -4,23 +4,39 @@
 import { uiTokenVariables } from './tokens';
 
 const CSS = `
+/* Letters Piazzolla's base file lacks, each behind a unicode-range: a browser
+   fetches a face only when the page draws a character inside its range, so an
+   English interface requests neither. Here rather than in the document head with
+   the base face (spec/11) because the static shell is always English. */
+@font-face { font-family: 'Piazzolla'; src: url('/fonts/piazzolla-ui-latin1.woff2') format('woff2-variations'), url('/fonts/piazzolla-ui-latin1.woff2') format('woff2'); font-weight: 400 700; font-style: normal; font-display: swap; unicode-range: U+A1-B6, U+B8-FF, U+152-153, U+178, U+201A, U+201E; }
+@font-face { font-family: 'Piazzolla'; src: url('/fonts/piazzolla-ui-cyrillic.woff2') format('woff2-variations'), url('/fonts/piazzolla-ui-cyrillic.woff2') format('woff2'); font-weight: 400 700; font-style: normal; font-display: swap; unicode-range: U+401, U+410-44F, U+451, U+2116; }
 :root { ${uiTokenVariables()} }
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; }
 body { background: var(--herd-paper-solid); color: var(--herd-ink); font-family: var(--herd-font); word-spacing: var(--herd-word-space); }
+/* Wide tracking is a treatment for Latin capitals; Hangul, kana and Han characters
+   are already set wide and lose their rhythm under it. Korean breaks at spaces,
+   as its readers expect, and the others keep their line-start rules. No CJK face
+   ships: the browser picks the system's own for the page's lang (spec/15). */
+:lang(ko), :lang(ja), :lang(zh) { --herd-track: .02em; --herd-track-wide: .06em; overflow-wrap: anywhere; }
+:lang(ko) { word-break: keep-all; }
+:lang(ja), :lang(zh) { line-break: strict; }
 button, select, input { font: inherit; color: inherit; }
 canvas { display: block; touch-action: none; }
 .herd-app { position: relative; width: 100%; height: 100%; isolation: isolate; }
 .herd-gate-cue { --gate-angle: 0rad; --gate-range: 0; position: absolute; left: 0; top: 0; width: 44px; height: 44px; pointer-events: none; }
 .herd-gate-cue svg { display: block; width: 44px; height: 44px; filter: var(--herd-field-lift); }
 .herd-gate-cue[hidden] { display: none; }
-.herd-title-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; font-size: var(--herd-small); text-shadow: var(--herd-halo); }
+.herd-title-links { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0 20px; margin-top: 16px; font-size: var(--herd-small); text-shadow: var(--herd-halo); }
 /* Full ink, not soft. Measured over the field these links actually sit on,
    --herd-ink-soft runs 4.19:1 on light grass down to 2.73:1 in a cloud
    shadow, so it failed AA everywhere and failed the 3:1 large-text floor in
    shade; --herd-ink holds 5.61:1 at its worst. */
-.herd-title-links a { color: var(--herd-ink); text-underline-offset: 3px; }
+/* 24 px of target around small text. A mis-tap here leaves a game that was slow to load. */
+.herd-title-links a { display: inline-flex; align-items: center; min-height: 24px; color: var(--herd-ink); text-underline-offset: 3px; }
 .herd-title-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.herd-title-links--more { gap: 0 16px; margin-top: 8px; font-size: 12px; }
+.herd-title-links--more span { flex-basis: 100%; text-align: center; }
 /* No transform transition. The cue is now written every frame, and a 150ms
    interpolation retargeted each frame never lands - it trails the camera and
    rubber-bands. Opacity still eases, because that changes only on state. */
@@ -68,6 +84,12 @@ canvas { display: block; touch-action: none; }
 .herd-loading-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #718b5b, #9aa968); transition: width 120ms linear; }
 .herd-loading-status { display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); min-height: 22px; margin: 0; color: var(--herd-ink-soft); font-size: var(--herd-small); font-variant-numeric: tabular-nums lining-nums; letter-spacing: .04em; text-align: left; }
 .herd-title-card { position: relative; grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; gap: var(--herd-s6); max-width: min(92vw, 660px); opacity: 0; transform: translateY(10px); pointer-events: none; text-align: center; text-shadow: 0 2px 18px rgba(244,234,215,.78); transition: opacity var(--herd-slow) var(--herd-ease), transform var(--herd-slow) var(--herd-ease); }
+/* At any size, a card too tall for the screen scrolls, with Play near the top of it,
+   rather than being cut off. Where it fits this moves nothing: the card is centred and
+   the padding is the same on both sides. The side padding keeps the title's halo from
+   being clipped by the scroller, and is added back to the width. */
+.herd-boot .herd-title-card { --herd-title-room: calc(max(var(--herd-s5), env(safe-area-inset-top)) + max(var(--herd-s5), env(safe-area-inset-bottom))); max-width: min(92vw, 708px); max-height: calc(100vh - var(--herd-title-room)); max-height: calc(100dvh - var(--herd-title-room)); overflow-y: auto; padding: var(--herd-s1) 24px; }
+.herd-title-card > * { flex-shrink: 0; }
 .herd-boot[data-ready=true] .herd-title-card { opacity: 1; transform: none; pointer-events: auto; }
 .herd-boot[data-leaving=true] .herd-title-card { opacity: 0; transform: translateY(-8px); pointer-events: none; }
 .herd-title-lockup { display: grid; justify-items: center; gap: var(--herd-s3); }
@@ -78,6 +100,22 @@ canvas { display: block; touch-action: none; }
 .herd-size[aria-pressed=true] { background: rgba(116,90,58,.2); border-color: var(--herd-line-strong); }
 .herd-title-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--herd-s3); }
 .herd-title-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--herd-s3); }
+/* The language list draws in the system face. A browser measures every option of a
+   select, so naming Piazzolla here would fetch both on-demand files for every player,
+   measured, just to draw "Español" and "Русский" in a closed list. */
+.herd-language-select { font-family: system-ui, sans-serif; }
+/* The language picker sits with the title's tools and looks like them, with a drawn
+   globe, because a player who cannot read the current language still has to find it.
+   The label shows the current language in the interface face, and the select lies
+   over it, invisible, so a tap anywhere opens the phone's own native list. */
+.herd-language-picker { position: relative; display: inline-flex; align-items: center; gap: var(--herd-s2); min-height: var(--herd-target); padding: 8px 18px 8px 13px; border: 1px solid var(--herd-line); border-radius: var(--herd-round); color: var(--herd-ink); background: var(--herd-paper-quiet); letter-spacing: var(--herd-track); }
+.herd-language-picker:hover { background: var(--herd-paper); border-color: var(--herd-line-strong); }
+.herd-language-picker:focus-within { outline: 3px solid rgba(47,105,183,.55); outline-offset: 3px; }
+.herd-language-picker svg { flex: 0 0 auto; width: 16px; height: 16px; }
+.herd-language-failed { flex-basis: 100%; margin: 0; color: var(--herd-ink-soft); font-size: var(--herd-small); text-align: center; }
+.herd-language-picker select { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: 0; opacity: 0; cursor: pointer; }
+/* In the card's flow and below Play, so it can never sit over the start action. */
+.herd-language-offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px var(--herd-s2); padding: 0 var(--herd-s3); border-radius: var(--herd-control); background: rgba(244,234,215,.38); color: var(--herd-ink); font-size: var(--herd-small); text-shadow: var(--herd-halo); }
 /* An 18px halo is too diffuse to lift small text off moving grass. These two
    rows are the only text on the title that sits on the field with no paper
    under it, so they carry a tight halo of their own. */
@@ -209,12 +247,13 @@ canvas { display: block; touch-action: none; }
 .herd-toggle input:checked + .herd-toggle__track .herd-toggle__knob { transform: translateX(20px); }
 .herd-bindings { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--herd-s3); }
 .herd-binding { display: grid; gap: var(--herd-s1); }
-.herd-binding .herd-select { min-width: 0; }
+.herd-binding .herd-select { min-width: 0; padding-inline: 12px 26px; }
 .herd-audio-levels { display: grid; gap: var(--herd-s2); }
 .herd-audio-level { min-height: var(--herd-target); display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: var(--herd-s3); color: var(--herd-ink-soft); font-size: var(--herd-small); }
 .herd-audio-level input { width: 100%; min-height: var(--herd-target); accent-color: var(--herd-sage); }
 .herd-legal { display: grid; gap: var(--herd-s2); padding-top: var(--herd-s4); border-top: 1px solid var(--herd-line); color: var(--herd-ink-soft); font-size: var(--herd-small); line-height: 1.45; }
 .herd-legal a { color: var(--herd-ink); text-underline-offset: 3px; }
+.herd-setting__label a { color: var(--herd-ink); text-underline-offset: 3px; }
 .herd-legal a:focus-visible { outline: 3px solid rgba(47,105,183,.55); outline-offset: 3px; }
 .herd-touch-zone { position: fixed; inset: 0 50% 0 0; z-index: var(--herd-z-controls); touch-action: none; }
 .herd-touch-ring { position: fixed; width: calc(var(--herd-stick-radius) * 2); height: calc(var(--herd-stick-radius) * 2); margin: calc(var(--herd-stick-radius) * -1) 0 0 calc(var(--herd-stick-radius) * -1); border: 1px solid var(--herd-line); border-radius: 50%; background: rgba(244,234,215,.18); opacity: 0; pointer-events: none; transition: opacity var(--herd-quick) var(--herd-ease), border-color var(--herd-quick) var(--herd-ease); }
@@ -224,6 +263,7 @@ canvas { display: block; touch-action: none; }
 .herd-touch-rest[data-holding=true] { opacity: 0; }
 .herd-touch-rest__knob { width: var(--herd-target); height: var(--herd-target); border: 1px solid var(--herd-line-strong); border-radius: 50%; background: var(--herd-paper-quiet); }
 .herd-bark-button { position: fixed; right: max(var(--herd-s6), env(safe-area-inset-right)); bottom: max(var(--herd-s7), env(safe-area-inset-bottom)); z-index: var(--herd-z-controls); width: 92px; height: 92px; border-radius: 50%; border: 1px solid var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); text-shadow: var(--herd-halo); font-size: 17px; font-weight: 500; letter-spacing: var(--herd-track); touch-action: none; }
+.herd-bark-button[data-long=true] { padding: 0; font-size: 15px; letter-spacing: .01em; }
 .herd-sprint-button { position: fixed; right: max(126px, calc(env(safe-area-inset-right) + 126px)); bottom: max(40px, calc(env(safe-area-inset-bottom) + 40px)); z-index: var(--herd-z-controls); width: 76px; height: 76px; border-radius: 50%; border: 1px solid var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); text-shadow: var(--herd-halo); font-size: 15px; font-weight: 500; letter-spacing: .03em; touch-action: none; -webkit-tap-highlight-color: transparent; }
 .herd-sprint-button[data-active=true] { border-color: var(--herd-line-strong); background: rgba(218,199,158,.9); text-shadow: none; transform: scale(.97); }
 .herd-camera-button { position: fixed; right: max(var(--herd-s7), calc(env(safe-area-inset-right) + var(--herd-s1))); bottom: max(142px, calc(env(safe-area-inset-bottom) + 142px)); z-index: var(--herd-z-controls); width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--herd-line-strong); background: var(--herd-paper-sheer); color: var(--herd-ink); text-shadow: var(--herd-halo); font-size: 15px; font-weight: 500; letter-spacing: .03em; touch-action: none; }
@@ -256,7 +296,7 @@ canvas { display: block; touch-action: none; }
 .herd-studio .herd-customize-pill { flex: 1; min-width: 0; box-shadow: none; padding: 8px; }
 .herd-customize-pill span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .herd-studio .herd-orbit-btn { width: 44px; height: 44px; flex-shrink: 0; }
-.herd-angle-select { display: none; min-width: 0; max-width: 120px; height: 44px; padding: 4px 8px; border: 1px solid var(--herd-line); border-radius: var(--herd-control); color: var(--herd-ink); background: var(--herd-paper-glass); font: inherit; }
+.herd-angle-select { display: none; min-width: 0; max-width: 132px; height: 44px; padding: 4px 8px; border: 1px solid var(--herd-line); border-radius: var(--herd-control); color: var(--herd-ink); background: var(--herd-paper-glass); font: inherit; }
 .herd-studio-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 2px 2px 12px; }
 .herd-studio .herd-panel__header { flex-shrink: 0; margin-bottom: 8px; }
 .herd-studio .herd-tabs { flex-shrink: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 8px; padding-bottom: 8px; }
@@ -267,7 +307,7 @@ canvas { display: block; touch-action: none; }
 .herd-studio .herd-rename-input, .herd-studio .herd-action-btn, .herd-studio .herd-scope-btn, .herd-studio .herd-stepper-btn { min-height: 44px; }
 .herd-studio .herd-stepper-btn { min-width: 44px; }
 .herd-studio .herd-sheep-hero-header, .herd-studio .herd-filter-bar, .herd-studio .herd-flock-scope { flex-wrap: wrap; }
-.herd-studio .herd-search-field { min-width: 100px; }
+.herd-studio .herd-search-field { flex: 1 1 100%; min-width: 100px; }
 .herd-studio .herd-sheep-editor, .herd-studio .herd-sheep-hero-card { min-width: 0; }
 .herd-studio .herd-flock-scope { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); }
 .herd-studio .herd-sheep-hero-card { padding: 8px; }
@@ -275,7 +315,7 @@ canvas { display: block; touch-action: none; }
 .herd-studio .herd-rename-row, .herd-studio .herd-preset-list { min-width: 0; }
 .herd-studio .herd-registry-status, .herd-studio .herd-status-actions { flex-wrap: wrap; }
 .herd-studio .herd-page-btn, .herd-studio .herd-link-btn, .herd-studio .herd-sheep-chip { min-height: 44px; }
-.herd-studio .herd-breed-dropdown { flex: 1; }
+.herd-studio .herd-breed-dropdown { flex: 1 1 100%; }
 .herd-studio[data-bottom=true] .herd-customize-dock { left: 0; right: 0; top: auto; bottom: 0; width: 100%; height: var(--studio-panel); border-radius: 16px 16px 0 0; border-right: 0; border-top: 1px solid var(--herd-line); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 .herd-studio[data-bottom=true] .herd-customize-dock { bottom: var(--studio-keyboard); max-height: calc(100dvh - var(--studio-keyboard) - 16px); }
 @media (max-width: 1199px) {
@@ -317,8 +357,8 @@ canvas { display: block; touch-action: none; }
 .herd-action-btn { min-height: 34px; padding: 4px 12px; border-radius: var(--herd-round); border: 1px solid var(--herd-line); background: var(--herd-paper-glass); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--herd-ink); white-space: nowrap; flex-shrink: 0; transition: all var(--herd-quick) var(--herd-ease); }
 .herd-action-btn:hover { background: var(--herd-paper); border-color: var(--herd-line-strong); }
 .herd-action-btn--reset { color: var(--herd-ink-soft); font-weight: 500; }
-.herd-breed-subtext { font-size: 11px; color: var(--herd-ink-soft); line-height: 1.35; display: flex; flex-wrap: wrap; gap: 3px; align-items: baseline; }
-.herd-dot-sep { color: var(--herd-line-strong); margin: 0 1px; }
+.herd-breed-subtext { font-size: 11px; color: var(--herd-ink-soft); line-height: 1.35; }
+.herd-dot-sep { color: var(--herd-line-strong); margin: 0 4px; }
 .herd-filter-bar { display: flex; gap: 6px; align-items: center; width: 100%; }
 .herd-search-field { flex: 1; min-width: 0; min-height: 32px; border: 1px solid var(--herd-line); border-radius: var(--herd-round); padding: 4px 10px; background: var(--herd-paper-glass); font-size: 12px; color: var(--herd-ink); }
 .herd-search-field:focus-visible { outline: 2px solid rgba(47,105,183,.55); outline-offset: 1px; }
@@ -414,8 +454,11 @@ canvas { display: block; touch-action: none; }
 [data-reduced-motion=true] *, [data-reduced-motion=true] *::before, [data-reduced-motion=true] *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
 @media (max-width: 560px) {
+  /* The question on one line and both answers on the next, never three rows. */
+  .herd-language-offer span { flex-basis: 100%; }
   .herd-nameplate-badge { font-size: 14px; padding: 5px 14px 6px; }
   .herd-title-card { gap: var(--herd-s5); width: 100%; }
+  .herd-boot .herd-title-card { padding-inline: 0; }
   .herd-title-actions { flex-direction: column; width: 100%; }
   .herd-title-actions .herd-button { width: min(100%, 260px); }
   .herd-title-tools { width: 100%; gap: var(--herd-s2); }
@@ -433,14 +476,28 @@ canvas { display: block; touch-action: none; }
   .herd-progress[data-flock-size="200"] .herd-progress__count { font-size: 10px; }
   .herd-timer { top: max(91px, calc(env(safe-area-inset-top) + 89px)); }
 }
-/* Short screens keep both play choices and the information links in one view.
-   The scroll fallback remains for browser chrome, large text and smaller sizes. */
-@media (max-height: 500px) {
-  .herd-boot .herd-title-card { gap: var(--herd-s1); max-height: calc(100dvh - 48px); overflow-y: auto; padding: var(--herd-s1); }
-  .herd-title-card > * { flex-shrink: 0; }
-  .herd-title-card .herd-title { font-size: 36px; }
+/* "Close" just fits its circle in English, and its translations do not. The title gives
+   way first by wrapping, and Close takes its own row only when a single word leaves no
+   room for it. */
+html:not(:lang(en)) .herd-panel__header { flex-wrap: wrap; }
+html:not(:lang(en)) .herd-panel__header > :first-child { flex: 1 1 0; min-width: min-content; }
+html:not(:lang(en)) .herd-panel__header .herd-icon-button { flex: none; width: auto; margin-inline-start: auto; padding-inline: var(--herd-s3); }
+/* A phone's browser bar takes about 80 px, so a 360 by 640 phone has about 560 px.
+   Tighter spacing pays for the language picker's row and the links, and a phone's
+   column of controls needs it sooner than a wide screen's row. */
+@media (max-height: 640px), (max-height: 700px) and (max-width: 560px) {
+  .herd-boot .herd-title-card { gap: var(--herd-s3); }
   .herd-title-card .herd-title-lockup { gap: var(--herd-s1); }
   .herd-title-card .herd-title-links { margin-top: 0; }
+}
+/* Short screens keep both play choices and the information links in one view. */
+@media (max-height: 500px) {
+  .herd-boot .herd-title-card { gap: var(--herd-s1); }
+  .herd-title-card .herd-title { font-size: 36px; }
+  .herd-title-card .herd-title-lockup { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--herd-s3); }
+  .herd-title-card .herd-size-row { padding-block: 0; }
+  .herd-title-card .herd-title-links { margin-top: 0; }
+  .herd-title-links--more span { flex-basis: auto; }
 }
 `;
 

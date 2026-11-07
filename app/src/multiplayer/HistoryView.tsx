@@ -1,36 +1,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { HistoryMatch, PlayerStats } from '../../../net/stats';
-export const modeName = (mode: string) => mode==='coop' ? 'Co-op' : 'Competitive';
-const outcome = { none:'',win:'Win',shared:'Shared win',forfeit_win:'Win by forfeit',coop_complete:'Completed together' };
+import { activeLocale, formatSeconds, translate, translatePlural, useT } from '@app/i18n/store';
+import { reasonText } from './notices';
+export const modeName = (mode: string) => translate(mode==='coop' ? 'mp.mode.coop' : 'mp.mode.competitive');
+// Saved matches outlive this list, so a region it no longer has shows as it was saved.
+export const regionName = (region: string) => region==='na' || region==='eu' || region==='apac' ? translate(`mp.region.${region}`) : region.toUpperCase();
 export function PlayerSummary({ stats }: { stats: PlayerStats[] }) {
+  const t = useT();
   return <div className="history-summary">{['coop','competitive'].map(mode=>{
     const s=stats.find(s=>s.mode===mode);
     return <section key={mode}><h3>{modeName(mode)}</h3><dl>
-      <div><dt>Matches started</dt><dd>{s?.matches ?? 0}</dd></div>
-      {mode==='coop' ? <div><dt>Completed together</dt><dd>{s?.completed ?? 0}</dd></div> : <>
-        <div><dt>Wins</dt><dd>{s?.wins ?? 0}</dd></div>
-        <div><dt>Shared wins</dt><dd>{s?.sharedWins ?? 0}</dd></div>
-        <div><dt>Wins by forfeit</dt><dd>{s?.forfeitWins ?? 0}</dd></div>
-        <div><dt>Sheep in your pen</dt><dd>{s?.sheep ?? 0}</dd></div></>}
-      <div><dt>{mode==='coop' ? 'Early departures' : 'Forfeits'}</dt><dd>{s?.forfeits ?? 0}</dd></div>
-      <div><dt>Interrupted rounds</dt><dd>{s?.interruptions ?? 0}</dd></div>
+      <div><dt>{t('stats.matchesStarted')}</dt><dd>{s?.matches ?? 0}</dd></div>
+      {mode==='coop' ? <div><dt>{t('stats.completedTogether')}</dt><dd>{s?.completed ?? 0}</dd></div> : <>
+        <div><dt>{t('stats.wins')}</dt><dd>{s?.wins ?? 0}</dd></div>
+        <div><dt>{t('stats.sharedWins')}</dt><dd>{s?.sharedWins ?? 0}</dd></div>
+        <div><dt>{t('stats.forfeitWins')}</dt><dd>{s?.forfeitWins ?? 0}</dd></div>
+        <div><dt>{t('stats.sheepInPen')}</dt><dd>{s?.sheep ?? 0}</dd></div></>}
+      <div><dt>{t(mode==='coop' ? 'stats.earlyDepartures' : 'stats.forfeits')}</dt><dd>{s?.forfeits ?? 0}</dd></div>
+      <div><dt>{t('stats.interrupted')}</dt><dd>{s?.interruptions ?? 0}</dd></div>
     </dl></section>;
   })}</div>;
 }
 export function MatchList({ matches }: { matches: (HistoryMatch & { yourSlot?: number })[] }) {
-  if (!matches.length) return <p>No recorded matches yet. History begins when this feature is enabled.</p>;
+  const t = useT();
+  if (!matches.length) return <p>{t('stats.none')}</p>;
   return <ol className="history-matches">{matches.map(m=><li key={m.id}>
-    <div className="history-match-heading"><strong>{modeName(m.mode)} · {m.flockSize} sheep</strong>
-      <time dateTime={new Date(m.createdAt).toISOString()}>{new Date(m.createdAt).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})}</time></div>
-    <p>{m.partySize} starting players · {m.region.toUpperCase()} · {m.visibility==='private' ? 'Invite only' : 'Public'}</p>
-    <p>{m.status==='finished' ? m.reason==='forfeit' ? 'Finished by forfeit' : 'Flock finished'
-      : m.status==='interrupted' ? `Interrupted: ${m.reason?.replaceAll('_',' ')}`
-      : m.status==='abandoned' ? 'Ended without a winner' : m.status==='starting' ? 'Waiting to start' : 'In progress'}
-      {m.ticks!==null ? ` · ${(m.ticks/60).toFixed(1)} seconds of play` : ''}</p>
-    <ul>{m.players.map(p=><li key={p.slot}><strong>{p.name}{p.slot===m.yourSlot ? ' (you)' : ''}</strong>
-      {p.count!==null ? ` · ${p.count} sheep` : ''}{p.forfeited ? m.mode==='coop' ? ' · left early' : ' · forfeited' : ''}
-      {outcome[p.outcome] ? ` · ${outcome[p.outcome]}` : ''}</li>)}</ul>
-    {m.count!==null ? <p>{m.count} of {m.flockSize} sheep home{m.unclaimed ? ` · ${m.unclaimed} unclaimed` : ''}</p> : null}
+    <div className="history-match-heading"><strong>{modeName(m.mode)} · {t('common.sheepCount.other', { count: m.flockSize })}</strong>
+      <time dateTime={new Date(m.createdAt).toISOString()}>{new Date(m.createdAt).toLocaleString(activeLocale()==='en' ? undefined : activeLocale(),{dateStyle:'medium',timeStyle:'short'})}</time></div>
+    <p>{t('stats.startingPlayers', { count: m.partySize })} · {regionName(m.region)} · {t(m.visibility==='private' ? 'mp.inviteOnly' : 'mp.public')}</p>
+    <p>{m.status==='finished' ? t(m.reason==='forfeit' ? 'stats.finishedForfeit' : 'stats.flockFinished')
+      : m.status==='interrupted' ? t('stats.interruptedReason', { reason: reasonText(m.reason ?? '') })
+      : t(m.status==='abandoned' ? 'stats.abandoned' : m.status==='starting' ? 'stats.waitingStart' : 'stats.inProgress')}
+      {m.ticks!==null ? ` · ${t('stats.secondsPlay', { seconds: formatSeconds(m.ticks/60) })}` : ''}</p>
+    <ul>{m.players.map(p=><li key={p.slot}><strong>{p.name}{p.slot===m.yourSlot ? ` ${t('stats.you')}` : ''}</strong>
+      {p.count!==null ? ` · ${translatePlural('common.sheepCount', p.count)}` : ''}{p.forfeited ? ` · ${t(m.mode==='coop' ? 'stats.leftEarly' : 'stats.forfeited')}` : ''}
+      {p.outcome==='none' ? '' : ` · ${t(`stats.outcome.${p.outcome}`)}`}</li>)}</ul>
+    {m.count!==null ? <p>{t('stats.sheepHome', { count: m.count, total: m.flockSize })}{m.unclaimed ? ` · ${t('stats.unclaimed', { count: m.unclaimed })}` : ''}</p> : null}
   </li>)}</ol>;
 }
 export function HistoryStyles() {

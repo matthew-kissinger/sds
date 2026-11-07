@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2026 Matthew Kissinger
-// Cycle 86 Phase 2 (P0-CRASH follow-up): /api/event prop caps. Crash stacks
-// from the client ErrorBoundary run ~4 KB, so the `stack` key gets its own
-// cap; every other string prop keeps the original 256. The encoded propsJson
-// total is bounded separately. All caps are applied to the RAW string value
-// BEFORE JSON-encoding - the old code sliced the encoded JSON, which could
-// cut mid-escape (e.g. a stack ending in `\n` -> dangling backslash) and
-// store invalid JSON.
+// Cycle 86 Phase 2 (P0-CRASH follow-up): /api/event prop caps. Every string prop
+// is capped at 256, and the encoded propsJson total is bounded separately. All
+// caps are applied to the RAW string value BEFORE JSON-encoding - the old code
+// sliced the encoded JSON, which could cut mid-escape (e.g. a value ending in
+// `\n` -> dangling backslash) and store invalid JSON.
 //
 // Lives in its own module (not index.ts) because the Workers runtime treats
 // every export of the ENTRY module as a handler: a `export const <number>`
@@ -14,8 +12,16 @@
 // 'function or ExportedHandler'".
 
 export const EVENT_STRING_PROP_CAP = 256;
-export const EVENT_STACK_PROP_CAP = 4096;
 export const EVENT_PROPS_JSON_CAP = 8192;
+
+// Every name the client sends (app/src/funnel/funnel.ts), so anything else on this
+// open route cannot add rows or skew the counts. tests/worker/event-names.spec.ts
+// holds the two lists together.
+export const EVENT_NAMES: ReadonlySet<string> = new Set([
+  'funnel_load', 'funnel_ready', 'funnel_play', 'funnel_moved', 'funnel_complete',
+  'funnel_graphics_lost', 'funnel_hidden', 'funnel_left',
+  'language_offered', 'language_chosen', 'language_declined',
+]);
 
 // Truncate a raw (not yet JSON-encoded) string. If the cut would split a
 // surrogate pair, the dangling high surrogate is dropped too so the stored

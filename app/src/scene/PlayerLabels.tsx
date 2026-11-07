@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Vector3 } from 'three/webgpu';
 import { useGameStore } from '@app/state/store';
+import { translate } from '@app/i18n/store';
 import { useHeightfield } from '@app/world/heightfield';
 const icons = ['●', '▲', '■', '◆'];
 const colours = ['#315f91', '#8b392e', '#58632b', '#734f87'];
@@ -14,7 +15,7 @@ export function PlayerLabels() {
   const labels = useMemo(() => sim.authoritative ? [] : [...sim.state.dogs.map(d => ({ slot: d.id, pen: false })), ...(sim.state.field.competition?.pens.map(p => ({ slot: p.slot, pen: true })) ?? [])].map(d => {
     const label = document.createElement('span');
     label.dataset.playerLabel = String(d.slot);
-    label.textContent = `Player ${d.slot + 1}`;
+    label.textContent = translate('player.label', { number: d.slot + 1 });
     label.dataset.kind = d.pen ? 'pen' : 'dog';
     label.hidden = true;
     label.style.cssText = `position:fixed;left:0;top:0;pointer-events:none;z-index:10;background:${colours[d.slot]};color:white;border:1px solid white;border-radius:6px;padding:3px 6px;font:600 12px sans-serif;white-space:nowrap`;
@@ -29,7 +30,7 @@ export function PlayerLabels() {
       const at = pen?.position ?? sim.state.dogs[i]!.position;
       point.set(at.x, field.groundY(at.x, at.z) + (pen ? 4 : 3), at.z).project(camera);
       label.hidden = point.z < -1 || point.z > 1 || Math.abs(point.x) > 1 || Math.abs(point.y) > 1;
-      label.textContent = `${icons[slot]} ${slot + 1} · ${sim.playerNames?.get(slot) ?? 'Player'}${pen ? ' · pen' : ''}${slot === sim.state.dogs[0]?.id ? ' · you' : ''}`;
+      label.textContent = `${icons[slot]} ${slot + 1} · ${sim.playerNames?.get(slot) ?? translate('player.fallback')}${pen ? ` · ${translate('player.pen')}` : ''}${slot === sim.state.dogs[0]?.id ? ` · ${translate('player.you')}` : ''}`;
       label.style.transform = `translate(${rect.left + (point.x + 1) * size.width / 2}px,${rect.top + (1 - point.y) * size.height / 2}px) translate(-50%,-100%)`;
     });
   });
