@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.10.1] - 2026-11-07
+
 ### Fixed
 
 - The finish panel on a landscape phone. Nothing scrolled, so at 844x390 `Title` could
