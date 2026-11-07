@@ -35,6 +35,24 @@ describe('with storage blocked', () => {
     storage.clear();
   });
 
+  it('a rename the service took holds for this page, with the same secret', async () => {
+    const { createScoresController } = await import('@app/scores/controller');
+    const { browserIdentityStorage } = await import('@app/scores/storage');
+    const { useScoreStore } = await import('@app/scores/store');
+    const profile = { persistentId: 'p', displayName: 'Minted', fullName: 'Minted#0001' };
+    const controller = createScoresController({
+      register: async () => ({ token: 't', authSecret: 's', playerProfile: profile }),
+      rename: async (_token: string, displayName: string) => ({ ...profile, displayName, fullName: `${displayName}#0001` }),
+    } as never, browserIdentityStorage());
+    await controller.ensureIdentity();
+    expect(await controller.rename('Bracken')).toBe(true);
+    expect(useScoreStore.getState()).toMatchObject({
+      identity: { persistentId: 'p', authSecret: 's', displayName: 'Bracken', fullName: 'Bracken#0001' },
+      renaming: false,
+      renameMessage: '',
+    });
+  });
+
   it('the move hint shows, and learning it throws nothing', async () => {
     const { forgetMoveHint, markMoveHintLearned, moveHintLearned } = await import('@app/input/moveHint');
     expect(moveHintLearned()).toBe(false);
