@@ -13,6 +13,35 @@
 
 export const EVENT_STRING_PROP_CAP = 256;
 export const EVENT_PROPS_JSON_CAP = 8192;
+// The client's counts are about 110 bytes. The caps above bound what is stored, and this
+// bounds what is read to get there, on a route anyone can post to.
+export const EVENT_BODY_CAP = 64 * 1024;
+
+// The body as JSON, `{}` if it is not JSON, as readJsonObject does, or null once it runs
+// past `cap` bytes. A declared length is believed, and a missing one is counted as it is
+// read. Never throws.
+export async function readCappedJson(request: Request, cap: number): Promise<any> {
+  if (Number(request.headers.get('content-length')) > cap) return null;
+  const reader = request.body?.getReader();
+  if (!reader) return {};
+  try {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > cap) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+    return JSON.parse(await new Blob(chunks).text()) ?? {};
+  } catch {
+    return {};
+  }
+}
 
 // Every name the client sends (app/src/funnel/funnel.ts), so anything else on this
 // open route cannot add rows or skew the counts. tests/worker/event-names.spec.ts
