@@ -191,7 +191,8 @@ export function createScoresController(
       useScoreStore.getState().patch({ renaming: true, renameMessage: '' });
       try {
         const profile = await withFreshToken((activeToken) => api.rename(activeToken, requested));
-        const current = storage.load();
+        // Storage can refuse to hold an identity, and the service has already taken the name.
+        const current = storage.load() ?? useScoreStore.getState().identity;
         if (current === null) throw new ScoreApiError(0, 'identity absent');
         const identity: ScoreIdentity = { ...profile, authSecret: current.authSecret };
         storage.save(identity);

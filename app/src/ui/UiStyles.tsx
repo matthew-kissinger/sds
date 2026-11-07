@@ -179,7 +179,7 @@ canvas { display: block; touch-action: none; }
 .herd-timer-button[aria-pressed=false] { color: var(--herd-ink-soft); }
 .herd-modal { position: fixed; inset: 0; z-index: var(--herd-z-modal); display: grid; place-items: center; padding: max(var(--herd-s5), env(safe-area-inset-top)) max(var(--herd-s5), env(safe-area-inset-right)) max(var(--herd-s5), env(safe-area-inset-bottom)) max(var(--herd-s5), env(safe-area-inset-left)); background: rgba(64,48,31,.14); backdrop-filter: blur(5px); pointer-events: auto; }
 .herd-panel { width: min(92vw, 430px); max-height: min(88vh, 720px); overflow: auto; padding: var(--herd-s7); border: 1px solid var(--herd-line); border-radius: var(--herd-panel); background: var(--herd-paper-glass); box-shadow: 0 18px 70px var(--herd-shadow); }
-.herd-panel--completion { text-align: center; overflow: visible; }
+.herd-panel--completion { text-align: center; max-height: min(88dvh, 720px); }
 .herd-panel__header { display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); margin-bottom: var(--herd-s6); }
 .herd-panel__title { margin: 0; font-family: var(--herd-display-font); font-size: 28px; font-weight: 400; letter-spacing: var(--herd-track); }
 .herd-panel__kicker { margin: 0 0 var(--herd-s3); color: var(--herd-ink-soft); font-size: var(--herd-small); letter-spacing: var(--herd-track-wide); text-transform: uppercase; }
@@ -196,6 +196,7 @@ canvas { display: block; touch-action: none; }
 .herd-board-list { display: grid; gap: var(--herd-s2); margin: 0; padding: var(--herd-s4) 0 0; border-top: 1px solid var(--herd-line); list-style: none; }
 .herd-board-list li { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: var(--herd-s4); font-variant-numeric: tabular-nums lining-nums; }
 .herd-board-rank { color: var(--herd-ink-soft); }
+.herd-board-list + .herd-mine-more, .herd-board-message + .herd-mine-more { margin-top: var(--herd-s3); }
 /* The "My times" tab. One section per flock size, because the flat list this
    replaced put a 200-sheep run directly above a 25-sheep one and invited a
    comparison that means nothing. spec/12-my-times.md records the contract. */
@@ -498,6 +499,18 @@ html:not(:lang(en)) .herd-panel__header .herd-icon-button { flex: none; width: a
   .herd-title-card .herd-size-row { padding-block: 0; }
   .herd-title-card .herd-title-links { margin-top: 0; }
   .herd-title-links--more span { flex-basis: auto; }
+}
+/* A landscape phone has the width and not the height: the result on the left and its
+   actions on the right, where no list of times can push them out of view. */
+@media (max-height: 500px) and (min-width: 561px) {
+  .herd-panel--completion { width: min(92vw, 680px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 220px); column-gap: var(--herd-s6); padding-block: var(--herd-s5); }
+  .herd-panel--completion > * { grid-column: 1; }
+  .herd-panel--completion > .herd-panel-actions { grid-column: 2; grid-row: 1 / span 4; align-self: start; position: sticky; top: var(--herd-s5); margin-top: 0; }
+}
+/* A folding phone's cover screen is 280 wide, 4 px short of the sizes at their usual width. */
+@media (max-width: 300px) {
+  .herd-title-card .herd-size-row { width: 100%; }
+  .herd-title-card .herd-size { flex: 1; min-width: 0; padding-inline: var(--herd-s2); }
 }
 `;
 

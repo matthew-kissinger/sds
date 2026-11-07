@@ -225,8 +225,8 @@ export interface StoredCustomization {
   readonly customSheepNames?: Record<number, string>;
 }
 
+// No `typeof localStorage` guard outside the try: with site data blocked even that throws.
 function loadJson<T>(key: string, fallback: T): T {
-  if (typeof localStorage === 'undefined') return fallback;
   try {
     const value = localStorage.getItem(key);
     return value === null ? fallback : (JSON.parse(value) as T);
@@ -236,7 +236,6 @@ function loadJson<T>(key: string, fallback: T): T {
 }
 
 function saveJson(key: string, value: unknown): void {
-  if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {

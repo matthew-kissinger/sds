@@ -69,23 +69,28 @@ function DogStamina() {
   const gamePhase = useGameStore((state) => state.gamePhase);
   useEffect(() => {
     let frame = 0;
+    let shown = -1;
     const update = () => {
       const { sim, gamePhase: phase } = useGameStore.getState();
       const dog = sim.state.dogs[0];
       const fraction = Math.max(0, Math.min(1, (dog?.stamina ?? 0) / DOG_MAX_STAMINA));
       const percent = Math.round(fraction * 100);
-      if (fillRef.current) fillRef.current.style.width = `${percent}%`;
       if (ref.current) {
         ref.current.dataset.low = String(fraction <= 0.25);
         ref.current.dataset.sprinting = String(dog?.sprinting === true);
-        ref.current.setAttribute('aria-valuenow', String(percent));
-        ref.current.setAttribute('aria-valuetext', translate('hud.staminaValue', { percent }));
+      }
+      if (percent !== shown) {
+        shown = percent;
+        if (fillRef.current) fillRef.current.style.width = `${percent}%`;
+        ref.current?.setAttribute('aria-valuenow', String(percent));
+        ref.current?.setAttribute('aria-valuetext', translate('hud.staminaValue', { percent }));
       }
       if (phase === 'playing') frame = requestAnimationFrame(update);
     };
     update();
     return () => cancelAnimationFrame(frame);
-  }, [gamePhase]);
+    // t changes with the language, which is when the same percent needs new words.
+  }, [gamePhase, t]);
 
   return (
     <div
