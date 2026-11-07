@@ -234,8 +234,8 @@ const authoringConcepts = distFiles.filter((path) => {
 if (authoringConcepts.length > 0) fail('authoring-only concept entered dist');
 
 const forbiddenLaunchSignatures = [
-  { name: 'WebSocket client', pattern: /\bWebSocket\b/ },
-  { name: 'room flow', pattern: /\broom(?:Code)?\b/i },
+  // Rooms ship, and a player who never opens one still downloads no socket code.
+  { name: 'WebSocket client', pattern: /\bWebSocket\b/, allowedIn: /^assets\/MultiplayerRoot-[\w-]+\.js$/ },
   { name: 'five-thousand sheep choice', pattern: /5,000|5000 sheep/i },
   { name: 'GPU flock implementation', pattern: /GpuComputeSim|GpuFlock/ },
   { name: 'browser recording API', pattern: /MediaRecorder/ },
@@ -252,7 +252,7 @@ const launchExecutableFiles = distFiles.filter((candidate) => {
 for (const path of launchExecutableFiles) {
   const source = readFileSync(path, 'utf8');
   for (const signature of forbiddenLaunchSignatures) {
-    if (signature.pattern.test(source)) {
+    if (signature.pattern.test(source) && !signature.allowedIn?.test(relative(dist, path))) {
       fail(`${signature.name} entered ${relative(dist, path)}`);
     }
   }
