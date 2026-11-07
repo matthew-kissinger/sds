@@ -8,7 +8,9 @@ investigations are in `docs/history/`.
 ## Production state
 
 - Release 3.10.0 adds language support, a small anonymous funnel and static pages, with
-  no gameplay change. `https://sheepdogsim.com/release.json` names what is live. Evidence
+  no gameplay change. Release 3.10.1 fixes the finish panel on landscape phones and starting
+  with site data blocked, also with no gameplay change. `https://sheepdogsim.com/release.json`
+  names what is live. Evidence
   for 3.9.8 is in `docs/history/status-log.md`, "Release 3.9.8". Physical-phone review of
   3.9.7's title layout and of this release remains with the owner.
 - Version 3 client source, deterministic simulation, procedural assets, tests
