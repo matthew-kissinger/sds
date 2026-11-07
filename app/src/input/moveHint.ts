@@ -31,7 +31,6 @@ const KEY = 'herd.touch-move-learned.v1';
 
 /** True once this player has produced real stick travel, ever. */
 export function moveHintLearned(): boolean {
-  if (typeof localStorage === 'undefined') return false;
   try {
     return localStorage.getItem(KEY) === 'true';
   } catch {
@@ -41,7 +40,6 @@ export function moveHintLearned(): boolean {
 
 /** Record that they found it. Safe to call on every sample; it is idempotent. */
 export function markMoveHintLearned(): void {
-  if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(KEY, 'true');
   } catch {
@@ -52,7 +50,6 @@ export function markMoveHintLearned(): void {
 
 /** Test seam: forget, so a spec can exercise a first-time player. */
 export function forgetMoveHint(): void {
-  if (typeof localStorage === 'undefined') return;
   try {
     localStorage.removeItem(KEY);
   } catch {
