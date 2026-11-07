@@ -9,7 +9,8 @@
  *
  * `layout` opens each screen at phone and desktop sizes and reports any text that
  * leaves its control or the viewport, including the language offer against the Play
- * button, and text a closed select or a placeholder cannot show whole. `--long`
+ * button, text a closed select or a placeholder cannot show whole, and any control
+ * that cannot be brought on screen and tapped. `--long`
  * rewrites the German dictionary as it is served, so every word is 40% longer,
  * standing in for a language longer than any shipped. `screens` does the same for what
  * a player only reaches later: the finish panel, a room, its results and the history,
@@ -60,6 +61,7 @@ const PHONES = [
  */
 const TITLE_SIZES = [
   ...[641, 660, 680, 700, 720, 760, 800, 843].map((height) => ({ name: `phone-360x${height}`, width: 360, height })),
+  { name: 'phone-280x653', width: 280, height: 653 },
   { name: 'phone-320x641', width: 320, height: 641 },
   { name: 'phone-412x732', width: 412, height: 732 },
   { name: 'phone-landscape-667x375', width: 667, height: 375 },
@@ -142,6 +144,22 @@ function auditScreen(rootSelector) {
       found.push({ problem: 'small-target', where, text: name, height: Math.round(box.height) });
     }
   }
+  // Last, because it scrolls: every control can be brought on screen and tapped.
+  for (const node of root.querySelectorAll('button, a, input, select')) {
+    const style = getComputedStyle(node);
+    if (node.closest('[hidden], [inert]') || style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none' || Number(style.opacity) === 0) continue;
+    node.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    const box = node.getBoundingClientRect();
+    if (box.width === 0 || box.height === 0) continue;
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    if (box.top < -1 || box.bottom > innerHeight + 1 || !hit || !(node === hit || node.contains(hit) || hit.contains(node))) {
+      found.push({ problem: 'control-unreachable', where: `${node.tagName.toLowerCase()}.${String(node.className).split(' ')[0]}`, text: (node.textContent || '').trim().slice(0, 50), top: Math.round(box.top), bottom: Math.round(box.bottom) });
+    }
+  }
+  for (const node of document.querySelectorAll('*')) {
+    if (node.scrollTop > 0) node.scrollTop = 0;
+    if (node.scrollLeft > 0) node.scrollLeft = 0;
+  }
   return found;
 }
 
@@ -149,6 +167,10 @@ function auditScreen(rootSelector) {
 function screenChecker(report, tag = '') {
   return async (page, code, viewport, screen, selector) => {
     await page.waitForTimeout(250);
+    // A control still easing into place reads a fraction short of its size.
+    await page.evaluate(async () => {
+      await Promise.allSettled(document.getAnimations().filter((animation) => animation instanceof CSSTransition).map((animation) => animation.finished));
+    });
     const label = `${code}${tag}-${viewport}-${screen}`;
     const findings = await page.evaluate(auditScreen, selector);
     report.screens += 1;
@@ -223,6 +245,7 @@ async function layout() {
       }
       card.scrollTo(0, 0);
       const overflow = card.scrollHeight - card.clientHeight;
+      const sideways = card.scrollWidth - card.clientWidth;
       let moved = 0;
       if (overflow <= 0) {
         // What the fallback costs a card that fits: take it away and see if Play moves.
@@ -233,9 +256,10 @@ async function layout() {
         style.remove();
       }
       const box = card.getBoundingClientRect();
-      return { playBottom, height: innerHeight, unreachable, overflow, moved, centre: { x: box.left + box.width / 2, y: box.top + box.height / 2 } };
+      return { playBottom, height: innerHeight, unreachable, overflow, sideways, moved, centre: { x: box.left + box.width / 2, y: box.top + box.height / 2 } };
     });
     for (const control of facts.unreachable) find({ problem: 'control-unreachable', ...control });
+    if (facts.sideways > 0) find({ problem: 'card-scrolls-sideways', by: facts.sideways });
     if (facts.playBottom > facts.height) find({ problem: 'play-below-the-fold', playBottom: Math.round(facts.playBottom), height: facts.height });
     if (Math.abs(facts.moved) > 1) find({ problem: 'fallback-moved-play', moved: facts.moved });
     if (facts.overflow > 0 && cdp) {
@@ -396,6 +420,12 @@ const PROTOCOL = Number(readFileSync(join(repo, 'net/messages.ts'), 'utf8').matc
 const ROOM_HANDLE = `apac_${'a'.repeat(32)}`;
 const NAMES = ['Mossy Lamb', 'Quiet Drover', 'Bracken Hill'];
 const SCREEN_SIZES = [PHONES[0], PHONES[2], PHONES[4]];
+// The finish panel changes shape on a short wide screen, so it also gets the ends of that range.
+const FINISH_SIZES = [
+  ...SCREEN_SIZES,
+  { name: 'phone-landscape-568x320', width: 568, height: 320 },
+  { name: 'phone-landscape-932x430', width: 932, height: 430 },
+];
 
 const standings = (counts, forfeited = []) => counts.map((count, slot) => ({ slot, name: NAMES[slot], count, forfeited: forfeited.includes(slot) }));
 const roomResult = (fields) => ({ mode: 'competitive', reason: 'flock', tick: 5004, count: 75, started: 3, remaining: 2, standings: standings([41, 34, 0], [2]), unclaimed: 0, winners: [0], ...fields });
@@ -583,7 +613,7 @@ async function screens() {
       await page.waitForSelector('[data-testid="completion"]');
       // Let the stubbed score answer land, so it cannot overwrite the states below.
       await page.waitForTimeout(600);
-      for (const viewport of [...SCREEN_SIZES, DESKTOP]) {
+      for (const viewport of [...FINISH_SIZES, DESKTOP]) {
         await page.setViewportSize(viewport);
         for (const variant of ['ranks', 'online', 'outside', 'offline']) {
           await page.evaluate(finishRun, variant);
@@ -903,6 +933,21 @@ async function selection() {
         }),
       });
       claim('a fetch that throws for the counts still mounts the game', await page.locator('.herd-app').count() === 1 && pageErrors.length === 0, pageErrors.join(' '));
+      await page.locator('.herd-title-actions .herd-button--primary').click();
+      await page.waitForFunction(() => document.querySelector('.herd-app')?.getAttribute('data-phase') === 'playing', undefined, { timeout: 60_000 });
+      claim('and a run starts', pageErrors.length === 0, pageErrors.join(' '));
+      await context.close();
+    }
+    {
+      // As a browser blocking all site data does it: reading the property throws.
+      const { context, page, pageErrors } = await open('&lang=ko', {
+        routes: (target) => target.addInitScript(() => {
+          for (const name of ['localStorage', 'sessionStorage']) {
+            Object.defineProperty(window, name, { configurable: true, get() { throw new DOMException('denied', 'SecurityError'); } });
+          }
+        }),
+      });
+      claim('with storage blocked the game starts, in the language asked for', await shows(page) === dictionary('ko')['title.playSolo'] && pageErrors.length === 0, pageErrors.join(' '));
       await page.locator('.herd-title-actions .herd-button--primary').click();
       await page.waitForFunction(() => document.querySelector('.herd-app')?.getAttribute('data-phase') === 'playing', undefined, { timeout: 60_000 });
       claim('and a run starts', pageErrors.length === 0, pageErrors.join(' '));

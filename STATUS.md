@@ -8,7 +8,9 @@ investigations are in `docs/history/`.
 ## Production state
 
 - Release 3.10.0 adds language support, a small anonymous funnel and static pages, with
-  no gameplay change. `https://sheepdogsim.com/release.json` names what is live. Evidence
+  no gameplay change. Release 3.10.1 fixes the finish panel on landscape phones and starting
+  with site data blocked, also with no gameplay change. `https://sheepdogsim.com/release.json`
+  names what is live. Evidence
   for 3.9.8 is in `docs/history/status-log.md`, "Release 3.9.8". Physical-phone review of
   3.9.7's title layout and of this release remains with the owner.
 - Version 3 client source, deterministic simulation, procedural assets, tests
@@ -655,10 +657,10 @@ the record those files carry.
   done and its fixes are applied (AI readers, so `reviewed` stays false and the note in
   Settings stays). A second read covered the finish, room and history screens from
   `tools/i18n-probe.mjs screens`, though no shot reaches the middle of the history list, and
-  its fixes are applied too. Left for after this release: `0 ovelha` in Brazilian Portuguese,
-  which needs a plural code change; and, both in English too and the same on `main`, the
-  finish panel running off a landscape phone at 844x390 and the `Previous week` button over
-  the fifth row. Open, the owner's: the
+  its fixes are applied too. `0 ovelha` in Brazilian Portuguese stays as it is:
+  `Intl.PluralRules` calls 0 singular and so does the written norm (`zero grau`), though the
+  plural is common in speech, and nothing shows which form Brazilian players expect. Open, the
+  owner's: the
   physical low-cost Android check, which no copy may claim in advance, and whether to clear
   the old `events` rows, which may carry version 2 user agents and player ids
   (`docs/operations/funnel.md`). Decided reversibly and flagged: `/about`, `/support` and

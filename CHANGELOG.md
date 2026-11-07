@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.10.1] - 2026-11-07
+
+### Fixed
+
+- The finish panel on a landscape phone. Nothing scrolled, so at 844x390 `Title` could
+  not be reached and `Share` was cut by the screen, and with a list of times `Play again`
+  could not be reached either. The actions now sit beside the result, and the panel scrolls.
+- With all site data blocked, the game stopped before it started. It now plays and saves
+  nothing on this device, as it does when storage is full, and a changed name holds until
+  the page closes.
+- `Previous week` touched the last row of the board. It now has a gap above it.
+- The title scrolled sideways by 2 px at 280 px wide. The flock sizes now fit.
+- The stamina bar wrote its screen reader text every frame. It now writes when the percent
+  changes.
+- `/api/event` read a body of any size before its caps applied. It now answers 413 past
+  64 KiB, without reading further. The counts themselves are unchanged.
+
+### Tools
+
+- `tools/i18n-probe.mjs` reports a control that cannot be brought on screen and tapped, and
+  a title card that scrolls sideways, and now tries 280 px, and the finish panel at 568x320
+  and 932x430. It waits for a transition before measuring, because a control easing into
+  place reads a fraction short of its size.
+- `tools/release-hardening-probe.mjs` allows the room client in the multiplayer chunk and
+  nowhere else, and no longer looks for the word "room", which rooms shipping made ordinary.
+
 ## [3.10.0] - 2026-11-06
 
 ### Added

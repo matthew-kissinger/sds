@@ -221,4 +221,67 @@ describe('scores controller', () => {
       boardEntries: [{ displayName: 'SwiftShepherd', scoreSeconds: 64.25 }],
     });
   });
+
+  describe('rename', () => {
+    const saved: ScoreIdentity = {
+      persistentId: 'pid-1', authSecret: 'secret-1',
+      displayName: 'OldName', fullName: 'OldName#0001',
+    };
+    const renamed = { ...saved, displayName: 'Bracken', fullName: 'Bracken#0001' };
+    const api = (rename?: ScoreApi['rename']): ScoreApi => ({
+      async register() {
+        return { token: 'token-1', playerProfile: { persistentId: 'pid-1', displayName: 'OldName', fullName: 'OldName#0001' } };
+      },
+      rename: rename ?? (async () => ({ persistentId: 'pid-1', displayName: 'Bracken', fullName: 'Bracken#0001' })),
+      async submit() {},
+      async myRuns() { return []; },
+      async leaderboard() { return { entries: [] }; },
+    });
+
+    it('saves the new name with the secret it already had', async () => {
+      const storage = memoryStorage(saved);
+      const controller = createScoresController(api(), storage);
+      await controller.ensureIdentity();
+
+      expect(await controller.rename('Bracken')).toBe(true);
+
+      expect(storage.value).toEqual(renamed);
+      expect(useScoreStore.getState().identity).toEqual(renamed);
+    });
+
+    it('takes the secret from storage while storage has one', async () => {
+      const storage = memoryStorage(saved);
+      const controller = createScoresController(api(), storage);
+      await controller.ensureIdentity();
+      storage.value = { ...saved, authSecret: 'secret-from-another-tab' };
+
+      expect(await controller.rename('Bracken')).toBe(true);
+
+      expect(storage.value).toEqual({ ...renamed, authSecret: 'secret-from-another-tab' });
+    });
+
+    it('puts the identity back when storage lost it while the page was open', async () => {
+      const storage = memoryStorage(saved);
+      const controller = createScoresController(api(), storage);
+      await controller.ensureIdentity();
+      storage.clear();
+
+      expect(await controller.rename('Bracken')).toBe(true);
+
+      expect(storage.value).toEqual(renamed);
+    });
+
+    it('leaves what is saved alone when the service refuses the name', async () => {
+      const storage = memoryStorage(saved);
+      const controller = createScoresController(api(async () => {
+        throw new ScoreApiError(400, 'bad name');
+      }), storage);
+      await controller.ensureIdentity();
+
+      expect(await controller.rename('Bracken')).toBe(false);
+
+      expect(storage.value).toEqual(saved);
+      expect(useScoreStore.getState().identity).toEqual(saved);
+    });
+  });
 });

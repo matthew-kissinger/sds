@@ -20,7 +20,6 @@ export interface IdentityStorage {
 export function browserIdentityStorage(): IdentityStorage {
   return {
     load() {
-      if (typeof localStorage === 'undefined') return null;
       try {
         const raw = localStorage.getItem(IDENTITY_KEY);
         if (raw === null) return null;
@@ -31,7 +30,6 @@ export function browserIdentityStorage(): IdentityStorage {
       }
     },
     save(identity) {
-      if (typeof localStorage === 'undefined') return;
       try {
         localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
       } catch {
@@ -39,7 +37,6 @@ export function browserIdentityStorage(): IdentityStorage {
       }
     },
     clear() {
-      if (typeof localStorage === 'undefined') return;
       try {
         localStorage.removeItem(IDENTITY_KEY);
       } catch {

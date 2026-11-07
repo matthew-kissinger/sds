@@ -38,6 +38,8 @@ import { resolveWeek } from './cardWeek';
 import {
   truncateRawString,
   encodePropsJson,
+  readCappedJson,
+  EVENT_BODY_CAP,
   EVENT_NAMES,
   EVENT_STRING_PROP_CAP,
   EVENT_PROPS_JSON_CAP,
@@ -495,7 +497,8 @@ export default {
       // gating the route on auth. Body is best-effort — failures are
       // swallowed client-side so analytics never affects gameplay UX.
       if (path === '/api/event' && method === 'POST') {
-        const body = await readJsonObject(request);
+        const body = await readCappedJson(request, EVENT_BODY_CAP);
+        if (body === null) return err('request too large', 413, cors);
         const name = String(body?.name ?? '');
         if (!EVENT_NAMES.has(name)) return err('unknown event name', 400, cors);
         const propsRaw = body?.props && typeof body.props === 'object' ? body.props : {};
