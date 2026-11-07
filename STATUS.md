@@ -655,10 +655,10 @@ the record those files carry.
   done and its fixes are applied (AI readers, so `reviewed` stays false and the note in
   Settings stays). A second read covered the finish, room and history screens from
   `tools/i18n-probe.mjs screens`, though no shot reaches the middle of the history list, and
-  its fixes are applied too. Left for after this release: `0 ovelha` in Brazilian Portuguese,
-  which needs a plural code change; and, both in English too and the same on `main`, the
-  finish panel running off a landscape phone at 844x390 and the `Previous week` button over
-  the fifth row. Open, the owner's: the
+  its fixes are applied too. `0 ovelha` in Brazilian Portuguese stays as it is:
+  `Intl.PluralRules` calls 0 singular and so does the written norm (`zero grau`), though the
+  plural is common in speech, and nothing shows which form Brazilian players expect. Open, the
+  owner's: the
   physical low-cost Android check, which no copy may claim in advance, and whether to clear
   the old `events` rows, which may carry version 2 user agents and player ids
   (`docs/operations/funnel.md`). Decided reversibly and flagged: `/about`, `/support` and
