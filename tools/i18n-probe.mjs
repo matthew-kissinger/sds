@@ -420,6 +420,12 @@ const PROTOCOL = Number(readFileSync(join(repo, 'net/messages.ts'), 'utf8').matc
 const ROOM_HANDLE = `apac_${'a'.repeat(32)}`;
 const NAMES = ['Mossy Lamb', 'Quiet Drover', 'Bracken Hill'];
 const SCREEN_SIZES = [PHONES[0], PHONES[2], PHONES[4]];
+// The finish panel changes shape on a short wide screen, so it also gets the ends of that range.
+const FINISH_SIZES = [
+  ...SCREEN_SIZES,
+  { name: 'phone-landscape-568x320', width: 568, height: 320 },
+  { name: 'phone-landscape-932x430', width: 932, height: 430 },
+];
 
 const standings = (counts, forfeited = []) => counts.map((count, slot) => ({ slot, name: NAMES[slot], count, forfeited: forfeited.includes(slot) }));
 const roomResult = (fields) => ({ mode: 'competitive', reason: 'flock', tick: 5004, count: 75, started: 3, remaining: 2, standings: standings([41, 34, 0], [2]), unclaimed: 0, winners: [0], ...fields });
@@ -607,7 +613,7 @@ async function screens() {
       await page.waitForSelector('[data-testid="completion"]');
       // Let the stubbed score answer land, so it cannot overwrite the states below.
       await page.waitForTimeout(600);
-      for (const viewport of [...SCREEN_SIZES, DESKTOP]) {
+      for (const viewport of [...FINISH_SIZES, DESKTOP]) {
         await page.setViewportSize(viewport);
         for (const variant of ['ranks', 'online', 'outside', 'offline']) {
           await page.evaluate(finishRun, variant);

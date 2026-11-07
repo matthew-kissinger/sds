@@ -234,7 +234,7 @@ const authoringConcepts = distFiles.filter((path) => {
 if (authoringConcepts.length > 0) fail('authoring-only concept entered dist');
 
 const forbiddenLaunchSignatures = [
-  // Rooms ship, and a player who never opens one still downloads no socket code.
+  // Rooms ship, so the client loads with every page. No socket opens until a room is entered.
   { name: 'WebSocket client', pattern: /\bWebSocket\b/, allowedIn: /^assets\/MultiplayerRoot-[\w-]+\.js$/ },
   { name: 'five-thousand sheep choice', pattern: /5,000|5000 sheep/i },
   { name: 'GPU flock implementation', pattern: /GpuComputeSim|GpuFlock/ },
