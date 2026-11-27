@@ -10,6 +10,7 @@ const noopCtx = { waitUntil() {}, passThroughOnException() {} } as any;
 
 function fakeDb() {
   const inserted: string[] = [];
+  const rows: { name: string; props: string; playerId: unknown }[] = [];
   const db: any = {
     prepare(sql: string) {
       let binds: unknown[] = [];
@@ -18,13 +19,17 @@ function fakeDb() {
         async first() { return null; },
         async all() { return { results: [] }; },
         async run() {
-          if (/INSERT INTO events/i.test(sql)) inserted.push(binds[0] as string);
+          if (/INSERT INTO events/i.test(sql)) {
+            inserted.push(binds[0] as string);
+            rows.push({ name: binds[0] as string, props: binds[1] as string, playerId: binds[2] });
+          }
           return { success: true };
         },
       };
       return statement;
     },
     inserted,
+    rows,
   };
   return db;
 }
@@ -52,6 +57,23 @@ describe('/api/event names', () => {
     const db = fakeDb();
     for (const name of EVENT_NAMES) expect((await postEvent(db, name)).status, name).toBe(200);
     expect(db.inserted.sort()).toEqual([...EVENT_NAMES].sort());
+  });
+
+  it('keep the seconds a run reports as a number, so the rows can be summed', async () => {
+    const db = fakeDb();
+    for (const [name, props] of [
+      ['run_end', { reason: 'title', played: 42, sheep: '>75%', flock: 25, mode: 'solo' }],
+      ['run_heartbeat', { played: 60, flock: 25, mode: 'solo' }],
+    ] as const) {
+      const res = await worker.fetch(new Request('https://worker.test/api/event', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name, props }),
+      }), env(db), noopCtx);
+      expect(res.status, name).toBe(200);
+    }
+    expect(db.rows.map((row: { props: string }) => JSON.parse(row.props).played)).toEqual([42, 60]);
+    expect(db.rows.map((row: { playerId: unknown }) => row.playerId)).toEqual([null, null]);
   });
 
   it('refuse anything else, and write nothing', async () => {

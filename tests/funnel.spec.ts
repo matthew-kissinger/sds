@@ -142,6 +142,7 @@ describe('a page load', () => {
     vi.stubGlobal('window', { addEventListener: (name: string, run: () => void) => windowListeners.set(name, run) });
     vi.stubGlobal('document', doc);
     vi.stubGlobal('requestAnimationFrame', (run: (now: number) => void) => { frame = run; return 1; });
+    vi.stubGlobal('setInterval', () => 1);
   });
 
   afterEach(() => {
@@ -217,6 +218,8 @@ describe('a page load', () => {
 
   it('starts nothing for a browser asking not to be tracked', () => {
     vi.stubGlobal('navigator', { language: 'id-ID', doNotTrack: '1' });
+    const timers = vi.fn(() => 1);
+    vi.stubGlobal('setInterval', timers);
     fetchSpy.mockClear();
     frame = null;
     windowListeners.clear();
@@ -226,5 +229,146 @@ describe('a page load', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(windowListeners.size).toBe(0);
     expect(documentListeners.size).toBe(0);
+    expect(timers).not.toHaveBeenCalled();
+  });
+});
+
+describe('every run', () => {
+  const fetchSpy = vi.fn(async () => new Response('{}'));
+  const windowListeners = new Map<string, () => void>();
+  const documentListeners = new Map<string, () => void>();
+  let heartbeat: (() => void) | null = null;
+  let heartbeatEvery = 0;
+  const doc = { visibilityState: 'visible', addEventListener: (name: string, run: () => void) => documentListeners.set(name, run) };
+  const sent = () => fetchSpy.mock.calls.map((call) => JSON.parse(String((call as unknown as [string, RequestInit])[1].body)) as {
+    name: string;
+    props: Record<string, string | number>;
+  });
+  const runRows = () => sent().filter((event) => event.name === 'run_end' || event.name === 'run_heartbeat');
+
+  // A fresh store and funnel each time: a page load's subscription lives as long as its store.
+  async function freshPage() {
+    vi.resetModules();
+    const store = await import('../app/src/state/store');
+    const funnel = await import('../app/src/funnel/funnel');
+    return { store: store.useGameStore, startFunnel: funnel.startFunnel };
+  }
+
+  beforeEach(() => {
+    fetchSpy.mockClear();
+    windowListeners.clear();
+    documentListeners.clear();
+    heartbeat = null;
+    doc.visibilityState = 'visible';
+    vi.stubGlobal('fetch', fetchSpy);
+    vi.stubGlobal('navigator', { language: 'id-ID' });
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    vi.stubGlobal('innerWidth', 390);
+    vi.stubGlobal('innerHeight', 844);
+    vi.stubGlobal('window', {
+      location: { search: '', pathname: '/' },
+      addEventListener: (name: string, run: () => void) => windowListeners.set(name, run),
+    });
+    vi.stubGlobal('document', doc);
+    vi.stubGlobal('requestAnimationFrame', () => 1);
+    vi.stubGlobal('setInterval', (run: () => void, every: number) => { heartbeat = run; heartbeatEvery = every; return 1; });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('ends each run once, however it ends, and its seconds add up to the time played', async () => {
+    const { store, startFunnel } = await freshPage();
+    const clock = vi.spyOn(performance, 'now');
+    const at = (ms: number) => clock.mockReturnValue(ms);
+    at(1_000);
+    startFunnel();
+    expect(heartbeatEvery).toBe(60_000);
+
+    // Title time is not play.
+    heartbeat!();
+    expect(runRows()).toEqual([]);
+
+    store.getState().startGame(25);
+    at(61_000);
+    heartbeat!();
+    at(70_500);
+    store.getState().pause();
+    // Nothing builds up while paused, so a heartbeat then has nothing to say.
+    at(130_500);
+    heartbeat!();
+    at(200_000);
+    store.getState().resume();
+    at(210_000);
+    store.getState().complete(79_500);
+
+    // Play again, then End run from the pause menu.
+    at(220_000);
+    store.getState().startGame(25);
+    store.getState().sheepPenned(20);
+    at(250_000);
+    store.getState().reset();
+
+    // A fresh field mid-run is a restart.
+    at(260_000);
+    store.getState().startGame(75);
+    at(262_000);
+    store.getState().startGame(75);
+
+    // Hidden mid-run, back 100 seconds later, then closed.
+    at(300_000);
+    doc.visibilityState = 'hidden';
+    documentListeners.get('visibilitychange')!();
+    documentListeners.get('visibilitychange')!();
+    at(400_000);
+    doc.visibilityState = 'visible';
+    documentListeners.get('visibilitychange')!();
+    at(410_000);
+    windowListeners.get('pagehide')!();
+    windowListeners.get('pagehide')!();
+
+    const rows = runRows();
+    expect(rows.map((row) => [row.name, row.props.reason ?? null, row.props.played])).toEqual([
+      ['run_heartbeat', null, 60],
+      ['run_end', 'complete', 19],
+      ['run_end', 'title', 30],
+      ['run_end', 'restart', 2],
+      ['run_end', 'hidden', 38],
+      ['run_end', 'left', 10],
+    ]);
+    // 159.5 seconds were played: whole seconds are sent and the half carries forward.
+    expect(rows.reduce((sum, row) => sum + Number(row.props.played), 0)).toBe(159);
+    expect(rows[0]!.props).toEqual({ ui: 'en', browser: 'id-ID', device: 'phone', played: 60, flock: 25, mode: 'solo' });
+    expect(rows[1]!.props).toEqual({
+      ui: 'en', browser: 'id-ID', device: 'phone', reason: 'complete', played: 19, sheep: 'none', flock: 25, mode: 'solo',
+    });
+    // Quitting resets the field before the count hears of it: the end describes the run as it was.
+    expect(rows[2]!.props).toMatchObject({ reason: 'title', sheep: '>75%', flock: 25, mode: 'solo' });
+    // Only the end after a return says so, which is how a hide that was not the end is told apart.
+    expect(rows.map((row) => row.props.resumed ?? null)).toEqual([null, null, null, null, null, 'yes']);
+  });
+
+  it('counts no run for the title, a lost renderer or a rebuilt multiplayer view', async () => {
+    const { store, startFunnel } = await freshPage();
+    const clock = vi.spyOn(performance, 'now');
+    clock.mockReturnValue(1_000);
+    startFunnel();
+    store.getState().reportGraphicsLost();
+    store.getState().reset();
+    expect(runRows()).toEqual([]);
+
+    const { store: next, startFunnel: startNext } = await freshPage();
+    fetchSpy.mockClear();
+    startNext();
+    next.getState().startGame(25);
+    const view = { ...next.getState().sim, authoritative: false } as unknown as ReturnType<typeof next.getState>['sim'];
+    next.setState({ sim: view });
+    next.setState({ sim: { ...view } as typeof view });
+    expect(runRows()).toEqual([]);
+    clock.mockReturnValue(31_000);
+    next.getState().reset();
+    expect(runRows().map((row) => [row.props.reason, row.props.played, row.props.mode])).toEqual([['title', 30, 'multiplayer']]);
   });
 });

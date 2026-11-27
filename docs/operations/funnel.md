@@ -33,13 +33,31 @@ One POST per event, from `app/src/funnel/funnel.ts`. Every event carries:
 | `funnel_graphics_lost` | The renderer stopped and could not continue | |
 | `funnel_hidden` | The page was first hidden, by switching app or tab or by closing it. It may come back | The same as `funnel_left` |
 | `funnel_left` | The page went away (`pagehide`) | `phase`, `elapsed`, `sheep`, `frame`, `renderer`, `tier`, `flock`, `mode` |
+| `run_end` | A run ended, every time, however it ended | `reason`, `played`, `sheep`, `flock`, `mode`, and `resumed` on an end after a return |
+| `run_heartbeat` | Each minute of a run, while it is being played | `played`, `flock`, `mode` |
 | `language_offered` | The title screen offered a language | `offered` |
 | `language_chosen` | A player chose a language | `from`, `to`, `via`: `title`, `settings` or `offer` |
 | `language_declined` | A player turned the offer down | `offered` |
 
-Each `funnel_*` stage is sent once per page load, so these count how far loads get, not how often anyone plays.
+Each `funnel_*` stage is sent once per page load, so these count how far loads get, not how often anyone plays. The two `run_*` events are the exception: they are sent for every run, so they count runs and play time.
 
-Times and amounts are only ever sent as these buckets:
+### Runs and play time
+
+`played` is the one measured value the game sends: the whole seconds of active play since this page's previous `run_end` or `run_heartbeat`. Active means a run is in the `playing` phase on a visible page with a working renderer, so paused, settings, title, completion and hidden time are not play. The part under a second carries into the next report, so rounding loses nothing over a page's life. Summing `played` over both events gives total play time, and no row needs to name a run, a visit or a player for that to work. The heartbeat means a crash or a phone killing a hidden tab loses under a minute.
+
+| `reason` | Means |
+| --- | --- |
+| `complete` | The run finished |
+| `restart` | A fresh solo field was started while a run was still going. No control in 3.11.0 does this, so expect none until one exists |
+| `title` | Back to the title mid-run: End run on the pause menu, or a multiplayer room closing |
+| `hidden` | The page was hidden mid-run: another tab or app came to the front, which is how a phone usually leaves. It may come back |
+| `left` | The page went away (`pagehide`) mid-run before it was hidden. A tab closed mid-run in Chromium on this PC arrives this way |
+
+A hidden or left page that comes back to the same run picks it up again, and that run's next end carries `resumed` of `yes`. So each `resumed` row is one earlier `hidden` or `left` row that was not really the end: runs that ended = all `run_end` rows minus the `resumed` ones, and runs that ended by being hidden = `hidden` rows minus `resumed` rows. `sheep`, `flock` and `mode` describe the run that ended, as it was just before; returning to the title resets the field before the count hears of it.
+
+`played` is a number on an open route, so a forged row could carry any value. A genuine report holds at most about 60 seconds of play plus a carried second, so the queries below ignore anything outside 0 to 300.
+
+Other times and amounts are only ever sent as these buckets:
 
 | Field | Means | Values |
 | --- | --- | --- |
@@ -59,9 +77,9 @@ Times and amounts are only ever sent as these buckets:
 
 **Not sent:** a token, running name, stored id, per-visit id, user agent or anything else that links one event to another. `player_id` stays null because the client sends no token. The Worker stores no IP address here. Each row does have a server timestamp, so in a very quiet hour two rows with the same country and browser language could be guessed to be one page load. Nothing in the table can confirm it. A browser sending Do Not Track or Global Privacy Control sends nothing. `app/public/privacy.html` describes this, and a change here changes that page.
 
-`node tools/i18n-probe.mjs selection` closes a page mid-run with a real server behind it and confirms `funnel_left` arrives, because Playwright's interception does not see a request from a page going away. That was Chromium on this PC. Whether the same holds in a phone's browser or an app's in-app browser is not established, which is the other reason both events exist.
+`node tools/i18n-probe.mjs selection` closes a page mid-run with a real server behind it and confirms `funnel_left` arrives, because Playwright's interception does not see a request from a page going away. It plays until the first `run_heartbeat` arrives before closing, and checks that the run's `played` seconds add up to the time the probe saw the page in play. On 2026-11-27 that was 60 seconds sent against 60.0 to 60.4 seen, a heartbeat of 58 and a `run_end` of 2, and the close arrived as `left` with `pagehide` ahead of the hide. That was Chromium on this PC. Whether the same holds in a phone's browser or an app's in-app browser is not established, which is the other reason both events exist.
 
-Sending is fire and forget: a failure is ignored, never retried and never shown. An English player's page load adds two of these requests by the time the title is up, about 110 bytes of JSON each, and at most two more as the page goes away. The sends on leaving use `keepalive`, so they can outlive the page.
+Sending is fire and forget: a failure is ignored, never retried and never shown. An English player's page load adds two of these requests by the time the title is up, about 110 bytes of JSON each, and at most two more as the page goes away. A run adds one request a minute while it is played and one when it ends. The event route's own rate-limit bucket refills at one a second per address, far above that. The sends on leaving use `keepalive`, so they can outlive the page.
 
 ## Reading it
 
@@ -128,8 +146,48 @@ GROUP BY tier, frame;
 
 Whether starting a run led to moving the dog is `funnel_moved` against `funnel_play` in the first query above.
 
+Total play time, in hours, overall and by month:
+
+```sql
+SELECT ROUND(SUM(json_extract(props, '$.played')) / 3600.0, 1) AS hours
+FROM events
+WHERE name IN ('run_end', 'run_heartbeat')
+  AND json_extract(props, '$.played') BETWEEN 0 AND 300;
+
+SELECT strftime('%Y-%m', created_at) AS month, json_extract(props, '$.mode') AS mode,
+  ROUND(SUM(json_extract(props, '$.played')) / 3600.0, 1) AS hours
+FROM events
+WHERE name IN ('run_end', 'run_heartbeat')
+  AND json_extract(props, '$.played') BETWEEN 0 AND 300
+GROUP BY month, mode
+ORDER BY month, mode;
+```
+
+How runs end, with the hides that were not the end shown apart:
+
+```sql
+SELECT json_extract(props, '$.reason') AS reason,
+  COUNT(*) AS ends,
+  SUM(json_extract(props, '$.resumed') = 'yes') AS after_return
+FROM events
+WHERE name = 'run_end'
+GROUP BY reason
+ORDER BY ends DESC;
+```
+
+Runs that really ended is the total of `ends` minus the total of `after_return`. Where players quit, by how far they got:
+
+```sql
+SELECT json_extract(props, '$.flock') AS flock, json_extract(props, '$.sheep') AS sheep, COUNT(*) AS n
+FROM events
+WHERE name = 'run_end' AND json_extract(props, '$.reason') IN ('title', 'restart')
+GROUP BY flock, sheep;
+```
+
+These start counting from the release that carries them. Earlier play is only in the completion times on the board.
+
 ## Open for the owner
 
 - **Old rows.** Rows from version 2 may hold a `player_id` and, in crash events, a user agent. The privacy page describes the new counts, not those. Keep or delete them.
-- **Retention.** Nothing deletes rows. Each load writes up to about eight small rows, so this is not urgent; a periodic delete is a later decision.
+- **Retention.** Nothing deletes rows. Each load writes up to about eight small rows, plus one per run and one per minute of play, so this is not urgent; a periodic delete is a later decision. Deleting old rows also deletes their play time, so total it first.
 - **Open route.** `/api/event` takes unauthenticated writes, as it always has, but only under the names in `worker/src/eventProps.ts`, with caps on size and a rate-limit bucket of its own, so counts cannot spend what a sign-in or a score card needs. Junk rows under those names are still possible; if the counts look wrong, this is the first thing to check.
