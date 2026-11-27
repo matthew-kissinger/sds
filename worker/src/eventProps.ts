@@ -49,6 +49,7 @@ export async function readCappedJson(request: Request, cap: number): Promise<any
 export const EVENT_NAMES: ReadonlySet<string> = new Set([
   'funnel_load', 'funnel_ready', 'funnel_play', 'funnel_moved', 'funnel_complete',
   'funnel_graphics_lost', 'funnel_hidden', 'funnel_left',
+  'run_end', 'run_heartbeat',
   'language_offered', 'language_chosen', 'language_declined',
 ]);
 

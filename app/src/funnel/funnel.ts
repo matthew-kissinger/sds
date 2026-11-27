@@ -6,18 +6,22 @@
 //
 // Nothing here identifies a player or links one event to another: no token, no
 // running name, no stored or per-visit id, no cookies. Times and amounts are sent as
-// coarse buckets, never as measured values. So the table can answer "how many
-// loads in this language reached Play", and cannot answer anything about one person. A
-// failed send changes nothing for the player, and it is never retried.
+// coarse buckets, with one exception: `played`, the whole seconds of active play since
+// the page's previous report, which is what lets the rows add up to total play time.
+// So the table can answer "how many loads in this language reached Play" and "how many
+// hours were played", and cannot answer anything about one person. A failed send
+// changes nothing for the player, and it is never retried.
 
 import { activeLocale, useI18nStore } from '@app/i18n/store';
 import { resolvedRenderTier } from '@app/quality/autoTier';
 import { scoreApiBase } from '@app/scores/config';
+import { HEARTBEAT_MS, createPlayClock, type RunEndReason } from '@app/funnel/playClock';
 import { useGameStore, type GamePhase, type GameStore } from '@app/state/store';
 
 export type FunnelEvent =
   | 'funnel_load' | 'funnel_ready' | 'funnel_play' | 'funnel_moved' | 'funnel_complete'
   | 'funnel_graphics_lost' | 'funnel_hidden' | 'funnel_left'
+  | 'run_end' | 'run_heartbeat'
   | 'language_offered' | 'language_chosen' | 'language_declined';
 
 type FunnelProps = Readonly<Record<string, string | number>>;
@@ -142,6 +146,92 @@ function runProps(state: GameStore): FunnelProps {
   return { flock: state.flockSize, mode: state.sim.authoritative ? 'solo' : 'multiplayer' };
 }
 
+const inRun = (phase: GamePhase) => phase === 'playing' || phase === 'paused';
+
+/**
+ * Every run, unlike the stages below: one run_end however the run ends, and a
+ * run_heartbeat each minute of play between. Both carry `played`, the whole seconds
+ * of active play since this page's previous report, so summing every row gives total
+ * play time without any row naming a run, a visit or a player. Paused, menu and
+ * hidden time are not play.
+ */
+function trackRuns() {
+  const clock = createPlayClock(() => performance.now());
+  let open = false;
+  // This run already sent a hidden or left end and the page came back to it.
+  let resumed = false;
+  let runSim: object | null = null;
+  // The run as last seen in play. Quitting or restarting swaps in a fresh field before
+  // this hears of it, so those ends describe the run from here.
+  let lastInRun: GameStore | null = null;
+
+  const begin = (state: GameStore) => {
+    open = true;
+    resumed = false;
+    runSim = state.sim;
+  };
+  const end = (reason: RunEndReason, state: GameStore) => {
+    if (!open) return;
+    open = false;
+    trackFunnel('run_end', {
+      reason,
+      played: clock.take(),
+      sheep: sheepBucket(state.pennedCount, state.flockSize),
+      ...runProps(state),
+      ...(resumed ? { resumed: 'yes' } : {}),
+    });
+  };
+  const syncClock = (state: GameStore) => {
+    if (open && state.gamePhase === 'playing' && !state.graphicsLost && document.visibilityState !== 'hidden') clock.start();
+    else clock.stop();
+  };
+
+  setInterval(() => {
+    try {
+      if (!open || !clock.running()) return;
+      const played = clock.take();
+      if (played > 0) trackFunnel('run_heartbeat', { played, ...runProps(useGameStore.getState()) });
+    } catch {
+      // A count is worth less than the game.
+    }
+  }, HEARTBEAT_MS);
+
+  return {
+    onState(state: GameStore, before: GamePhase) {
+      const was = inRun(before);
+      if (was && state.gamePhase === 'complete') end('complete', state);
+      else if (was && state.gamePhase === 'title') end('title', lastInRun ?? state);
+      else if (was && inRun(state.gamePhase) && state.sim !== runSim) {
+        // A fresh solo field mid-run is a restart. A multiplayer view is rebuilt when
+        // the roster changes, and that is still the same match.
+        if (state.sim.authoritative) {
+          end('restart', lastInRun ?? state);
+          begin(state);
+        } else runSim = state.sim;
+      } else if (!was && state.gamePhase === 'playing') begin(state);
+      if (inRun(state.gamePhase)) lastInRun = state;
+      syncClock(state);
+    },
+    /** A hide may be the end: a phone can kill a hidden page with no further event. */
+    onHidden(state: GameStore) {
+      end('hidden', state);
+      syncClock(state);
+    },
+    onLeft(state: GameStore) {
+      end('left', state);
+      syncClock(state);
+    },
+    /** Back to the run that was reported as ended. Its next end says so, so those ends can be told apart. */
+    onShown(state: GameStore) {
+      if (!open && runSim === state.sim && inRun(state.gamePhase)) {
+        open = true;
+        resumed = true;
+      }
+      syncClock(state);
+    },
+  };
+}
+
 /** Each stage once per page load: this counts how far a load got, not how often someone plays. */
 export function startFunnel(): void {
   if (declined()) return;
@@ -152,6 +242,7 @@ export function startFunnel(): void {
     seen.add(name);
     trackFunnel(name, props?.());
   };
+  const runs = trackRuns();
   let frames: ReturnType<typeof sampleFrames> | null = null;
   let runStartedAt: number | null = null;
   let previousPhase = useGameStore.getState().gamePhase;
@@ -171,6 +262,7 @@ export function startFunnel(): void {
         runStartedAt = performance.now();
         frames?.reset();
       }
+      runs.onState(state, previousPhase);
       previousPhase = state.gamePhase;
       if (state.gamePhase === 'playing') once('funnel_play', () => runProps(state));
       if (state.dogMoved) once('funnel_moved', () => runProps(state));
@@ -193,11 +285,28 @@ export function startFunnel(): void {
       ...runProps(state),
     };
   };
-  window.addEventListener('pagehide', () => once('funnel_left', leaving));
+  // These listeners run outside the store's guard above. The run's end goes first, so it
+  // does not depend on the leaving props computing cleanly.
+  const guarded = (run: (state: GameStore) => void) => {
+    try {
+      run(useGameStore.getState());
+    } catch {
+      // A count is worth less than the game.
+    }
+  };
+  window.addEventListener('pagehide', () => {
+    guarded(runs.onLeft);
+    once('funnel_left', leaving);
+  });
+  // A page restored from the back-forward cache is the same run, still going.
+  window.addEventListener('pageshow', () => guarded(runs.onShown));
   // A phone usually leaves by switching apps, which hides the page and may then kill
   // it with no pagehide at all. So funnel_left undercounts and this one overcounts:
   // the page may come back.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') once('funnel_hidden', leaving);
+    if (document.visibilityState === 'hidden') {
+      guarded(runs.onHidden);
+      once('funnel_hidden', leaving);
+    } else guarded(runs.onShown);
   });
 }

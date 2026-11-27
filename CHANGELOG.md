@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Run ends and play time in the anonymous counts. Every run now sends `run_end` when it
+  finishes, restarts, returns to the title or the page goes away, and `run_heartbeat` each
+  minute of play. Both carry `played`, the seconds of active play since the previous one, so
+  the rows add up to total play time with no identifier. The privacy page says so; this is
+  the first exact time the counts send (`docs/operations/funnel.md`).
+
 ## [3.10.1] - 2026-11-07
 
 ### Fixed
