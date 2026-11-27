@@ -654,10 +654,10 @@ the record those files carry.
 
 - Run ends and play time, recorded 2026-11-27, unreleased. `run_end` and `run_heartbeat`
   send `played`, exact seconds of active play, where the privacy page said times go only as
-  broad ranges. The page now says what is sent; the owner approves that wording before
-  release. Decided reversibly and flagged: the heartbeat is its own event name rather than a
-  sixth `reason`, so counting ends needs no filter, and no control starts a fresh field
-  mid-run in 3.10.1, so `restart` reads zero until one exists.
+  broad ranges. The owner approved the new privacy wording on 2026-11-27, and kept the
+  heartbeat as its own event name rather than a sixth `reason`, so counting ends needs no
+  filter. Still open: no control starts a fresh field mid-run in 3.10.1, so `restart` reads
+  zero until one exists.
 
 - Language support, recorded 2026-11-06. Contract: `spec/15-languages.md`, which amends
   the "English only" line in `spec/00`. An independent review of all ten languages is

@@ -673,6 +673,8 @@ async function screens() {
 /**
  * What reaches a server when a page closes mid-run. Playwright's interception does
  * not see a request from a page going away, so this has a real server and no routes.
+ * The run lasts until the first play-time heartbeat has arrived, so the seconds the
+ * rows report can be held against how long the probe saw the page in play.
  */
 async function eventsFromClosedPage(browser) {
   const arrived = [];
@@ -702,16 +704,24 @@ async function eventsFromClosedPage(browser) {
     const page = await context.newPage();
     await page.goto(`http://localhost:${serverPort}/${BOOT_QUERY}`);
     await waitReady(page);
+    const before = Date.now();
     await page.locator('.herd-title-actions .herd-button--primary').click();
     await page.waitForFunction(() => document.querySelector('.herd-app')?.getAttribute('data-phase') === 'playing', undefined, { timeout: 60_000 });
-    await page.waitForTimeout(800);
+    const playing = Date.now();
+    // The heartbeat's timer starts with the page, so the first one comes within a minute of load.
+    for (const deadline = Date.now() + 75_000; Date.now() < deadline && !arrived.some((event) => event.name === 'run_heartbeat');) {
+      await page.waitForTimeout(250);
+    }
+    await page.waitForTimeout(1_500);
+    const closing = Date.now();
     await page.close();
     await new Promise((resolve) => { setTimeout(resolve, 2_000); });
+    // The page's own play clock starts between the click and the probe seeing `playing`.
+    return { arrived, playedAtLeast: (closing - playing) / 1000, playedAtMost: (closing - before) / 1000 };
   } finally {
     await context.close();
     server.close();
   }
-  return arrived;
 }
 
 async function selection() {
@@ -813,14 +823,26 @@ async function selection() {
       await settle(page);
       const hidden = named('funnel_hidden');
       claim('hiding the page is counted once, mid-run', hidden.length === 1 && hidden[0].props.phase === 'playing' && hidden[0].props.sheep === 'none', JSON.stringify(hidden[0]?.props));
+      const hiddenEnd = named('run_end');
+      claim('and ends the run once, as hidden, in whole seconds', hiddenEnd.length === 1 && hiddenEnd[0].props.reason === 'hidden'
+        && Number.isInteger(hiddenEnd[0].props.played) && hiddenEnd[0].props.played >= 0 && hiddenEnd[0].props.played <= 60
+        && hiddenEnd[0].props.mode === 'solo' && hiddenEnd[0].props.resumed === undefined, JSON.stringify(hiddenEnd.map((event) => event.props)));
       await context.close();
     }
     {
-      const arrived = await eventsFromClosedPage(browser);
+      const { arrived, playedAtLeast, playedAtMost } = await eventsFromClosedPage(browser);
       const left = arrived.filter((event) => event.name === 'funnel_left');
       claim('closing the page mid-run still reaches a real server, once', left.length === 1 && left[0].props.phase === 'playing', arrived.map((event) => event.name).join(' '));
       claim('with a coarse median frame', /^(<20ms|20-33ms|33-50ms|50-100ms|100-250ms|>250ms)$/.test(left[0]?.props.frame), left[0]?.props.frame);
       claim('and no identity', !JSON.stringify(left).includes('probe'), JSON.stringify(left[0]?.props));
+      const beats = arrived.filter((event) => event.name === 'run_heartbeat');
+      const ends = arrived.filter((event) => event.name === 'run_end');
+      claim('a minute of play sends a heartbeat in whole seconds', beats.length >= 1 && beats.every((event) => Number.isInteger(event.props.played) && event.props.played > 0 && event.props.played <= 60), JSON.stringify(beats.map((event) => event.props)));
+      claim('closing ends the run once, and says how', ends.length === 1 && ['hidden', 'left'].includes(ends[0].props.reason), JSON.stringify(ends.map((event) => event.props)));
+      const played = [...beats, ...ends].reduce((sum, event) => sum + event.props.played, 0);
+      // Whole seconds are sent and the rest carries, so the sum may sit up to a second under.
+      claim('and the seconds add up to the time in play', played >= Math.floor(playedAtLeast) - 1 && played <= Math.ceil(playedAtMost), `${played}s sent, ${playedAtLeast.toFixed(1)}-${playedAtMost.toFixed(1)}s seen`);
+      claim('with no identity either', !JSON.stringify([...beats, ...ends]).includes('probe'));
     }
     {
       const { context, page, events } = await open('', { browserLanguage: 'id-ID' });

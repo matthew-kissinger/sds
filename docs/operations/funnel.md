@@ -50,8 +50,8 @@ Each `funnel_*` stage is sent once per page load, so these count how far loads g
 | `complete` | The run finished |
 | `restart` | A fresh solo field was started while a run was still going. No control in 3.10.1 does this, so expect none until one exists |
 | `title` | Back to the title mid-run: End run on the pause menu, or a multiplayer room closing |
-| `hidden` | The page was hidden mid-run. Closing a tab hides it first, so most closes read as `hidden`. It may come back |
-| `left` | The page went away (`pagehide`) mid-run without being hidden first. Rare |
+| `hidden` | The page was hidden mid-run: another tab or app came to the front, which is how a phone usually leaves. It may come back |
+| `left` | The page went away (`pagehide`) mid-run before it was hidden. A tab closed mid-run in Chromium on this PC arrives this way |
 
 A hidden or left page that comes back to the same run picks it up again, and that run's next end carries `resumed` of `yes`. So each `resumed` row is one earlier `hidden` or `left` row that was not really the end: runs that ended = all `run_end` rows minus the `resumed` ones, and runs that ended by being hidden = `hidden` rows minus `resumed` rows. `sheep`, `flock` and `mode` describe the run that ended, as it was just before; returning to the title resets the field before the count hears of it.
 
@@ -77,7 +77,7 @@ Other times and amounts are only ever sent as these buckets:
 
 **Not sent:** a token, running name, stored id, per-visit id, user agent or anything else that links one event to another. `player_id` stays null because the client sends no token. The Worker stores no IP address here. Each row does have a server timestamp, so in a very quiet hour two rows with the same country and browser language could be guessed to be one page load. Nothing in the table can confirm it. A browser sending Do Not Track or Global Privacy Control sends nothing. `app/public/privacy.html` describes this, and a change here changes that page.
 
-`node tools/i18n-probe.mjs selection` closes a page mid-run with a real server behind it and confirms `funnel_left` arrives, because Playwright's interception does not see a request from a page going away. That was Chromium on this PC. Whether the same holds in a phone's browser or an app's in-app browser is not established, which is the other reason both events exist.
+`node tools/i18n-probe.mjs selection` closes a page mid-run with a real server behind it and confirms `funnel_left` arrives, because Playwright's interception does not see a request from a page going away. It plays until the first `run_heartbeat` arrives before closing, and checks that the run's `played` seconds add up to the time the probe saw the page in play. On 2026-11-27 that was 60 seconds sent against 60.0 to 60.4 seen, a heartbeat of 58 and a `run_end` of 2, and the close arrived as `left` with `pagehide` ahead of the hide. That was Chromium on this PC. Whether the same holds in a phone's browser or an app's in-app browser is not established, which is the other reason both events exist.
 
 Sending is fire and forget: a failure is ignored, never retried and never shown. An English player's page load adds two of these requests by the time the title is up, about 110 bytes of JSON each, and at most two more as the page goes away. A run adds one request a minute while it is played and one when it ends. The event route's own rate-limit bucket refills at one a second per address, far above that. The sends on leaving use `keepalive`, so they can outlive the page.
 
