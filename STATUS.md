@@ -9,7 +9,8 @@ investigations are in `docs/history/`.
 
 - Release 3.10.0 adds language support, a small anonymous funnel and static pages, with
   no gameplay change. Release 3.10.1 fixes the finish panel on landscape phones and starting
-  with site data blocked, also with no gameplay change. `https://sheepdogsim.com/release.json`
+  with site data blocked, also with no gameplay change. Release 3.11.0 adds run ends and play
+  time to the anonymous counts, with no gameplay change. `https://sheepdogsim.com/release.json`
   names what is live. Evidence
   for 3.9.8 is in `docs/history/status-log.md`, "Release 3.9.8". Physical-phone review of
   3.9.7's title layout and of this release remains with the owner.
@@ -652,11 +653,11 @@ the record those files carry.
 
 ## Open questions
 
-- Run ends and play time, recorded 2026-11-27, unreleased. `run_end` and `run_heartbeat`
+- Run ends and play time, recorded 2026-11-27, released as 3.11.0. `run_end` and `run_heartbeat`
   send `played`, exact seconds of active play, where the privacy page said times go only as
   broad ranges. The owner approved the new privacy wording on 2026-11-27, and kept the
   heartbeat as its own event name rather than a sixth `reason`, so counting ends needs no
-  filter. Still open: no control starts a fresh field mid-run in 3.10.1, so `restart` reads
+  filter. Still open: no control starts a fresh field mid-run in 3.11.0, so `restart` reads
   zero until one exists.
 
 - Language support, recorded 2026-11-06. Contract: `spec/15-languages.md`, which amends

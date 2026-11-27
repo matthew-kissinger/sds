@@ -48,7 +48,7 @@ Each `funnel_*` stage is sent once per page load, so these count how far loads g
 | `reason` | Means |
 | --- | --- |
 | `complete` | The run finished |
-| `restart` | A fresh solo field was started while a run was still going. No control in 3.10.1 does this, so expect none until one exists |
+| `restart` | A fresh solo field was started while a run was still going. No control in 3.11.0 does this, so expect none until one exists |
 | `title` | Back to the title mid-run: End run on the pause menu, or a multiplayer room closing |
 | `hidden` | The page was hidden mid-run: another tab or app came to the front, which is how a phone usually leaves. It may come back |
 | `left` | The page went away (`pagehide`) mid-run before it was hidden. A tab closed mid-run in Chromium on this PC arrives this way |

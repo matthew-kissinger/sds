@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.11.0] - 2026-11-27
+
 ### Added
 
 - Run ends and play time in the anonymous counts. Every run now sends `run_end` when it
